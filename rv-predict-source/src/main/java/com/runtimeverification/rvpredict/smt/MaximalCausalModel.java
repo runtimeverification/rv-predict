@@ -49,17 +49,21 @@ import com.runtimeverification.rvpredict.trace.LockRegion;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.AND;
@@ -585,7 +589,10 @@ public class MaximalCausalModel {
                         Map<Integer, Integer> signalParents = extractSignalParents();
                         fillSignalStack(threadToExecution, signalParents, race);
                         if (Configuration.debug) {
-                            dumpOrdering(threadToExecution, race.firstEvent(), race.secondEvent());
+                            dumpOrderingWithLessThreadSwitches(
+                                    threadToExecution,
+                                    Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
+                                    signalParents);
                         }
                     }
                     solver.pop();
@@ -672,8 +679,8 @@ public class MaximalCausalModel {
     private void findAndDumpOrdering() {
         solver.push();
         if (solver.check() == Status.SATISFIABLE) {
-            Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution();
-            dumpOrdering(threadToExecution, null, null);
+            dumpOrderingWithLessThreadSwitches(
+                    extractExecution(), Optional.empty(), Optional.empty(), extractSignalParents());
         }
         solver.pop();
     }
@@ -699,7 +706,8 @@ public class MaximalCausalModel {
 
     private void dumpOrdering(
             Map<Integer, List<EventWithOrder>> threadToExecution,
-            ReadonlyEventInterface firstRaceEvent, ReadonlyEventInterface secondRaceEvent) {
+            ReadonlyEventInterface firstRaceEvent, ReadonlyEventInterface secondRaceEvent,
+            Map<Integer, Integer> signalParents) {
         System.out.println("Possible ordering of events ..........");
         Map<Integer, Integer> lastIndexPerThread = new HashMap<>();
         threadToExecution.keySet().forEach(threadId -> lastIndexPerThread.put(threadId, 0));
@@ -745,10 +753,12 @@ public class MaximalCausalModel {
                             foundRace = true;
                             lastIndexPerThread.put(threadId, index + 1);
                             System.out.println("-- Found race for threads "
-                                    + threadDescription(minThread, event) + " and "
-                                    + threadDescription(threadId, currentEvent) + " --");
+                                    + threadDescription(minThread, event, signalParents) + " and "
+                                    + threadDescription(threadId, currentEvent, signalParents) + " --");
                             lastThread = Integer.MAX_VALUE;
-                            System.out.println(event.getEvent() + " vs " + currentEvent.getEvent());
+                            System.out.println(prettyPrint(event.getEvent()));
+                            System.out.println(" -- vs");
+                            System.out.println(prettyPrint(currentEvent.getEvent()));
                             break;
                         }
                     }
@@ -756,14 +766,290 @@ public class MaximalCausalModel {
                 }
                 if (!foundRace) {
                     if (lastThread != minThread) {
-                        System.out.println("-- Switching to thread " + threadDescription(minThread, event) + " --");
+                        System.out.println(
+                                "-- Switching to thread " + threadDescription(minThread, event, signalParents) + " --");
                         lastThread = minThread;
                     }
-                    System.out.println(event.getEvent());
+                    System.out.println(prettyPrint(event.getEvent()));
                 }
             }
         } while (hasData);
     }
+
+    private void dumpOrderingWithLessThreadSwitches(
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            Optional<ReadonlyEventInterface> firstRaceEvent, Optional<ReadonlyEventInterface> secondRaceEvent,
+            Map<Integer, Integer> signalParents) {
+        Optional<OrderedEventWithThread> firstRaceOrderedEvent = Optional.empty();
+        Optional<OrderedEventWithThread> secondRaceOrderedEvent = Optional.empty();
+        if (firstRaceEvent.isPresent()) {
+            firstRaceOrderedEvent = findEventForId(threadToExecution, firstRaceEvent.get().getEventId());
+        }
+        if (secondRaceEvent.isPresent()) {
+            secondRaceOrderedEvent = findEventForId(threadToExecution, secondRaceEvent.get().getEventId());
+        }
+        assert(firstRaceEvent.isPresent() == secondRaceEvent.isPresent());
+        assert(firstRaceEvent.isPresent() == firstRaceOrderedEvent.isPresent());
+        assert(secondRaceEvent.isPresent() == secondRaceOrderedEvent.isPresent());
+
+        Map<OrderedEventWithThread, Set<OrderedEventWithThread>> dependencyGraph =
+                buildDependencyGraph(threadToExecution);
+
+        if (firstRaceOrderedEvent.isPresent()) {
+            removeRaceEventsAndEventsNotInvolvedInRace(
+                    dependencyGraph, firstRaceOrderedEvent.get(), secondRaceOrderedEvent.get());
+        }
+
+        List<OrderedEventWithThread> sortedEvents = topologicalSortingWithFewerThreadSwitches(dependencyGraph);
+        int previousThread = Constants.INVALID_TTID;
+        for (OrderedEventWithThread oewt : sortedEvents) {
+            EventWithOrder eventWithOrder = getOrderedEvent(threadToExecution, oewt);
+            if (oewt.thread != previousThread) {
+                System.out.println(
+                        "-- Switching to thread "
+                                + threadDescription(oewt.thread, eventWithOrder, signalParents) + " --");
+                previousThread = oewt.thread;
+            }
+            System.out.println(prettyPrint(eventWithOrder.getEvent()));
+        }
+        if (firstRaceOrderedEvent.isPresent()) {
+            EventWithOrder first = getOrderedEvent(threadToExecution, firstRaceOrderedEvent.get());
+            EventWithOrder second = getOrderedEvent(threadToExecution, secondRaceOrderedEvent.get());
+            System.out.println("-- Found race for threads "
+                    + threadDescription(firstRaceOrderedEvent.get().thread, first, signalParents)
+                    + " and "
+                    + threadDescription(secondRaceOrderedEvent.get().thread, second, signalParents)
+                    + " --");
+            System.out.println(prettyPrint(first.getEvent()));
+            System.out.println(" -- vs");
+            System.out.println(prettyPrint(second.getEvent()));
+        }
+        System.out.println("------------------------------------------");
+    }
+
+    private Map<OrderedEventWithThread, Set<OrderedEventWithThread>> buildDependencyGraph(
+            Map<Integer, List<EventWithOrder>> threadToExecution) {
+        Map<OrderedEventWithThread, Set<OrderedEventWithThread>> dependencies = new HashMap<>();
+        threadToExecution.keySet().forEach(ttid -> {
+            Optional<ReadonlyEventInterface> maybeStartEvent = trace.getStartEventForTtid(ttid);
+            if (!maybeStartEvent.isPresent()) {
+                return;
+            }
+            ReadonlyEventInterface startEvent = maybeStartEvent.get();
+            int parentThreadTtid = trace.getTraceThreadId(startEvent);
+            List<EventWithOrder> parentExecution = threadToExecution.get(parentThreadTtid);
+            OptionalInt maybeStartEventIndex = OptionalInt.empty();
+            for (int i = 0; i < parentExecution.size(); i++) {
+                if (parentExecution.get(i).getEvent().getEventId() == startEvent.getEventId()) {
+                    maybeStartEventIndex = OptionalInt.of(i);
+                    break;
+                }
+            }
+            assert maybeStartEventIndex.isPresent();
+            dependencies
+                    .computeIfAbsent(new OrderedEventWithThread(ttid, 0), key -> new HashSet<>())
+                    .add(new OrderedEventWithThread(parentThreadTtid, maybeStartEventIndex.getAsInt()));
+        });
+        Map<Long, OrderedEventWithThread> lastReadForVariable = new HashMap<>();
+        Map<Long, OrderedEventWithThread> lastWriteForVariable = new HashMap<>();
+        // TODO(virgil): signal control can be more fine-grained.
+        Optional<OrderedEventWithThread> lastSignalEvent = Optional.empty();
+        Map<Long, OrderedEventWithThread> lastLockEvent = new HashMap<>();
+        Optional<OrderedEventWithThread> lastAtomicEvent = Optional.empty();
+        Map<Integer, OrderedEventWithThread> lastEventForThread = new HashMap<>();
+        Map<Integer, Integer> ttidToIndex = new HashMap<>();
+        threadToExecution.keySet().forEach(ttid -> ttidToIndex.put(ttid, 0));
+        Optional<OrderedEventWithThread> maybeNextEvent = goToNextEvent(threadToExecution, ttidToIndex);
+        while (maybeNextEvent.isPresent()) {
+            OrderedEventWithThread nextEvent = maybeNextEvent.get();
+            EventWithOrder eventWithOrder = getOrderedEvent(threadToExecution, nextEvent);
+            Optional<OrderedEventWithThread> maybePreviousThreadEvent =
+                    Optional.ofNullable(lastEventForThread.get(nextEvent.thread));
+            maybePreviousThreadEvent.ifPresent(previousEvent ->
+                    addDependency(dependencies, nextEvent, previousEvent));
+            ReadonlyEventInterface event = eventWithOrder.getEvent();
+            lastEventForThread.put(nextEvent.thread, nextEvent);
+            if (event.isRead()) {
+                Optional<OrderedEventWithThread> maybePreviousWrite =
+                        Optional.ofNullable(lastWriteForVariable.get(event.getDataInternalIdentifier()));
+                maybePreviousWrite.ifPresent(previousWrite -> addDependency(dependencies, nextEvent, previousWrite));
+                lastReadForVariable.put(event.getDataInternalIdentifier(), nextEvent);
+            } else if (event.isWrite()) {
+                Optional<OrderedEventWithThread> maybePreviousRead =
+                        Optional.ofNullable(lastReadForVariable.get(event.getDataInternalIdentifier()));
+                maybePreviousRead.ifPresent(previousRead -> addDependency(dependencies, nextEvent, previousRead));
+                lastWriteForVariable.put(event.getDataInternalIdentifier(), nextEvent);
+            } else if (event.isLock() || event.isUnlock()) {
+                Optional<OrderedEventWithThread> maybePreviousLock =
+                        Optional.ofNullable(lastLockEvent.get(event.getLockId()));
+                maybePreviousLock.ifPresent(previousLock -> addDependency(dependencies, nextEvent, previousLock));
+                lastLockEvent.put(event.getLockId(), nextEvent);
+                if (event.isAtomic()) {
+                    lastSignalEvent.ifPresent(signalEvent -> addDependency(dependencies, nextEvent, signalEvent));
+                    lastAtomicEvent = Optional.of(nextEvent);
+                }
+            } else if (event.isSignalEvent()) {
+                lastAtomicEvent.ifPresent(atomicEvent -> addDependency(dependencies, nextEvent, atomicEvent));
+                lastSignalEvent.ifPresent(signalEvent -> addDependency(dependencies, nextEvent, signalEvent));
+                lastSignalEvent = Optional.of(nextEvent);
+            }
+
+            maybeNextEvent = goToNextEvent(threadToExecution, ttidToIndex);
+        }
+        return dependencies;
+    }
+
+    private Optional<OrderedEventWithThread> goToNextEvent(
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            Map<Integer, Integer> ttidToIndex) {
+        OptionalLong minOrder = OptionalLong.empty();
+        OptionalInt minThread = OptionalInt.empty();
+        for (Map.Entry<Integer, Integer> entry : ttidToIndex.entrySet()) {
+            int ttid = entry.getKey();
+            int index = entry.getValue();
+            List<EventWithOrder> events = threadToExecution.get(ttid);
+            if (index >= events.size()) {
+                continue;
+            }
+            EventWithOrder eventWithOrder = events.get(index);
+            if (!minOrder.isPresent()) {
+                minOrder = OptionalLong.of(eventWithOrder.getOrderId());
+                minThread = OptionalInt.of(ttid);
+                continue;
+            }
+            if (minOrder.getAsLong() > eventWithOrder.getOrderId()) {
+                minOrder = OptionalLong.of(eventWithOrder.getOrderId());
+                minThread = OptionalInt.of(ttid);
+            }
+        }
+        if (!minThread.isPresent()) {
+            return Optional.empty();
+        }
+        int thread = minThread.getAsInt();
+        int eventIndex = ttidToIndex.get(thread);
+        ttidToIndex.put(thread, eventIndex + 1);
+        return Optional.of(new OrderedEventWithThread(minThread.getAsInt(), eventIndex));
+    }
+
+    private boolean addDependency(
+            Map<OrderedEventWithThread, Set<OrderedEventWithThread>> dependencies,
+            OrderedEventWithThread dependent, OrderedEventWithThread dependency) {
+        return dependencies.computeIfAbsent(dependent, k -> new HashSet<>()).add(dependency);
+    }
+
+    private List<OrderedEventWithThread> topologicalSortingWithFewerThreadSwitches(
+            Map<OrderedEventWithThread, Set<OrderedEventWithThread>> dependencyGraph) {
+        Map<OrderedEventWithThread, List<OrderedEventWithThread>> eventToEventsThatDependOnIt = new HashMap<>();
+        dependencyGraph.forEach((dependent, dependencies) ->
+                dependencies.forEach(dependency ->
+                        eventToEventsThatDependOnIt
+                                .computeIfAbsent(dependency, k -> new ArrayList<>())
+                                .add(dependent)));
+        Map<Integer, OrderedEventWithThread> threadToEventWithoutDependencies = new HashMap<>();
+        dependencyGraph.forEach((dependent, dependencies) ->
+                dependencies.stream()
+                        .filter(dependency -> !dependencyGraph.containsKey(dependency))
+                        .forEach(dependency -> threadToEventWithoutDependencies.put(dependency.thread, dependency)));
+        Map<OrderedEventWithThread, Integer> dependencyCount = new HashMap<>();
+        dependencyGraph.forEach((dependent, dependencies) -> dependencyCount.put(dependent, dependencies.size()));
+        int currentThread = Constants.INVALID_TTID;
+        List<OrderedEventWithThread> sorted = new ArrayList<>();
+        while (!threadToEventWithoutDependencies.isEmpty()) {
+            if (!threadToEventWithoutDependencies.containsKey(currentThread)) {
+                currentThread = threadToEventWithoutDependencies.keySet().iterator().next();
+            }
+            OrderedEventWithThread oetw = threadToEventWithoutDependencies.get(currentThread);
+            sorted.add(oetw);
+            threadToEventWithoutDependencies.remove(currentThread);
+            eventToEventsThatDependOnIt.getOrDefault(oetw, Collections.emptyList()).forEach(dependent ->
+                    dependencyCount.compute(dependent, (key, value) -> {
+                        value = value - 1;
+                        if (value == 0) {
+                            assert !threadToEventWithoutDependencies.containsKey(dependent.thread);
+                            threadToEventWithoutDependencies.put(dependent.thread, dependent);
+                        }
+                        return value;
+                    }));
+        }
+        return sorted;
+    }
+
+    private void removeRaceEventsAndEventsNotInvolvedInRace(
+            Map<OrderedEventWithThread, Set<OrderedEventWithThread>> dependencyGraph,
+            OrderedEventWithThread firstRaceEvent,
+            OrderedEventWithThread secondRaceEvent) {
+        Set<OrderedEventWithThread> validEvents = new HashSet<>();
+        Stack<OrderedEventWithThread> toProcess = new Stack<>();
+        toProcess.push(firstRaceEvent);
+        toProcess.push(secondRaceEvent);
+        while (!toProcess.isEmpty()) {
+            OrderedEventWithThread oetw = toProcess.pop();
+            for (OrderedEventWithThread dependency : dependencyGraph.getOrDefault(oetw, Collections.emptySet())) {
+                if (validEvents.contains(dependency)) {
+                    continue;
+                }
+                validEvents.add(dependency);
+                toProcess.push(dependency);
+            }
+        }
+        dependencyGraph.keySet().removeIf(oetw -> !validEvents.contains(oetw));
+        dependencyGraph.values().forEach(oetws -> oetws.removeIf(oetw -> !validEvents.contains(oetw)));
+    }
+
+    private EventWithOrder getOrderedEvent(
+            Map<Integer, List<EventWithOrder>> threadToExecution, OrderedEventWithThread oewt) {
+        return threadToExecution.get(oewt.thread).get(oewt.eventIndex);
+    }
+
+    private Optional<OrderedEventWithThread> findEventForId(
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            long eventId) {
+        for (Map.Entry<Integer, List<EventWithOrder>> entry : threadToExecution.entrySet()) {
+            Integer ttid = entry.getKey();
+            List<EventWithOrder> events = entry.getValue();
+            for (int eventIndex = 0; eventIndex < events.size(); eventIndex++) {
+                ReadonlyEventInterface event = events.get(eventIndex).getEvent();
+                if (event.getEventId() == eventId) {
+                    return Optional.of(new OrderedEventWithThread(ttid, eventIndex));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private class OrderedEventWithThread {
+        private final Integer thread;
+        private final int eventIndex;
+
+        OrderedEventWithThread(Integer thread, int eventIndex) {
+            this.thread = thread;
+            this.eventIndex = eventIndex;
+        }
+
+        @Override
+        public int hashCode() {
+            return thread.hashCode() ^ Integer.hashCode(eventIndex);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (!(obj instanceof OrderedEventWithThread)) {
+                return false;
+            }
+            OrderedEventWithThread other = (OrderedEventWithThread) obj;
+            return other.thread.equals(thread) && other.eventIndex == eventIndex;
+        }
+
+        @Override
+        public String toString() {
+            return thread + " " + eventIndex;
+        }
+    }
+
+    private String prettyPrint(ReadonlyEventInterface event) {
+        return event.getType().getPrinter().print(event);
+    }
+
     private boolean isRaceEvent(
             EventWithOrder event,
             ReadonlyEventInterface firstRaceEvent,
@@ -772,14 +1058,33 @@ public class MaximalCausalModel {
                 || (secondRaceEvent != null && secondRaceEvent.getEventId() == event.getEvent().getEventId());
     }
 
-    private String threadDescription(int threadId, EventWithOrder event) {
-        String description = threadId
-                + " (T" + event.getEvent().getOriginalThreadId();
-        if (event.getEvent().getSignalDepth() != 0) {
-            description += ", SD" + event.getEvent().getSignalDepth()
-                    + ", S" + trace.getSignalNumber(threadId);
+    private String threadDescription(int threadId, EventWithOrder event, Map<Integer, Integer> signalParents) {
+        if (trace.getThreadType(threadId) == ThreadType.THREAD) {
+            return "T" + event.getEvent().getOriginalThreadId();
         }
-        return description + ")";
+        return "(<S" + trace.getSignalNumber(threadId) + "> "
+                    + getInterruptionDescription(threadId, signalParents) + ")";
+    }
+
+    private String getInterruptionDescription(int threadId, Map<Integer, Integer> signalParents) {
+        StringBuilder description = new StringBuilder();
+        int currentThreadId = threadId;
+        while (true) {
+            Optional<Integer> maybeNextThreadId = Optional.ofNullable(signalParents.get(currentThreadId));
+            assert maybeNextThreadId.isPresent();
+            int nextThreadId = maybeNextThreadId.get();
+            description.append(currentThreadId == threadId ? "interrupting " : "which interrupts ");
+            if (trace.getThreadType(nextThreadId) == ThreadType.THREAD) {
+                description.append("T");
+                description.append(trace.getOriginalThreadIdForTraceThreadId(nextThreadId));
+                break;
+            }
+            description.append("<S");
+            description.append(trace.getSignalNumber(nextThreadId));
+            description.append(">");
+            currentThreadId = nextThreadId;
+        }
+        return description.toString();
     }
 
     /**

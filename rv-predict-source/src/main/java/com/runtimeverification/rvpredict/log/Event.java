@@ -167,6 +167,11 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
+    public boolean isAtomic() {
+        return getLockId() == Constants.ATOMIC_LOCK_C;
+    }
+
+    @Override
     public String getLockRepresentation() {
         assert isPreLock() || isLock();
         long lockId = getLockId();

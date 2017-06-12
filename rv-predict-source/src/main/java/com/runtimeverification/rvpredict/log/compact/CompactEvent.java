@@ -115,6 +115,11 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
+    public boolean isAtomic() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
     public long unsafeGetDataInternalIdentifier() {
         return 0;
     }

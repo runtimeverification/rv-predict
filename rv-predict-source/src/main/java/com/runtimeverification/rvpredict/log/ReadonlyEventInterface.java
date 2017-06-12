@@ -76,6 +76,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     boolean isReadUnlock();
     boolean isWriteUnlock();
     boolean isWaitRel();
+    boolean isAtomic();
     boolean isSyncEvent();
     boolean isMetaEvent();
     boolean isCallStackEvent();
@@ -84,4 +85,5 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getLockId();
     boolean isSimilarTo(ReadonlyEventInterface event);
     boolean isSignalMaskRead();
+
 }

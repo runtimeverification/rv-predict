@@ -171,6 +171,11 @@ public class CompactEventFactory {
             }
 
             @Override
+            public boolean isAtomic() {
+                return lockReason == LockReason.ATOMIC;
+            }
+
+            @Override
             public String toString() {
                 return super.toString() + "/" + getLockRepresentation();
             }

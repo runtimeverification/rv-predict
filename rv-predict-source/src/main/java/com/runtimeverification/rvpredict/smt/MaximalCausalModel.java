@@ -59,7 +59,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -249,32 +248,41 @@ public class MaximalCausalModel {
             ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent,
             Integer signalTtid, Integer interruptedTtid,
             long threadSignalNumber, long threadSignalHandler, long interruptingSignalNumber) {
+        if (!startThreadEvent.isPresent()) {
+            return BooleanConstant.FALSE;
+        }
+        ReadonlyEventInterface startThread = startThreadEvent.get();
+        List<ReadonlyEventInterface> establishSignalEvents =
+                trace.getEstablishSignalEvents(threadSignalNumber, threadSignalHandler);
+        List<ReadonlyEventInterface> enablingEvents = establishSignalEvents.stream()
+                .filter(establishEvent ->
+                        Signals.signalIsEnabled(
+                                interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                .collect(Collectors.toList());
+        if (enablingEvents.isEmpty()) {
+            return BooleanConstant.FALSE;
+        }
+        FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
+        enablingEvents
+                .forEach(establishWithEnableEvent -> {
+                    FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
+                    andBuilder().add(HB(establishWithEnableEvent, startThread));
+                    establishSignalEvents.stream()
+                            .filter(establishEvent ->
+                                    !Signals.signalIsEnabled(
+                                            interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                            .forEach(establishWithDisableEvent ->
+                                    enabledJustBefore.add(OR(
+                                            HB(establishWithDisableEvent, establishWithEnableEvent),
+                                            HB(startThread, establishWithDisableEvent))));
+                    signalIsEnabled.add(enabledJustBefore.build());
+                });
+
         FormulaTerm signalInterruption =
                 signalInterruption(
                         startThreadEvent, endThreadEvent,
                         firstSignalEvent, lastSignalEvent,
                         signalTtid, interruptedTtid);
-        List<ReadonlyEventInterface> establishSignalEvents =
-                trace.getEstablishSignalEvents(threadSignalNumber, threadSignalHandler);
-        FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
-        startThreadEvent.ifPresent(
-                startThread -> establishSignalEvents.stream()
-                        .filter(establishEvent ->
-                                Signals.signalIsEnabled(
-                                        interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                        .forEach(establishWithEnableEvent -> {
-                            FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
-                            andBuilder().add(HB(establishWithEnableEvent, startThread));
-                            establishSignalEvents.stream()
-                                    .filter(establishEvent ->
-                                            !Signals.signalIsEnabled(
-                                                    interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                                    .forEach(establishWithDisableEvent ->
-                                            enabledJustBefore.add(OR(
-                                                    HB(establishWithDisableEvent, establishWithEnableEvent),
-                                                    HB(startThread, establishWithDisableEvent))));
-                            signalIsEnabled.add(enabledJustBefore.build());
-                        }));
         return AND(signalInterruption, signalIsEnabled.build());
     }
 

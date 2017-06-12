@@ -55,13 +55,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.AND;
 import static com.runtimeverification.rvpredict.smt.formula.FormulaTerm.BOOL_EQUAL;
@@ -147,9 +146,10 @@ public class MaximalCausalModel {
     private void addSignalInterruptsRestricts() {
         FormulaTerm.Builder allSignalsAndRestrict = FormulaTerm.andBuilder();
         allSignalsAndRestrict.add(BooleanConstant.TRUE);
-        trace.eventsByThreadID().keySet().stream()
+        List<Integer> allSignalTtids = trace.eventsByThreadID().keySet().stream()
                 .filter(ttid -> trace.getThreadType(trace.getFirstEvent(ttid)) == ThreadType.SIGNAL)
-                .forEach(ttid -> {
+                .collect(Collectors.toList());
+        allSignalTtids.forEach(ttid -> {
                     ReadonlyEventInterface firstEvent = trace.getFirstEvent(ttid);
                     ReadonlyEventInterface lastEvent = trace.getLastEvent(ttid);
                     long signalNumber = trace.getSignalNumber(ttid);
@@ -219,6 +219,23 @@ public class MaximalCausalModel {
                     });
                     allSignalsAndRestrict.add(oneSignalOrRestrict.build());
                 });
+        allSignalTtids.forEach(ttid1 -> allSignalTtids.stream().filter(ttid -> ttid > ttid1).forEach(ttid2 -> {
+            ReadonlyEventInterface firstEvent1 = trace.getFirstEvent(ttid1);
+            ReadonlyEventInterface lastEvent1 = trace.getLastEvent(ttid1);
+            ReadonlyEventInterface firstEvent2 = trace.getFirstEvent(ttid2);
+            ReadonlyEventInterface lastEvent2 = trace.getLastEvent(ttid2);
+
+            FormulaTerm.Builder noOverlapOrDifferentThreads = FormulaTerm.orBuilder();
+            noOverlapOrDifferentThreads.add(HB(lastEvent2, firstEvent1));
+            noOverlapOrDifferentThreads.add(HB(lastEvent1, firstEvent2));
+
+            InterruptedThreadVariable v1 = new InterruptedThreadVariable(ttid1);
+            InterruptedThreadVariable v2 = new InterruptedThreadVariable(ttid2);
+            noOverlapOrDifferentThreads.add(LESS_THAN(v1, v2));
+            noOverlapOrDifferentThreads.add(LESS_THAN(v2, v1));
+
+            allSignalsAndRestrict.add(noOverlapOrDifferentThreads.build());
+        }));
         phiTau.add(allSignalsAndRestrict.build());
     }
 
@@ -227,32 +244,41 @@ public class MaximalCausalModel {
             ReadonlyEventInterface firstSignalEvent, ReadonlyEventInterface lastSignalEvent,
             Integer signalTtid, Integer interruptedTtid,
             long threadSignalNumber, long threadSignalHandler, long interruptingSignalNumber) {
+        if (!startThreadEvent.isPresent()) {
+            return BooleanConstant.FALSE;
+        }
+        ReadonlyEventInterface startThread = startThreadEvent.get();
+        List<ReadonlyEventInterface> establishSignalEvents =
+                trace.getEstablishSignalEvents(threadSignalNumber, threadSignalHandler);
+        List<ReadonlyEventInterface> enablingEvents = establishSignalEvents.stream()
+                .filter(establishEvent ->
+                        Signals.signalIsEnabled(
+                                interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                .collect(Collectors.toList());
+        if (enablingEvents.isEmpty()) {
+            return BooleanConstant.FALSE;
+        }
+        FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
+        enablingEvents
+                .forEach(establishWithEnableEvent -> {
+                    FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
+                    andBuilder().add(HB(establishWithEnableEvent, startThread));
+                    establishSignalEvents.stream()
+                            .filter(establishEvent ->
+                                    !Signals.signalIsEnabled(
+                                            interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
+                            .forEach(establishWithDisableEvent ->
+                                    enabledJustBefore.add(OR(
+                                            HB(establishWithDisableEvent, establishWithEnableEvent),
+                                            HB(startThread, establishWithDisableEvent))));
+                    signalIsEnabled.add(enabledJustBefore.build());
+                });
+
         FormulaTerm signalInterruption =
                 signalInterruption(
                         startThreadEvent, endThreadEvent,
                         firstSignalEvent, lastSignalEvent,
                         signalTtid, interruptedTtid);
-        List<ReadonlyEventInterface> establishSignalEvents =
-                trace.getEstablishSignalEvents(threadSignalNumber, threadSignalHandler);
-        FormulaTerm.Builder signalIsEnabled = FormulaTerm.orBuilder();
-        startThreadEvent.ifPresent(
-                startThread -> establishSignalEvents.stream()
-                        .filter(establishEvent ->
-                                Signals.signalIsEnabled(
-                                        interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                        .forEach(establishWithEnableEvent -> {
-                            FormulaTerm.Builder enabledJustBefore = FormulaTerm.andBuilder();
-                            andBuilder().add(HB(establishWithEnableEvent, startThread));
-                            establishSignalEvents.stream()
-                                    .filter(establishEvent ->
-                                            !Signals.signalIsEnabled(
-                                                    interruptingSignalNumber, establishEvent.getFullWriteSignalMask()))
-                                    .forEach(establishWithDisableEvent ->
-                                            enabledJustBefore.add(OR(
-                                                    HB(establishWithDisableEvent, establishWithEnableEvent),
-                                                    HB(startThread, establishWithDisableEvent))));
-                            signalIsEnabled.add(enabledJustBefore.build());
-                        }));
         return AND(signalInterruption, signalIsEnabled.build());
     }
 
@@ -343,14 +369,13 @@ public class MaximalCausalModel {
             lockRegions.forEach(locksetEngine::add);
 
             /* assert lock regions mutual exclusion */
-            lockRegions.forEach(lr1 -> {
-                lockRegions.forEach(lr2 -> {
-                    if (lr1.getTTID() < lr2.getTTID()
-                            && (lr1.isWriteLocked() || lr2.isWriteLocked())) {
-                        phiTau.add(MUTEX(lr1, lr2));
-                    }
-                });
-            });
+            lockRegions.forEach(lr1 -> lockRegions.forEach(lr2 -> {
+                if (lr1.getTTID() < lr2.getTTID()
+                        && (lr1.isWriteLocked() || lr2.isWriteLocked())
+                        && trace.threadsCanOverlap(lr1.getTTID(), lr2.getTTID())) {
+                    phiTau.add(MUTEX(lr1, lr2));
+                }
+            }));
         });
     }
 

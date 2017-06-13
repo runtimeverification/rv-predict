@@ -23,7 +23,7 @@ typedef struct _threadswitch {
 
 static const rvp_trace_header_t header = {
 	  .th_magic = "RVP_"
-	, . th_version = {0, 0, 0, 2}
+	, . th_version = {0, 0, 0, 3}
 	, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
 	, .th_pointer_width = sizeof(rvp_addr_t)
 	, .th_data_width = sizeof(uint32_t)

@@ -2,6 +2,8 @@ package com.runtimeverification.rvpredict.metadata;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.trace.Trace;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.FileNotFoundException;
@@ -9,7 +11,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,6 +72,41 @@ public class Metadata implements MetadataInterface, Serializable {
         return varId;
     }
 
+    public String getRaceLocationSigHelper(ReadonlyEventInterface e1, ReadonlyEventInterface e2, Configuration config) {
+        StringBuilder sb = new StringBuilder();
+        if(config.isLLVMPrediction()) {
+            long idx = e1.getDataObjectExternalIdentifier();
+            if(idx != 0) {
+                String sig = getVariableSig(idx).replace("/", ".");
+                return "@" + sig;
+            } else {
+                return "#" + e1.getFieldIdOrArrayIndex();
+            }
+        } else {
+            int idx = e1.getFieldIdOrArrayIndex();
+            if (idx < 0) {
+                String sig = getVariableSig(-idx).replace("/", ".");
+                long object = e1.getDataObjectExternalIdentifier();
+                return object == 0 ? "@" + sig : sig;
+            }
+            return "#" + idx;
+        }
+    }
+
+    @Override
+    public String getRaceLocationSig(ReadonlyEventInterface e1,
+	    ReadonlyEventInterface e2, Trace trace, Configuration config) {
+        String locSig = getRaceLocationSigHelper(e1, e2, config);
+        switch (locSig.charAt(0)) {
+            case '#':
+                return "array element " + locSig;
+            case '@':
+                return locSig.substring(1);
+            default:
+                return "field " + locSig;
+        }
+    }
+
     @Override
     public String getVariableSig(long varId) {
         return varIdToVarSig[Math.toIntExact(varId)];
@@ -98,6 +139,11 @@ public class Metadata implements MetadataInterface, Serializable {
             System.err.println("getLocationSig(" + locId + ") -> null");
         }
         return sig;
+    }
+
+    @Override
+    public String getLocationPrefix() {
+        return "at ";
     }
 
     public void setLocationSig(int locId, String sig) {

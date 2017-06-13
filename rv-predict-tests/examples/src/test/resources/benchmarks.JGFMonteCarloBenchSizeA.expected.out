@@ -1,1 +1,1 @@
-Data race on field benchmarks.montecarlo.Universal.UNIVERSAL_DEBUG: (.*)> at benchmarks.montecarlo.Universal.<init>\(Universal.java:63\)(.*)> at benchmarks.montecarlo.Universal.<init>\(Universal.java:63\)(.*)
+Data race on field benchmarks.montecarlo.Universal.UNIVERSAL_DEBUG:(.*)> at benchmarks.montecarlo.Universal.<init>\(Universal.java:63\)(.*)> at benchmarks.montecarlo.Universal.<init>\(Universal.java:63\)(.*)

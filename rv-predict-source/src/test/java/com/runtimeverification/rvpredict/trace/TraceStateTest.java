@@ -1,7 +1,9 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.trace.Trace;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

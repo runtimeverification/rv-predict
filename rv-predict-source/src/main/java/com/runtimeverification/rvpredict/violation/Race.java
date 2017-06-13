@@ -117,43 +117,14 @@ public class Race {
     }
 
     public String getRaceLocationSig() {
-        if(config.isLLVMPrediction()) {
-            long idx = e1.getDataObjectExternalIdentifier();
-            if(idx != 0) {
-                String sig = trace.metadata().getVariableSig(idx).replace("/", ".");
-                return "@" + sig;
-            } else {
-                return "#" + e1.getFieldIdOrArrayIndex();
-            }
-        } else {
-            int idx = e1.getFieldIdOrArrayIndex();
-            if (idx < 0) {
-                String sig = trace.metadata().getVariableSig(-idx).replace("/", ".");
-                long object = e1.getDataObjectExternalIdentifier();
-                return object == 0 ? "@" + sig : sig;
-            }
-            return "#" + idx;
-        }
+        return trace.metadata().getRaceLocationSig(e1, e2, trace, config);
     }
-
     public String generateRaceReport() {
         signatureProcessor.reset();
-        String locSig = getRaceLocationSig();
-        switch (locSig.charAt(0)) {
-            case '#':
-                locSig = "array element " + locSig;
-                break;
-            case '@':
-                locSig = locSig.substring(1);
-                break;
-            default:
-                locSig = "field " + locSig;
-        }
+        String locSig = trace.metadata().getRaceLocationSig(e1, e2, trace, config);
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Data race on %s: %n", locSig));
+        sb.append(String.format("Data race on %s:%n", locSig));
         boolean reportableRace;
-
-        generateBracketing(e1, Arrays.asList(trace.getStacktraceAt(e1), trace.getStacktraceAt(e2)), sb);
 
         if (trace.metadata().getLocationSig(e1.getLocationId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
@@ -168,99 +139,6 @@ public class Race {
 
         sb.append(String.format("%n"));
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
-    }
-
-    private static class EventBracket {
-        private Optional<ReadonlyEventInterface> bracket = Optional.empty();
-        private final long target;
-        private final Where where;
-
-        private enum Where {
-            BEFORE(-1),
-            AFTER(1);
-
-            private final long comparisonSign;
-
-            Where(long comparisonSign) {
-                this.comparisonSign = comparisonSign;
-            }
-
-            public long getComparisonSign() {
-                return comparisonSign;
-            }
-        }
-
-        private EventBracket(long target, Where where) {
-            this.target = target;
-            this.where = where;
-        }
-
-        private void processStackEvent(ReadonlyEventInterface event) {
-            long eventCfa = event.getCanonicalFrameAddress();
-            if (bracket.isPresent()) {
-                long bracketCfa = bracket.get().getCanonicalFrameAddress();
-                if (Math.signum(bracketCfa - eventCfa) * (target - eventCfa) < 0) {
-                    bracket = Optional.of(event);
-                }
-            } else if ((eventCfa - target) * where.getComparisonSign() > 0) {
-                bracket = Optional.of(event);
-            }
-        }
-
-        Optional<ReadonlyEventInterface> getBracket() {
-            return bracket;
-        }
-    }
-
-    private void generateBracketing(
-            ReadonlyEventInterface event, List<Collection<ReadonlyEventInterface>> stackTraces, StringBuilder sb) {
-        if (!config.isLLVMPrediction() || !config.isCompactTrace()) {
-            return;
-        }
-        long address = event.getDataObjectExternalIdentifier();
-        EventBracket globalBefore = new EventBracket(address, EventBracket.Where.BEFORE);
-        EventBracket globalAfter = new EventBracket(address, EventBracket.Where.AFTER);
-        for (Collection<ReadonlyEventInterface> stack : stackTraces) {
-            EventBracket stackBefore = new EventBracket(address, EventBracket.Where.BEFORE);
-            EventBracket stackAfter = new EventBracket(address, EventBracket.Where.AFTER);
-            stack.stream().filter(ReadonlyEventInterface::isCallStackEvent).forEach(stackEvent -> {
-                stackBefore.processStackEvent(stackEvent);
-                stackAfter.processStackEvent(stackEvent);
-            });
-            Optional<ReadonlyEventInterface> maybeCfaBefore = stackBefore.getBracket();
-            Optional<ReadonlyEventInterface> maybeCfaAfter = stackAfter.getBracket();
-
-            maybeCfaBefore.ifPresent(globalBefore::processStackEvent);
-            maybeCfaAfter.ifPresent(globalAfter::processStackEvent);
-
-            if (maybeCfaBefore.isPresent() && maybeCfaAfter.isPresent()) {
-                ReadonlyEventInterface cfaBefore = maybeCfaBefore.get();
-                ReadonlyEventInterface cfaAfter = maybeCfaAfter.get();
-                sb.append(String.format(
-                        "    Bracketed by [0x%016x] ({0x%016x}) and [0x%016x] ({0x%016x})}.%n%n",
-                        cfaBefore.getCanonicalFrameAddress(),
-                        cfaBefore.getLocationId(),
-                        cfaAfter.getCanonicalFrameAddress(),
-                        cfaAfter.getLocationId()));
-                return;
-            }
-        }
-        Optional<ReadonlyEventInterface> maybeCfaAfter = globalAfter.getBracket();
-        if (maybeCfaAfter.isPresent()) {
-            ReadonlyEventInterface cfaAfter = maybeCfaAfter.get();
-            sb.append(String.format(
-                    "    Before [0x%016x] ({0x%016x}).%n%n",
-                    cfaAfter.getCanonicalFrameAddress(),
-                    cfaAfter.getLocationId()));
-        }
-        Optional<ReadonlyEventInterface> maybeCfaBefore = globalBefore.getBracket();
-        if (maybeCfaBefore.isPresent()) {
-            ReadonlyEventInterface cfaBefore = maybeCfaBefore.get();
-            sb.append(String.format(
-                    "    After [0x%016x] ({0x%016x}).%n%n",
-                    cfaBefore.getCanonicalFrameAddress(),
-                    cfaBefore.getLocationId()));
-        }
     }
 
     public List<SignalStackEvent> getFirstSignalStack() {
@@ -370,10 +248,10 @@ public class Race {
                 signatureProcessor.process(locSig);
             }
             if (elem.isLock()) {
-                sb.append(String.format("        - locked %s at %s %n", elem.getLockRepresentation(),
+                sb.append(String.format("        - locked %s %s%s%n", elem.getLockRepresentation(), metadata.getLocationPrefix(),
                         locSig));
             } else {
-                sb.append(String.format("      %s at %s%n", isTopmostStack ? ">" : " ", locSig));
+                sb.append(String.format("      %s %s%s%n", isTopmostStack ? ">" : " ", metadata.getLocationPrefix(), locSig));
                 isTopmostStack = false;
             }
         }
@@ -386,9 +264,9 @@ public class Race {
                 if (locId >= 0) {
                     String locationSig = metadata.getLocationSig(locId);
                     signatureProcessor.process(locationSig);
-                    sb.append(String.format("        at %s%n", locationSig));
+                    sb.append(String.format("        %s%s%n", metadata.getLocationPrefix(), locationSig));
                 } else {
-                    sb.append("        at unknown location%n");
+                    sb.append(String.format("        %sunknown location%n", metadata.getLocationPrefix()));
                 }
             } else {
                 if (otid == 1) {

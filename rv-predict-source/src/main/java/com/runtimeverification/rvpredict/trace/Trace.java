@@ -1019,7 +1019,8 @@ public class Trace {
                             long signalNumber1 = getSignalNumber(ttid1);
                             long signalNumber2 = getSignalNumber(ttid2);
                             if (atLeastOneSigsetAllowsSignal(signalNumber1, signalNumber2)
-                                    || atLeastOneSigsetAllowsSignal(signalNumber2, signalNumber1)) {
+                                    || atLeastOneSigsetAllowsSignal(signalNumber2, signalNumber1)
+                                    || signalsCanRunOnDifferentThreads(signalNumber1, signalNumber2)) {
                                 ttidsThatCanOverlap.computeIfAbsent(ttid1, HashSet::new).add(ttid2);
                                 return;
                             }
@@ -1033,6 +1034,35 @@ public class Trace {
                 }));
         new HashMap<>(ttidsThatCanOverlap).forEach((ttid, ttids) -> ttids.forEach(
                 ttid2 -> ttidsThatCanOverlap.computeIfAbsent(ttid2, k -> new HashSet<>()).add(ttid)));
+    }
+
+    private boolean signalsCanRunOnDifferentThreads(long signalNumber1, long signalNumber2) {
+        List<Integer> threadsWhereSignal1IsEnabled = getThreadsWhereSignalIsEnabled(signalNumber1);
+        List<Integer> threadsWhereSignal2IsEnabled = getThreadsWhereSignalIsEnabled(signalNumber2);
+        if (threadsWhereSignal1IsEnabled.size() > 1 || threadsWhereSignal2IsEnabled.size() > 1) {
+            return true;
+        }
+        assert threadsWhereSignal1IsEnabled.size() > 0;
+        assert threadsWhereSignal2IsEnabled.size() > 0;
+        // TODO(virgil): Here and above I could also check that the threads can, indeed, overlap.
+        return !threadsWhereSignal1IsEnabled.get(0).equals(threadsWhereSignal2IsEnabled.get(0));
+    }
+
+    private List<Integer> getThreadsWhereSignalIsEnabled(long signalNumber) {
+        List<Integer> enabledThreads = new ArrayList<>();
+        tidToEvents.forEach((ttid, events) -> {
+            if (getTtidsWhereSignalIsEnabledAtStart(signalNumber).contains(ttid)) {
+                enabledThreads.add(ttid);
+                return;
+            }
+            for (ReadonlyEventInterface event : events) {
+                if (Signals.signalEnableChange(event, signalNumber).orElse(Boolean.FALSE)) {
+                    enabledThreads.add(ttid);
+                    return;
+                }
+            }
+        });
+        return enabledThreads;
     }
 
     public boolean threadsCanOverlap(int ttid1, int ttid2) {

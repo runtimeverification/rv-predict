@@ -73,7 +73,7 @@ public class LockRegion implements Comparable<LockRegion> {
         return lockId;
     }
 
-    public long getTTID() {
+    public int getTTID() {
         return ttid;
     }
 

@@ -3,7 +3,7 @@
 #include "trace.h"
 
 const void *
-__rvpredict_func_entry(const void *cfa)
+__rvpredict_func_entry(const void *cfa, const void *callsite)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
@@ -11,6 +11,7 @@ __rvpredict_func_entry(const void *cfa)
 
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_ENTERFN);
 	rvp_buf_put_voidptr(&b, cfa);
+	rvp_buf_put_voidptr(&b, callsite);
 	rvp_ring_put_buf(r, b);
 
 	return retaddr;

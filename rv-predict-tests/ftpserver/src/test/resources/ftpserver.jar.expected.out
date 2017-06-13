@@ -1,13 +1,13 @@
-Data race on field org.apache.mina.core.buffer.IoBuffer.allocator: (.*)> at org.apache.mina.core.buffer.IoBuffer.allocate\(IoBuffer.java:218\)(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
+Data race on field org.apache.mina.core.buffer.IoBuffer.allocator:(.*)> at org.apache.mina.core.buffer.IoBuffer.allocate\(IoBuffer.java:218\)(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
 
-Data race on field org.apache.mina.core.buffer.IoBuffer.allocator: (.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:167\)(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
+Data race on field org.apache.mina.core.buffer.IoBuffer.allocator:(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:167\)(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
 
-Data race on field org.apache.mina.core.buffer.IoBuffer.allocator: (.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
+Data race on field org.apache.mina.core.buffer.IoBuffer.allocator:(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)> at org.apache.mina.core.buffer.IoBuffer.setAllocator\(IoBuffer.java:169\)(.*)
 
-Data race on field org.apache.mina.core.buffer.AbstractIoBuffer.mark: (.*)> at org.apache.mina.core.buffer.AbstractIoBuffer.mark\(AbstractIoBuffer.java:402\)(.*)> at org.apache.mina.core.buffer.AbstractIoBuffer.mark\(AbstractIoBuffer.java:402\)(.*)
+Data race on field org.apache.mina.core.buffer.AbstractIoBuffer.mark:(.*)> at org.apache.mina.core.buffer.AbstractIoBuffer.mark\(AbstractIoBuffer.java:402\)(.*)> at org.apache.mina.core.buffer.AbstractIoBuffer.mark\(AbstractIoBuffer.java:402\)(.*)
 
-Data race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime: (.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadBytes\(IoServiceStatistics.java:318\)(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadBytes\(IoServiceStatistics.java:318\)(.*)
+Data race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime:(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadBytes\(IoServiceStatistics.java:318\)(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadBytes\(IoServiceStatistics.java:318\)(.*)
 
-Data race on field org.apache.mina.core.service.IoServiceStatistics.lastWriteTime: (.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseWrittenBytes\(IoServiceStatistics.java:336\)(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseWrittenBytes\(IoServiceStatistics.java:336\)(.*)
+Data race on field org.apache.mina.core.service.IoServiceStatistics.lastWriteTime:(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseWrittenBytes\(IoServiceStatistics.java:336\)(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseWrittenBytes\(IoServiceStatistics.java:336\)(.*)
 
-Data race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime: (.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)
+Data race on field org.apache.mina.core.service.IoServiceStatistics.lastReadTime:(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)> at org.apache.mina.core.service.IoServiceStatistics.increaseReadMessages\(IoServiceStatistics.java:327\)(.*)

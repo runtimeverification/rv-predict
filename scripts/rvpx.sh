@@ -85,6 +85,8 @@ set +e
 exitcode=$?
 set -e
 
+# If the command is not found (exit code 127) or if it is found, but not
+# executable (exit code 126), don't try to perform prediction.
 [ $exitcode -ne 126 -a $exitcode -ne 127 ] && predict
 
 trap - EXIT ALRM HUP INT PIPE QUIT TERM

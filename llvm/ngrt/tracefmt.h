@@ -205,6 +205,7 @@ typedef struct {
 typedef struct {
 	rvp_addr_t deltop;
 	rvp_addr_t cfa;
+	rvp_addr_t callsite;
 } __packed __aligned(sizeof(uint32_t)) rvp_enterfn_t;
 
 typedef struct {

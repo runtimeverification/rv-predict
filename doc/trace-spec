@@ -521,22 +521,29 @@ trace ::= (delta, 'load[n]') addr value
 
                 `self.PC <- self.PC + delta`
 
-        | (delta, 'enterfn') cfa
+        | (delta, 'enterfn') cfa callsite
 
                 The current thread added `delta` to its program counter
                 and entered a function at the new program counter.
                 The DWARF Canonical Frame Address (CFA) for the function's
                 new stack frame is given by the address `cfa`, which
-                begins on the first 32-bit boundary after the deltop;
-                it is `ptrw` bytes wide.
+                begins on the first 32-bit boundary after the deltop; it
+                is `ptrw` bytes wide.  In `callsite` is the instruction
+                where the just-entered function will return.  It is also
+                `ptrw` bytes wide, and it starts on the first 32-bit
+                boundary after `cfa`.
 
                 `self.PC <- self.PC + delta`
 
         | (delta, 'exitfn')
 
                 The current thread added `delta` to its program counter
-                and, at the new program counter, returned from the
-                current function.
+                and exited a function.  'enterfn' and 'exitfn' events
+                should form matched pairs: the value of the program
+                counter immediately after an 'enterfn' event should always
+                equal the program counter immediately after the matching
+                'exitfn' event.  Trace readers may reject a trace if it
+                does not display this property.
 
                 `self.PC <- self.PC + delta`
 
@@ -627,3 +634,10 @@ More changes:
 14) change the version number specification: it's 4 bytes, major / minor
     / teeny / tiny, not a 32-bit word.  Increase the current version
     number to 0.0.0.1.
+
+Change affecting function entry events:
+
+15) mention that 'enterfn' and 'exitfn' events form matched pairs with
+    the same PC after each event in a pair.
+
+16) add the `callsite` to the 'enterfn' event.

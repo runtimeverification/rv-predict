@@ -16,12 +16,14 @@ import org.mockito.runners.MockitoJUnitRunner;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
+import java.util.OptionalLong;
 
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class FunctionEnterReaderTest {
     private static final long CANONICAL_FRAME_ADDRESS = 1234567890123456L;
+    private static final long CALL_SITE_ADDRESS = 123L;
 
     @Mock private CompactEvent mockCompactEvent;
     @Mock private Context mockContext;
@@ -34,17 +36,19 @@ public class FunctionEnterReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = FunctionEnterReader.createReader();
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(16, reader.size(mockTraceHeader));
     }
 
     @Test
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventFactory.enterFunction(mockContext, CANONICAL_FRAME_ADDRESS))
+        when(mockCompactEventFactory.enterFunction(
+                mockContext, CANONICAL_FRAME_ADDRESS, OptionalLong.of(CALL_SITE_ADDRESS)))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
-        ByteBuffer buffer = ByteBuffer.allocate(16).putLong(CANONICAL_FRAME_ADDRESS).putLong(Long.MAX_VALUE);
+        ByteBuffer buffer = ByteBuffer.allocate(24)
+                .putLong(CANONICAL_FRAME_ADDRESS).putLong(CALL_SITE_ADDRESS).putLong(Long.MAX_VALUE);
         buffer.rewind();
 
         CompactEventReader.Reader reader = FunctionEnterReader.createReader();

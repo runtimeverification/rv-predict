@@ -781,4 +781,6 @@ public class Configuration implements Constants {
     }
 
     public boolean withoutGeneration() { return withoutGeneration; }
+
+    public boolean isDebug() { return debug; }
 }

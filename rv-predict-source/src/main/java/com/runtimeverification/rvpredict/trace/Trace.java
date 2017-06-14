@@ -31,7 +31,6 @@ package com.runtimeverification.rvpredict.trace;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
-import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
@@ -50,9 +49,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -707,7 +704,7 @@ public class Trace {
                                 .add(event);
                     }
                 } else {
-		    if (Configuration.debug)
+		    if (state.config().isDebug())
 		        System.err.println(event.getType());
                     throw new IllegalStateException();
                 }
@@ -819,8 +816,8 @@ public class Trace {
                         lockIdToOpenWriteLockIdx.values()).forEach(idx -> {
                    if (critical[idx]) {
                        lockIdToLockRegions
-                           .computeIfAbsent(tmp_events[idx].getLockId(), p -> new ArrayList<>())
-                           .add(new LockRegion(tmp_events[idx], null, ttid));
+                               .computeIfAbsent(tmp_events[idx].getLockId(), p -> new ArrayList<>())
+                               .add(new LockRegion(tmp_events[idx], null, ttid));
                    }
                 });
 

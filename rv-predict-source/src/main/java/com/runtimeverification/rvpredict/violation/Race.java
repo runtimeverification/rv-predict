@@ -39,10 +39,9 @@ import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.Trace;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 /**
  * Represents a data race. A data race is uniquely identified by the two memory
@@ -235,25 +234,18 @@ public class Race {
         List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         stacktrace.sort((e1, e2) -> -e1.compareTo(e2));
-        for (ReadonlyEventInterface elem : stacktrace) {
-            long locId = elem.getLocationId();
-            String locSig = locId >= 0 ? metadata.getLocationSig(locId)
-                    : "... not available ...";
-            if (config.isExcludedLibrary(locSig)) {
-                assert !elem.isLock() : "Locations for locks should have been handled in TraceState::updateLockLocToUserLoc";
+        for (int i = 0; i < stacktrace.size(); i++) {
+            ReadonlyEventInterface elem = stacktrace.get(i);
+
+            OptionalLong locId = findEventLocation(stacktrace, i, elem);
+            if (!locId.isPresent()) {
+                continue;
+            }
+            if (!displayOneStackLocation(sb, metadata, isTopmostStack, elem, locId.getAsLong())) {
                 continue;
             }
             stackSize++;
-            if (locId >= 0) {
-                signatureProcessor.process(locSig);
-            }
-            if (elem.isLock()) {
-                sb.append(String.format("        - locked %s %s%s%n", elem.getLockRepresentation(), metadata.getLocationPrefix(),
-                        locSig));
-            } else {
-                sb.append(String.format("      %s %s%s%n", isTopmostStack ? ">" : " ", metadata.getLocationPrefix(), locSig));
-                isTopmostStack = false;
-            }
+            isTopmostStack = false;
         }
 
         if (trace.getThreadType(e) == ThreadType.THREAD) {
@@ -277,6 +269,52 @@ public class Race {
             }
         }
         return stackSize>0;
+    }
+
+    private OptionalLong findEventLocation(
+            List<ReadonlyEventInterface> stacktrace, int eventIndex, ReadonlyEventInterface event) {
+        OptionalLong locId;
+        if (!event.isInvokeMethod() || !config.isCompactTrace()) {
+            return OptionalLong.of(event.getLocationId());
+        }
+        locId = event.getCallSiteAddress();
+        if (!locId.isPresent()) {
+            for (int j = eventIndex + 1; j < stacktrace.size(); j++) {
+                ReadonlyEventInterface callingFunction = stacktrace.get(j);
+                if (callingFunction.isInvokeMethod()) {
+                    return OptionalLong.of(callingFunction.getLocationId());
+                }
+            }
+        }
+        return locId;
+    }
+
+    private boolean displayOneStackLocation(
+            StringBuilder sb, MetadataInterface metadata,
+            boolean isTopmostStack, ReadonlyEventInterface event, long locId) {
+        String locSig = locId >= 0 ? metadata.getLocationSig(locId)
+                : "... not available ...";
+        if (config.isExcludedLibrary(locSig)) {
+            assert !event.isLock() : "Locations for locks should have been handled in TraceState::updateLockLocToUserLoc";
+            return false;
+        }
+        if (locId >= 0) {
+            signatureProcessor.process(locSig);
+        }
+        if (event.isLock()) {
+            sb.append(String.format(
+                    "        - locked %s %s%s%n",
+                    event.getLockRepresentation(),
+                    metadata.getLocationPrefix(),
+                    locSig));
+        } else {
+            sb.append(String.format(
+                    "      %s %s%s%n",
+                    isTopmostStack ? ">" : " ",
+                    metadata.getLocationPrefix(),
+                    locSig));
+        }
+        return true;
     }
 
     private String getHeldLocksReport(List<ReadonlyEventInterface> heldLocks) {

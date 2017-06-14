@@ -1,7 +1,10 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Table;
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -21,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 
 import static org.mockito.Matchers.any;
@@ -55,9 +59,14 @@ public class TraceTest {
     private static final long SIGNAL_MASK_5 = 704;
     private static final long GENERATION_1 = 800;
     private static final long BASE_ID = 900;
+    private static final long CANONICAL_FRAME_ADDRESS_1 = 1000;
+    private static final long CANONICAL_FRAME_ADDRESS_2 = 1001;
+    private static final long CANONICAL_FRAME_ADDRESS_3 = 1002;
+    private static final OptionalLong CALL_SITE_ADDRESS_1 = OptionalLong.of(1100);
 
     @Mock private TraceState mockTraceState;
     @Mock private Context mockContext;
+    @Mock private Configuration mockConfiguration;
 
     private long nextIdDelta;
     private Map<Long, Integer> eventIdToTtid;
@@ -109,6 +118,8 @@ public class TraceTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_3)).thenReturn(3L);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
+        when(mockTraceState.config()).thenReturn(mockConfiguration);
+        when(mockTraceState.getThreadStateSnapshot(anyInt())).thenReturn(new ThreadState());
     }
 
     @Test
@@ -741,7 +752,6 @@ public class TraceTest {
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_MASK_5),
                         tu.nonAtomicStore(ADDRESS_2, VALUE_1)));
-
         when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
         when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
         when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
@@ -750,6 +760,58 @@ public class TraceTest {
         Assert.assertEquals(3, trace.getEstablishSignalEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1).size());
         Assert.assertEquals(1, trace.getEstablishSignalEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_2).size());
         Assert.assertEquals(1, trace.getEstablishSignalEvents(SIGNAL_NUMBER_2, SIGNAL_HANDLER_3).size());
+    }
+
+    @Test
+    public void extractsStackTraceWithFunctionEntryEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+        List<ReadonlyEventInterface> event1List;
+        List<ReadonlyEventInterface> event2List;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setPc(PC_BASE),
+                        tu.enterFunction(CANONICAL_FRAME_ADDRESS_1, CALL_SITE_ADDRESS_1),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.enterFunction(CANONICAL_FRAME_ADDRESS_2, CALL_SITE_ADDRESS_1),
+                        event1List = tu.nonAtomicLoad(ADDRESS_2, VALUE_1),
+                        tu.enterFunction(CANONICAL_FRAME_ADDRESS_3, CALL_SITE_ADDRESS_1),
+                        event2List = tu.nonAtomicLoad(ADDRESS_3, VALUE_1)
+                ),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.nonAtomicStore(ADDRESS_3, VALUE_1)
+                ));
+
+        when(mockConfiguration.stacks()).thenReturn(true);
+
+        Trace trace = createTrace(rawTraces);
+
+        ImmutableList<ReadonlyEventInterface> event1Stack =
+                ImmutableList.copyOf(trace.getStacktraceAt(TraceUtils.extractSingleEvent(event1List)));
+        ImmutableList<ReadonlyEventInterface> event2Stack =
+                ImmutableList.copyOf(trace.getStacktraceAt(TraceUtils.extractSingleEvent(event2List)));
+
+        Assert.assertEquals(3, event1Stack.size());
+        Assert.assertEquals(EventType.READ, event1Stack.get(0).getType());
+        Assert.assertEquals(ADDRESS_2, event1Stack.get(0).getDataObjectExternalIdentifier());
+        Assert.assertEquals(EventType.INVOKE_METHOD, event1Stack.get(2).getType());
+        Assert.assertEquals(CANONICAL_FRAME_ADDRESS_1, event1Stack.get(2).getCanonicalFrameAddress());
+        Assert.assertEquals(EventType.INVOKE_METHOD, event1Stack.get(1).getType());
+        Assert.assertEquals(CANONICAL_FRAME_ADDRESS_2, event1Stack.get(1).getCanonicalFrameAddress());
+
+
+        Assert.assertEquals(4, event2Stack.size());
+        Assert.assertEquals(EventType.READ, event2Stack.get(0).getType());
+        Assert.assertEquals(ADDRESS_3, event2Stack.get(0).getDataObjectExternalIdentifier());
+        Assert.assertEquals(EventType.INVOKE_METHOD, event2Stack.get(1).getType());
+        Assert.assertEquals(CANONICAL_FRAME_ADDRESS_3, event2Stack.get(1).getCanonicalFrameAddress());
+        Assert.assertEquals(EventType.INVOKE_METHOD, event2Stack.get(2).getType());
+        Assert.assertEquals(CANONICAL_FRAME_ADDRESS_2, event2Stack.get(2).getCanonicalFrameAddress());
+        Assert.assertEquals(EventType.INVOKE_METHOD, event2Stack.get(3).getType());
+        Assert.assertEquals(CANONICAL_FRAME_ADDRESS_1, event2Stack.get(3).getCanonicalFrameAddress());
     }
 
     private Trace createTrace(List<RawTrace> rawTraces) {

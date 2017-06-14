@@ -94,7 +94,7 @@ public:
   GlobalVariable *createOrderingPointer(IRBuilder<> *, AtomicOrdering);
   Value *createOrdering(IRBuilder<> *, AtomicOrdering);
   static char ID;  // Pass identification, replacement for typeid.
-  virtual void getAnalysisUsage(AnalysisUsage &Info) const;
+  virtual void getAnalysisUsage(AnalysisUsage &Info) const override;
 
  private:
   void initializeCallbacks(Module &M);
@@ -485,31 +485,32 @@ RVPredictInstrument::runOnFunction(Function &F)
 		, .lockfn = m.getFunction("pthread_mutex_lock")
 		, .trylockfn = m.getFunction("pthread_mutex_trylock")
 		, .unlockfn = m.getFunction("pthread_mutex_unlock")
-		, .createstubfn = (pthreads.createfn == nullptr)
-		    ? nullptr
-		    : m.getOrInsertFunction("__rvpredict_pthread_create",
-		        pthreads.createfn->getFunctionType())
-		, .joinstubfn = (pthreads.joinfn == nullptr)
-		    ? nullptr
-		    : m.getOrInsertFunction("__rvpredict_pthread_join",
-					    pthreads.joinfn->getFunctionType())
-		, .exitstubfn = (pthreads.exitfn == nullptr)
-		    ? nullptr
-		    : m.getOrInsertFunction("__rvpredict_pthread_exit",
-					    pthreads.exitfn->getFunctionType())
-		, .lockstubfn = (pthreads.lockfn == nullptr)
-		    ? nullptr
-		    : m.getOrInsertFunction("__rvpredict_pthread_mutex_lock",
-					    pthreads.lockfn->getFunctionType())
-		, .trylockstubfn = (pthreads.trylockfn == nullptr)
-		    ? nullptr
-		    : m.getOrInsertFunction("__rvpredict_pthread_mutex_trylock",
-			pthreads.trylockfn->getFunctionType())
-		, .unlockstubfn = (pthreads.unlockfn == nullptr)
-		    ? nullptr
-		    : m.getOrInsertFunction("__rvpredict_pthread_mutex_unlock",
-			pthreads.unlockfn->getFunctionType())
 	};
+
+	pthreads.createstubfn = (pthreads.createfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_create",
+		pthreads.createfn->getFunctionType());
+	pthreads.joinstubfn = (pthreads.joinfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_join",
+				    pthreads.joinfn->getFunctionType());
+	pthreads.exitstubfn = (pthreads.exitfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_exit",
+				    pthreads.exitfn->getFunctionType());
+	pthreads.lockstubfn = (pthreads.lockfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_mutex_lock",
+				    pthreads.lockfn->getFunctionType());
+	pthreads.trylockstubfn = (pthreads.trylockfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_mutex_trylock",
+		pthreads.trylockfn->getFunctionType());
+	pthreads.unlockstubfn = (pthreads.unlockfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_mutex_unlock",
+		pthreads.unlockfn->getFunctionType());
 
 	// Traverse all instructions, collect loads/stores/returns, check for calls.
 	for (auto &bblock : F) {
@@ -589,7 +590,7 @@ RVPredictInstrument::runOnFunction(Function &F)
 			auto replace_insn = CallInst::Create(
 			    replacefn,
 			    ArrayRef<Value *>(args, nargs));
-			delete args;
+			delete[] args;
 			ReplaceInstWithInst(ci, replace_insn);
 		}
 	}

@@ -1,0 +1,36 @@
+:
+# diff two TET journals, allowing for activity nos., times and PIDs
+# if differences detected then use sdiff if it exists.
+
+SEDCMD='
+	s/|[0-9][0-9]*/|ACT/
+	s/^\([^|]*|[^|]*\)..:..:../\1HH:MM:SS/
+	/^520/s/\(  *[^ ]*\)  *[^ ]*/\1 PID/
+'
+
+TMP1=/tmp/jdiff1.$$
+TMP2=/tmp/jdiff2.$$
+
+trap "rm -f $TMP1 $TMP2; exit" 1 2 3 15
+
+sed "$SEDCMD" "$1" > $TMP1 &
+sed "$SEDCMD" "$2" > $TMP2 &
+
+wait
+
+type sdiff 2>&1 >/dev/null
+if [ $? -eq 0 ]
+then
+	diff $TMP1 $TMP2 2>&1 >/dev/null
+	rc=$?
+	if [ $? -eq 1 ]
+	then
+		sdiff -l  $TMP1 $TMP2
+	fi
+else
+	diff $TMP1 $TMP2 
+	rc=$?
+fi
+rm -f $TMP1 $TMP2
+
+exit $rc

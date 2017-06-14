@@ -1,0 +1,20 @@
+SCCS: @(#)README	1.1 99/09/03 TETware release 3.8
+
+This is the TETware demonstration test suite for the Java API.
+It is described in the chapter entitled
+"Writing a Java language API-conforming test suite", in the TETware
+Programmers Guide.
+
+It has been designed to run as a non-distributed test suite on all platforms
+for which the Java API is supported.
+
+Setup:
+
+	Ensure TET_ROOT is set correctly in the environment.
+	Ensure TET_EXECUTE is not set in the environment.
+
+Build, execute and clean:
+
+	cd $TET_ROOT/jdemo
+	tcc -becp
+

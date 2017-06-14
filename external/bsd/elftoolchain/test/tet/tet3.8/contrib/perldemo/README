@@ -1,0 +1,14 @@
+This is a perl version of the simple C API demo suite
+
+To run the simple demo
+
+tcc -p -bec contrib/perldemo
+
+If the execute mode fails, check the !# statement at the top
+of each perl file in the ts subdirectory. As delivered it
+assumes perl is in /usr/bin/perl, you may need to change this
+to /usr/local/bin/perl or /opt/bin/perl.
+
+To run the ETET scenario
+
+tcc -e -v TET_COMPAT=etet -p -s etet_scen contrib/perldemo

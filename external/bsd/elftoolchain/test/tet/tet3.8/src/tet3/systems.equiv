@@ -1,0 +1,74 @@
+#
+#      SCCS:  @(#)systems.equiv	1.5 (05/07/13) 
+#
+#	UniSoft Ltd., London, England
+#
+# (C) Copyright 1992 X/Open Company Limited
+# (C) Copyright 2005 The Open Group
+#
+# All rights reserved.  No part of this source code may be reproduced,
+# stored in a retrieval system, or transmitted, in any form or by any
+# means, electronic, mechanical, photocopying, recording or otherwise,
+# except as stated in the end-user licence agreement, without the prior
+# permission of the copyright owners.
+#
+# X/Open and the 'X' symbol are trademarks of X/Open Company Limited in
+# the UK and other countries.
+#
+#
+# ************************************************************************
+#
+# SCCS:   	@(#)systems.equiv	1.5 05/07/13 TETware release 3.8
+# NAME:		systems.equiv
+# PRODUCT:	TETware
+# AUTHOR:	Andrew Dingwall, UniSoft Ltd.
+# DATE CREATED:	June 1992
+#
+# DESCRIPTION:
+#	example systems.equiv file for the TETware INET implementation
+#
+#	each entry in this file permits one or more systems to log on
+#	to the tccd daemon by specifying the host name or IP address
+#	of one system that is allowed access, or a domain name
+#	(beginning with a dot) to allow access by all systems in that
+#	domain, or a network subnet (an address including trailing zeros
+#	then a slash and the mask length) to allow access by all systems
+#	on that subnet
+#
+#	an entry should be included in this file to enable the tcc which
+#	runs on a particular system to log on to tccd on that system
+#
+#	a systems.equiv file should exist in the home directory for
+#	the user tet (as specified in /etc/passwd), on each system
+#	that runs tccd
+#
+#	if tccd is invoked with the -u option to use a different user ID,
+#	the systems.equiv file should instead exist in the home directory
+#	of the specified user
+#
+# MODIFICATIONS:
+#
+#	Geoff Clare, The Open Group, July 2005
+#	Added support for domains and subnets.
+# 
+# ************************************************************************
+
+
+# individual systems by host name
+jim
+root44
+beech.example.net
+fir.example.net
+
+# individual systems by IP address
+192.168.1.2
+192.168.1.3
+10.11.12.1
+
+# all systems in a specified domain
+.example.org
+
+# all systems on a specified network subnet
+192.168.1.0/24
+10.0.0.0/8
+

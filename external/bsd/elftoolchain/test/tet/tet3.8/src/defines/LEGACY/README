@@ -1,0 +1,8 @@
+SCCS: @(#)README	1.1 (98/09/01) TETware release 3.8
+
+The defines.mk files in this directory relate to legacy systems to which
+the TETware developers no longer have access.
+
+They are still included in the distribution in case they are of use to
+anyone but it is likely that they will need some attention before
+TETware can be compiled on these systems.

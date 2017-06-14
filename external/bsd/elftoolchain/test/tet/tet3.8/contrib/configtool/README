@@ -1,0 +1,29 @@
+Additional tools to simplify installation:
+
+
+configure tool
+--------------
+The configure tool is for simplifying autoconfiguration.
+The configuration tool consists of a top-level configure
+script, a helper script for autoconfiguration, and additional
+makefiles.
+
+To install this distribution, if you have a sharfile
+Unwind this sharfile in TET_ROOT
+	sh sharfile
+Alternateley run make
+	make install
+
+To run the script
+	sh configure -t transport
+
+where transport is either xti, inet or lite
+
+
+sigtool
+-------
+
+The sigtool script is for identifying signal parameters
+needed when parameterising a new defines.mk file.
+
+

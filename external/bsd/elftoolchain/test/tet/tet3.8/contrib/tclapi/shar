@@ -1,0 +1,1046 @@
+#--------------------------------CUT HERE-------------------------------------
+#! /bin/sh
+#
+# This is a shell archive.  Save this into a file, edit it
+# and delete all lines above this comment.  Then give this
+# file to sh by executing the command "sh file".  The files
+# will be extracted into the current directory owned by
+# you with default permissions.
+#
+# The files contained herein are:
+#
+# -r--r--r--    1 ajosey   other      19061 Nov 18 14:51 tcl.tcm.dat
+# -r--r--r--    1 ajosey   other       8463 Nov 18 14:51 tetapi.tcl
+#
+echo 'x - tcl.tcm.dat'
+if test -f tcl.tcm.dat; then echo 'shar: not overwriting tcl.tcm.dat'; else
+sed 's/^X//' << '________This_Is_The_END________' > tcl.tcm.dat
+X# 
+X# @(#)tcl.tcm.dat	1.5
+X#
+X# Copyright 1990, 1997, The Open Group (X/Open)
+X# Copyright 1990, 1994 Open Software Foundation (OSF)
+X# Copyright 1990 Unix International (UI)
+X#
+X# Permission to use, copy, modify, and distribute this software and its
+X# documentation for any purpose and without fee is hereby granted, provided
+X# that the above copyright notice appear in all copies and that both that
+X# copyright notice and this permission notice appear in supporting
+X# documentation, and that the name of OSF, UI or X/Open not be used in 
+X# advertising or publicity pertaining to distribution of the software 
+X# without specific, written prior permission.  OSF, UI and X/Open make 
+X# no representations about the suitability of this software for any purpose.
+X# It is provided "as is" without express or implied warranty.
+X#
+X# OSF, UI and X/Open DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, 
+X# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO 
+X# EVENT SHALL OSF, UI or X/Open BE LIABLE FOR ANY SPECIAL, INDIRECT OR 
+X# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF 
+X# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR 
+X# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR 
+X# PERFORMANCE OF THIS SOFTWARE.
+X# 
+X# 
+X# HISTORY
+X# 18 November 1997, Andrew Josey, The Open Group
+X# Fix TET_CODE handling to handle user defined results codes.
+X# Previously it was fixed to the predefined codes. Also handle
+X# TET_ABORT properly
+X#
+X# 8 November 1997, Andrew Josey, The Open Group
+X# Make tet_reason consistent with the perl api, i.e. to return
+X# the reason string or "" otherwise
+X#
+X# 22 October 1997, Andrew Josey, The Open Group
+X# Minor speedups and add tet_delete fix
+X#
+X# 15th May 1997, Andrew Josey, The Open Group
+X# Fix cleanup, startup handling and initialise TET_TMPRES
+X# file as per suggestion from geoffs
+X#
+X# 10th February 1997, Andrew Josey, The Open Group
+X# Clean up temporary files before exiting
+X# Apply known bug fixes.
+X#
+X# $Log: tcm.tcl.dat,v $
+X# Revision 1.1.2.5  1994/03/07  23:00:09  rousseau
+X# 	Fix signal reporting and evaluation problems.
+X# 	[1994/03/07  22:59:00  rousseau]
+X#
+X# Revision 1.1.2.4  1994/03/07  21:35:24  rousseau
+X# 	Use '-c' option to sh for portability (CR 10085).
+X# 	[1994/03/07  21:35:08  rousseau]
+X# 
+X# Revision 1.1.2.3  1994/02/28  21:48:17  rousseau
+X# 	Fixed handling of ic list specifiers in tet_scen file.
+X# 	[1994/02/28  21:48:09  rousseau]
+X# 
+X# Revision 1.1.2.2  1994/02/25  22:17:47  rousseau
+X# 	      Fixed signal handling code.
+X# 	      [1994/02/25  22:15:05  rousseau]
+X# 
+X# Revision 1.1.2.1  1994/02/10  22:54:40  rousseau
+X# 	      Initial version
+X# 	      [1994/02/10  22:51:44  rousseau]
+X# 
+X# 	      Initial version.
+X# 	      [1993/12/17  21:03:40  rousseau]
+X# 
+X# $EndLog$
+X
+X# DESCRIPTION:
+X#       This file contains the support routines for the sequencing and control
+X#       of invocable components and test purposes.
+X#       It should be sourced (by means of the tcl "source" command) into a 
+X#       tcl shell script containing definitions of the invocable components 
+X#       and test purposes that may be executed, after those definitions have 
+X#       been made.
+X#       Test purposes may be written as tcl functions or executable
+X#       tcl scripts.
+X#
+X#       This file sources tetapi.tcl which contains the tcl API functions.
+X#       Test purposes written as separate tcl scripts must also source
+X#       tetapi.tcl in order to use those functions.
+X#
+X#       The user-supplied tcl variable iclist should contain a list of all
+X#       the invocable components in the testset;
+X#       these are named ic1, ic2 ... etc.
+X#       For each invocable component thus specified, the user should define
+X#       a variable whose name is the same as that of the component.
+X#       Each such variable should contain the names of the test purposes
+X#       associated with each invocable component; for example:
+X#               iclist="ic1 ic2"
+X#               ic1="test1-1 test1-2 test1-3"
+X#               ic2="test2-1 test2-2"
+X#
+X#       The NUMBERS of the invocable components to be executed are specified
+X#       on the command line.
+X#       In addition, the user may define the variables tet_startup and
+X#       tet_cleanup; if defined, the related functions (or tcl scripts)
+X#       are executed at the start and end of processing, respectively.
+X#
+X#       The TCM makes the NAME of the currently executing test purpose
+X#       available in the environment variable tet_thistest.
+X#
+X#       The TCM reads configuration variables from the file specified by the
+X#       TET_CONFIG environment variable; these are placed in the environment
+X#       and marked as readonly.
+X#       This file (or the environment) should contain an assignment for
+X#       TET_NSIG which should be set to one greater than the highest signal
+X#       number supported by the implementation.
+X#
+X
+X
+X# standard signals - may not be specified in TET_SIG_IGN and TET_SIG_LEAVE
+Xset TET_STD_SIGNALS "STD_SIGNAL_LIST"
+X
+X# signals that are always unhandled
+Xset TET_SPEC_SIGNALS "SPEC_SIGNAL_LIST"
+X
+Xset TET_NSIG TET_NSIG_NUM
+X
+X#
+X# TCM global variables
+X#
+Xset tet_thistest ""
+X
+X#
+X# "private" TCM variables
+X#
+X
+X#set TET_CWD [exec pwd]
+X# speedup
+Xset TET_CWD [pwd]
+Xset TET_DELETES $TET_CWD/tet_deletes
+Xtrace variable TET_DELETES wu tcl_var_protect
+Xset TET_RESFILE $TET_CWD/tet_xres
+Xtrace variable TET_RESFILE wu tcl_var_protect
+Xset TET_STDERR $TET_CWD/tet_stderr
+Xtrace variable TET_STDERR wu tcl_var_protect
+Xset TET_TESTS $TET_CWD/tet_tests
+Xtrace variable TET_TESTS wu tcl_var_protect
+Xset TET_TMPFILES $TET_CWD/tet_tmpfiles
+Xtrace variable TET_TMPFILES wu tcl_var_protect
+Xset TET_TMPRES $TET_CWD/tet_tmpres
+Xtrace variable TET_TMPRES wu tcl_var_protect
+X
+Xset TET_BLOCK 0
+Xset TET_CONTEXT 0
+Xset TET_EXITVAL 0
+Xset TET_SEQUENCE 0
+Xset TET_TPCOUNT 0
+X
+Xset TET_CAUGHTSIG 0
+X
+Xset TET_TMP1 $TET_CWD/tet1.[exec sh -c {(:)& echo $!}]
+Xset TET_TMP2 $TET_CWD/tet2.[exec sh -c {(:)& echo $!}]
+X
+X# ***********************************************************************
+X
+X#
+X# "private" TCM function definitions
+X# these interfaces may go away one day
+X#
+X
+X# tet_time - return the time
+Xproc tet_time {} {
+X    return [clock format [clock seconds] -format %H:%M:%S]
+X}
+X
+X
+X
+X# tet_ismember - return 1 if $1 is in the set $2 ...
+X# otherwise return 0
+Xproc tet_ismember {member args} {
+X    foreach i $args {
+X        foreach j $i {
+X            if {[string compare $member $j] == 0} {
+X                return 1
+X            }
+X        }
+X    }
+X    return 0
+X}
+X
+X
+X# tet_abandon - signal handler used during startup and cleanup
+Xproc tet_abandon {signal} {
+X    global TET_EXITVAL
+X
+X    puts stdout "signal in abandon is $signal"
+X    if {$signal == 15} {
+X        tet_sigterm $signal
+X    } else {
+X        tet_error Abandoning tetset: caught unexpected signal $signal.
+X    }
+X    
+X    set TET_EXITVAL $signal
+X    exit
+X}
+X
+X
+X# tet_sigterm - signal handler for SIGTERM
+Xproc tet_sigterm {signal} {
+X    global TET_EXTIVAL
+X    
+X    puts stdout "signal in sigterm is $signal"
+X    if {([catch {set signal}] == 1) || 
+X        ([string length $signal] == 0)} {
+X        puts stderr "tet_sigterm: no signal specified"
+X        exit
+X    }
+X    
+X    tet_error "Abandoning test case: received signal $signal"
+X    tet_docleanup
+X    set TET_EXITVAL $signal
+X    exit
+X}
+X
+X
+X# tet_sigskip - signal handler used during test execution
+Xproc tet_sigskip {signal} {
+X    
+X    puts stdout "signal in sigskip is $signal"
+X    if {([catch {set signal}] == 1) || 
+X        ([string length $signal] == 0)} {
+X        puts stderr "tet_sigskip: $signal is not defined"
+X        exit
+X    }
+X    
+X    tet_infoline "unexpected signal $signal received"
+X    tet_result UNRESOLVED
+X    if {$signal == 15} {
+X        tet_sigterm $signal
+X    }
+X}
+X
+X
+X# tet_tpend - report on a test purpose
+Xproc tet_tpend {test_name} {
+X    global TET_TMPRES TET_NEXTRES TET_RESULT TET_RESNUM
+X    
+X    if {([catch {set test_name}] == 1) || 
+X        ([string length $test_name] == 0)} {
+X        puts stderr "tet_tpend: no test_name specified"
+X        exit
+X    }
+X    
+X    set fd [open $TET_TMPRES r]
+X    seek $fd 0
+X    
+X    set TET_RESULT ""
+X    while {![eof $fd]} {
+X        set TET_NEXTRES [gets $fd]
+X
+X        if {[string length $TET_NEXTRES] == 0} {
+X            continue
+X        }
+X
+X        if {[string length $TET_RESULT] == 0} {
+X            set TET_RESULT $TET_NEXTRES
+X            continue
+X        }
+X        
+X        switch $TET_NEXTRES {
+X            PASS {
+X            }
+X            FAIL {
+X                set TET_RESULT $TET_NEXTRES
+X            }
+X            UNRESOLVED -
+X            UNINITIATED {
+X                if {$TET_RESULT != "FAIL"} {
+X                    set TET_RESULT $TET_NEXTRES
+X                }
+X            }
+X            NORESULT {
+X                if {($TET_RESULT != "FAIL") && 
+X                    ($TET_RESULT != "UNRESOLVED") &&
+X                    ($TET_RESULT != "UNINITIATED")} {
+X                    set TET_RESULT $TET_NEXTRES
+X                }
+X            }
+X            UNSUPPORTED -
+X            NOTINUSE -
+X            UNTESTED {
+X                if {$TET_RESULT == "PASS"} {
+X                    set TET_RESULT $TET_NEXTRES
+X                }
+X            }
+X            default {
+X                if {($TET_RESULT == "PASS") ||
+X                    ($TET_RESULT == "UNSUPPORTED") ||
+X                    ($TET_RESULT == "NOTINUSE") || 
+X                    ($TET_RESULT == "UNTESTED")} {
+X                    set TET_RESULT $TET_NEXTRES
+X                }
+X            }
+X        }
+X    }
+X
+X    close $fd
+X
+X    global TET_ABORT   # for passing between functions
+X    set TET_ABORT NO
+X    set TET_RESNUM -1
+X    if {[string length $TET_RESULT] == 0} {
+X        set TET_RESULT NORESULT
+X        set TET_RESNUM 7
+X    } elseif {![tet_getcode $TET_RESULT]} {
+X        # tet_getcode should set TET_RESNUM and TET_ABORT
+X    } else {
+X        set TET_RESULT "NO RESULT NAME"
+X        set TET_RESNUM -1
+X    }
+X    
+X    tet_output 220 "$test_name $TET_RESNUM [tet_time]" $TET_RESULT
+X    
+X    if {$TET_ABORT == "YES"} {
+X        set TET_TRAP_FUNCTION tet_abandon
+X        
+X        tet_output 510 "" "ABORT on result code $TET_RESNUM \"$TET_RESULT\""
+X        
+X        tet_docleanup
+X        
+X        set TET_EXITVAL 1
+X        exit
+X    }
+X}
+X
+X
+X# tet_docleanup - execute the tet_cleanup function
+Xproc tet_docleanup {} {
+X  global tet_thistest TET_TPCONT TET_BLOCK tet_cleanup
+X
+X  set tet_thistest ""
+X  set TET_TPCOUNT 0
+X  set TET_BLOCK 0
+X  tet_setblock
+X  if {[string length $tet_cleanup] > 0} {
+X  	eval $tet_cleanup
+X  }
+X}
+X
+X
+X# tet_var_protect - write and unset reace for read-only variables
+Xproc tet_var_protect {name element op} {
+X  puts stderr "Error: $name is a read-only variable."
+X  exit
+X}
+X
+X
+X# ***********************************************************************
+X
+X# read in API functions
+Xset TET_ROOT $env(TET_ROOT)
+X
+Xif {([catch {set TET_ROOT}] == 1) || 
+X    ([string length TET_ROOT] == 0)} {
+X  puts stderr "tcm_main: TET_ROOT not defined"
+X  exit
+X}
+X
+Xsource $env(TET_ROOT)/lib/tcl/tetapi.tcl
+X
+X
+X# ***********************************************************************
+X
+X#
+X# TCM main flow
+X#
+X
+X# capture command line args before they disappear
+Xset TET_TCM_ARGC $argc
+Xset TET_TCM_ARGS $argv
+Xset TET_PNAME $argv0
+X
+X# arrange to clean up on exit
+Xexec rm -f $TET_TMPFILES
+Xrename exit dcecp_internal_exit
+Xproc exit {{status 0}} {
+X    global TET_TMPFILES TET_EXITVAL
+X
+X    if {[catch {exec cat $TET_TMPFILES} msg]} {
+X        set TET_TMPFILELIST ""
+X    } else {
+X        set TET_TMPFILELIST $msg
+X    }
+X
+X    regsub -all \n $TET_TMPFILELIST " " TET_TMP
+X    
+X    foreach TET_TMP2 [concat $TET_TMP $TET_TMPFILES] {
+X        exec rm $TET_TMP2
+X    }
+X    
+X    dcecp_internal_exit $TET_EXITVAL
+X}
+Xsignal trap {1 2 3 15} {set TET_EXITVAL 1;exit}
+X
+X# zero and open execution results file
+Xif {[catch {exec touch $TET_RESFILE} msg]} {
+X    set TET_EXITVAL 1
+X    exit
+X}
+X
+Xset TET_TMP [concat $TET_DELETES $TET_STDERR $TET_TESTS $TET_TMP1 $TET_TMPRES]
+Xforeach TET_A $TET_TMP {
+X    exec rm -rf $TET_A
+X    exec echo $TET_A >> $TET_TMPFILES
+X    exec touch $TET_A
+X}
+X
+X# The long and winding road to the TET_CONFIG file...
+Xif {[catch {set TET_CONFIG $env(TET_CONFIG)}] == 0} {
+X    if {![file readable $TET_CONFIG]} {
+X        tet_error Can not read config file ${TET_CONFIG}.
+X    } else {
+X        # Read through TET_CONFIG file and rewrite into a format
+X        # that we (Tcl) can understand.
+X        set fd [open $TET_CONFIG r]
+X        
+X        while {![eof $fd]} {
+X            set line [gets $fd]
+X
+X            set var_index [string first "=" $line]
+X            if {$var_index == -1} {
+X                continue
+X            }
+X
+X            set var [string range $line 0 [expr $var_index - 1]]
+X            set value [string range $line [expr $var_index + 1] end]
+X            exec echo set $var $value >> $TET_TMP1
+X        }
+X            
+X        close $fd
+X        set TET_CONFIG $TET_TMP1
+X        source ${TET_CONFIG}
+X    }
+X}
+X
+X
+X# set current context to process ID
+Xtet_setcontext
+X
+X# set up default results code file if so required
+Xif {[catch {set $TET_CODE}]} {
+X#    set TET_CODE tet_code
+X# AJ 18/11/97 set TET_CODE from the environment passed by tcc
+X    set TET_CODE $env(TET_CODE)
+X    if {![file readable $TET_CODE]} { # only set the defaults if the file is not readable
+X        if {$TET_CODE != "tet_code"} {
+X            tet_error "could not open results code file" $TET_CODE
+X        }
+X
+X    exec echo $TET_TMP2 >> $TET_TMPFILES
+X    exec echo "
+X0       PASS            Continue
+X1       FAIL            Continue
+X2       UNRESOLVED      Continue
+X3       NOTINUSE        Continue
+X4       UNSUPPORTED     Continue
+X5       UNTESTED        Continue
+X6       UNINITIATED     Continue
+X7       NORESULT        Continue" > $TET_TMP2
+X
+X    set TET_CODE $TET_TMP2
+X    }
+X}
+X
+Xswitch -regexp $TET_CODE {
+X    ^/ {
+X    }
+X    default {
+X#        set TET_CODE "[exec pwd]/$TET_CODE"
+X        set TET_CODE "[pwd]/$TET_CODE"
+X   }
+X}
+X
+X# process command-line args
+Xif {1 > $TET_TCM_ARGC} {
+X    set TET_TCM_ARGS all
+X}
+X
+Xset TET_ICLAST -1
+Xset TET_ICLIST [exec echo $iclist | tr -cd { 0123456789}]
+X
+Xif {[string length $TET_ICLIST] == 0} {
+X    set TET_ICLIST 0
+X}
+X
+Xset TET_ICFIRST_DEF [exec echo $TET_ICLIST | sed {s/ .*//}]
+Xset TET_TMP [exec echo $TET_TCM_ARGS | tr , " "]
+Xforeach TET_A $TET_TMP {
+X    switch -regexp $TET_A {
+X        all* {
+X            if {0 >= $TET_ICLAST} {
+X                set TET_ICFIRST $TET_ICFIRST_DEF
+X                foreach TET_B $TET_ICLIST {
+X                    if {$TET_B <= $TET_ICFIRST} {
+X                        set TET_ICFIRST $TET_B
+X                    }
+X                }
+X            } else {
+X                incr TET_ICLAST
+X            }
+X            
+X            set TET_ICLAST $TET_ICFIRST
+X
+X            foreach TET_B $TET_ICLIST {
+X                if {$TET_B > $TET_ICLAST} {
+X                    set TET_ICLAST $TET_B
+X                }
+X            }
+X
+X            if {([catch {set TET_B}] == 1) || 
+X                ([string length $TET_B] == 0)} {
+X                set TET_B 0
+X            }
+X            
+X            if {$TET_ICLAST > $TET_B} {
+X                set TET_ICLAST $TET_B
+X            }
+X        }
+X        default {
+X            set TET_TMP [exec echo $TET_A | sed {h; s/^\([0-9]*\).*/set TET_ICFIRST \1/; p; g; s/^[^\-]*-*//; s/^\([0-9]*\).*/set TET_ICLAST X\1/}]
+X            eval $TET_TMP
+X            if {$TET_ICLAST == "X"} {
+X                set TET_ICLAST -1
+X            } else {
+X                set TET_ICLAST [string range $TET_ICLAST 1 end]
+X            }
+X        }
+X    }
+X
+X    if {[string length $TET_ICFIRST] == 0} {
+X        set TET_ICNO $TET_ICFIRST_DEF
+X    } else {
+X        set TET_ICNO $TET_ICFIRST
+X    }
+X 
+X    if {[string length $TET_ICLAST] == 0} {
+X        set TET_ICLAST $TET_ICNO
+X    }
+X    
+X    if {$TET_ICLAST == -1} {
+X        set TET_ICLAST $TET_ICNO
+X    }
+X
+X    while {$TET_ICNO <= $TET_ICLAST} {
+X        if {[tet_ismember $TET_ICNO $TET_ICLIST]} {
+X            set TET_TMP ic$TET_ICNO
+X            if {[string length $TET_TMP] > 0} {
+X                exec echo ic$TET_ICNO >> $TET_TESTS
+X            }
+X        } else {
+X            tet_error "IC $TET_ICNO is not defined for this test case"
+X        }
+X            
+X        incr TET_ICNO
+X    }
+X}
+Xexec cat $TET_TESTS
+X
+Xset TET_ICCOUNT [exec wc -l < $TET_TESTS | tr -cd {0123456789}]
+X
+X# print startup message to execution results file
+Xtet_output 15 "3.1 $TET_ICCOUNT" "TCM Start"
+X
+X# do initial signal list processing
+X
+Xif {[catch {set TET_SIG_LEAVE}]} {
+X    set TET_SIG_LEAVE ""
+X}
+Xif {[catch {set TET_SIG_IGN}]} {
+X    set TET_SIG_IGN ""
+X}
+X
+X
+Xset TET_SIG_LEAVE2 ""
+Xset TET_SIG_IGN2 ""
+Xset TET_TMP "TET_SIG_LEAVE TET_SIG_IGN"
+Xforeach TET_A $TET_TMP {
+X    set TMP_SIG_LIST [set $TET_A]
+X    set TET_TMP [exec echo $TMP_SIG_LIST | tr , {\012}]
+X    foreach TET_TMP2 $TET_TMP {
+X        set TET_B [lindex $TET_TMP2 0]
+X        if {[string length $TET_B] == 0} {
+X            continue;
+X        } elseif {[tet_ismember $TET_B $TET_STD_SIGNALS $TET_SPEC_SIGNALS]} {
+X            tet_error "warning: illegal entry $TET_B in $TET_A ignored"
+X        } else {
+X            set ${TET_A}2 "[set ${TET_A}2] $TET_B"
+X        }
+X    }
+X}
+X
+Xset TET_SIG_LEAVE2 "$TET_SIG_LEAVE2 $TET_SPEC_SIGNALS"
+Xset TET_A 1
+Xif {([catch {set TET_NSIG}]) || ([string length $TET_NSIG] == 0)} {
+X    puts stderr "TET_NSIG: Variable is null or not set"
+X    exit
+X}
+X
+Xset TET_TRAP_FUNCTION tet_abandon
+Xset TET_DEFAULT_SIGS ""
+X
+Xwhile {$TET_A < $TET_NSIG} {
+X    if {[tet_ismember $TET_A $TET_SIG_LEAVE2]} {
+X    } elseif {[tet_ismember $TET_A $TET_SIG_IGN2]} {
+X        signal ignore $TET_A
+X    } elseif {[tet_ismember $TET_A $TET_STD_SIGNALS]}  {
+X       	    signal trap $TET_A "signal ignore $TET_A; $TET_TRAP_FUNCTION $TET_A"
+X            set TET_DEFAULT_SIGS "$TET_DEFAULT_SIGS $TET_A"
+X    } 
+X    incr TET_A
+X}
+X
+X# do startup processing
+Xif {[string length $tet_startup] > 0} {
+X	eval $tet_startup
+X}
+X
+X# do main loop processing
+Xset TET_TMP [exec cat $TET_TESTS]
+Xforeach TET_ICNAME $TET_TMP {
+X    set TET_TPLIST [set $TET_ICNAME]
+X    set TET_ICNUMBER [exec echo $TET_ICNAME | tr -cd '0123456789']
+X    set TET_TPCOUNT [llength $TET_TPLIST]
+X    tet_output 400 "$TET_ICNUMBER $TET_TPCOUNT [tet_time]" "IC Start"
+X    set TET_TPCOUNT 0
+X    
+X    foreach tet_thistest $TET_TPLIST {
+X        incr TET_TPCOUNT
+X        tet_output 200 "$TET_TPCOUNT [tet_time]" "TP Start"
+X
+X# 970513 geoffs: Initialise TET_TMPRES file
+X        exec cp /dev/null $TET_TMPRES     
+X
+X# tp deleted ?
+X	if { [tet_reason $tet_thistest] != "" } {
+X            tet_infoline [eval tet_reason $tet_thistest]
+X            tet_result UNINITIATED
+X        } else {
+X            set TET_TRAP_FUNCTION tet_sigskip
+X            # signal trap $TET_DEFAULT_SIGS 
+X            
+X            set TET_TMP [set tet_thistest]
+X            # Run the test
+X            [set TET_TMP]
+X        }
+X        tet_tpend $TET_TPCOUNT
+X    }
+X    tet_output 410 "$TET_ICNUMBER $TET_TPCOUNT [tet_time]" "IC End"
+X}
+X
+X# do cleanup processing
+Xset TET_TRAP_FUNCTION tet_abandon
+X
+Xif {[string length $tet_cleanup] > 0} {
+X  	eval $tet_cleanup
+X}
+X
+X#
+X# Cleanup temporary files before exit
+X#
+Xset TET_B [exec cat $TET_TMPFILES]
+Xset TET_B [concat $TET_TMPFILES $TET_B]
+Xforeach TET_A $TET_B {
+X    exec rm -rf $TET_A
+X}     
+X# successful exit
+Xset TET_EXITVAL 0
+X
+________This_Is_The_END________
+if test `wc -l < tcl.tcm.dat` -ne 675; then
+	echo 'shar: tcl.tcm.dat was damaged during transit (should have been 675 bytes)'
+fi
+fi		; : end of overwriting check
+echo 'x - tetapi.tcl'
+if test -f tetapi.tcl; then echo 'shar: not overwriting tetapi.tcl'; else
+sed 's/^X//' << '________This_Is_The_END________' > tetapi.tcl
+X#
+X# @(#)tetapi.tcl	1.4
+X#
+X# Copyright 1990, 1994 Open Software Foundation (OSF)
+X# Copyright 1990 Unix International (UI)
+X# Copyright 1990, 1997 The Open Group (X/Open)
+X#
+X# Permission to use, copy, modify, and distribute this software and its
+X# documentation for any purpose and without fee is hereby granted, provided
+X# that the above copyright notice appear in all copies and that both that
+X# copyright notice and this permission notice appear in supporting
+X# documentation, and that the name of OSF, UI or X/Open not be used in 
+X# advertising or publicity pertaining to distribution of the software 
+X# without specific, written prior permission.  OSF, UI and X/Open make 
+X# no representations about the suitability of this software for any purpose.
+X# It is provided "as is" without express or implied warranty.
+X#
+X# OSF, UI and X/Open DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, 
+X# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO 
+X# EVENT SHALL OSF, UI or X/Open BE LIABLE FOR ANY SPECIAL, INDIRECT OR 
+X# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF 
+X# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR 
+X# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR 
+X# PERFORMANCE OF THIS SOFTWARE.
+X# 
+X# 
+X# HISTORY
+X# 18 November 1997, Andrew Josey, The Open Group
+X# set TET_ABACTION with a default value
+X#
+X# 8 November 1997, Andrew Josey, The Open Group
+X# Make tet_reason consistent with the perl api, i.e. to return
+X# the reason string or "" otherwise
+X#
+X# 22 October 1997, Andrew Josey, The Open Group
+X# Minor speedup changes and tet_delete handling
+X#
+X# 10th October 1997, Andrew Josey, The Open Group
+X# add missing close-bracket "]" at line 309 for use with tcl8
+X# as per bug report.
+X#
+X# 10th February 1997, Andrew Josey, The Open Group
+X# Apply known bug fixes
+X#
+X# $Log: tetapi.tcl,v $
+X# Revision 1.1.2.2  1994/03/07  21:35:25  rousseau
+X# 	Use '-c' option to sh for portability (CR 10085).
+X# 	[1994/03/07  21:35:10  rousseau]
+X#
+X# Revision 1.1.2.1  1994/02/10  22:54:42  rousseau
+X# 	Initial version
+X# 	[1994/02/10  22:53:53  rousseau]
+X# 
+X# $EndLog$
+X
+X
+X# DESCRIPTION:
+X#	This file contains tcl functions for use with the tcl API.
+X#	It is sourced automatically by the tcl TCM.
+X#	In addition it should be sourced by test purposes that are written as
+X#	separate tcl scripts, by means of the tcl "source" command.
+X#
+X#	The following functions are provided:
+X#
+X#		tet_setcontext
+X#		tet_setblock
+X#		tet_infoline
+X#		tet_result
+X#		tet_delete
+X#		tet_reason
+X#
+X
+X# set current context and reset block and sequence
+X# usage: tet_setcontext
+Xproc tet_setcontext {} {
+X  global TET_CONTEXT TET_BLOCK TET_SEQUENCE
+X
+X  set TET_CONTEXT [exec sh -c {(:)& echo $!}]
+X  set TET_BLOCK 1
+X  set TET_SEQUENCE 1
+X}
+X
+X
+X# increment the current block ID, reset the sequence number to 1
+X# usage: tet_setblock
+Xproc tet_setblock {} {
+X  global TET_BLOCK TET_SEQUENCE
+X
+X  incr TET_BLOCK
+X  set TET_SEQUENCE 1
+X}
+X
+X
+X# print an information line to the execution results file
+X# and increment the sequence number
+X# usage: tet_infoline args [...]
+Xproc tet_infoline args {
+X  global TET_TPCOUNT TET_CONTEXT TET_BLOCK TET_SEQUENCE
+X
+X  tet_output 520 "$TET_TPCOUNT $TET_CONTEXT $TET_BLOCK $TET_SEQUENCE" $args
+X  incr TET_SEQUENCE
+X}
+X
+X
+X# record a test result for later emmision to the execution results file
+X# by tet_tpend
+X# usage: tet_result result_name
+X# (note that a result name is expected, not a result code number)
+Xproc tet_result {result_name} {
+X    global TET_TMPRES
+X
+X    if {([catch {set result_name}]) || 
+X        ([string length $result_name] == 0)} {
+X        puts stderr "tet_result: no result name specified"
+X        exit
+X    }
+X    if {[tet_getcode $result_name]} {
+X        tet_error "tet_result: invalid result name $result_name"
+X        set result_name NORESULT
+X    }
+X    
+X    if {([catch {set TET_TMPRES}]) || 
+X        ([string length $TET_TMPRES] == 0)} {
+X        puts stderr "tet_result: TET_TMPRES is not defined"
+X        exit
+X    }
+X    
+X    exec echo $result_name >> $TET_TMPRES
+X}
+X
+X
+X# mark a test purpose as deleted
+X# usage: tet_delete test_name reason [...]
+Xproc tet_delete {test_name args} {
+X  global TET_DELETES
+X
+X  if {([catch {set test_name}] == 1) || 
+X      ([string length $test_name] == 0)} {
+X    puts stderr "tet_delete: no test_name specified"
+X    exit
+X  }
+X  
+X  if {[string length $args] == 0} {
+X    tet_undelete $test_name
+X    return
+X  }
+X
+X  if {[tet_reason $test_name ] != "" } {
+X    tet_undelete $test_name
+X  }
+X
+X  if {([catch {set TET_DELETES}] == 1) || 
+X      ([string length $TET_DELETES] == 0)} {
+X    puts stderr "tet_delete: TET_DELETES is not defined"
+X    exit
+X  }
+X  
+X  exec echo "$test_name $args" >> $TET_DELETES
+X}
+X
+X
+X# return the reason string why a test purpose has been deleted
+X# otherwise return an empty string
+X# usage: tet_reason test_name
+Xproc tet_reason {test_name} {
+X    global TET_DELETES
+X
+X    set fd [open $TET_DELETES r]
+X    
+X    while {![eof $fd]} {
+X	set line [gets $fd]
+X	if {[lindex $line 0] == $test_name} {
+X	    set reasonstr [lindex $line 1]
+X	    close $fd
+X	    return $reasonstr
+X	}
+X    }
+X    close $fd
+X    return  ""
+X}
+X
+X
+X
+X# ******************************************************************
+X
+X#
+X# "private" functions for internal use by the tcl API
+X# these are not published interfaces and may go away one day
+X#
+Xproc tet_getcode {code_name} {
+X    global TET_ABORT TET_RESNUM TET_CODE TET_ABACTION
+X    
+X    set TET_ABACTION ""
+X    set TET_ABORT NO
+X    set TET_RESNUM -1
+X    
+X    if {[catch {set TET_CODE}]} {
+X	puts stderr "tet_getcode: TET_CODE is not defined"
+X	exit
+X    }
+X
+X    if {[catch {set code_name}]} {
+X	puts stderr "tet_getcode: no code name specified"
+X	exit
+X    }
+X
+X    set fd [open $TET_CODE r]
+X    seek $fd 0
+X    
+X    while {![eof $fd]} {
+X	set line [gets $fd]
+X	if {[regexp ^# $line]} {
+X	    continue
+X	}
+X
+X	if {[regexp ^$ $line]} {
+X	    continue
+X	}
+X
+X	if {[lindex $line 1] == $code_name} {
+X	    set TET_RESNUM [lindex $line 0]
+X	    set TET_ABACTION [lindex $line 2]
+X	    regsub -all \" $TET_ABACTION "" $TET_ABACTION
+X	    break
+X	}
+X    }
+X    
+X    if {$TET_RESNUM == -1} {
+X	unset TET_ABACTION
+X	return 1
+X    }
+X    
+X    switch $TET_ABACTION {
+X	"" -
+X	Continue {
+X	    set TET_ABORT NO
+X	}
+X	Abort {
+X	    set TET_ABORT YES
+X	}
+X	default {
+X	    tet_error "invalid action field $TET_ABACTION in file $TET_CODE"
+X	    set TET_ABORT NO
+X	}
+X    }
+X    
+X    unset TET_ABACTION
+X    return 0
+X}
+X
+X
+X# tet_undelete - undelete a test purpose
+Xproc tet_undelete {test_name} {
+X    global TET_DELETES
+X    
+X    set fd [open $TET_DELETES r]
+X    set tfd [open "/tmp/tet_deletes.tmp" w+]
+X    seek $fd 0
+X    
+X    while {![eof $fd]} {
+X	set line [gets $fd]
+X	
+X	if {[string first $test_name $line] == 0} {
+X	    continue;
+X	} else {
+X	    puts $tfd $line
+X	}
+X    } 
+X    
+X    close $fd
+X    close $tfd
+X    exec cp /tmp/tet_deletes.tmp $TET_DELETES
+X    exec rm /tmp/tet_deletes.tmp
+X}
+X
+X
+X# tet_error - print an error message to stderr and on TCM Message line
+Xproc tet_error {args} {
+X    global TET_PNAME TET_RESFILE TET_ACTIVITY
+X
+X    puts stderr "$TET_PNAME: $args"
+X    
+X    if {[catch {set TET_ACTIVITY}]} {
+X	set TET_ACTIVITY 0
+X    }
+X    
+X    if {([catch {set TET_ACTIVITY}] == 1) || 
+X        ([string length $TET_ACTIVITY] == 0)} {
+X	set TET_ACTIVITY 0
+X    }
+X    
+X    if {([catch {set TET_RESFILE}] == 1) || 
+X        ([string length $TET_RESFILE] == 0)} {
+X	puts stderr "tet_error: TET_RESFILE is not defined"
+X	exit
+X    }
+X    
+X    exec echo "510|$TET_ACTIVITY|$args" >> $TET_RESFILE
+X}
+X
+X
+X# tet_output - print a line to the execution results file
+Xproc tet_output {args} {
+X    global TET_STDERR TET_RESFILE TET_ACTIVITY
+X
+X    if {[catch {set TET_ACTIVITY}]} {
+X	set TET_ACTIVITY 0
+X    }
+X    
+X    if {[string length [lindex $args 1]] > 0} {
+X	set tet_sp " "
+X    } else {
+X	set tet_sp ""
+X    }
+X    
+X    set line [format "%d|%s%s%s|%s" [lindex $args 0] $TET_ACTIVITY $tet_sp \
+X            [lindex $args 1] [lindex $args 2]]
+X    
+X    regsub -all \n $line " " line2
+X    set line $line2
+X    
+X    if {[string length $line] > 511} {
+X	puts stderr [format "warning: results file line truncated: prefix: %d|%s%s%s|" [lindex $args 0] $TET_ACTIVITY $TET_SP [lindex $args 1]]
+X	set line [string range $line 0 511]
+X    }
+X    
+X    if {([catch {set TET_RESFILE}] == 1) || 
+X        ([string length $TET_RESFILE] == 0)} {
+X	puts stderr "tet_error: TET_RESFILE is not defined"
+X	exit
+X    }
+X    
+X    exec echo $line >> $TET_RESFILE
+X    
+X    if {([file exists $TET_STDERR]) && ([file size $TET_STDERR] > 0)} {
+X	tet_error "[exec cat $TET_STDERR]"
+X    }
+X}
+X
+X
+________This_Is_The_END________
+if test `wc -l < tetapi.tcl` -ne 340; then
+	echo 'shar: tetapi.tcl was damaged during transit (should have been 340 bytes)'
+fi
+fi		; : end of overwriting check
+exit 0

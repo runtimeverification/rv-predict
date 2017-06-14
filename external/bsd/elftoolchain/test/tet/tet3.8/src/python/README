@@ -1,0 +1,37 @@
+Introduction
+------------
+PyTET is a Python implementation of the TET API. The implementation has
+been done using the interface compiler SWIG (http://www.swig.org).
+PyTET was developed on a RedHat 9.0 Linux using TETware release 3.7, 
+but there is no reason it shouldn't work on any UNIX platform that 
+supports Python and TET 3.3, TET 3.6 or TETware 3.7.
+
+Building
+--------
+It is assumed you have first installed and successfully built one of the
+TET versions mentioned above. You should have an environment with TET_ROOT 
+set and a PATH with $TET_ROOT/bin and the location to the python interpreter. 
+Also PYTHONPATH must contain $TET_ROOT/lib/python, the directory where
+the PyTET shared library and pytet.py are installed.
+
+Ensure you have set the python-related variables in $TET_ROOT/src/defines.mk
+appropriately for the target system.  You must also set the shared-library
+building variables.  You can then run the make command to build the
+shared library and pytet.py files, and "make install" to install them.
+
+If you want to re-run SWIG you will need to have SWIG 1.3.21 or later
+installed on the system. You can then compile using makefile.swig after 
+checking the contents.
+
+Writing test cases
+------------------
+The main points to remember is to first import pytet. The python test
+cases are then defined, eg test1, test2, test3 etc. Optionally there
+can be a startup and cleanup function. The test list is then defined 
+using a Python dictionary and then the calls are registered using the
+pytet.pytet_init() function. If no startup or cleanup functions are
+provided, then these are passed as TET_NULLFP.
+
+Running the demo
+----------------
+Read the TET User Guide for instructions on running the demo test suite.

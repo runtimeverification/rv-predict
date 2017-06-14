@@ -1,0 +1,196 @@
+#
+# Generalized C/C++ interface for Microsoft C/C++
+#
+# rcsid = $Header: /u/rd/src/ccg/rcs/msc.ccg 1.10 1995/05/10 18:37:31 mark Exp $
+#
+
+# SCCS: @(#)compiler.ccg	1.4 (00/09/05) TETware release 3.8
+#
+# this version used when compiling TETware on Windows NT
+# Andrew Dingwall, UniSoft Ltd., October 1996
+#
+# MODIFICATIONS:
+#
+#	Andrew Dingwall, UniSoft Ltd., July 1998
+#	Added support for building DLLs.
+#	Commented out the -link option - it wasn't implemented!
+#
+#	Andrew Dingwall, UniSoft Ltd., July 2000
+#	Added -nodefaultlib to the linker command line - makes diagnosing
+#	"undefined symbol" errors easier.
+#	Added support for -L (to add an element to the library search path).
+#	Added support for -Wl (to hand off a command-line argument to the
+#	linker - the syntax is the same as for the CI5 compiler).
+#	Added support for -lfoo (to specify a library foo.lib).
+#	Added support for .res files.
+#	The names of .lib files are no longer remembered separately and added
+#	to the end of the linker command line - instead the relative order
+#	of .obj, .res and .lib files specified on the cc command line
+#	is preserved.
+#	Removed the -align linker flag which seems to cause the more recent
+#	versions of link to complain.
+#
+
+
+# CL option prefixes: these are passed through to compiler
+
+Copts = { "-C", "-d", "-D", "-F", "-G", "-H", "-I", "-J",
+	  "-O", "-U", "-u", "-V", "-W", "-Z" };
+
+Copts_compile_only = { "-E", "-P" };
+
+coptions = { "-nologo" };
+ldoptions = "-nologo -nodefaultlib";
+val = 0;
+dll = 0;
+Libc = "libc.lib";
+Libs = {};
+Srcs = {};
+Objs = {};
+Output = "";
+
+
+for (i in ARGV)
+do
+	flag = substr(i,1,2);
+	if (i == "-c")
+		compile_only = 1;
+	elif (i == "-S")		# assembler listing
+		coptions |= "-Fa";
+		compile_only = 1;
+	elif (substr(i,-2) == ".c")
+		Srcs |= i;
+		opath = filepath(substr(i,1,length(i)-1));
+		Objs |= opath[length(opath)-1] | "obj ";
+	elif (substr(i,-4) == ".asm")
+		Srcs |= i;
+		opath = filepath(substr(i,1,length(i)-3));
+		Objs |= opath[length(opath)-1] | "obj ";
+	elif (substr(i,-4) == ".cpp")
+		Srcs |= i;
+		opath = filepath(substr(i,1,length(i)-3));
+		Objs |= opath[length(opath)-1] | "obj ";
+	elif (
+		substr(i,-4) == ".obj" || 
+		substr(i,-4) == ".res" || 
+		substr(i,-4) == ".lib"
+	)
+		Objs |= i | " ";
+	elif (i == "-o")
+		advance i;
+		Output = i;
+	elif (substr(i,1,3) == "-Fe")		# support -Fe<outputfile>
+		Output = substr(i,4);
+	elif (index(Copts, flag) != 0)
+		coptions |= i;
+	elif (index(Copts_compile_only, flag) != 0)
+		coptions |= i;
+		compile_only = 1;
+	elif (substr(i, 1, 2) == "-l")
+		Objs |= substr(i, 3) | ".lib ";
+	elif (i == "-L")
+		advance i;
+		ldoptions |= " -libpath:" | replace(i, "/", "\\");
+	elif (i == "-M")
+		ldoptions |= " -map";
+#	elif (substr(i,1,5) == "-link")
+#		LinkOptions |= " " | i;
+	elif (substr(i, 1, 4) == "-Wl,")
+		ldoptions |= replace(substr(i, 4), ",", " ");
+	elif (i == "-v")
+		verbose = 1;
+	elif (i == "-ML")
+		coptions |= i;
+	elif (i == "-MT")
+		coptions |= i;
+		Libc = "libcmt.lib";
+	elif (i == "-MD")
+		coptions |= i;
+		Libc = "msvcrt.lib";
+	elif (i == "-MLd")
+		coptions |= i;
+		Libc = "libcd.lib";
+	elif (i == "-MTd")
+		coptions |= i;
+		Libc = "libcmtd.lib";
+	elif (i == "-MDd")
+		coptions |= i;
+		Libc = "msvcrtd.lib";
+	elif (i == "-LD")
+		dll = 1;
+		coptions |= "-MD";
+		Libc = "msvcrt.lib";
+	elif (i == "-LDd")
+		dll = 1;
+		coptions |= "-MDd";
+		Libc = "msvcrtd.lib";
+	elif (substr(i,1,1) == "-")
+		println "Unknown option:", i, "(ignored)";
+	else
+		println "Unknown", i, "(ignored)";
+	fi
+done
+
+if (! Objs)
+	print "No source or object files!\n";
+	exit 1;
+fi
+
+if (Output == "")
+	Output = Objs[0];
+	if (dll)
+		Output = substr(Output, 1, rindex(Output,".")) | "lib";
+	else
+		Output = substr(Output, 1, rindex(Output,".")) | "exe";
+	fi
+fi
+
+# compile all .c files
+for (i in Srcs)
+do
+	if (verbose)
+		print "cl", "-c ";
+		for (j in coptions)
+		do
+			print j | " ";
+		done
+		print i | "\n\n";
+	fi
+	val = execv("cl", "-c", coptions, i);
+	if (val)
+		exit val;
+	fi
+done
+
+if (compile_only)
+	exit val;
+fi
+
+if (dll)
+	ldoptions |= " -dll -implib:" | replace(Output, "/", "\\");
+	Output = substr(Output, 1, rindex(Output,".")) | "dll";
+else
+	ldoptions |= " -subsystem:console -entry:mainCRTStartup";
+fi
+
+ldoptions |= " -out:" | replace(Output, "/", "\\");
+
+Libs |= Libc | " kernel32.lib";
+
+ldfiles = "";
+for (i in Objs)
+do
+	ldfiles |= " " | replace(i, "/", "\\");
+done
+
+for (i in Libs)
+do
+	ldfiles |= " " | replace(i, "/", "\\");
+done
+
+if (verbose)
+	println "link " | ldoptions | ldfiles, "\n";
+fi
+
+exit exec("link " | ldoptions | ldfiles);
+

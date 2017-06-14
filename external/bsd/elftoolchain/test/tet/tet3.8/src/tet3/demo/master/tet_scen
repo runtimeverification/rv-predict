@@ -1,0 +1,14 @@
+#	SCCS: @(#)tet_scen	1.2 (96/08/15)
+#	TETware release 3.8
+#
+#	scenario file for the TETware demonstration
+#
+all
+	"starting scenario"
+	:remote,000,001:
+	/ts/tc1
+	/ts/tc2
+	"next is the last test case"
+	/ts/tc3
+	:endremote:
+	"done"

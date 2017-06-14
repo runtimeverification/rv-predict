@@ -17,18 +17,18 @@ libclang_rt.tsan-x86_64.a: build/runtime/lib/linux/libclang_rt.tsan-x86_64.a ins
 
 rvpinstrument.so: build/pass/rvpinstrument.so installit
 
-build: ../CMakeLists.txt ../pass/CMakeLists.txt ../runtime/CMakeLists.txt
+build: $(.CURDIR)/../CMakeLists.txt $(.CURDIR)/../pass/CMakeLists.txt $(.CURDIR)/../runtime/CMakeLists.txt
 	@rm -rf $(.OBJDIR)/build
 	@$(INSTALL) -d -m 0700 $(.OBJDIR)/build
-	@cd $(.OBJDIR)/build && cmake -DLLVM_DIR=$(HOME)/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/share/llvm/cmake $(.OBJDIR)/..
+	cd $(.OBJDIR)/build && cmake -DLLVM_DIR=$(HOME)/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04/share/llvm/cmake $(.CURDIR)/..
 
 build/runtime/lib/linux/libclang_rt.tsan_cxx-x86_64.a \
 build/runtime/lib/linux/libclang_rt.tsan_cxx-x86_64.a.syms \
 build/runtime/lib/linux/libclang_rt.tsan-x86_64.a! build
-	@cd $(.OBJDIR)/build && cmake --build runtime -- -s
+	@cd $(.OBJDIR)/build && cmake --build $(.OBJDIR)/build/runtime -- -s
 
 build/pass/rvpinstrument.so! build
-	@cd $(.OBJDIR)/build && cmake --build pass -- -s
+	@cd $(.OBJDIR)/build && cmake --build $(.OBJDIR)/build/pass -- -s
 
 #	@$(MAKE) -C $(.OBJDIR)/build
 

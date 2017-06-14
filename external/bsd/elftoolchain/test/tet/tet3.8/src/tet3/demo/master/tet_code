@@ -1,0 +1,19 @@
+#	SCCS: @(#)tet_code	1.2 (96/08/15)
+#	TETware release 3.8
+#
+#	tet_code file for the TETware demonstration
+#
+# TET reserved codes
+0 "PASS"
+1 "FAIL"
+2 "UNRESOLVED"
+3 "NOTINUSE"
+4 "UNSUPPORTED"
+5 "UNTESTED"
+6 "UNINITIATED"
+7 "NORESULT"
+
+# Test suite additional codes
+101 "FATAL"	Abort
+102 "INSPECT"
+

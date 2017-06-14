@@ -1,0 +1,84 @@
+
+This C++ demo is unsupported user-contributed software, designed by the
+contributor to run on a UNIX system.
+The notes in this README file are intended to assist someone attempting
+to port the C++ demo to a Windows NT system.
+--
+Andrew Dingwall, UniSoft Ltd., December 1996
+
+
+
+-----------------------------------------------------------------------
+
+I looked at the first test case in the demo (ts/tc1/tc1.c) to see what
+needed to be done in order to make it run on a Windows NT system.
+The build environment used is the same as the one used to build TETware
+on Windows NT; namely: Microsoft Visual C++ (MSVC) and the MKS Toolkit.
+The TETware version used is TETware-Lite.
+
+
+I made the following changes to the tc1 test case:
+
+1) Change the name of tc1.c to tc1.cpp.
+   (This tells MSVC that it is a C++ file.)
+
+2) Customise the makefile.
+   This is the makefile that I used:
+
+-----------------------------------------------------------------------
+LIBDIR	= $(TET_ROOT)/lib/tet3
+INCDIR	= $(TET_ROOT)/inc/tet3
+
+# Name of C++ compiler
+CC	= cl -nologo
+
+CFLAGS	=  -I$(INCDIR)
+
+LIBTCM	= $(LIBDIR)/Ctcm.obj
+LIBAPI	= $(LIBDIR)/libapi.lib
+SYSLIBS =
+
+all:	tc1.exe
+
+tc1.exe:	tc1.cpp $(INCDIR)/tet_api.h
+	$(CC) $(CFLAGS) -o tc1.exe tc1.cpp $(LIBTCM) $(LIBAPI) $(SYSLIBS)
+
+CLEAN:	clean
+
+clean:
+	rm -f *.obj tc1.exe
+
+-----------------------------------------------------------------------
+
+
+Then I built the test case and executed it successfully.
+
+
+
+Makefile notes:
+
+	If you want to build this test case using Distributed TETware,
+	you need to set SYSLIBS to wsock32.lib (the Winsock library).
+
+
+
+Observations about the other test cases in the C++ demo:
+
+	tc2 can be expected to port to Windows NT in the same way
+	as did tc1.
+
+	tc3 uses tet_fork() and tet_exec() which are not in
+	the TETware API on a Windows NT system.
+	If tc3 is to be run on a Windows NT system it must be rewritten
+	to use tet_spawn() and tet_wait() instead.
+
+
+Issues affecting the whole test suite:
+
+	Names of the test cases in the tet_scen file must each
+	have a .exe suffix appended.
+	Although tcc can execute a test case that is specified without
+	the .exe suffix, in this test suite the build tool (make) and
+	the clean tool (rm) need the .exe suffix.
+
+

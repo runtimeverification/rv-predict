@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+
+require "Rbtet"
+
+class TestSet < Rbtet::SuperTestSet
+
+    @@testlist = Hash[1,"test1", 2,"test2", 3,"test3"]
+
+    def test1()
+        begin
+            var = Rbtet.tet_getvar("RBTET_TC2_VAR")
+        rescue
+            Rbtet.tet_infoline("Failed to get a value for RBTET_TC2_VAR")
+            Rbtet.tet_result(Rbtet::TET_UNRESOLVED)
+            return
+        end
+        if (var == "Y")
+            Rbtet.tet_result(Rbtet::TET_PASS)
+        else
+            Rbtet.tet_result(Rbtet::TET_UNSUPPORTED)
+        end
+    end
+
+    def test2()
+        t1 = Time.new
+
+        0.upto(100000) do |var|
+            str = var.to_s()
+        end
+
+        t2 = Time.new
+
+        elapsed = t2 - t1
+
+        if (elapsed < 1.0)
+            Rbtet.tet_infoline("Not bad! That took " + elapsed.to_s + 
+                " seconds")
+            Rbtet.tet_result(Rbtet::TET_PASS)
+        else
+            Rbtet.tet_infoline("Too bad! That took " + elapsed.to_s + 
+                " seconds")
+            Rbtet.tet_result(Rbtet::TET_FAIL)
+        end
+    end
+
+    def test3()
+        Rbtet.tet_result(Rbtet::TET_UNTESTED)
+    end
+
+end
+
+Rbtet.rbtet_init(TestSet.new, Rbtet::TET_NULLFP, Rbtet::TET_NULLFP)

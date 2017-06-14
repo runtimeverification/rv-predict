@@ -1,0 +1,80 @@
+# Remote Demonstration Test Suite
+# In this example all tests are on the slave (or client) machines
+# no tests are on the master, hence we are using
+# systems 1->, system 0 being the master.
+
+all
+	:remote,1,2:^testcases
+
+testcases
+	"starting scenario"
+	/tset/test1/tc1
+	/tset/test2/tc2
+	"next is the last test case"
+	/tset/test3/tc3
+	"done"
+
+# 	The following scenarios give some examples
+#	of how the scenario language can be used
+#	to run testsets in different ways.
+#	These can be run as follows:
+#
+#		tcc -ep contrib/demo scenario-name
+#
+#	where scenario-name is the name of the scenario that you
+#	want to execute.
+
+# 	This example runs all the tests in parallel on 2 remote systems using
+# 	a reference scenario name denoted by the carat (^)
+parallel
+	"run all the tests in parallel on two remote systems"
+	:remote,1,2:
+	:parallel:^testcases
+	:endremote:
+	
+# 	This example shows another way to write the same 
+# 	scenario using expanded syntax 
+parallel2
+	"run all the tests in parallel"
+	:parallel:
+	/tset/test1/tc1
+	/tset/test2/tc2
+	/tset/test3/tc3
+	:endparallel:
+
+# 	This example picks a random test from the scenario called "all"
+#	and runs it on two remote machines simultaneously
+random
+	"pick a random test"
+	:remote,1-2:
+	:random:^testcases
+	:endremote:
+
+
+# 	This example could be used for soak testing.
+# 	Random test cases are run on two remote machines simultaneously.
+#	This one only runs for 10 minutes.
+soak
+	"pick random tests for 600 seconds"
+	:remote,1-2:
+	:timed_loop,600;random:^testcases
+	:endremote:
+
+
+# 	A complex scenario to demonstrate the enhanced scenario features
+#	and how you can combine scenario directives.
+enhanced
+	:remote,1-2:
+	"pick a random test"
+	:random:^testcases
+	"repeat test1 four times"
+	:repeat,4:@/tset/test1/tc1
+	"run all the tests in parallel"
+	:parallel:^testcases
+	"pick random tests for 35 seconds"
+	:timed_loop,35;random:^testcases
+	:endremote:
+
+# 	This scenario  runs the testcases scenario on system 003 only.
+remote3only
+	:remote,3:^testcases

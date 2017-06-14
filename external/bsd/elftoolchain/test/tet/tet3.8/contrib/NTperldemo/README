@@ -1,0 +1,5 @@
+This is a perl version of the simple C API demo suite
+This is the version for Windows NT
+To run the ETET scenario
+
+tcc -e -v TET_COMPAT=etet -p -s etet_scen contrib/NTperldemo

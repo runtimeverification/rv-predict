@@ -1,0 +1,22 @@
+#	Demonstration test suite.
+# 	A default execution scenario to demo the ETET features
+#
+#	See the tet_scen file for further examples
+#	of the scenario language file.
+tests
+	"starting scenario"
+	/ts/tc1
+	/ts/tc2
+	"next is the last test case"
+	/ts/tc3
+	"done"
+
+all
+	"pick a random test"
+	:random:^tests
+	"repeat four times /ts/tc1"
+	:repeat,4:@/ts/tc1
+	"run all the tests in parallel"
+	:parallel:^tests
+	"pick random tests for 35 seconds"
+	:timed_loop,35;random:^tests

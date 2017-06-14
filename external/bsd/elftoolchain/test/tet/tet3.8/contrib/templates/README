@@ -1,0 +1,15 @@
+Sample code templates for the various APIs
+
+c-api.c 	- TETware C API
+cplus-api.C	- TETware C++ API
+java-api.java	- TETware Java API
+kornshell-api.ksh - TETware Korn Shell API
+perl-api.pl	- TETware Perl API
+shell-api.sh	- TETware Shell API
+tcl-api.tcl	- TETware TCL API
+
+These are illustrative of the code block conventions
+for the various APIs. To utilitise these examples,
+you need to alter the startup/cleanup functions, add
+any test purpose functions and populate the TCM
+data structures appropriately.

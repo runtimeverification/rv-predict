@@ -1,0 +1,22 @@
+# some environment settings for running the capi demo
+# this should be sourced in as 
+# . profile
+PATH=$PATH:`pwd`/bin
+TS_CAPI=True
+export PATH TS_CAPI
+
+alias tetrep="tetrep -t|more"
+
+j () 
+{
+
+FNAME=`ls -t results|cut -f 1|sed 1q`
+more results/$FNAME/journal
+}
+
+jx ()
+{
+FNAME=`ls -t results|cut -f 1|sed 1q`
+vres results/$FNAME/journal
+}
+

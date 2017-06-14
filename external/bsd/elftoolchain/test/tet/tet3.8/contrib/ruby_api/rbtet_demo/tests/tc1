@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+
+require "Rbtet"
+
+class TestSet < Rbtet::SuperTestSet
+
+    @@testlist = Hash[1,"test1", 2,"test2", 3,"test3"]
+
+    def startup()
+        Rbtet.tet_infoline("Test startup")
+        Rbtet.tet_delete(3, "Marking test 3 as uninitiated")
+    end
+
+    def cleanup()
+        Rbtet.tet_infoline("Test cleanup")
+    end
+
+    def test1()
+        begin
+            var = Rbtet.tet_getvar("RBTET_TC1_VAR")
+        rescue
+            Rbtet.tet_infoline("Failed to get a value for RBTET_TC1_VAR")
+            Rbtet.tet_result(Rbtet::TET_UNRESOLVED)
+            return
+        end
+        Rbtet.tet_infoline("RBTET_TC1_VAR is set to " + var)
+        Rbtet.tet_result(Rbtet::TET_PASS)
+    end
+
+    def test2()
+        Rbtet.tet_infoline("The second test fails")
+        Rbtet.tet_result(Rbtet::TET_FAIL)
+    end
+
+    def test3()
+        Rbtet.tet_infoline("The third test is unresolved")
+    end
+
+end
+
+Rbtet.rbtet_init(TestSet.new, "startup", "cleanup")

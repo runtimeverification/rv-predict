@@ -1,0 +1,32 @@
+#!/bin/sh
+
+if [ "$TS_CAPI" = "" ]
+then
+	echo "The environment is not setup, please source in the"
+	echo "file \"profile\", ( . ./profile )"
+	echo "test setup aborting."
+	exit 1
+fi
+
+echo "** Setting up the capi demo test suite **"
+echo "** This test suite tests the chmod and **"
+echo "** fileno UNIX interfaces.   **"
+echo ""
+PATH=$PATH:`pwd`/bin
+export PATH
+cd tools
+make clobber install
+cd tetrep
+make clobber install
+
+if [ $? -eq 0 ]
+then
+	echo ""
+	echo "** Test Suite setup ok **"
+	echo "** To run the test suite **"
+	echo "** tcc -p -bec contrib/capi **"
+else
+	echo ""
+	echo "** Test Suite setup failed **"
+fi
+cd ../..

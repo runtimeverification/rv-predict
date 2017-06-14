@@ -1,0 +1,154 @@
+Remote Test Demonstration.
+
+
+This demo contains a remote test case, so it needs Distributed
+TETware to run. This test assumes that Distributed TETware
+has been setup to use the "inet" transport mechanism.
+
+In this demonstration, the master machine 
+controls tests running on a set of slave machines.
+
+This is an example of how a set of tests designed  to be
+run on a single machine can be made to run on many machines
+simultaneously controlled by a single invocation of tcc.
+
+The test cases consist of the simple demo C API tests.
+Initially there are two remote clients.
+
+
+What you must do:
+
+0) Establish the environment for running Distributed TETware on each
+machine that intends to participate. You can also run this on one
+physical machine with multiple logical slave machines if your
+machine supports the concept of localhost. The default setup below
+assumes that the localhost will be used.
+
+Ensure that your TET_ROOT environment variable points to the tet root
+directory of a Distributed TETware setup.
+
+Ensure that your user ID is the same as the tet user , or the
+user that in.tccd is running as (see the inetd.conf entry).
+
+1) Change directory to $TET_ROOT/contrib/remotedemo
+
+   Run the setup script, thus:
+
+	sh setup.sh
+
+   This script creates the distributed configuration file (tetdist.cfg)
+   file which contains the correct values of tet-root for your machine,
+   it also unbundles two test suite roots used by the tests.
+
+   The default setup assumes that the slave machines are running
+   from localhost and will share the same tet-root. The Test Suite
+   roots are the remclient1, remclient2  subdirectories within
+   the remotedemo directory. 
+
+   Review the tetdist.cfg and the systems file. The tetdist.cfg contains
+   descriptions of TET_ROOT and TS_ROOT information for 10
+   remote hosts.  The systems file, by default, maps all those remote hosts
+   to localhost.
+
+   Copy the systems file from this directory to $TET_ROOT/systems.
+
+2) Build the test cases, thus:
+
+	tcc -bp contrib/remotedemo
+
+
+3) Examine the journal.
+   You should see the results of building the test cases.
+
+   Note that if the build fails you may need to edit the makefiles
+   within the remclient?/tset directories. This particular demo
+   may need the SYSLIBS entry changing if your system does not
+   include networking interfaces  in a default compilation.
+   A production test suite should parameterise this and use a buildtool
+   to pass the parameter to make.
+   
+ 
+4) Execute the test cases, thus:
+
+	tcc -ep contrib/remotedemo
+
+5) Examine the journal.
+   You should see the results of executing the test cases.
+
+6) Examine the tet_scen file and run some of the other
+   scenarios. For example:
+
+	tcc -ep contrib/remotedemo parallel
+	tcc -ep contrib/remotedemo random
+	tcc -ep contrib/remotedemo soak
+	tcc -ep contrib/remotedemo enhanced
+
+7) These next stages of this demonstration can be attempted if
+   you have available another machine to act as a remote
+   client. It is assumed that Distributed TETware is setup on 
+   that machine.
+
+   Copy the remclient.tar file to the remote machine and
+   unwind under the remote TET_ROOT directory.  Note the location
+   of TET_ROOT on the remote machine.
+
+
+8) Edit the $TET_ROOT/systems file
+   Change the entry for system 000 to include the real
+   hostname or IP address of the master machine upon which
+   this demo is being run.
+
+   Change the entry for System 003
+   to include the host name or IP address of the remote machine 
+   that is  joining the test demonstration.
+
+9) Build the testcases on the third system
+
+	tcc -pb contrib/remotedemo remote3only
+
+   If tcc encounters an error , check the following:
+
+   (i) Edit the tetdist.cfg and check that the  entries for
+       TET_REM003_TET_ROOT and  TET_REM003_TET_TSROOT are correct
+       for the remote system
+   (ii) View the /tmp/tccdlog file on the remote machine. If necessary
+        review the contents of the $TET_ROOT/systems.equiv file on the
+        remote machine
+
+10) Execute the testcases on the third system
+
+	tcc -pe contrib/remotedemo remote3only
+   Examine the journal.
+   You should see the results of executing the test cases.
+
+11) Edit the tet_scen file to add a third system to many of the scenarios
+   and then re-execute the tests
+
+   Change the all scenario from
+
+	all
+		:remote,1,2:^testcases
+
+   to
+	all
+		:remote,1-3:^testcases
+
+
+   tcc -ep contrib/remotedemo
+
+   Examine the journal and verify that the third system is added.
+
+12)  Add several other system IDs to the :remote: directive. 
+	Points to note:
+		a) Systems 0 -> 10 have been set up, so you can use any
+		   of these in your system list.
+		b) A system can only appear once in the list.
+		c) System ID 0 is defined in the code as the server, so
+		   it must always be in the list.
+		d) You will need to add appropriate TS_ROOTs.
+
+______________
+
+Copyright (c) 1999 The Open Group
+All Rights Reserved
+No unauthorized reproduction without prior written permission.

@@ -1,0 +1,4 @@
+export TET_ROOT=<location of the TET installation>
+export RUBYPATH=<location of the RbTET module>
+export RUBYLIB=<location of the RbTET extension module (shared libary)>
+export PATH=$PATH:$TET_ROOT/bin

@@ -1,0 +1,19 @@
+#To install the test suite:
+PATH=`pwd`/bin:$PATH
+export PATH
+
+
+
+j () 
+{
+
+FNAME=`ls -t results|cut -f 1|sed 1q`
+more results/$FNAME/journal
+}
+
+jx ()
+{
+FNAME=`ls -t results|cut -f 1|sed 1q`
+vres results/$FNAME/journal
+}
+

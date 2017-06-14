@@ -1,0 +1,61 @@
+TETware demo test suite
+(a modified version of the original TET1.10 demo,
+which is now in the directory contrib/demo110)
+
+
+This is the simple TETware demonstration test suite
+intended to give familiarity with the
+outline structure for a test suite and its
+associated files, the test scenario file
+and the tcc command.
+
+
+Test Scenario File:
+The file tet_scen is the default scenario or
+"test list" to be executed. The example given
+has a simple "all" scenario which is used
+by default , and several other example test
+scenarios that can be called by name.
+
+
+To run this test suite:
+
+0. Check your environment for running tcc
+
+   - check that TET_ROOT is set in the environment
+   - check that tcc can be found in the default PATH
+
+   - change directory to $TET_ROOT/contrib/demo
+
+1.  Build the simple test suite as follows:
+
+	tcc -p -b  contrib/demo
+
+2. Execute the tests, thus:
+
+	tcc -p -e contrib/demo
+
+	tcc -p -e contrib/demo all  # the same as above
+
+3. Clean the tests, thus:
+
+	tcc -p -c contrib/demo
+
+4. Rebuild the tests, thus:
+
+	tcc -p -b contrib/demo
+
+5. Look at the extended examples within the tet_scen scenario file.
+   Execute the different test scenarios, thus:
+
+	tcc -ep contrib/demo parallel
+
+	tcc -ep contrib/demo random
+
+	tcc -ep contrib/demo enhanced
+
+______________
+
+Copyright (c) 1997 The Open Group
+All Rights Reserved
+No unauthorized reproduction without prior written permission.

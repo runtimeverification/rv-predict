@@ -1,0 +1,61 @@
+
+This is a sample test suite based on chapter 14 of the
+TETware Programmers Guide. This is an extended version of
+that suite.
+
+It has been designed to run as a non-distributed test suite
+on a UNIX operating system. Some of the tools in this distribution
+use fork/exec and hence would need some rewriting to work on NT.
+
+This test suite includes some tools in the tools/
+directory. These are as follows:
+
+buildtool.c:
+
+A TET_BUILD_TOOL called buildtool and
+a TET_CLEAN_TOOL called cleantool.
+
+That call smake to put tetbuild.cfg parameters into the
+environment so that make(1) can see them, and then capture
+output to a temporary file for inclusion in the  journal.
+Essentially the execution of the build / clean operation is
+a TETware test case. If the test fails then the output of the
+make operation will be inserted into the journal file. If the
+test succeeds for the build/clean operation then no 
+output will appear in the journal apart from the  PASS.
+
+smake:
+ 
+A front end sed script that parses the tetbuild.cfg file and
+exports the parameters into the environment.
+
+vres: 
+
+A simple awk script to give a summary total.
+
+
+tetrep
+
+A Report writer written in C. The default output for this is html.
+The usage is:
+
+Usage: tetrep [-f filename] [-j journal] [-s suitename] [-u] [ -h ] [-v] [-t] [-q]
+      -s test suite name
+      -t output text instead of html
+      -f journal file name
+      -q print a quiet summary report
+      -j journal file # (default is latest)
+      -u use latest journal file for current user
+      -h display this usage message
+      -v display program version
+      TET_ROOT must be set
+
+If you are in the test suite root this will automatically parse
+the last file.
+
+To run the test suite, firstly run the Setup script and then
+use tcc.
+
+sh ./Setup
+tcc -p -bec contrib/capi
+

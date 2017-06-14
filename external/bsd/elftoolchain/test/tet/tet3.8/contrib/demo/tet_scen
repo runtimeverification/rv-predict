@@ -1,0 +1,69 @@
+#	TETware Simple Demonstration test suite
+#	Copyright (c) 1997 , The Open Group
+
+
+#	The "all" scenario is run by default when you don't specify a
+#	scenario name.
+#	When tcc processes this scenario:
+#		The lines in double quotes are simply printed in the journal.
+#		The lines that look like file names specify test cases
+#		to be processed according to tcc's selected mode(s) of
+#		operation.
+all
+	"starting scenario"
+	/tset/test1/tc1
+	/tset/test2/tc2
+	"next is the last test case"
+	/tset/test3/tc3
+	"done"
+
+
+# 	The following scenarios give some examples
+#	of how the scenario language can be used
+#	to run testsets in different ways.
+#	These can be run as follows:
+#
+#		tcc -ep contrib/demo scenario-name
+#
+#	where scenario-name is the name of the scenario that you
+#	want to execute.
+
+# 	This example runs all the tests in parallel using
+# 	a reference scenario name denoted by the carat (^)
+parallel
+	"run all the tests in parallel"
+	:parallel:^all
+	
+# 	This example shows another way to write the same 
+# 	scenario using expanded syntax 
+parallel2
+	"run all the tests in parallel"
+	:parallel:
+	/tset/test1/tc1
+	/tset/test2/tc2
+	/tset/test3/tc3
+	:endparallel:
+
+# 	This example picks a random test from the scenario called "all".
+random
+	"pick a random test"
+	:random:^all
+
+# 	This example could be used for soak testing.
+#	This one only runs for 10 minutes.
+soak
+	"pick random tests for 600 seconds"
+	:timed_loop,600;random:^all
+
+# 	A complex scenario to demonstrate the enhanced scenario features
+#	and how you can combine scenario directives.
+enhanced
+	"pick a random test"
+	:random:^all
+	"repeat test1 four times"
+	:repeat,4:@/tset/test1/tc1
+	"run all the tests in parallel"
+	:parallel:^all
+	"pick random tests for 35 seconds"
+	:timed_loop,35;random:^all
+

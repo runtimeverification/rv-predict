@@ -55,7 +55,7 @@ public class RaceTest {
     }
 
     @Test
-    public void generatesStackBracketInReport() throws InvalidTraceDataException {
+    public void raceDescriptionGeneratedByMetadata() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;
@@ -76,23 +76,26 @@ public class RaceTest {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
+        when(mockMetadata.getRaceLocationSig(
+                extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration))
+                .thenReturn("<mock race report>");
+
         Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
         race.setFirstSignalStack(Collections.emptyList());
         race.setSecondSignalStack(Collections.emptyList());
 
         String report = race.generateRaceReport();
         String[] pieces = report.split("\n");
-        Optional<String>  maybeBracketed = Optional.empty();
+        Optional<String>  maybeRaceDescription = Optional.empty();
         for (String piece : pieces) {
-            if (piece.contains("Bracketed")) {
-                maybeBracketed = Optional.of(piece);
+            if (piece.contains("Data race")) {
+                maybeRaceDescription = Optional.of(piece);
                 break;
             }
         }
-        Assert.assertTrue(maybeBracketed.isPresent());
-        String bracketed = maybeBracketed.get();
-        MoreAsserts.assertSubstring("[0x00000000000000c7]", bracketed);
-        MoreAsserts.assertSubstring("[0x00000000000000c9]", bracketed);
+        Assert.assertTrue(maybeRaceDescription.isPresent());
+        String raceDescription = maybeRaceDescription.get();
+        MoreAsserts.assertSubstring("<mock race report>", raceDescription);
     }
 
     private static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {

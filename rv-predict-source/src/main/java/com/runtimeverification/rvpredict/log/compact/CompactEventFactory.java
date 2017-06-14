@@ -6,6 +6,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.OptionalLong;
 
 public class CompactEventFactory {
     private static final List<ReadonlyEventInterface> NO_EVENTS = Collections.emptyList();
@@ -405,11 +406,17 @@ public class CompactEventFactory {
 
     // Function events.
 
-    public List<ReadonlyEventInterface> enterFunction(Context context, long canonicalFrameAddress) {
+    public List<ReadonlyEventInterface> enterFunction(
+            Context context, long canonicalFrameAddress, OptionalLong callSiteAddress) {
         return Collections.singletonList(new CompactEvent(context, EventType.INVOKE_METHOD) {
             @Override
             public long getCanonicalFrameAddress() {
                 return canonicalFrameAddress;
+            }
+
+            @Override
+            public OptionalLong getCallSiteAddress() {
+                return callSiteAddress;
             }
 
             @Override

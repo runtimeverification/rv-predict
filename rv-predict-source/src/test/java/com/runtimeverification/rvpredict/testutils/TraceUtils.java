@@ -11,6 +11,7 @@ import org.junit.Assert;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.OptionalLong;
 
 import static com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES;
 import static org.mockito.Mockito.when;
@@ -165,9 +166,9 @@ public class TraceUtils {
                 CompactEventReader.Atomicity.ATOMIC);
     }
 
-    public List<ReadonlyEventInterface> enterFunction(long canonicalFrameAddress) {
+    public List<ReadonlyEventInterface> enterFunction(long canonicalFrameAddress, OptionalLong callSiteAddress) {
         prepareContextForEvent(threadId, signalDepth);
-        return compactEventFactory.enterFunction(mockContext, canonicalFrameAddress);
+        return compactEventFactory.enterFunction(mockContext, canonicalFrameAddress, callSiteAddress);
     }
 
     public static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {

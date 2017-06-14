@@ -31,7 +31,6 @@ package com.runtimeverification.rvpredict.trace;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
-import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.Event;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
@@ -50,9 +49,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -707,7 +704,7 @@ public class Trace {
                                 .add(event);
                     }
                 } else {
-		    if (Configuration.debug)
+		    if (state.config().isDebug())
 		        System.err.println(event.getType());
                     throw new IllegalStateException();
                 }
@@ -748,6 +745,8 @@ public class Trace {
                             tmp_events[tmp_size++] = event;
                         }
                     } else if (event.isSignalEvent()) {
+                        tmp_events[tmp_size++] = event;
+                    } else if (state.config().isDebug() && event.isCallStackEvent()) {
                         tmp_events[tmp_size++] = event;
                     } else {
                         // MetaEvents are thrown away
@@ -925,6 +924,8 @@ public class Trace {
                 }
             } else if (event.isSignalEvent()) {
                 // Do nothing for now, since signal events themselves are not involved with r/w.
+                endCrntBlock = false;
+            } else if (state.config().isDebug() && event.isCallStackEvent()) {
                 endCrntBlock = false;
             } else {
                 throw new IllegalStateException("Unexpected critical event: " + event);

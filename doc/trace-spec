@@ -531,7 +531,8 @@ trace ::= (delta, 'load[n]') addr value
                 is `ptrw` bytes wide.  In `callsite` is the instruction
                 where the just-entered function will return.  It is also
                 `ptrw` bytes wide, and it starts on the first 32-bit
-                boundary after `cfa`.
+                boundary after `cfa`. A value of 0 means that the call
+                site is unknown.
 
                 `self.PC <- self.PC + delta`
 

@@ -5,6 +5,8 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
+import java.util.OptionalLong;
+
 public abstract class CompactEvent extends ReadonlyEvent {
     private long eventId;
     private long locationId;
@@ -116,6 +118,11 @@ public abstract class CompactEvent extends ReadonlyEvent {
 
     @Override
     public boolean isAtomic() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
+    public OptionalLong getCallSiteAddress() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
 

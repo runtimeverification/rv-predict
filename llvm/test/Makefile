@@ -5,7 +5,7 @@ MKINSTALL=no
 all: bin/rvpc lib/rvpinstrument.so lib/rvprt.a
 
 bin/rvpc:
-	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../rvpdump install
+	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../../scripts install
 
 lib/rvpinstrument.so:
 	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../cmade install

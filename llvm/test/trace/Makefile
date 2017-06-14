@@ -7,6 +7,9 @@ NOMAN=
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
+PATH:=$(.OBJDIR)/../bin:$(PATH)
+.export PATH
+
 PROGS=mask
 
 CC?=rvpc

@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+@iclist=(ic1);
+@ic1=("tp1","tp2");
+
+$tet'startup="startup";
+$tet'cleanup="cleanup";
+
+sub startup {
+	&tet'infoline("This is the startup");
+	&tet'delete("tp2", "deleted in startup");
+}
+
+sub cleanup {
+	&tet'infoline("This is the cleanup");
+}
+
+sub tp1{
+
+	&tet'infoline("This is the tp1 test case"); 
+        &tet'result("PASS");
+}
+
+sub tp2{
+
+	&tet'infoline("This is the tp2 test case"); 
+        &tet'result("PASS");
+}
+
+require "$ENV{\"TET_ROOT\"}/lib/perl/tcm.pl";

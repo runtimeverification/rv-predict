@@ -1,0 +1,164 @@
+/*
+ *	SCCS: @(#)example.css	1.2 02/11/06
+ *
+ * Copyright (c) 2000 The Open Group
+ * All rights reserved.
+ *
+ * No part of this source code may be reproduced, stored in a retrieval
+ * system, or transmitted, in any form or by any means, electronic,
+ * mechanical, photocopying, recording or otherwise, except as stated
+ * in the end-user licence agreement, without the prior permission of
+ * the copyright owners.
+ * A copy of the end-user licence agreement is contained in the file
+ * Licence which accompanies this distribution.
+ * 
+ * Motif, OSF/1, UNIX and the "X" device are registered trademarks and
+ * IT DialTone and The Open Group are trademarks of The Open Group in
+ * the US and other countries.
+ *
+ * X/Open is a trademark of X/Open Company Limited in the UK and other
+ * countries.
+ */
+
+/************************************************************************
+
+SCCS:		@(#)example.css	1.2 02/11/06 3.8 TETware release 3.8
+NAME:		example.css
+PRODUCT:	TETware Generic Report Writer.
+AUTHOR:		Matthew Hails, UniSoft Ltd.
+DATE CREATED:	21 July 2000
+
+DESCRIPTION:
+
+	Sample style sheet for Generic Report Writer.
+
+************************************************************************/
+
+/*
+ * Set the foreground and background colours on the body element.
+ * This serves as a default, since all other elements inherit from body.
+ */
+body
+{
+	color:			black;
+	background:		white;
+}
+
+/*
+ * Table cells in a table with no border are given a "noborder" class by the
+ * report writer.
+ */
+.noborder
+{
+ 	background:		white;
+}
+
+/*
+ * The "neutral" class is for table cells containing column headings and
+ * totals, i.e. nothing to do with a result.
+ */
+.neutral
+{
+	background:		#cccccc;
+}
+
+/*
+ * Successful cases:
+ *	"success" is for cells giving a successful status, e.g. build/clean
+ *	results.
+ *	"PASS" is the result code of that name.
+ */
+.success, .PASS
+{
+ 	background:		#33cc33;
+}
+
+/*
+ * Failure cases:
+ *	"failure" is for cells giving a failure status, e.g. build/clean
+ *	results.
+ *	"FAIL", "UNRESOLVED" and "NORESULT" are for result codes of the same
+ *	name.
+ */
+.failure, .FAIL, .UNRESOLVED, .NORESULT, .UNINITIATED
+{
+	background:		#ff3333;
+}
+
+/*
+ * More result code table cells. These are those which require some examination
+ * of the test and results.
+ */
+.INSPECT, .FIP, .WARNING, .STOP-RUN
+{
+	background:		#ff7733;
+}
+
+/*
+ * More result code table cells. These are ones where the test proper didn't
+ * get run, probably for a good reason.
+ */
+.NOTINUSE, .UNTESTED, .UNSUPPORTED, .UNAPPROVED-ASSERTION, .NOT-IMPLEMENTED
+{
+	background:		#ffcc33;
+}
+
+/*
+ * A table cell containing what the report writer considers to be a level 1
+ * heading.
+ */
+.heading1
+{
+	background:		#ccccff;
+	font:			xx-large serif;
+}
+
+/*
+ * HTML level 1 heading.
+ */
+h1
+{
+	font:			xx-large serif;
+}
+
+/*
+ * A table cell containing what the report writer considers to be a level 1
+ * heading.
+ */
+.heading2
+{
+	background:		#ccccff;
+	font:			sans-serif;
+}
+
+/*
+ * Other HTML headings.
+ */
+h2, h3, h4, h5, h6
+{
+	font:			sans-serif;
+}
+
+/*
+ * Top level unordered list.
+ */
+ul li
+{
+	list-style:		square;
+}
+
+/*
+ * Nested unordered list.
+ */
+ul ul li
+{
+	list-style:		disc;
+}
+
+/*
+ * Two levels of nesting in an unordered list.
+ */
+ul ul ul li
+{
+	list-style:		circle;
+}

@@ -1,0 +1,35 @@
+Three programs are included:
+
+tetreport - Perl journal file reporting tool.  See the documentation in the
+            build directory for instructions how to use. Documentation
+	    is provided in html and UNIX manual page format.
+
+TetReports.pl -  Perl Class used to build the three reports (formatted,
+                 summary, error)
+
+TetJournal.pl -  Perl Class used to analyse and extract information from a 
+                 TET Journal file.  The reports in TetReports are only one set
+                 of possible examples for its use.
+
+Installation:
+------------
+1. You need perl 5.001 or later
+
+2. Put the path to your perl binary at the top of tetreport
+
+3. TetReports.pl and TetJournal.pl may either be installed in a directory 
+   called 'class' within your Perl library directory, or the path to these
+   files may be specified explicitly in the "require" statements in tetreport
+
+4. Let tetreport loose on some of your journal files:
+
+   eg: tetreport -f journal
+
+
+Regards,
+____________________________________________________________________
+Geoff Smith  Tel 613 92105580    Hewlett Packard
+             Fax 613 92105550    Advanced Networks Division
+                                 PO Box 221 Blackburn Vic 3130
+Internet   geoff_smith@hp.com    AUSTRALIA
+____________________________________________________________________

@@ -1,0 +1,13 @@
+#!/bin/sh
+echo Installing SHELL-API test suite
+
+#cd SHELL-API || exit 1
+
+# create alternate execution directory hierarchy
+find ts -type d -print |
+while read d
+do
+    if test ! -d ts_exec/"$d"
+    then mkdir -p ts_exec/"$d"
+    fi
+done

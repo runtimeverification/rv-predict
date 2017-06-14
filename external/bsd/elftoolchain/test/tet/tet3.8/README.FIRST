@@ -1,0 +1,127 @@
+
+TET3 is the latest version of the Test Environment Toolkit.
+This is an UNSUPPORTED  source release.
+
+See http://tetworks.opengroup.org for more information
+
+For quick installation instructions see below.
+
+For full  documentation refer to the  3.8 documentation
+available on http://tetworks.opengroup.org/docs.html
+
+
+Quick Start for Installation.
+-----------------------------
+
+Typical installation is as follows:
+
+Install a .profile for the test suite user
+Example:
+        TET_ROOT=/home/tet
+        PATH=$PATH:$TET_ROOT/bin
+        export TET_ROOT PATH 
+
+To configure TET3
+	cd $TET_ROOT
+	sh configure -t lite   # for TETware lite
+	cd src
+	make install    
+(the final command below is not necessary)
+	make compat  # for backwards compatibility for include directories
+	
+If the build fails check the makefiles in src/defines
+
+Note: some Make utilities may have trouble with the include directive,
+this is a known problem on BSDI systems. In this case use GNU Make
+(gmake). Version 3.75 and higher is known to work.
+
+
+Build Notes: 
+      In this release the Java API may be built on Solaris and Linux. In
+      order to build the Java API on these systems a variable must be set
+      in the defines.mk file which specifies where the Java Development
+      Kit (JDK) has been installed on your machine.
+
+      On Solaris Release 7 and later the JDK is supplied with
+      the operating system and so is installed in a standard place
+      (/usr/java). This location is specified in the defines.mk files
+      for such systems that are supplied in the distribution.
+
+      However, on other platforms the JDK might be installed anywhere,
+      so it is necessary to customise your defines.mk file if you want
+      to build the Java API. Refer to the section entitled ``Support
+      for Java'' in the TETware Installation Guide for instructions on
+      how to do this.
+
+      In the defines.mk file on UNIX systems it is necessary to specify
+      the list of signals that are used by the Java Virtual Machine, so
+      as to avoid conflict with the use of signals by the TETware Java
+      API runtime support library. This signal list may change, depending
+      on which JDK and/or operating system version you are using.
+
+      The defines.mk files for various UNIX platforms on which the
+      Java API is supported contain signal lists for particular JDK
+      versions. If you are using a different JDK version you may need to
+      change this list. Please refer to the section entitled ``Support
+      for Java'' in the TETware Installation Guide for UNIX Operating
+      Systems for further details.
+
+
+Perl Notes
+
+     As indicated previously, the Perl API is upgraded to use perl 5
+     syntax such that it executes without warnings when run under the
+     control of perl -w. However, test case authors should note that
+     perl test cases may still emit warnings, when run under the control
+     of perl -w, about API interface variables defined in the test case
+     only being used once. For example, consider the following trivial
+     perl test case:
+
+      #!/usr/bin/perl
+      @iclist=("ic1");
+      @ic1=("tp1");
+      $tet'startup = "startup";
+      $tet'cleanup = "cleanup";
+      sub startup
+      {
+                  &tet'infoline("in startup function");
+      }
+      sub cleanup
+      {
+                  &tet'infoline("in cleanup function");
+      }
+
+      sub tp1
+      {
+                    &tet'infoline("This is tp1 in a simple perl test case");
+                    &tet'result("PASS");
+      }
+      require "$ENV{\"TET_ROOT\"}/lib/perl/tcm.pl";
+
+      When run with perl -w, the following warnings are generated from
+      the test case source file:
+
+      Name "tet::startup" used only once: possible typo at simple.pl line 6.
+      Name "tet::cleanup" used only once: possible typo at simple.pl line 7.
+      Name "main::ic1" used only once: possible typo at simple.pl line 4.
+      Name "main::iclist" used only once: possible typo at simple.pl line 3.
+
+      When Perl version 5.6 or later is used, it is possible to suppress
+      these warnings by use of the our keyword in the test case source
+      file. For example:
+
+      #!/usr/bin/perl
+      @iclist=("ic1");
+      @ic1=("tp1");
+      $tet'startup = "startup";
+      $tet'cleanup = "cleanup";
+      our(@iclist, @ic1);                                                                               
+      {                                                                                                 
+                    package tet;                                                                        
+                    our($startup, $cleanup);                                                            
+      }                                                                                                 
+      rest of test case . . .
+
+      In this example the code that has been added in order to suppress
+      warning messages is indicated by a   character in the right margin.
+

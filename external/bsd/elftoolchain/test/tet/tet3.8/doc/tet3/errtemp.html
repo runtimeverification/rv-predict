@@ -1,0 +1,49 @@
+<HTML version="-//IETF//DTD HTML 2.0//EN">
+<!-- @(#)errtemp.html	1.2 (02/01/03) TETware Release 3.8 -->
+<HEAD>
+<title>TET Bug Report Form</title>
+</HEAD><BODY>
+<body text="#000000" bgcolor="#FFFFFF" link="#0000EE" vlink="#551A8B" alink="#FF0000">
+<form method=post action="http://tetworks.xopen.org/cgi-bin/cgiemail/tetreport.txt">
+<h1>TETware Problem Report Form</h1>
+Name:      <input type=text name=required-originator size=40 value=""><br>
+Company:   <input type=text name=organization size=40 value=""><br>
+E-mail:    <input type=text name=required-email size=40><br>
+Synopsis of Problem:   <input type=text name=required-synopsis size=40><br>
+<hr width=100%>
+TETware Version Number:   <select name=release>
+<option selected>3.8
+</select><br>
+TETware Build Mode:   <select name=mode>
+<option selected>Distributed
+<option>TETware-lite
+</select><br>
+Hardware: <input type=text name=hardware size=40><br>
+Operating System: <input type=text name=os size=40><br>
+Description:<br>
+<textarea name="description" rows="5" cols="76">
+Precise description of the problem.</textarea><br>
+How to repeat:<br>
+<textarea name="repeat" rows="5" cols="76">
+Code/input/activities to reproduce the problem.</textarea><br>
+Fix:<br>
+<textarea name="fix" rows="5" cols="76">
+How to correct or work around the problem, if known.</textarea><br>
+TETware configuration file(s):<br>
+<textarea name="config" rows="5" cols="76">
+Any relevant configuration files.</textarea><br>
+TETware systems file:<br>
+<textarea name="systems" rows="5" cols="76">
+Any relevant entries from the systems file
+(in Distributed TETware).</textarea><br>
+TETware journal file:<br>
+<textarea name="fix" rows="5" cols="76">
+The complete journal file, if there is one.</textarea><br>
+Tccd log file(s):<br>
+<textarea name="logs" rows="5" cols="76">
+Relevant parts of the tccd log files
+from local and/or remote system(s).</textarea><br>
+<input type=submit value="Send Bug Report"><input type=reset>
+</form>
+</BODY>
+</HTML>

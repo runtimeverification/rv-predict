@@ -1,0 +1,24 @@
+
+This is the a very simple demo to use the TCL API.
+This is merely a demonstration of the capability.
+
+This version assumes that tcl is in /usr/local/bin/tcl,
+edit the ts/test1.tcl file to change that.
+
+test1.tcl:
+
+   illustrates startup/cleanup with some simple pass and fail results
+
+test2.tcl
+
+   a very simple test case
+
+test3.tcl
+     
+This  generates in addition an INSPECT result.
+
+By executing as 
+ tcc -e -vmessage="mymessage" -y test3 contrib/tcldemo -p
+ you can change the behaviour
+
+

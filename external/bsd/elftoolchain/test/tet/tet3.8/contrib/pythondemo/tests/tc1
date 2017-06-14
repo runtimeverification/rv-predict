@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+from pytet import *
+
+import sys
+
+def startup():
+	print "tc1: Calling startup"
+	tet_delete(3, "Marking test 3 as uninitiated")
+
+def cleanup():
+	print "tc1: Calling cleanup"
+
+def test1():
+	try:
+		var = tet_getvar("PYTET_TC1_VAR");
+	except:
+		tet_infoline("Failed to get a value for PYTET_TC1_VAR")
+		tet_result(TET_UNRESOLVED)
+		return
+
+	tet_infoline("PYTET_TC1_VAR is set to " + var);
+	tet_result(TET_PASS)
+
+def test2():
+	tet_infoline("platform = " + sys.platform)
+	tet_result(TET_PASS)
+
+def test3():
+	tet_result(TET_NOTINUSE)
+
+testlist = { 1:test1, 2:test2, 3:test3 }
+pytet_init(testlist, startup, cleanup)

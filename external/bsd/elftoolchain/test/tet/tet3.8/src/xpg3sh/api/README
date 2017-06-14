@@ -1,0 +1,49 @@
+SCCS: @(#)README	1.14 (96/08/15)
+TETware release 3.8
+
+The files in this directory constitute the TETware Application
+Programming Interface (API), Shell language binding.
+
+The files are shell scripts written for use with a Shell command interpreter
+that conforms to the sh specification in Volume 1 of the X/OPEN Portability
+Guide Issue 3.  An example of this might be a Bourne Shell that includes
+support for shell functions.  In addition certain common utilities are
+used; attempts have been made to avoid utilities and/or features that may
+vary between implementations.
+
+After running make the following files are available in the directory
+$(TET_ROOT)/lib/xpg3sh for use with applications:
+
+	tcm.sh		Shell Test Case Manager
+
+	tetapi.sh	Shell API support routines.
+
+
+Note - Signal Handling.
+
+Since signals are specified in the Shell by means of numbers rather than
+symbolic names, it will be necessary to inspect the lists of signals
+and "SH_NSIG" value in the makefile and check that they are correct for
+your implementation.
+
+In addition, it should be noted that the Shell may not know about all the
+signals that may occur in a particular implementation and attempts to
+handle unknown signals are often treated as fatal errors.  Such signal
+numbers must either be added to the list of unhandled signals or must
+be avoided by reducing SH_NSIG to less than the "real" NSIG value.
+
+The SH_NSIG value in the makefile can be overriden by setting TET_NSIG
+when shell test cases are executed, either in the execution configuration
+file or in the environment.
+
+
+Note - Awk.
+
+In order to fulfill the requirements of the Shell API Specification, the
+awk utility has been used to format lines in the Results file.  It should
+be noted that some awk implementations are limited in their capacity to
+handle long lines; if this is the case, it will limit the length of a line
+that may be passed to tet_infoline or tet_result.
+
+--
+End of README.

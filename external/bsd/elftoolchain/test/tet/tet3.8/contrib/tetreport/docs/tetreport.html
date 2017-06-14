@@ -1,0 +1,86 @@
+<!-- $Id$ -->
+<HTML><HEAD>
+<CENTER><TITLE>../tetreport</TITLE>
+</HEAD>
+<BODY></CENTER><p><hr>
+
+<H1> 
+<A NAME="../tetreport_name_0">
+NAME</A>
+</H1>
+tetreport - Analyse TET journal file
+<p><p><hr>
+
+<H1> 
+<A NAME="../tetreport_description_0">
+DESCRIPTION</A>
+</H1>
+Formats one or more TET journal files into useful reports.  Several reports are
+available, including Summary, Formatted and Error reports.
+<p>Usage:
+<p>
+<H2> tetreport [<STRONG>-s|f|e</STRONG>] [<STRONG>-nt</STRONG>] [<STRONG>-q</STRONG>] journal [journal ...]</H2>
+
+<XMP>
+  Where 'journal' specifies one or more journal files to report.  
+  If no journal file is specified, current directory and $TET_SUITE_ROOT
+  environment variable is used to deduce most recent relevant journal file.
+  Any combination of the following reports may be specified.  The report name
+  may be abbreviated to the first letter:
+    -s        Summary report detailing the test cases run and the pass rate
+              for each test case.  This is the default report.
+    -f        Present journal file information in sequence, but in a more
+              readable structured format.
+    -e        Present detailed error information from journal about each
+              non-PASS.  Tests completing with a PASS are not reported.
+  Other options:
+    -nt       Blank out all times fields to enable reports run at different
+              times to be compared
+    -q        Print nothing to STDOUT, but return a failure count for the 
+              specified journal file(s).  A zero return code means no failures.
+              No reports may be specified together with the -q option.
+    
+
+</XMP>
+<p><p><hr>
+
+<H1> 
+<A NAME="../tetreport_examples_0">
+EXAMPLES</A>
+</H1>
+Print a summary report:
+<p>
+<XMP>
+  tetreport results/0001e/journal
+
+</XMP>
+<p>Print a formatted report:
+<p>
+<XMP>
+  tetreport -f results/0001e/journal
+
+</XMP>
+<p>Print an error report for all journal files in results directory:
+<p>
+<XMP>
+  tetreport -e results/*/journal
+
+</XMP>
+<p>Compare two journal files for differences:
+<p>
+<XMP>
+  tetreport -f -nt results/0010e/journal > xx
+  tetreport -f -nt results/0011e/journal > yy
+  diff xx yy
+
+</XMP>
+<p><p><hr>
+
+<H1> 
+<A NAME="../tetreport_author_0">
+AUTHOR</A>
+</H1>
+Geoff Smith
+<p>
+</BODY>
+</HTML>

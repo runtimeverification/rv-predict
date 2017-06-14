@@ -1,0 +1,29 @@
+# distributed configuration file for exercise 8
+
+# replace the string "tet-root" with the value of $TET_ROOT for your
+# system
+
+# TET_ROOT and TET_TSROOT for each remote system
+TET_REM001_TET_ROOT=tet-root
+TET_REM001_TET_TSROOT=tet-root/contrib/remotedemo/remclient1
+TET_REM002_TET_ROOT=tet-root
+TET_REM002_TET_TSROOT=tet-root/contrib/remotedemo/remclient2
+# If your TET_ROOT and TET_TSROOT differ you will need
+# to edit this file as appropriate
+TET_REM003_TET_ROOT=tet-root
+TET_REM003_TET_TSROOT=tet-root/contrib/remotedemo/remclient3
+TET_REM004_TET_ROOT=tet-root
+TET_REM004_TET_TSROOT=tet-root/contrib/remotedemo/remclient4
+TET_REM005_TET_ROOT=tet-root
+TET_REM005_TET_TSROOT=tet-root/contrib/remotedemo/remclient5
+TET_REM006_TET_ROOT=tet-root
+TET_REM006_TET_TSROOT=tet-root/contrib/remotedemo/remclient6
+TET_REM007_TET_ROOT=tet-root
+TET_REM007_TET_TSROOT=tet-root/contrib/remotedemo/remclient7
+TET_REM008_TET_ROOT=tet-root
+TET_REM008_TET_TSROOT=tet-root/contrib/remotedemo/remclient8
+TET_REM009_TET_ROOT=tet-root
+TET_REM009_TET_TSROOT=tet-root/contrib/remotedemo/remclient9
+TET_REM010_TET_ROOT=tet-root
+TET_REM010_TET_TSROOT=tet-root/contrib/remotedemo/remclient10
+

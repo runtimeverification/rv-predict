@@ -1,0 +1,242 @@
+#
+#      SCCS:  @(#)tetconfig	1.12 (05/12/06) 
+#
+#	UniSoft Ltd., London, England
+#
+# (C) Copyright 1993 X/Open Company Limited
+# (C) Copyright 1994 UniSoft Ltd.
+#
+# All rights reserved.  No part of this source code may be reproduced,
+# stored in a retrieval system, or transmitted, in any form or by any
+# means, electronic, mechanical, photocopying, recording or otherwise,
+# except as stated in the end-user licence agreement, without the prior
+# permission of the copyright owners.
+#
+# X/Open and the 'X' symbol are trademarks of X/Open Company Limited in
+# the UK and other countries.
+#
+#
+# ************************************************************************
+#
+# SCCS:   	@(#)tetconfig	1.12 05/12/06 TETware release 3.8
+# NAME:		tetconfig
+# PRODUCT:	TETware
+# AUTHOR:	Denis McConalogue, UniSoft Ltd.
+# DATE CREATED:	September 1993
+#
+# DESCRIPTION:
+#	TETware configuration script
+# 
+# MODIFICATIONS:
+# 
+#	Denis McConalogue, UniSoft Limited, December 1993
+#	added support for fifolib
+#
+#	Geoff Clare, UniSoft Ltd., July 1996
+#	Changes for TETWare.
+# 
+#	Geoff Clare, UniSoft Ltd., Sept 1996
+#	Changes for TETWare-Lite and Windows NT.
+#	Moved from src/tet3/dtetcfg to src/tetconfig.
+#	Added check for defines.mk file.
+#
+#	Andrew Dingwall, UniSoft Ltd., August 1998
+#	Added support for shared libraries.
+#	Removed fixup of tet3/common.mk.
+# 
+#	Andrew Dingwall, UniSoft Ltd., July 1999
+#	added support for optional directories (to support the java API)
+#
+#	Andrew Dingwall, The Open Group, May 2002
+#	Added support for a Lite-only distribution.
+#
+#       Geoff Clare, The Open Group, November 2005
+#       added support for the Distributed Korn Shell API
+#
+# ************************************************************************
+
+USAGE="Usage:${0} [-t transport]"
+FIX="      To fix: specify \"-t xti\", \"-t inet\", or \"-t lite\""
+
+alldirs=". apithr apishlib apithrshlib tcc tcm"
+distdirs="syncd tccd xresd kshapi"
+optdirs=japilib
+
+# doconfig - configure tet3/*/ts.mk for selected transport
+doconfig()
+{
+	cd tet3 || exit 1
+
+	tplib=${1:?}
+	rc=0
+
+	for i in $alldirs
+	do
+		do1config $tplib $i || rc=1
+	done
+
+	if test $tplib != lite
+	then
+		for i in $distdirs
+		do
+			do1config $tplib $i || rc=1
+		done
+	fi
+
+	for i in $optdirs
+	do
+		if test -d $i
+		then
+			do1config $tplib $i || rc=1
+		fi
+	done
+
+	cd ..
+	return $rc
+}
+
+# do1config - extend the doconfig processing for a single subdirectory
+do1config()
+{
+	name=${1:?}
+	dir=${2:?}
+
+	rm -f $dir/ts.mk
+	cp $dir/${name}lib.mk $dir/ts.mk
+}
+
+# index - return 0 if $1 is in the set $2 ...
+# otherwise return 1
+index()
+{
+        X=${1:?}
+        shift
+        for Y in $*
+        do
+                if test "$X" = "$Y"
+                then
+                        return 0
+                fi
+        done
+        return 1
+}
+
+# work out which options are acceptable
+# depending on what directories are present in the distribution
+options=lite
+if test -d tet3/servlib
+then
+	if test -d tet3/inetlib
+	then
+		options="$options inet"
+	fi
+	if test -d tet3/xtilib
+	then
+		options="$options xti"
+	fi
+fi
+
+# see if a configuration option was specified on the command line
+while :
+do
+	case "$1" in
+		-t)
+			shift
+			TPLIB=${1:?"-t parameter not set"}
+			shift
+			;;
+		"")
+			break
+			;;
+
+		*)
+			echo "$USAGE" 1>&2
+			echo "$FIX" 1>&2
+			exit 2
+	esac
+done
+
+case "$TPLIB" in
+lite|inet|xti)
+	if index $TPLIB $options
+	then
+		doconfig ${TPLIB}
+	else
+		echo "sorry, the $TPLIB option is not available" \
+			"in this distribution"
+		exit 1
+	fi
+	;;
+"")
+	prompt="Enter"
+	set -- $options
+	case $# in
+	0)
+		echo "internal error - no options" 1>&2
+		exit 1
+		;;
+	1)
+		prompt="$prompt $1"
+		;;
+	*)
+		prompt="one of $1"
+		shift
+		while test $# -gt 1
+		do
+			prompt="$prompt, $1"
+			shift
+		done
+		prompt="$prompt or $1"
+		;;
+	esac
+	prompt="$prompt, or type 'q' to exit"
+
+	doneconfig=0
+	while echo $prompt && read TPLIB
+	do
+		case $TPLIB in
+		inet|xti|lite)
+			if index $TPLIB $options
+			then
+				doconfig $TPLIB
+				doneconfig=1
+				break
+			else
+				echo "sorry, the $TPLIB option is" \
+					"not available in this distribution"
+			fi
+			;;
+		[Qq])
+			exit 1
+			;;
+		*)
+			;;
+		esac
+	done
+	if test $doneconfig -eq 0
+	then
+		# read encountered EOF
+		exit 1
+	fi
+	;;
+*)
+	echo "$USAGE" 1>&2
+	echo "$FIX" 1>&2
+	exit 2
+	;;
+esac
+
+
+case $TPLIB in
+lite) echo "TETware-Lite configuration completed" ;;
+*)    echo "TETware configuration for $TPLIB transport completed" ;;
+esac
+
+if test ! -f defines.mk
+then
+	echo "
+You need to create a defines.mk file before running make"
+fi
+
+exit 0
+

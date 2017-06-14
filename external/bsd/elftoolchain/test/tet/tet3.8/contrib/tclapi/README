@@ -1,0 +1,42 @@
+TCL API Binding
+-----------------
+
+This is a tcl API binding for use with TETware.
+
+This version of a tcl API for TET was originally developed by the OSF.
+Some minor changes and bug fixes have been applied for use with TETware.
+
+System Requirements:
+--------------------
+To use this you need to obtain the tcl and tclX distributions
+
+The official home for Tcl and Tk on the Web is:
+        http://www.sunlabs.com/research/tcl    
+and
+	ftp.smli.com
+
+Extended Tcl (TclX), is a set of extensions to Tcl and is needed
+for the signal handling functionality.
+
+Extended Tcl can be downloaded by anonymous FTP from:
+
+   ftp.neosoft.com:/pub/tcl/tclx-distrib/
+
+
+This has been tested on Linux 1.2.13, 2.0.27 and UnixWare 2.03 using 
+tcl 7.6 and tclX7.6.0 and tk4.2, and on  Solaris x86 SunOS 5.5.1 i86pc using
+ tcl8.0 / tclX8.0.0b3 and tk8.0       
+
+Porting
+--------
+
+You may need to edit any tcl scripts to change the first line
+to match the path for your installed tcl interpreter
+
+
+Change History
+---------------
+
+See the SCCS version information and the change
+history within the individual files within the API.
+

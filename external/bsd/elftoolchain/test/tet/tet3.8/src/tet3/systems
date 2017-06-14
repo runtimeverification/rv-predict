@@ -1,0 +1,56 @@
+#
+#      SCCS:  @(#)systems	1.4 (96/11/10) 
+#
+#	UniSoft Ltd., London, England
+#
+# (C) Copyright 1992 X/Open Company Limited
+#
+# All rights reserved.  No part of this source code may be reproduced,
+# stored in a retrieval system, or transmitted, in any form or by any
+# means, electronic, mechanical, photocopying, recording or otherwise,
+# except as stated in the end-user licence agreement, without the prior
+# permission of the copyright owners.
+#
+# X/Open and the 'X' symbol are trademarks of X/Open Company Limited in
+# the UK and other countries.
+#
+#
+# ************************************************************************
+#
+# SCCS:   	@(#)systems	1.4 96/11/10 TETware release 3.8
+# NAME:		systems
+# PRODUCT:	TETware
+# AUTHOR:	Andrew Dingwall, UniSoft Ltd.
+# DATE CREATED:	June 1992
+#
+# DESCRIPTION:
+#	example systems file for the TETware INET implementation
+#
+#	each entry in the systems file associates a TETware system number
+#	with a host name
+#	a systems file should exist in the $TET_ROOT directory on the local
+#	system, and also in the $TET_ROOT directories of each remote system
+#	that might start processes using tet_remexec() or make a call to
+#	tet_remtime() or tet_getsysbyid()
+#
+#	format of a systems file entry is
+#		sysid	host
+#
+#	host may be either a host name that may be looked up using
+#	gethostbyname(3), or an Internet address in dot notation
+#
+# MODIFICATIONS:
+# 
+# ************************************************************************
+
+0	root44		# the local system - must be present when test cases
+			# are to be executed on the local system
+
+# remote systems
+
+1	happy
+2	tigger
+3	vampire
+4	beech
+5	fir
+

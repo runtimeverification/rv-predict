@@ -1,0 +1,4 @@
+export TET_ROOT=<location of the TET installation>
+export PHPRC=<location of the php.ini file>
+export TET_SUITE_ROOT=<location of the demo test suite>
+export PATH=$PATH:$TET_ROOT/bin

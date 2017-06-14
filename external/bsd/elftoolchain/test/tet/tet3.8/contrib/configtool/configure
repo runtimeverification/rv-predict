@@ -1,0 +1,95 @@
+#
+# @(#)configure	1.14
+#
+# This simple script will auto configure the known operating 
+# systems which have makefiles included in the src/defines
+# directory.
+
+USAGE="Usage:${0} -t transport"
+FIX="      To fix: specify \"-t xti\", \"-t inet\", or \"-t lite\""
+
+if [ $# -lt  2 ]
+then
+	echo "$USAGE \n $FIX"
+	exit 1
+fi
+
+while :
+do
+	case "$1" in
+		-t)
+			shift
+			TPLIB=${1:?"-t parameter not set"}
+			shift
+			;;
+
+		"")	break;;
+		*)
+			echo "$USAGE" 1>&2
+			echo "$FIX" 1>&2
+			exit 2
+	esac
+done
+
+cd src
+if [ $? -eq 1 ]
+then 
+	echo "${0}: Unable to find src directory, aborting"
+	exit 1
+fi
+
+case `uname -s` in
+	Windows_NT|Windows_95|DOS)
+        	OS=win32
+        	;;
+	*DYNIX/ptx*)
+		OS=dynix
+		;;
+        *)
+		OS=`sh ./helpers/GuessOS`
+                ;;
+esac  
+
+
+case ${OS} in
+
+	win32) rm defines.mk; cp defines/msc+mks.mk defines.mk;;
+	
+	*dynix*) rm defines.mk 2>/dev/null;ln -s defines/dynix.mk defines.mk ;;
+	*unixware2*|*unixware7*) rm defines.mk 2>/dev/null;ln -s defines/svr42mp.mk defines.mk ;;
+	*unixware1*) rm defines.mk 2>/dev/null;ln -s defines/svr4.mk defines.mk ;;
+	*ibm-aix4.3) rm defines.mk 2>/dev/null;ln -s defines/aix43.mk defines.mk ;;
+	*ibm-aix4.*) rm defines.mk 2>/dev/null;ln -s defines/aix41.mk defines.mk ;;
+	*ibm-aix3*) rm defines.mk 2>/dev/null;ln -s defines/aix41.mk defines.mk ;;
+	*hi-hiux*) rm defines.mk 2>/dev/null;ln -s defines/hiux9.mk defines.mk ;;
+	*hp-hpux10*) rm defines.mk 2>/dev/null;ln -s defines/hpux9.mk defines.mk ;;
+	*hp-hpux*) rm defines.mk 2>/dev/null;ln -s defines/hpux9.mk defines.mk ;;
+	*linux*) rm defines.mk 2>/dev/null;ln -s defines/linux.mk defines.mk ;;
+	*qnx*) rm defines.mk 2>/dev/null;ln -s defines/qnx4.mk defines.mk ;;
+	*dec-osf) rm defines.mk 2>/dev/null;ln -s defines/osf1.mk defines.mk ;;
+	*dec-osf4) rm defines.mk 2>/dev/null;ln -s defines/decux4.mk defines.mk ;;
+	*sun-solaris7*) rm defines.mk 2>/dev/null;ln -s defines/solaris7.mk defines.mk 
+	echo "Solaris 7 detected. The default configuration assumes 32-bit,"
+	echo "with POSIX Threads, Sun Workshop C compiler, no C++ compiler."
+	echo "Edit the defines.mk file if you need to enable 64-bit mode,"
+	echo "or change other configuration as per the comments."
+	;;
+	*sun-solaris2*) rm defines.mk 2>/dev/null;ln -s defines/sunos5.mk defines.mk ;;
+	*sun-sunos4*) rm defines.mk 2>/dev/null;ln -s defines/sunos41.mk defines.mk ;;
+       CRAY*) rm defines.mk 2>/dev/null;ln -s defines/cray.mk defines.mk ;;
+
+       *freebsd*) rm defines.mk 2>/dev/null;ln -s defines/freebsd.mk defines.mk ;;
+       *bsdi*) rm defines.mk 2>/dev/null;ln -s defines/bsdi.mk defines.mk ;;
+       *sgi-irix*) rm defines.mk 2>/dev/null;ln -s defines/irix.mk defines.mk ;;
+       MPE/iX*) rm defines.mk 2>/dev/null; ln -s defines/mpeix.mk defines.mk ;;
+
+	*) echo "Unable to determine the OS, please configure manually, refer to install guide."
+           echo "Upon successful configuration please send the output of src/helpers/GuessOS\nand the corresponding makefile for your platform (edited\nfrom src/defines/template.mk) to tet_support@opengroup.org."
+	  exit 1;;
+esac
+
+sh tetconfig -t ${TPLIB}
+echo "OS=${OS} Configured"
+
+echo "To build , \n\t cd src; make ; make install  "
+

@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+
+require "Rbtet"
+
+class TestSet < Rbtet::SuperTestSet
+
+    @@testlist = Hash[1,"test1", 2,"test2", 3,"test3"]
+
+    def test1()
+        begin
+            var = Rbtet.tet_getvar("RBTET_TC3_VAR")
+        rescue
+            # Should fail, since the parameter is not defined
+            Rbtet.tet_infoline("Failed to get a value for RBTET_TC2_VAR")
+            Rbtet.tet_result(Rbtet::TET_UNRESOLVED)
+            return
+        end
+        Rbtet.tet_infoline("RBTET_TC3_VAR is set to " + var)
+        Rbtet.tet_result(Rbtet::TET_PASS)
+    end
+
+    def test2()
+        if (Rbtet.tet_thistest == 2)
+            Rbtet.tet_result(Rbtet::TET_PASS)
+        else
+            Rbtet.tet_infoline("Expected test number 2, found " + 
+                Rbtet.tet_thistest.to_s)
+            Rbtet.tet_result(Rbtet::TET_FAIL)
+        end
+    end
+
+    def test3()
+        no = 0
+        File.open("tc1", "r") do | file |
+            file.each_line { 
+                | line | 
+                case line
+                    when /def test1/
+                        Rbtet.tet_infoline("Found test1"); no = no + 1
+                    when /def test2/
+                        Rbtet.tet_infoline("Found test2"); no = no + 1
+                    when /def test3/
+                        Rbtet.tet_infoline("Found test3"); no = no + 1
+                end
+            }
+        end
+        if (no == 3)
+            Rbtet.tet_result(Rbtet::TET_PASS)
+        else
+            Rbtet.tet_infoline("Only found " + no.to_s + " tests")
+            Rbtet.tet_result(Rbtet::TET_FAIL)
+        end
+    end
+
+end
+
+Rbtet.rbtet_init(TestSet.new, Rbtet::TET_NULLFP, Rbtet::TET_NULLFP)

@@ -1,0 +1,434 @@
+#--------------------------------CUT HERE-------------------------------------
+#! /bin/sh
+#
+# This is a shell archive.  Save this into a file, edit it
+# and delete all lines above this comment.  Then give this
+# file to sh by executing the command "sh file".  The files
+# will be extracted into the current directory owned by
+# you with default permissions.
+#
+# The files contained herein are:
+#
+# -r--r--r--    1 ajosey   other          7525 Mar 31 08:58 GuessOS
+# -r--r--r--    1 ajosey   other          3167 Mar 31 08:59 configure
+#
+echo 'x - GuessOS'
+if test -f GuessOS; then echo 'shar: not overwriting GuessOS'; else
+sed 's/^X//' << '________This_Is_The_END________' > GuessOS
+X#
+X# @(#)GuessOS	1.4
+X# 
+X# ====================================================================
+X# Copyright (c) 1995-1997 The Apache Group.  All rights reserved.
+X#
+X# Redistribution and use in source and binary forms, with or without
+X# modification, are permitted provided that the following conditions
+X# are met:
+X#
+X# 1. Redistributions of source code must retain the above copyright
+X#    notice, this list of conditions and the following disclaimer. 
+X#
+X# 2. Redistributions in binary form must reproduce the above copyright
+X#    notice, this list of conditions and the following disclaimer in
+X#    the documentation and/or other materials provided with the
+X#    distribution.
+X#
+X# 3. All advertising materials mentioning features or use of this
+X#    software must display the following acknowledgment:
+X#    "This product includes software developed by the Apache Group
+X#    for use in the Apache HTTP server project (http://www.apache.org/)."
+X#
+X# 4. The names "Apache Server" and "Apache Group" must not be used to
+X#    endorse or promote products derived from this software without
+X#    prior written permission.
+X#
+X# 5. Redistributions of any form whatsoever must retain the following
+X#    acknowledgment:
+X#    "This product includes software developed by the Apache Group
+X#    for use in the Apache HTTP server project (http://www.apache.org/)."
+X#
+X# THIS SOFTWARE IS PROVIDED BY THE APACHE GROUP ``AS IS'' AND ANY
+X# EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+X# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+X# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE APACHE GROUP OR
+X# ITS CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+X# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+X# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+X# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+X# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+X# STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+X# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+X# OF THE POSSIBILITY OF SUCH DAMAGE.
+X# ====================================================================
+X#
+X# This software consists of voluntary contributions made by many
+X# individuals on behalf of the Apache Group and was originally based
+X# on public domain software written at the National Center for
+X# Supercomputing Applications, University of Illinois, Urbana-Champaign.
+X# For more information on the Apache Group and the Apache HTTP server
+X# project, please see <http://www.apache.org/>.
+X#
+X
+X# Simple OS/Platform guesser. Similar to config.guess but
+X# much, much smaller. Since it was developed for use with
+X# Apache, it follows under Apache's regular licensing
+X# with one specific addition: Any changes or additions
+X# to this script should be Emailed to the Apache
+X# group (apache@apache.org) in general and to
+X# Jim Jagielski (jim@jaguNET.com) in specific.
+X#
+X# Be as similar to the output of config.guess/config.sub
+X# as possible.
+X
+X# 5th November 1998 , add in support for Solaris 7
+X
+X# First get uname entries that we use below
+X
+XMACHINE=`(uname -m) 2>/dev/null` || MACHINE="unknown"
+XRELEASE=`(uname -r) 2>/dev/null` || RELEASE="unknown"
+XSYSTEM=`(uname -s) 2>/dev/null`  || SYSTEM="unknown"
+XVERSION=`(uname -v) 2>/dev/null` || VERSION="unknown"
+X
+X
+X# Now test for ISC and SCO, since it is has a braindamaged uname.
+X#
+X# We need to work around FreeBSD 1.1.5.1 
+XXREL=`uname -X 2>/dev/null | grep "^Release" | awk '{print $3}'`
+Xif [ "x$XREL" != "x" ]; then
+X    if [ -f /etc/kconfig ]; then
+X	case "$XREL" in
+X	    4.0|4.1)
+X		    echo "${MACHINE}-whatever-isc4"; exit 0
+X		;;
+X	esac
+X    else
+X	case "$XREL" in
+X	    3.2v4.2)
+X		echo "whatever-whatever-sco3"; exit 0
+X		;;
+X	    3.2v5.0*)
+X		echo "whatever-whatever-sco5"; exit 0
+X		;;
+X	    4.2MP)
+X		if [ "x$VERSION" = "x2.1.1" ]; then
+X		    echo "${MACHINE}-whatever-unixware211"; exit 0
+X		elif [ "x$VERSION" = "x2.1.2" ]; then
+X		    echo "${MACHINE}-whatever-unixware212"; exit 0
+X		else
+X		    echo "${MACHINE}-whatever-unixware2"; exit 0
+X		fi
+X		;;
+X	    4.2)
+X		echo "whatever-whatever-unixware1"; exit 0
+X		;;
+X	    5)
+X	        if [ "x$SYSTEM" = "xUnixWare" ]; then
+X	           echo "${MACHINE}-whatever-unixware7"; exit 0
+X	        fi
+X		;;    
+X	esac
+X    fi
+Xfi
+X# Now we simply scan though... In most cases, the SYSTEM info is enough
+X#
+Xcase "${SYSTEM}:${RELEASE}:${VERSION}:${MACHINE}" in
+X    A/UX:*)
+X	echo "m68k-apple-aux3"; exit 0
+X	;;
+X
+X    AIX:*)
+X	echo "${MACHINE}-ibm-aix${VERSION}.${RELEASE}"; exit 0
+X	;;
+X
+X    dgux:*)
+X	echo "${MACHINE}-dg-dgux"; exit 0
+X	;;
+X
+X    HI-UX:*)
+X	echo "${MACHINE}-hi-hiux"; exit 0
+X	;;
+X
+X    HP-UX:*)
+X	HPUXVER=`echo ${RELEASE}|sed -e 's/[^.]*.[0B]*//'`
+X	case "$HPUXVER" in
+X	    10.*)
+X		echo "${MACHINE}-hp-hpux10."; exit 0
+X		;;
+X	    *)
+X		echo "${MACHINE}-hp-hpux"; exit 0
+X		;;
+X	esac
+X	;;
+X
+X    IRIX:*)
+X	echo "${MACHINE}-sgi-irix"; exit 0
+X	;;
+X
+X    IRIX64:*)
+X	echo "${MACHINE}-sgi-irix64"; exit 0
+X	;;
+X
+X    Linux:[2-9].*)
+X	echo "${MACHINE}-whatever-linux2"; exit 0
+X	;;
+X
+X    Linux:1.*)
+X	echo "${MACHINE}-whatever-linux1"; exit 0
+X	;;
+X
+X    LynxOS:*)
+X	echo "${MACHINE}-lynx-lynxos"; exit 0
+X	;;
+X
+X    BSD/386:*:*:*486*|BSD/OS:*:*:*:*486*)
+X	echo "i486-whatever-bsdi"; exit 0
+X	;;
+X
+X    BSD/386:*|BSD/OS:*)
+X	echo "${MACHINE}-whatever-bsdi"; exit 0
+X	;;
+X
+X    FreeBSD:*:*:*486*)
+X	echo "i486-whatever-freebsd"; exit 0
+X	;;
+X
+X    FreeBSD:*)
+X	echo "${MACHINE}-whatever-freebsd"; exit 0
+X	;;
+X
+X    NetBSD:*:*:*486*)
+X	echo "i486-whatever-netbsd"; exit 0
+X	;;
+X
+X    NetBSD:*)
+X	echo "${MACHINE}-whatever-netbsd"; exit 0
+X	;;
+X
+X    OpenBSD:*)
+X	echo "${MACHINE}-whatever-openbsd"; exit 0
+X	;;
+X
+X    OSF1:*:*:*alpha*)
+X	case "$RELEASE" in
+X	    V4*|X4*)
+X		echo "${MACHINE}-dec-osf4"
+X		;;
+X	    *)
+X		echo "${MACHINE}-dec-osf"
+X		;;
+X	esac
+X	exit 0
+X	;;
+X
+X    QNX:*)
+X	case "$VERSION" in
+X	    423)
+X		echo "${MACHINE}-qssl-qnx32"
+X		;;
+X	    *)
+X		echo "${MACHINE}-qssl-qnx"
+X		;;
+X	esac
+X	exit 0
+X	;;
+X
+X    Paragon*:*:*:*)
+X	echo "i860-intel-osf1"; exit 0
+X	;;
+X
+X    SunOS:5.7:*)
+X	echo "${MACHINE}-sun-solaris7"; exit 0
+X	;;
+X
+X    SunOS:5.*)
+X	echo "${MACHINE}-sun-solaris2"; exit 0
+X	;;
+X
+X    SunOS:*)
+X	echo "${MACHINE}-sun-sunos4"; exit 0
+X	;;
+X
+X    UNIX_System_V:4.*:*)
+X	echo "${MACHINE}-whatever-sysv4"; exit 0
+X	;;
+X
+X    *:4*:R4*:m88k)
+X	echo "${MACHINE}-whatever-sysv4"; exit 0
+X	;;
+X
+X    DYNIX/ptx:4*:*)
+X	echo "${MACHINE}-whatever-sysv4"; exit 0
+X	;;
+X
+X    *:4.0:3.0:3[34]?? | *:4.0:3.0:3[34]??,*)
+X	echo "i486-ncr-sysv4"; exit 0
+X	;;
+X
+X    ULTRIX:*)
+X	echo "${MACHINE}-unknown-ultrix"; exit 0
+X	;;
+X
+X    SINIX*)
+X	echo "${MACHINE}-sni-sysv4"; exit 0
+X	;;
+X
+X    machten:*)
+X       echo "${MACHINE}-tenon-${SYSTEM}"; exit 0;
+X       ;;
+X
+X    library:*)
+X	echo "${MACHINE}-ncr-sysv4"; exit 0
+X	;;
+X
+X    ConvexOS:*:11.*:*)
+X	echo "${MACHINE}-v11-${SYSTEM}"; exit 0;
+X	;;
+X    
+X    UNIX_SV:*:*:maxion)
+X	echo "${MACHINE}-ccur-sysv4"; exit 0;
+X	;;
+X    
+X    NonStop-UX:4.[02]*:[BC]*:*)
+X	echo "${MACHINE}-tandem-sysv4"; exit 0;
+X	;;
+X
+X    MPE/iX:*)
+X	echo "${SYSTEM}-${RELEASE}-${VERSION}" | tr -d ' '; exit 0;
+X	;;
+Xesac
+X
+X#
+X# Ugg. These are all we can determine by what we know about
+X# the output of uname. Be more creative:
+X#
+X
+X# Do the Apollo stuff first. Here, we just simply assume
+X# that the existance of the /usr/apollo directory is proof
+X# enough
+Xif [ -d /usr/apollo ]; then
+X    echo "whatever-apollo-whatever"
+X    exit 0
+Xfi
+X
+X# Now NeXT
+XISNEXT=`hostinfo 2>/dev/null`
+Xcase "$ISNEXT" in
+X    *NeXT*)
+X	echo "whatever-next-nextstep"; exit 0
+X	;;
+Xesac
+X
+X# At this point we gone through all the one's
+X# we know of: Punt
+X
+Xecho "${MACHINE}-whatever-${SYSTEM}|${RELEASE}|${VERSION}" 
+Xexit 0
+________This_Is_The_END________
+if test `wc -l < GuessOS` -ne 308; then
+	echo 'shar: GuessOS was damaged during transit (should have been 308 bytes)'
+fi
+fi		; : end of overwriting check
+echo 'x - configure'
+if test -f configure; then echo 'shar: not overwriting configure'; else
+sed 's/^X//' << '________This_Is_The_END________' > configure
+X#
+X# @(#)configure	1.14
+X#
+X# This simple script will auto configure the known operating 
+X# systems which have makefiles included in the src/defines
+X# directory.
+X
+XUSAGE="Usage:${0} -t transport"
+XFIX="      To fix: specify \"-t xti\", \"-t inet\", or \"-t lite\""
+X
+Xif [ $# -lt  2 ]
+Xthen
+X	echo "$USAGE \n $FIX"
+X	exit 1
+Xfi
+X
+Xwhile :
+Xdo
+X	case "$1" in
+X		-t)
+X			shift
+X			TPLIB=${1:?"-t parameter not set"}
+X			shift
+X			;;
+X
+X		"")	break;;
+X		*)
+X			echo "$USAGE" 1>&2
+X			echo "$FIX" 1>&2
+X			exit 2
+X	esac
+Xdone
+X
+Xcd src
+Xif [ $? -eq 1 ]
+Xthen 
+X	echo "${0}: Unable to find src directory, aborting"
+X	exit 1
+Xfi
+X
+Xcase `uname -s` in
+X	Windows_NT|Windows_95|DOS)
+X        	OS=win32
+X        	;;
+X	*DYNIX/ptx*)
+X		OS=dynix
+X		;;
+X        *)
+X		OS=`sh ./helpers/GuessOS`
+X                ;;
+Xesac  
+X
+X
+Xcase ${OS} in
+X
+X	win32) rm defines.mk; cp defines/msc+mks.mk defines.mk;;
+X	
+X	*dynix*) rm defines.mk 2>/dev/null;ln -s defines/dynix.mk defines.mk ;;
+X	*unixware2*|*unixware7*) rm defines.mk 2>/dev/null;ln -s defines/svr42mp.mk defines.mk ;;
+X	*unixware1*) rm defines.mk 2>/dev/null;ln -s defines/svr4.mk defines.mk ;;
+X	*ibm-aix4.3) rm defines.mk 2>/dev/null;ln -s defines/aix43.mk defines.mk ;;
+X	*ibm-aix4.*) rm defines.mk 2>/dev/null;ln -s defines/aix41.mk defines.mk ;;
+X	*ibm-aix3*) rm defines.mk 2>/dev/null;ln -s defines/aix41.mk defines.mk ;;
+X	*hi-hiux*) rm defines.mk 2>/dev/null;ln -s defines/hiux9.mk defines.mk ;;
+X	*hp-hpux10*) rm defines.mk 2>/dev/null;ln -s defines/hpux9.mk defines.mk ;;
+X	*hp-hpux*) rm defines.mk 2>/dev/null;ln -s defines/hpux9.mk defines.mk ;;
+X	*linux*) rm defines.mk 2>/dev/null;ln -s defines/linux.mk defines.mk ;;
+X	*qnx*) rm defines.mk 2>/dev/null;ln -s defines/qnx4.mk defines.mk ;;
+X	*dec-osf) rm defines.mk 2>/dev/null;ln -s defines/osf1.mk defines.mk ;;
+X	*dec-osf4) rm defines.mk 2>/dev/null;ln -s defines/decux4.mk defines.mk ;;
+X	*sun-solaris7*) rm defines.mk 2>/dev/null;ln -s defines/solaris7.mk defines.mk 
+X	echo "Solaris 7 detected. The default configuration assumes 32-bit,"
+X	echo "with POSIX Threads, Sun Workshop C compiler, no C++ compiler."
+X	echo "Edit the defines.mk file if you need to enable 64-bit mode,"
+X	echo "or change other configuration as per the comments."
+X	;;
+X	*sun-solaris2*) rm defines.mk 2>/dev/null;ln -s defines/sunos5.mk defines.mk ;;
+X	*sun-sunos4*) rm defines.mk 2>/dev/null;ln -s defines/sunos41.mk defines.mk ;;
+X       CRAY*) rm defines.mk 2>/dev/null;ln -s defines/cray.mk defines.mk ;;
+X
+X       *freebsd*) rm defines.mk 2>/dev/null;ln -s defines/freebsd.mk defines.mk ;;
+X       *bsdi*) rm defines.mk 2>/dev/null;ln -s defines/bsdi.mk defines.mk ;;
+X       *sgi-irix*) rm defines.mk 2>/dev/null;ln -s defines/irix.mk defines.mk ;;
+X       MPE/iX*) rm defines.mk 2>/dev/null; ln -s defines/mpeix.mk defines.mk ;;
+X
+X	*) echo "Unable to determine the OS, please configure manually, refer to install guide."
+X           echo "Upon successful configuration please send the output of src/helpers/GuessOS\nand the corresponding makefile for your platform (edited\nfrom src/defines/template.mk) to tet_support@opengroup.org."
+X	  exit 1;;
+Xesac
+X
+Xsh tetconfig -t ${TPLIB}
+Xecho "OS=${OS} Configured"
+X
+Xecho "To build , \n\t cd src; make ; make install  "
+X
+________This_Is_The_END________
+if test `wc -l < configure` -ne 95; then
+	echo 'shar: configure was damaged during transit (should have been 95 bytes)'
+fi
+fi		; : end of overwriting check
+exit 0

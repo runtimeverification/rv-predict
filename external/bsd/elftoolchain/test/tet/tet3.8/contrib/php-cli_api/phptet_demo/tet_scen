@@ -1,0 +1,4 @@
+all
+	/tests/tc1/tc1
+	/tests/tc2/tc2
+	/tests/tc3/tc3

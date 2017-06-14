@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+import pytet, time
+
+def test1():
+	try:
+		var = pytet.tet_getvar("PYTET_TC2_VAR");
+	except:
+		pytet.tet_infoline("Failed to get a value for PYTET_TC2_VAR")
+		pytet.tet_result(pytet.TET_UNRESOLVED)
+		return
+
+	pytet.tet_infoline("PYTET_TC2_VAR is set to \"" + var + "\"");
+
+	if var == "Y":
+		pytet.tet_result(pytet.TET_PASS)
+	else:
+		pytet.tet_result(pytet.TET_UNSUPPORTED)
+
+def test2():
+	starttime = time.time()
+	for i in range(100000):
+		s = str(i)
+	endtime = time.time()
+	elapsed = endtime - starttime
+	if elapsed > 1.0:
+		pytet.tet_infoline("Too slow! That took %.2f seconds" % elapsed)
+		pytet.tet_result(pytet.TET_FAIL)
+	else:
+		pytet.tet_infoline("Not bad! That took %.2f seconds" % elapsed)
+		pytet.tet_result(pytet.TET_PASS)
+
+def test3():
+	pytet.tet_result(pytet.TET_UNTESTED)
+
+testlist = { 1:test1, 2:test2, 3:test3 }
+pytet.pytet_init(testlist, pytet.TET_NULLFP, pytet.TET_NULLFP)

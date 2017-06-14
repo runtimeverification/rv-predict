@@ -1,0 +1,13 @@
+@(#)etet/contrib/cplusdemo/README	1.2
+
+This is the standard TET1.10 demo modified to use C++.
+The tests have their own subdirectories rather than a common
+directory as in the standard demo; this is better.
+
+This is merely a demonstration of the capability.
+
+If this fails to build on your system checkout the individual
+makefiles. For example the definitions for CC and CFLAGS will
+need changing for GNU g++; examples are given for SunOS4.1.
+
+The defaults are known to work with USL C++ 3.0.2 on SVR4.2.

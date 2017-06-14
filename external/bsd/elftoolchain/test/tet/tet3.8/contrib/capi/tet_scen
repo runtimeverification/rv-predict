@@ -1,0 +1,33 @@
+#	chmod, fileno, stat, uname test suite.
+# 	this is an extended version of the test suite
+#	in chapter 14 of the TETware Programmers Guide
+
+all
+	"Starting Full Test Suite"
+	/ts/chmod/chmod-tc
+	/ts/fileno/fileno-tc
+	/ts/stat/stat-tc
+	/ts/uname/uname-tc
+	"Completed Full Test Suite"
+
+chmod
+	"Starting chmod Test Case"
+	/ts/chmod/chmod-tc
+	"Finished chmod Test Case"
+
+fileno
+	"Starting fileno Test Case"
+	/ts/fileno/fileno-tc
+	"Finished fileno Test Case"
+
+stat
+	"Starting stat Test Case"
+	/ts/stat/stat-tc
+	"Finished stat Test Case"
+
+uname
+	"Starting uname Test Case"
+	/ts/uname/uname-tc
+	"Finished uname Test Case"
+
+# EOF 

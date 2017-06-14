@@ -1,0 +1,44 @@
+#!/usr/bin/env php
+<?
+include "phptet.php";
+
+function startup()
+{
+    tet_infoline("Test startup");
+    tet_delete(3, "Marking test 3 as uninitiated");
+}
+
+function cleanup()
+{
+    tet_infoline("Test cleanup");
+}
+
+function test1()
+{
+    $var = tet_getvar("PHPTET_TC1_VAR");
+    if ($var == "")
+    {
+        tet_infoline("Failed to get a value for PHPTET_TC1_VAR");
+        tet_result(TET_UNRESOLVED);
+        return;
+    }
+
+    tet_infoline("PHPTET_TC1_VAR is set to " . $var);
+    tet_result(TET_PASS);
+}
+
+function test2()
+{
+    tet_infoline("The second test fails");
+    tet_result(TET_FAIL);
+}
+
+function test3()
+{
+    tet_infoline("The third test is unresolved");
+} 
+
+$testlist = array(1 => "test1", "test2", "test3");
+
+phptet_init($testlist, "startup", "cleanup");
+?>

@@ -1,0 +1,134 @@
+#!/usr/bin/awk -f
+#
+# Tabulates a simple scoreboard for a journal file
+# for example:
+#  Test       TOTAL     PASS USP tst war use fip imp FAIL URS ini rep unk apr tet
+#-------------------------------------------------------------------------------
+#    chmod-tc    5 ---    5   .   .   .   .   .   .    .   .   .   .   .   .   .
+#   fileno-tc    6 ---    5   .   .   .   .   .   .    1   .   .   .   .   .   .
+#     stat-tc    9 ---    8   1   .   .   .   .   .    .   .   .   .   .   .   .
+#Unknown result code: 33
+#    uname-tc    3 ---    2   .   .   .   .   .   .    .   .   .   .   .   1   .
+#	      TOTAL     PASS USP tst war use fip imp FAIL URS ini rep unk apr tet
+#-------------------------------------------------------------------------------
+#       Total   23 ---   20   1   .   .   .   .   .    1   .   .   .   .   1   .
+#
+
+function PrintNum(fmt,num) {
+	str = sprintf(fmt,num);
+	if( match(str,"^ +0$") != 0 )  sub("0",".", str);
+	printf("%s",str);
+	}
+
+function PrintLine() {
+	if (ic_msg && check_ic ) {
+		printf(" - missing IC for %s\n", command);
+		ic_msg = 0;
+		}
+	
+	 ###perc = (100*xxx)/total
+# pass=passed+warning+fip+unsuported+notinuse+untested+notimp;
+# fail=failed+unresolved+uninitiated+unreported;
+# printf("Total tests: \t\t%d\tPASS = %d\tFAIL = %d\n\n",total,pass,fail);
+
+	printf("%12s", command);
+        s_total+=total; PrintNum("%5d",total); total=0;
+	
+	###	printf(" %3.0f", perc);
+	PrintNum(" ---", 0);
+
+	s_passed+=passed; PrintNum(" %4d",passed); passed=0;
+	s_unsuported+=unsuported; PrintNum(" %3d",unsuported); unsuported=0;
+	s_untested+=untested; PrintNum(" %3d",untested); untested=0;
+	s_warning+=warning; PrintNum(" %3d",warning); warning=0;
+	s_notinuse+=notinuse; PrintNum(" %3d",notinuse); notinuse=0;
+	s_fip+=fip; PrintNum(" %3d",fip); fip=0;
+	s_notimp+=notimp; PrintNum(" %3d",notimp); notimp=0;
+
+	s_failed+=failed; PrintNum(" %4d",failed); failed=0;
+	s_unresolved+=unresolved;PrintNum(" %3d",unresolved); unresolved=0;
+	s_uninitiated+=uninitiated;PrintNum(" %3d",uninitiated);uninitiated=0;
+	s_unreported+=unreported; PrintNum(" %3d",unreported); unreported=0;
+	s_unaproved+=unaproved; PrintNum(" %3d",unaproved); unaproved=0;
+	s_unknown+=unknown; PrintNum(" %3d",unknown); unknown=0;
+	s_tetfail+=tetfail; PrintNum(" %3d",tetfail); tetfail=0;
+
+	printf("\n");
+	}
+
+function NextIC(ic_curr) {
+
+	if( ! check_ic ) return;
+
+	if( ic_curr > ic_last+1 ) {
+		if ( ic_curr-1 != 1000 ) {
+			if (ic_msg) printf(",");
+			if ( ic_curr > ic_last+2 ) printf("%d-",ic_last+1);
+			printf("%d",ic_curr-1);
+			ic_msg = 1;
+			}
+		}
+	ic_last = ic_curr
+	}
+
+
+BEGIN	{ if (head == 0) printf ("%s\n%s\n",\
+"Testcase    TOTAL  .  PASS USP tst war use fip imp FAIL URS ini rep unk apr tet","-------------------------------------------------------------------------------")
+	ic_last = 0
+	check_ic = 0
+	}
+
+$1 ~ "^110" {	if (lines++ != 0) PrintLine();
+		command = $2
+		sub("^.*[/]", "", command);
+		sub(".ex$", "", command);
+		}
+
+$1 ~ "^220" {if ($3 == 0) passed++ 
+		else if ($3 == 1) failed++
+		else if ($3 == 2) unresolved++
+		else if ($3 == 3) notinuse++
+		else if ($3 == 4) unsuported++
+		else if ($3 == 5) untested++
+		else if ($3 == 6) uninitiated++
+		else if ($3 == 7) unreported++
+		else if ($3 == 101) warning++
+		else if ($3 == 102) fip++
+		else if ($3 == 103) notimp++
+		else if ($3 == 104) unapproved++
+		else {printf("Unknown result code: %d\n",$3);unknown++}
+	    total++
+	}
+
+$1 ~ "^400" {	if (1) NextIC($2); }
+
+$1 ~ "^50" { tetfail++ }
+
+$1 ~ "^510" { tetfail++}
+
+END	{
+	PrintLine();
+	if( lines > 1 ) {
+		command = "Total"
+		
+		total = s_total;
+		passed = s_passed;
+		unsuported = s_unsuported;
+		untested = s_untested;
+		warning = s_warning;
+		notinuse = s_notinuse;
+		fip = s_fip;
+		notimp = s_notimp;
+		failed = s_failed;
+		unresolved = s_unresolved;
+		uninitiated = s_uninitiated;
+		unreported = s_unreported;
+		unapproved = s_unapproved;
+		unknown = s_unknown;
+		tetfail = s_tetfail;
+printf ("%s\n%s\n",\
+"            TOTAL  .  PASS USP tst war use fip imp FAIL URS ini rep unk apr tet","-------------------------------------------------------------------------------")
+		PrintLine();
+		}
+	}
+

@@ -1,0 +1,54 @@
+#!/usr/bin/env php
+<?
+include "phptet.php";
+
+function test1()
+{
+    $var = tet_getvar("PHPTET_TC2_VAR");
+    if ($var == "")
+    {
+        tet_infoline("Failed to get a value for PHPTET_TC2_VAR");
+        tet_result(TET_UNRESOLVED);
+        return;
+    }
+
+    if ($var == "Y")
+        tet_result(TET_PASS);
+    else
+        tet_result(TET_UNSUPPORTED);
+}
+
+function test2()
+{
+    list($usec, $sec) = explode(" ", microtime());
+    $t1 = (float)($sec + $usec);
+
+    for ($i = 0; $i < 100000; $i++)
+        $str = (string) $i;
+
+    list($usec, $sec) = explode(" ", microtime());
+    $t2 = (float)($sec + $usec);
+
+    $elapsed = $t2 - $t1;
+
+    if ($elapsed < 1.0) 
+    {
+        tet_infoline("Not bad! That took " . (string)$elapsed . " seconds");
+        tet_result(TET_PASS);
+    }
+    else
+    {
+        tet_infoline("Too bad! That took " . (string)$elapsed . " seconds");
+        tet_result(TET_FAIL);
+    } 
+}
+
+function test3()
+{
+    tet_result(TET_UNTESTED);
+} 
+
+$testlist = array(1 => "test1", "test2", "test3");
+
+phptet_init($testlist, TET_NULLFP, TET_NULLFP);
+?>

@@ -1,0 +1,71 @@
+#!/bin/sh
+# envexec -
+# This is an exec tool for setting up a defined user environment
+# for a test case.
+# 
+# This can be called as a TET_BUILD_TOOL, TET_CLEAN_TOOL, or TET_EXEC_TOOL.
+# When called this looks for the configuration variable TS_ENV_FILE being set 
+# in the appropriate TETware configuration file
+# (i.e. tetbuild.cfg, tetexec.cfg or tetexec.cfg), and then sets
+# any environment variables.
+#
+# The file specified by TS_ENV_FILE should contain Shell syntax for
+# environment variables. These are set in the environment
+# prior to executing the test case.
+#
+# A Debug tool can also be set by TS_DEBUG_TOOL in the appropriate 
+# build, clean or execute config file or in the environment using the
+# -v flag to cc
+#
+# Command line arguments can be passed to testcases by using
+# TS_CMD_ARGS in the appropriate file
+#
+# An example use , assuming envexec is in the PATH
+# 
+#   tcc -p -v TET_EXEC_TOOL=envexec -bec contrib/demo
+#
+#   tcc -p -v TS_DEBUG_TOOL=strace -v TET_EXEC_TOOL=envexec -bec contrib/demo
+#
+#   tcc -p -v TS_DEBUG_TOOL=time -v TET_EXEC_TOOL=envexec -e contrib/demo
+#
+#   tcc -p -v TS_CMD_ARGS="-d" -e contrib/demo
+#--------------------------------------------------------------------
+# extract the value of TS_ENV_FILE from the configuration for the
+# current mode of operation -
+# ignore blank lines and comments in the config file
+TS_ENV_FILE=
+eval `sed -n 's/#.*//
+	/^[ 	]*\$/d
+	/^TS_ENV_FILE=/s/\([^=]*\)=\(.*\)/\1="\2"/p' ${TET_CONFIG:?}`
+
+# if a TS_ENV_FILE has been defined, read it in
+if test ! -z "$TS_ENV_FILE"
+then
+	if test -r $TS_ENV_FILE
+	then
+		. $TS_ENV_FILE
+	else
+		echo "$0: can't read environment file $TS_ENV_FILE" 1>&2
+		exit 1
+	fi
+fi
+
+TS_CMD_ARGS=
+eval `sed -n 's/#.*//
+	/^[ 	]*\$/d
+	/^TS_CMD_ARGS=/s/\([^=]*\)=\(.*\)/\1="\2"/p' ${TET_CONFIG:?}`
+
+TS_DEBUG_TOOL=
+eval `sed -n 's/#.*//
+	/^[ 	]*\$/d
+	/^TS_DEBUG_TOOL=/s/\([^=]*\)=\(.*\)/\1="\2"/p' ${TET_CONFIG:?}`
+
+# finally, exec the test case
+
+if test -z $TS_DEBUG_TOOL
+then
+	exec "$@" "$TS_CMD_ARGS" 
+else
+	exec "$TS_DEBUG_TOOL" "$@" "$TS_CMD_ARGS"
+fi
+

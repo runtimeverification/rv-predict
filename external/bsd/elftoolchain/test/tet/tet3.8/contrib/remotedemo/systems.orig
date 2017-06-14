@@ -1,0 +1,28 @@
+# TETware Remote Demonstration Test Suite
+# systems definition file 
+#
+# copy this file to $TET_ROOT/systems
+
+# normally, you would have real host names in this file, not "localhost";
+# but we have defined it like this to reduce the amount of customisation
+# that you have to do during this demonstration
+# (using "localhost" in this file only works at all if all the systems
+# map to "localhost")
+
+000	localhost
+# If you run the tests on a mixture of logical (localhost) pseudo
+# clients and a real physical remote client, then you need to
+# have a real address or host name  for system 000.
+#000	192.168.0.3
+001	localhost
+002	localhost
+003	localhost
+#003	192.168.0.1
+004	localhost
+005	localhost
+006	localhost
+007	localhost
+008	localhost
+009	localhost
+010	localhost
+

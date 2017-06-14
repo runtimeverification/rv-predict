@@ -1,0 +1,16 @@
+awk -F\| '
+#
+# script to generate a simple list of Results on a per test case basis
+#
+$1 == 0 { split($2, tmp, " "); print "TETware Version:", tmp[1], \
+    "DATE:", tmp[3], "TIME:", tmp[2] "\n", $3 ;}
+$1 == 5 { print "SYSTEMID:", $2 ; }
+$1 == 70 { print "\n", $3 ;}
+$1 == 110 { split($2, tmp, " "); \
+	    split ($3, tmp2, ","); \
+ 	    print "\n", tmp[2], tmp2[1] ; }
+$1 == 220 { split($2, tmp, " "); print tmp[2], $3 }
+#$1 == 10  { split($2, tmp, " "); print tmp[2] }
+$1 == 300 { split($2, tmp, " "); split ($3, tmp2, ","); print tmp[2], tmp2[1] ; }
+$1 == 10 { split($2, tmp, " "); split ($3, tmp2, ","); print tmp[2], tmp2[1] ; }
+' "$@"

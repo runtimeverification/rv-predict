@@ -1,0 +1,6 @@
+#To install the test suite:
+PATH=`pwd`/bin:$PATH
+export PATH
+./bin/install
+
+echo "Setup complete"

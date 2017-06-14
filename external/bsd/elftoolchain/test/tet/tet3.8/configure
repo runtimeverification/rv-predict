@@ -1,0 +1,401 @@
+:
+#	SCCS: @(#)configure	1.21 (05/07/08)
+#
+# Copyright (c) 1998-2005 The Open Group
+# All rights reserved.
+#
+# No part of this source code may be reproduced, stored in a retrieval
+# system, or transmitted, in any form or by any means, electronic,
+# mechanical, photocopying, recording or otherwise, except as stated in
+# the end-user licence agreement, without the prior permission of the
+# copyright owners.
+# A copy of the end-user licence agreement is contained in the file
+# Licence which accompanies this distribution.
+# 
+# Motif, OSF/1, UNIX and the "X" device are registered trademarks and
+# IT DialTone and The Open Group are trademarks of The Open Group in
+# the US and other countries.
+#
+# X/Open is a trademark of X/Open Company Limited in the UK and other
+# countries.
+#
+# ************************************************************************
+#
+# SCCS:   	@(#)configure	1.21 05/07/08 TETware release 3.8
+# NAME:		configure
+# PRODUCT:	TETware
+# AUTHOR:	Andrew Josey, The Open Group
+# DATE CREATED:	September 1997
+#
+# DESCRIPTION:
+#	This simple script will auto configure the known operating 
+#	systems which have defines.mk files included in the src/defines
+#	directory.
+# 
+# MODIFICATIONS:
+#	Andrew Dingwall, UniSoft Ltd., September 1998
+#	integrated into the TETware distribution
+#
+#	Andrew Dingwall, UniSoft Ltd., November 1998
+#	added support for FreeBSD
+#
+#	Andrew Dingwall, UniSoft Ltd., March 1999
+#	integrated some enhancements received from Andrew Josey -
+#		added support for DYNIX/ptx, Solaris 2.7, BSDI
+#
+#	Andrew Dingwall, UniSoft Ltd., September 1999
+#	added support for HP-UX 11
+#	added support for the Java API
+#
+#	Andrew Dingwall, UniSoft Ltd., November 1999
+#	always copy the defines.mk file in case the user needs to edit it
+#	for some reason; however, we still only make the file writable
+#	when an edit is "expected"
+#	(if the user wants to edit the file in other situations, we assume
+#	they know what they are doing and thus will be smart enough to
+#	figure out the "chmod u+w" for themselves!)
+# 
+#	Andrew Dingwall, UniSoft Ltd., March 2000
+#	added support for Solaris 8
+#
+#	Andrew Dingwall, The Open Group, January 2002
+#	updated to align with UNIX2003
+#
+#	Andrew Dingwall, The Open Group, May 2002
+#	Added separate support for Solaris 8 and 9.
+#	Added support for a Lite-only distribution.
+#
+#	Geoff Clare, The Open Group, November 2004
+#	Added support for MacOS X (Darwin).
+#
+#	Geoff Clare, The Open Group, July 2005
+#	Avoid using getopt.
+#	Added support for Solaris 10 and QNX.
+#
+# ************************************************************************
+
+# functions
+badusage()
+{
+	echo "Usage:	$0 -t transport" 1>&2
+	echo "To fix:	specify \"-t xti\", \"-t inet\", or \"-t lite\"" 1>&2
+	exit 2
+}
+
+unknown_os()
+{
+	echo "$0: Unable to determine the OS type."
+	echo "Please configure manually; refer to TETware Installation Guide."
+	echo "Upon successful configuration please send the output of"
+	echo "src/helpers/GuessOS and the corresponding makefile for" \
+		"your platform"
+	echo "(edited from src/defines/template.mk) to" \
+		"tet_support@opengroup.org."
+	exit 1
+}
+
+java_msg()
+{
+	echo "If the JDK is installed on this machine, you have installed"
+	echo "the TETware Java API and you want to build the API,"
+	echo "you must edit src/defines.mk and specify where the"
+	echo "JDK include files have been installed on this machine."
+	echo "The comments below the heading 'Support for Java' tell you"
+	echo "what to do."
+	echo
+}
+
+solaris_msg()
+{
+	echo "The default configuration assumes 32-bit, with POSIX Threads,"
+	echo "Sun Workshop C compiler and no C++ compiler."
+	echo "Edit the defines.mk file if you need to enable 64-bit mode,"
+	echo "or change other configuration as per the comments."
+}
+
+# parse the command line
+
+tplib=
+while test $# -gt 0
+do
+	case "$1" in
+	-t)
+		test $# -gt 1 || badusage
+		tplib="$2"
+		shift
+		;;
+	-t*)
+		tplib=`echo X"$1" | sed 's/X-t//'`
+		;;
+	--)
+		shift
+		break
+		;;
+	-*)
+		badusage
+		;;
+	*)
+		break
+		;;
+	esac
+	shift
+done
+
+case "$tplib" in
+inet|xti|lite)
+	;;
+*)
+	badusage
+	;;
+esac
+
+# change to the source directory
+cd src
+if test $? -ne 0
+then 
+	echo "$0: Unable to find src directory, aborting"
+	exit 1
+fi
+
+# determine the OS type
+case `uname -s` in
+Windows_*)
+	os=win32
+	if test "$tplib" = xti
+	then
+		echo "$0: Win32 systems do not support XTI networking" 1>&2
+		exit 1
+	fi
+	;;
+*DYNIX/ptx*)
+	os=dynix
+	;;
+Darwin)
+	os=darwin
+	;;
+*)
+	os=`sh ./helpers/GuessOS`
+	;;
+esac  
+
+
+# decide whether the user is likely to need to edit the defines.mk file
+#
+# the file probably needs to be edited:
+#	if TETware-Lite is being built
+#	if the XTI transport is being used
+#	if the Java API is supported
+#	if there are other options to be specified (e.g.: 64-bit mode)
+#
+# the basic decision is made here, based on which transport has been specified;
+# the os/specific decisions are made in the next switch
+case $tplib in
+inet)
+	chmod=:
+	;;
+*)
+	chmod="chmod u+w"
+	;;
+esac
+
+
+# determine which defines.mk file to use
+fname=
+
+case "$os" in
+win32)
+	fname=msc+mks.mk
+	# java supported on this platform
+	echo
+	echo "$0: Win32 system detected."
+	java_msg
+	chmod="chmod +w"
+	;;
+dynix)
+	fname=dynix.mk
+	;;
+darwin)
+	fname=darwin.mk
+	;;
+*-unixware2*|*-unixware7)
+	fname=svr42mp.mk
+	;;
+*-unixware1*|*-sysv4)
+	fname=svr4.mk
+	;;
+*-ibm-aix4.[12])
+	fname=aix41.mk
+	;;
+*-ibm-aix4.3)
+	fname=aix43.mk
+	;;
+*-ibm-aix3*)
+	fname=aix32.mk
+	;;
+*-hi-hiux*)
+	fname=hiux9.mk
+	;;
+*-hp-hpux11*)
+	fname=hpux11.mk
+	;;
+*-hp-hpux10*)
+	fname=hpux10.mk
+	;;
+*-hp-hpux*)
+	fname=hpux9.mk
+	;;
+*-linux*)
+	fname=linux.mk
+	# java supported on this platform
+	echo
+	echo "$0: Linux detected."
+	java_msg
+	chmod="chmod u+w"
+	;;
+*-dec-osf)
+	fname=osf1.mk
+	;;
+*-dec-osf4)
+	fname=decux4.mk
+	;;
+*-sun-solaris2*)
+	case `uname -r` in
+	5.[0-5]*)
+		fname=sunos5.mk
+		;;
+	5.[67]*)
+		fname=sunos56.mk
+		;;
+	*)
+		unknown_os
+		;;
+	esac
+	;;
+*-sun-solaris7)
+	fname=solaris7.mk
+	# java supported on this platform
+	echo
+	echo "$0: Solaris 7 detected."
+	solaris_msg
+	# no java_msg here - Solaris 2.7 includes java, so the java stuff
+	# should always be in the standard place
+	chmod="chmod u+w"
+	;;
+*-sun-solaris8)
+	fname=solaris8.mk
+	# java supported on this platform
+	echo
+	echo "$0: Solaris 8 detected."
+	solaris_msg
+	# no java_msg here
+	chmod="chmod u+w"
+	;;
+*-sun-solaris9)
+	fname=solaris9.mk
+	# java supported on this platform
+	echo
+	echo "$0: Solaris 9 detected."
+	solaris_msg
+	# no java_msg here
+	chmod="chmod u+w"
+	;;
+*-sun-solaris1[0-9])
+	fname=solaris10.mk
+	# java supported on this platform
+	echo
+	echo "$0: Solaris 10 or later detected."
+	solaris_msg
+	# no java_msg here
+	chmod="chmod u+w"
+	;;
+*-sun-sunos4*)
+	fname=sunos41.mk
+	;;
+CRAY*)
+	fname=cray.mk
+	;;
+*-sgi-irix*)
+	fname=irix.mk
+	;;
+*-freebsd | *-netbsd | *-dragonfly)	# Use FreeBSD's configuration.
+	fname=freebsd.mk
+	;;
+*-bsdi)
+	fname=bsdi.mk
+	;;
+*-qnx*)
+	fname=qnx.mk
+	;;
+# this had to be left out of the distribution for now
+# MPE/iX-*)
+#	fname=mpeix.mk
+#	;;
+*)
+	unknown_os
+	;;
+esac
+
+# locate the chosen defines.mk file
+if test ! -d defines
+then
+	echo "$0: no defines directory - aborting" 1>&2
+	exit 1
+fi
+
+mkfile=`find defines -name ${fname:?} -print | head -n 1`
+
+if test -z "$mkfile"
+then
+	echo "$0: can't find $fname in the defines directory" 1>&2
+	exit 1
+fi
+
+# link/copy the chosen defines.mk file in place
+echo "$0: using $mkfile"
+rm -f defines.mk
+cp ${mkfile:?} defines.mk
+eval ${chmod:?} defines.mk
+
+# configure TETware to use the chosen network transport
+if sh tetconfig -t $tplib
+then
+	echo
+	echo "OS=$os Configured"
+else
+	echo "configuration for OS=$os failed"
+	exit 1
+fi
+
+# emit informational messages if we are not building Distributed TETware
+# to use sockets
+if test "$tplib" != inet
+then
+	echo
+	echo "$0: the selected defines.mk file has been designed to build"
+	echo "Distributed TETware to use the socket network interface."
+	echo "If you are building a different version of TETware you may need"
+	echo "to edit the file src/defines.mk before building TETware."
+fi
+if test "$tplib" = lite
+then
+	echo "For example: if network libraries have been specified in the"
+	echo "SYSLIBS assignment, you don't need these when building" \
+		"TETware-Lite."
+fi
+if test "$tplib" = xti
+then
+	echo "For example: you will need to add something to DTET_CDEFS" \
+		"to specify"
+	echo "which transport provider(s) you want to use" \
+		"(-DTCPTPI and/or -DOSITPI),"
+	echo "and you will probably want to specify -DSVID3_POLL as well."
+	echo "Also, you may need to specify different network libraries using"
+	echo "the SYSLIBS variable."
+	echo "Refer to the TETware Installation Guide for details."
+fi
+
+# what to do next
+echo
+echo "To build TETware:"
+echo "	cd src; make; make install"
+

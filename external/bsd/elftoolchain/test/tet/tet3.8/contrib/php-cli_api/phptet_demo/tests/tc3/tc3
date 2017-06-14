@@ -1,0 +1,53 @@
+#!/usr/bin/env php
+<?
+include "phptet.php";
+
+function test1()
+{
+    $var = tet_getvar("PHPTET_TC3_VAR");
+    if ($var == "")
+    {
+        # Should fail, since the parameter is not defined
+        tet_infoline("Failed to get a value for PHPTET_TC3_VAR");
+        tet_result(TET_UNRESOLVED);
+        return;
+    }
+
+    tet_infoline("RBTET_TC3_VAR is set to " . $var);
+    tet_result(TET_PASS);
+}
+
+function test2()
+{
+    global $tet_thistest;
+
+    if ($tet_thistest == 2)
+    {
+        tet_result(TET_PASS);
+    }
+    else
+    {
+        tet_infoline("Expected test number 2, found " . $tet_thistest);
+        tet_result(TET_FAIL);
+    }
+}
+
+function test3()
+{
+    global $tet_pname;
+
+    if (ereg("tc3", "$tet_pname") == TRUE)
+    {
+        tet_result(TET_PASS);
+    }
+    else
+    {
+        tet_infoline("Expected program name tc3, found " . $tet_pname);
+        tet_result(TET_FAIL);
+    }
+} 
+
+$testlist = array(1 => "test1", "test2", "test3");
+
+phptet_init($testlist, TET_NULLFP, TET_NULLFP);
+?>

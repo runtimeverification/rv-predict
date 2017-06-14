@@ -1,0 +1,383 @@
+<!-- $Id$ -->
+<HTML><HEAD>
+<CENTER><TITLE>TetJournal</TITLE>
+</HEAD>
+<BODY></CENTER><p><hr>
+
+<H1> 
+<A NAME="TetJournal_name_0">
+NAME</A>
+</H1>
+TetJournal - Interpret TET Journal File
+<p><p><hr>
+
+<H1> 
+<A NAME="TetJournal_description_0">
+DESCRIPTION</A>
+</H1>
+This class reads a supplied TET journal file and provides methods for
+interpreting the journal to varying levels of detail.
+<p><p><hr>
+
+<H1> 
+<A NAME="TetJournal_methods_0">
+METHODS</A>
+</H1>
+<p>
+<DL COMPACT>
+<DT><STRONG>
+
+<A NAME="TetJournal_new_0">
+new    Create a TetJournal object.</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: Journal file name
+  Returns: Object handle  (zero if error)
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_dump_0">
+dump   Return array containing entire journal file</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: @journal array
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_status_0">
+status Return failure count within journal</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: Number of TPs that did not record a PASS result
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_nextblock_0">
+nextBlock Fetch next logical block from journal</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: @block array.  Unformatted contents of current block
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_resetblockptr_0">
+resetBlockPtr  Reset block pointer to start of journal</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: empty
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_blockoutput_0">
+blockOutput</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: Output text contained in the current block
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_blockstatus_0">
+blockStatus</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: Failure count within current block (if block is a Test Case)
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_blocktype_0">
+blockType</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: Text string identifying type of current block.  One of:
+   "header","build","TC","clean","scenario" or "unknown"
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_blocktimes_0">
+blockTimes</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: 2 element array of start and end times for current block.  Times are
+           in HH:MM:SS format
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_times_0">
+times</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: 2 element array of start and end times for entire journal
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_modes_0">
+modes</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: Array of tcc execution modes used.  (Selected from: 'build',
+           'execute','clean')
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_tclist_0">
+TClist</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: List of Test Cases encountered in journal
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_tcname_0">
+TCname</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: none
+  Returns: Name of test case processed by current block
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_iclist_0">
+IClist</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: Optional test case name.  If not specified, current block is used to
+         determine test case (TC).
+  Returns: 
+   1. If test case is specified: 
+      Array of all IC numbers processed by all invocations of specified test
+      case
+   2. If no test case specified:
+      Array of IC numbers processed by current test case
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_getic_0">
+getIC</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: IC number within current test case.
+  Returns: Array of journal entries for IC
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_icpasscount_0">
+ICpassCount</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: (Test Case, IC number)
+  Returns: Array of total pass counts for each TP within specified IC
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_icruncount_0">
+ICrunCount</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: (Test Case, IC number)
+  Returns: Total number of times this IC has been run
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_icstatus_0">
+ICstatus</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: IC number within current test case
+  Returns: Failure count for IC
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_ictimes_0">
+ICtimes</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: IC number within current test case
+  Returns: Start and end times for specified IC
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_tpcount_0">
+TPcount</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: IC number within current test case
+  Returns: Number of Test Purposes for the specified IC
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_gettp_0">
+getTP</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: (IC number, TP number)
+  Returns: Unformated journal entries for specified Test Purpose
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_tpresult_0">
+TPresult</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: (IC number, TP number)
+  Returns: Result code (PASS, FAIL, NORESULT etc) for specified Test Purpose
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_tpoutput_0">
+TPoutput</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: (IC number, TP number)
+  Returns: Information text for a specified Test Purpose
+
+</XMP>
+<p>
+<DT><STRONG>
+
+<A NAME="TetJournal_tptimes_0">
+TPtimes</A>
+
+</STRONG>
+<DD>
+
+<XMP>
+  Input: (IC number, TP number)
+  Returns: Start and End times for specified Test Purpose
+
+</XMP>
+<p><p><hr>
+
+<H1> 
+<A NAME="TetJournal_author_0">
+AUTHOR</A>
+</H1>
+Geoff Smith
+<p>
+</DL>
+
+</BODY>
+</HTML>

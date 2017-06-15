@@ -38,12 +38,7 @@ public class RaceDetector implements Constants {
     public RaceDetector(Configuration config) {
         this.config = config;
         Context z3Context;
-        try {
-            String logDir = config.getOrCreateLogDir();
-            z3Context = getZ3Context(Paths.get(logDir, Configuration.Z3_PATH).toString());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        z3Context = getZ3Context();
         this.z3filter = new Z3Filter(z3Context, config.windowSize);
         try {
             /* setup the solver */

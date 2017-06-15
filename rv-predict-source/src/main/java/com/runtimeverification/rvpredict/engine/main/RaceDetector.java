@@ -152,8 +152,18 @@ public class RaceDetector implements Constants {
         }
     }
 
+    private static Path getZ3LibDir() {
+        Path tmpPath = Paths.get(System.getProperty("java.io.tmpdir"));
+        try {
+            Path libPath = Files.createTempDirectory(tmpPath, "rvp-libz3-");
+            libPath.toFile().deleteOnExit();
+            return libPath;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
     public static Context getZ3Context() {
-        String z3LibDir = System.getProperty("java.io.tmpdir");
+        Path z3LibDir = getZ3LibDir();
         extractZ3Library(z3LibDir);
         Context context = null;
         try {
@@ -163,7 +173,7 @@ public class RaceDetector implements Constants {
             sysPathsField.setAccessible(true);
             String[] sysPaths = (String[]) sysPathsField.get(null);
             String oldPath = sysPaths[0];
-            sysPaths[0] = z3LibDir;
+            sysPaths[0] = z3LibDir.toString();
 
             try {
                 context = new Context();
@@ -184,9 +194,10 @@ public class RaceDetector implements Constants {
         return context;
     }
 
-    private static void extractZ3Library(String logDir) {
+    private static void extractZ3Library(Path tmpPath) {
         String z3LibraryName = getNativeLibraryName();
-        Path z3LibraryTarget = Paths.get(logDir, z3LibraryName);
+        Path z3LibraryTarget = tmpPath.resolve(z3LibraryName);
+        z3LibraryTarget.toFile().deleteOnExit();
         if (Files.exists(z3LibraryTarget)) return;
         String z3LibraryPath = getNativeLibraryPath() + "/" + z3LibraryName;
         try {

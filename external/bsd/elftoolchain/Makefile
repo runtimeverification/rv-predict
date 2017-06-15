@@ -20,10 +20,10 @@ SUBDIR += libpe
 
 # Build tools after the libraries.
 SUBDIR += addr2line
-SUBDIR += ar
+#SUBDIR += ar
 SUBDIR += brandelf
 SUBDIR += cxxfilt
-SUBDIR += elfcopy
+#SUBDIR += elfcopy
 SUBDIR += elfdump
 SUBDIR += findtextrel
 SUBDIR += ld

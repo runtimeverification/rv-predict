@@ -1,7 +1,6 @@
 *.d
 .depend
 dot-product
-double-checked-locking
 intr_driver
 *.ll
 lpcq
@@ -10,13 +9,10 @@ memcpy
 _mkc_*
 *.o
 raceless-signal
+rvpredict.trace
 simplerace
-simple-state-machine
 spcq
-spinning-loop
 square-sum
-stack
 stolz-queue
 .*.swp
 tags
-unsafe-vector

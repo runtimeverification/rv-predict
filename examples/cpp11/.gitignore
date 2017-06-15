@@ -1,7 +1,14 @@
+*.o
+unsafe-vector
+spinning-loop
+stack
 BrokenSpinningLoop
 BrokenSpinningLoop.o
 *.d
 .depend
+double-checked-locking
+local-variable-race
+simple-state-machine
 DoubleCheckedLocking
 DoubleCheckedLocking.o
 _mkc_*

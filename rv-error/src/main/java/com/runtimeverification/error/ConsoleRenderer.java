@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Runtime Verification, Inc. (RV-Match team). All Rights Reserved.
+// Copyright (c) 2016-2017 Runtime Verification, Inc. (RV-Match team). All Rights Reserved.
 package com.runtimeverification.error;
 
 import com.runtimeverification.error.data.Citation;

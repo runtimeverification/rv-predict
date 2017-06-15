@@ -1,8 +1,11 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import defaultdict
 import shutil
 import json
 import uuid
+import argparse
+import os
 
 from jinja2 import Environment, FileSystemLoader
 from pygments import highlight
@@ -69,8 +72,16 @@ def load_json(filename):
             except json.JSONDecodeError:
                 print('error reading: ' + line)
 
-
-errors = list(load_json('errors.json'))
+dirname = os.path.dirname(os.path.realpath(__file__))
+parser = argparse.ArgumentParser()
+parser.add_argument("input", nargs='+', help="json file generated with kcc -fissue-report")
+parser.add_argument("-o", "--output", help="Directory to output html report to")
+args = parser.parse_args()
+if not args.output:
+  args.output = "output"
+errors = []
+for i in args.input:
+  errors.extend(load_json(i))
 files = {}
 datafiles = []
 global_data = {item: load_json(item + '.json')
@@ -137,7 +148,7 @@ for ix, err in enumerate(errors):
 
 def render_code(rel, abs, path, errors):
     filename = abs
-    with open(filename, 'r') as f, open('output/' + path + '.html', 'w') as target:
+    with open(filename, 'r') as f, open(args.output + '/' + path + '.html', 'w') as target:
         code = f.read()
         template = env.get_template('sourcefile.html')
         if errors:
@@ -153,19 +164,19 @@ def render_code(rel, abs, path, errors):
 
 def render_error(err):
     template = env.get_template('error.html')
-    with open('output/error-%d.html' % err[u'index'], 'w') as target:
+    with open('%s/error-%d.html' % (args.output, err[u'index']), 'w') as target:
         target.write(template.render(err=err, fileids=fileids))
 
 
 def render_template(filename):
-    with open('output/' + filename, 'w') as target:
+    with open(args.output + '/' + filename, 'w') as target:
         template = env.get_template(filename)
         target.write(template.render())
 
 
 env = Environment(
     autoescape=True,
-    loader=FileSystemLoader('templates/')
+    loader=FileSystemLoader(dirname + '/templates/')
 )
 env.filters[u'highlight'] = highlight_c
 
@@ -175,8 +186,7 @@ env.globals[u'errors'] = errors
 
 fileids = {}
 
-shutil.rmtree('output/', True)
-shutil.copytree('static/', 'output/static/')
+shutil.copytree(dirname + '/static/', args.output + '/static/')
 for template in ['index.html', 'error-descriptions.html']:
     render_template(template)
 for abs,rel in files.iteritems():
@@ -185,5 +195,5 @@ for abs,rel in files.iteritems():
     render_code(rel,abs,fileids[abs], False)
 for err in errors:
     render_error(err)
-with open("output/errors.json.js", "w") as file:
+with open(args.output + "/errors.json.js", "w") as file:
     file.write("var json_data='" + json.dumps(errors).replace('\\"',"'").replace("'", "\\'") + "';\n");

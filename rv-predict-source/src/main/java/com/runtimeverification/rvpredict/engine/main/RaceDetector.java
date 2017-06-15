@@ -37,7 +37,13 @@ public class RaceDetector implements Constants {
 
     public RaceDetector(Configuration config) {
         this.config = config;
-        Context z3Context = getZ3Context();
+        Context z3Context;
+        try {
+            String logDir = config.getOrCreateLogDir();
+            z3Context = getZ3Context(Paths.get(logDir, Configuration.Z3_PATH).toString());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         this.z3filter = new Z3Filter(z3Context, config.windowSize);
         try {
             /* setup the solver */
@@ -152,9 +158,8 @@ public class RaceDetector implements Constants {
         }
     }
 
-    public static Context getZ3Context() {
-        String z3LibDir = System.getProperty("java.io.tmpdir");
-        extractZ3Library(z3LibDir);
+    public static Context getZ3Context(String tempDir) {
+        extractZ3Library(tempDir);
         Context context = null;
         try {
             // Very dirty hack to add our native libraries dir to the array of system paths
@@ -163,7 +168,7 @@ public class RaceDetector implements Constants {
             sysPathsField.setAccessible(true);
             String[] sysPaths = (String[]) sysPathsField.get(null);
             String oldPath = sysPaths[0];
-            sysPaths[0] = z3LibDir;
+            sysPaths[0] = tempDir;
 
             try {
                 context = new Context();
@@ -190,6 +195,7 @@ public class RaceDetector implements Constants {
         if (Files.exists(z3LibraryTarget)) return;
         String z3LibraryPath = getNativeLibraryPath() + "/" + z3LibraryName;
         try {
+            z3LibraryTarget.getParent().toFile().mkdirs();
             Path z3LibraryTempPath = Files.createTempFile(z3LibraryTarget.getParent(), "rvpredict-z3-", ".library");
             File z3LibraryTempFile = z3LibraryTempPath.toFile();
             InputStream in = RaceDetector.class.getResourceAsStream(z3LibraryPath);

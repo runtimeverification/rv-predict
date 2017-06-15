@@ -9,6 +9,7 @@ import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
+import com.runtimeverification.rvpredict.testutils.TestUtils;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -1540,7 +1541,7 @@ public class MaximalCausalModelTest {
             List<RawTrace> rawTraces,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             boolean detectInterruptedThreadRace) {
-        com.microsoft.z3.Context context = RaceDetector.getZ3Context();
+        com.microsoft.z3.Context context = RaceDetector.getZ3Context(TestUtils.getLogDir());
         Z3Filter z3Filter = new Z3Filter(context, WINDOW_SIZE);
         Solver solver = context.mkSimpleSolver();
         Params params = context.mkParams();

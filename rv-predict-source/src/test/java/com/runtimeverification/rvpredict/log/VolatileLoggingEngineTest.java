@@ -1,11 +1,16 @@
 package com.runtimeverification.rvpredict.log;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.testutils.TestUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class VolatileLoggingEngineTest {
     private static final int LOC_ID = 10;
@@ -34,9 +39,10 @@ public class VolatileLoggingEngineTest {
     }
 
     @Test
-    public void getGidDeadlock() throws InterruptedException {
+    public void getGidDeadlock() throws InterruptedException, IOException {
         Configuration configuration = mock(Configuration.class);
         configuration.windowSize = 1;
+        when(configuration.getOrCreateLogDir()).thenReturn(TestUtils.getLogDir());
 
         Metadata metadata = mock(Metadata.class);
 
@@ -82,9 +88,10 @@ public class VolatileLoggingEngineTest {
     }
 
     @Test
-    public void noRecursiveLogging() throws InterruptedException {
+    public void noRecursiveLogging() throws InterruptedException, IOException {
         Configuration configuration = mock(Configuration.class);
         configuration.windowSize = 1;
+        when(configuration.getOrCreateLogDir()).thenReturn(TestUtils.getLogDir());
 
         Metadata metadata = mock(Metadata.class);
 

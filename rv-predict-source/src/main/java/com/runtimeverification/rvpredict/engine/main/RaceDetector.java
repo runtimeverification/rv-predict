@@ -158,6 +158,8 @@ public class RaceDetector implements Constants {
         }
     }
 
+    private static Path z3LibDir = getZ3LibDir();
+
     private static Path getZ3LibDir() {
         Path tmpPath = Paths.get(System.getProperty("java.io.tmpdir"));
         try {
@@ -169,7 +171,6 @@ public class RaceDetector implements Constants {
         }
     }
     public static Context getZ3Context() {
-        Path z3LibDir = getZ3LibDir();
         extractZ3Library(z3LibDir);
         Context context = null;
         try {
@@ -200,7 +201,11 @@ public class RaceDetector implements Constants {
         return context;
     }
 
+    static boolean ranIt = false;
     private static void extractZ3Library(Path tmpPath) {
+        boolean wasRan = ranIt;
+        if (wasRan)
+            return;
         String z3LibraryName = getNativeLibraryName();
         Path z3LibraryTarget = tmpPath.resolve(z3LibraryName);
         z3LibraryTarget.toFile().deleteOnExit();
@@ -230,5 +235,6 @@ public class RaceDetector implements Constants {
                 throw new RuntimeException(e);
             }
         }
+        ranIt = true;
     }
 }

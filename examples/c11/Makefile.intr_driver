@@ -1,0 +1,13 @@
+.include <bsd.own.mk>
+
+PROGS=	intr_driver
+
+CC=clang
+CFLAGS+=-std=c11
+COPTS+=-O0
+CPPFLAGS+=-D_POSIX_SOURCE -D_POSIX_C_SOURCE=199506L
+WARNS=4
+
+SRCS.intr_driver=intr_driver.c
+
+.include <bsd.prog.mk>

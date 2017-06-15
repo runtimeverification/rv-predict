@@ -201,11 +201,7 @@ public class RaceDetector implements Constants {
         return context;
     }
 
-    static boolean ranIt = false;
     private static void extractZ3Library(Path tmpPath) {
-        boolean wasRan = ranIt;
-        if (wasRan)
-            return;
         String z3LibraryName = getNativeLibraryName();
         Path z3LibraryTarget = tmpPath.resolve(z3LibraryName);
         z3LibraryTarget.toFile().deleteOnExit();
@@ -235,6 +231,5 @@ public class RaceDetector implements Constants {
                 throw new RuntimeException(e);
             }
         }
-        ranIt = true;
     }
 }

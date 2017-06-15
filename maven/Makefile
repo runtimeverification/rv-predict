@@ -9,6 +9,7 @@ FILESDIR_rv-predict.jar.copy=$(LIBDIR)
 
 buildit: .PHONY
 .if $(RELEASE:Uno) == "no"
+	@cd $(.CURDIR)/../native-z3 && mvn -q -DskipTests -DskipDocs install
 	@cd $(.CURDIR)/../rv-predict-source && mvn -q -DskipTests -DskipDocs compile
 	@[ -d $(.CURDIR)/../target/release/rv-predict ] || mkdir -p $(.CURDIR)/../target/release/rv-predict
 	@cd $(.CURDIR)/../rv-predict-source/target/classes && jar cf $(.CURDIR)/../target/release/rv-predict/rv-predict.jar .

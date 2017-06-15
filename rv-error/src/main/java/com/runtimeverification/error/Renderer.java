@@ -20,6 +20,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -58,14 +59,16 @@ public abstract class Renderer {
         }
         error.error_id = getRealErrorId(error.error_id, error.category);
         error.citations = getCitations(error.error_id);
+        error.friendly_cat = renderErrorCategory(error.category);
+        error.long_desc = getDescription(error.error_id);
         if (suppress(error.category, error.error_id, topFrame.loc, topFrame.symbol, json)) {
             return false;
         }
         try (PrintStream stream = getOutStream(data.output)) {
-            renderImpl(error, stream, json);
+            renderImpl(error, stream);
         }
         try (PrintStream stream = getOutStream(new File(System.getProperty("user.home"), ".kcc-report.csv").getAbsolutePath())) {
-            getCSV().renderImpl(error, stream, json);
+            getCSV().renderImpl(error, stream);
         }
         return data.fatal_errors;
     }
@@ -112,19 +115,21 @@ public abstract class Renderer {
         return array;
     }
 
-    protected abstract void renderImpl(StackError error, PrintStream out, String json);
+    protected abstract void renderImpl(StackError error, PrintStream out);
 
     public boolean render(LocationError error, String json) {
         error.error_id = getRealErrorId(error.error_id, error.category);
         error.citations = getCitations(error.error_id);
+        error.friendly_cat = renderErrorCategory(error.category);
+        error.long_desc = getDescription(error.error_id);
         if (suppress(error.category, error.error_id, error.loc.loc, error.loc.symbol, json)) {
             return false;
         }
         try (PrintStream stream = getOutStream(data.output)) {
-            renderImpl(error, stream, json);
+            renderImpl(error, stream);
         }
         try (PrintStream stream = getOutStream(new File(System.getProperty("user.home"), ".kcc-report.csv").getAbsolutePath())) {
-            getCSV().renderImpl(error, stream, json);
+            getCSV().renderImpl(error, stream);
         }
         try (PrintStream stream = getOutStream(new File(System.getProperty("user.home"), ".kcc-report.json").getAbsolutePath())) {
             stream.println(json);
@@ -132,6 +137,20 @@ public abstract class Renderer {
         }
         return data.fatal_errors;
     }
+
+    private String getDescription(String error_id) {
+        InputStream resource = getClass().getResourceAsStream("/descriptions/" + error_id + ".txt");
+        if (resource == null) {
+            return "";
+        }
+        try {
+            return IOUtils.toString(resource);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
 
     private String getRealErrorId(String error_id, ErrorCategory category) {
         switch (category.tag()) {
@@ -208,7 +227,7 @@ public abstract class Renderer {
         }
     }
 
-    protected abstract void renderImpl(LocationError error, PrintStream out, String json);
+    protected abstract void renderImpl(LocationError error, PrintStream out);
 
     public CSVRenderer getCSV() {
         CSVRenderer csv = this.csv;

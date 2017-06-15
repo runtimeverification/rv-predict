@@ -1,0 +1,1 @@
+According to ISO C11, __restrict and __restrict__ are not keywords. As a GNU extension, it is only supported by gcc and other compilers supporting the GNU C extensions. As such, it is a syntax error to use this identifier as a type specifier. The correct solution is to use the portable keyword, restrict.

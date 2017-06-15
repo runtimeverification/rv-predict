@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to call a function with a return type that is not a complete object type. In practice, this is a compiler error and will prevent the application from being built. The correct solution is to complete the return type of the function prior to calling it.

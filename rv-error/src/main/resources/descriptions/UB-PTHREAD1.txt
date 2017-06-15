@@ -1,0 +1,1 @@
+According to POSIX 2008, it is undefined behavior to call pthread_mutex_init on a mutex that has already been initialixed. In practice this may corrupt the state of the mutex and lead to incorrect synchronization in the program. The solution is to always initialize a particular mutex exactly once prior to using it.

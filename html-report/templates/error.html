@@ -2,27 +2,53 @@
 {% block title %}Error {{err.index}}{% endblock %}
 {% block head %}
 <script type="text/javascript">
-  $(function() {
-  $("[data-error-id]").each(function(){
-  var dat = this.dataset.errorId;
-  var path="error-descriptions.html #"+dat;
-  $(this).load(path);
+
+  function show3lines(line, context) {
+    showline(line, context);
+    line++;
+    showline(line, context);
+    line++;
+    showline(line, context);
+  }
+
+  function showline(line, context) {
+    $(".line-"+line, context).show();
+  }
+
+  $(document).ready(function() {
+  $("[data-fileid]").each(function(){
+  var dat = this.dataset.fileid;
+  var path=dat+".html ."+dat;
+  // cast to integer
+  var line = +this.dataset.line;
+  $(this).load(path, function() {
+  $(".line", this).hide();
+  $(".line-"+line).addClass("hll2");
+  showline(line, this);
+  show3lines(line+1, this);
+  show3lines(line-3, this);
   });
-  })
+  });
+  });
 </script>
 {% endblock %}
 {% block content %}
-<h1>Error {{err.index}}</h1>
+<h1><a href="index.html">&laquo;</a> Error {{err.index}}</h1>
 <h2>{{err.description}}</h2>
 <div id="listContainer">
   <ul id="expList">
   {% for frame in err.traces[0].frames %}
-  {% if loop.first %}<li class="expanded">at{% else %}<li>called by{%
-    endif %} {{frame.symbol}}({{frame.loc.rel_file}}:{{frame.loc.line}}:{{frame.loc.column}})<ul><li/></ul></li>
+  {% if loop.first %}<li class="expanded">in{% else %}<li>called by{%
+    endif %} {{frame.symbol}} at {{frame.loc.rel_file}}
+    <ul><li><div data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}"></div>
+    </li></ul></li>
   {% endfor %}
   </ul>
 </div>
-<div data-error-id="{{err.error_id}}">
-<a href="error-descriptions.html#{{err.error_id}}">{{err.category[0]}} behavior: {{err.description}} ({{err.error_id}})</a>
-</div>
+<h2>{{err.friendly_cat}} ({{err.error_id}})</h2>
+<p>{{err.long_desc}}</p>
+<h2>Citations</h2>
+{% for cite in err.citations %}
+<div class="cite"><a href="http://rvdoc.org/{{cite.document}}/{{cite.section}}">See {{cite.document}} section {{cite.section}}{% if cite.paragraph %}:{{cite.paragraph}}{% endif %}</a></div>
+{% endfor %}
 {% endblock %}

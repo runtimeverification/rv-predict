@@ -28,11 +28,11 @@ table.dataTable {
 }
 table.dataTable thead th,
 table.dataTable tfoot th {
-  font-weight: bold;
+  font-weight: normal;
 }
 table.dataTable thead th,
 table.dataTable thead td {
-  padding: 10px 18px;
+  padding: 0px 10px;
   border-bottom: 1px solid #111;
 }
 table.dataTable thead th:active,
@@ -41,8 +41,7 @@ table.dataTable thead td:active {
 }
 table.dataTable tfoot th,
 table.dataTable tfoot td {
-  padding: 10px 18px 6px 18px;
-  border-top: 1px solid #111;
+  padding: 10px 18px 2em 18px;
 }
 table.dataTable thead .sorting,
 table.dataTable thead .sorting_asc,
@@ -81,7 +80,7 @@ table.dataTable tbody tr.selected {
 }
 table.dataTable tbody th,
 table.dataTable tbody td {
-  padding: 8px 10px;
+  padding: 4px 10px;
 }
 table.dataTable.row-border tbody th, table.dataTable.row-border tbody td, table.dataTable.display tbody th, table.dataTable.display tbody td {
   border-top: 1px solid #ddd;
@@ -627,8 +626,12 @@ a.dt-button:focus:not(.disabled) {
 }
 
 div.dt-buttons {
-  position: relative;
-  float: left;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: #f8f8f8;
+  padding-top: 6px;
+  border-top: 1px #111 solid;
 }
 div.dt-buttons.buttons-right {
   float: right;

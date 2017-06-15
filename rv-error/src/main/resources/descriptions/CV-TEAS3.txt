@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to assign a value to an expression which is not a modifiable lvalue. In practice this is a compiler error that prevents the application from being built. The correct solution is to modify the assignment so that the value being assigned to is an lvalue representing an object that can be modifvied.

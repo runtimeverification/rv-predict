@@ -1,0 +1,1 @@
+According to ISO C11, enumerator initializers must be integer constant expressions. It is a constraint violation if this rule is broken. In practice, this is a compiler error that prevents the application from being built. The correct solution is to use an integer constant as the value of every enumerator in an enum definition.

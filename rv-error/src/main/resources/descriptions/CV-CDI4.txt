@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to initialize a member of an aggregate that does not exist. In practice, this can be a compiler error, however, some compilers allow this case but simply discard such initializer elements. The correct solution is to only initialize as many members as exist in the aggregate.

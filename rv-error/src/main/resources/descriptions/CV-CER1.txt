@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to compute the address of an rvalue. In practice this is a compiler error that prevents the application from being built. The solution is to remove the incorrect address operator or fix it so that its operand is an lvalue.

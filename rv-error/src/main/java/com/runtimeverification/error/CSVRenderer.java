@@ -21,7 +21,7 @@ public class CSVRenderer extends Renderer {
     }
 
     @Override
-    protected void renderImpl(StackError error, PrintStream out, String json) {
+    protected void renderImpl(StackError error, PrintStream out) {
         CSVPrinter printer = getCSVPrinter(out);
         String[] strings = getCommonFields(error.error_id, error.description, error.category, error.citations);
 
@@ -85,7 +85,7 @@ public class CSVRenderer extends Renderer {
     }
 
     @Override
-    protected void renderImpl(LocationError error, PrintStream out, String json) {
+    protected void renderImpl(LocationError error, PrintStream out) {
         CSVPrinter printer = getCSVPrinter(out);
         String[] strings = getCommonFields(error.error_id, error.description, error.category, error.citations);
         strings[4] = "";

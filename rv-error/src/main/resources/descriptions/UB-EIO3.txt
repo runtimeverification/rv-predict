@@ -1,0 +1,1 @@
+According to ISO C11, it is undefined behavior to modify an object defined with the const qualifier. In practice, the compiler assumes such variables do not change value, and thus violating this rule can lead to incorrect and inconsistent program state. The solution is to never try to modify an object defined as const, regardless of what type it is accessed through.

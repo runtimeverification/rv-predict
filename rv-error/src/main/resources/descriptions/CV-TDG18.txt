@@ -1,0 +1,1 @@
+According to ISO C11, it is a constraint violation for an object of thread-local storage to not be declared with either the static or extern keywords. In practice this is a compiler error that prevents the application from being built. The correct solution is to add one of these keywords to the relevant declaration in order to distinguish the linkage of the declaration.

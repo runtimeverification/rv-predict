@@ -1,10 +1,94 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    </head>
-<frameset cols="20%,80%">
-<frame src="nav.html" name="nav">
-<frame src="errors.html" id="main" name="main">
-</frameset>
-</html>
+{% extends "layout.html" %}
+{% block title %}RV-Match Error Report{% endblock %}
+
+{% block head %}
+<script type="text/javascript">
+  $(document).ready(function() {
+  var table = $("#myTable").DataTable( {
+  paging: false,
+  dom: 'rtB',
+  buttons: [
+  {extend:'csv',filename:'errors'},
+  {extend:'excel',filename:'errors'},
+  {extend:'pdf',filename:'errors'},
+  ],
+  columns: [
+  {"name": "id"},
+  {"name": "error"},
+  {"name": "function", "className": "function"},
+  {"name": "file"},
+  {"name": "line"},
+  ]
+  } );
+  
+    $("#myTable_search")
+    .on("keyup", function() { // filter according to key pressed
+      var text = this.value.trim();
+      var regex;
+      var words = text.split(/\s/);
+      var terms = {};
+      var cols = table.settings().init().columns;
+      for (var i = 0; i < cols.length; i++) {
+        terms[cols[i].name] = "";
+      }
+      var global = "";
+      for (var i = 0; i < words.length; i++) {
+        var word = words[i];
+        var idx = word.indexOf(':');
+        if (idx !== -1) {
+          var label = word.substring(0, idx);
+          var term = word.substring(idx+1);
+          if (label in terms) {
+            terms[label] = terms[label] + " " + term;
+          } else {
+            global = global + " " + word;
+          }
+        } else {
+          global = global + " " + word;
+        }
+      }
+      for (var col in terms) {
+        table.column(col+":name").search(terms[col]);
+      }
+      table.search(global).draw();
+    });
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="float-left">
+<h1>RV-Match Error Report</h1>
+</div>
+<div id="myTable_filter" class="dataTables_filter"><label>Search:<input id="myTable_search" class="" placeholder="" aria-controls="myTable" type="search"></label></div>
+<table id="myTable" class="tablesorter">
+  <thead>
+    <tr>
+      <th class="dt-right">ID</th>
+      <th class="dt-left">Error</th>
+      <th class="dt-left">Function</th>
+      <th class="dt-left">File</th>
+      <th class="dt-right">Line</th>
+    </tr>
+  </thead>
+  <tbody>
+{% for err in errors %}
+    <tr>
+      <td class="dt-right"><a href="error-{{err.index}}.html">{{err.index}}</a></td>
+      <td><a href="error-{{err.index}}.html">{{err.errdesc}}</a></td>
+      <td>{{err.function}}</td>
+      <td><a href="{{err.file}}.html">{{err.file}}</a></td>
+      <td class="dt-right">{{err.line}}</td>
+    </tr>
+{% endfor %}
+  <tfoot>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </tfoot>
+</table>
+{% endblock %}

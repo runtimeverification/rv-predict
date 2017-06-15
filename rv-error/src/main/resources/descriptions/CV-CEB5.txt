@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to compute a bitwise right shift between two operands not of integer type. In practice, this is a compiler error that prevents the application from being built. The solution is to remove the incorrect shift expression or fix the types of the operands.

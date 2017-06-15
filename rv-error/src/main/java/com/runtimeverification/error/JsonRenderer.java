@@ -15,13 +15,13 @@ public class JsonRenderer extends Renderer {
     }
 
     @Override
-    protected void renderImpl(StackError error, PrintStream out, String json) {
-        renderJson(out, json);
+    protected void renderImpl(StackError error, PrintStream out) {
+        renderJson(out, error.toJson());
     }
 
     @Override
-    protected void renderImpl(LocationError error, PrintStream out, String json) {
-        renderJson(out, json);
+    protected void renderImpl(LocationError error, PrintStream out) {
+        renderJson(out, error.toJson());
     }
 
     private void renderJson(PrintStream stream, String json) {

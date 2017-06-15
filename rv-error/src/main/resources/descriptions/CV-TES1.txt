@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to compute the sizeof of an expression of a type that is not a complete object type. In practice, this is usually a compiler error, however, some compilers allow an exception to this rule for the case when the type is void. The correct solution is to complete the type, or to compute the sizeof of a different complete object type.

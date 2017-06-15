@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to convert from a pointer to a floating point type or vice versa. In practice this is a compiler error and prevents the application from being built. The solution is to rewrite the incorrect code to avoid the conversion.

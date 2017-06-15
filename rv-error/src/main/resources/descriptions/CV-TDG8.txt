@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint for a declaration to have an initializer with an incomplete type that is not an array of unknown size. In practice, this is a compiler error that prevents teh application from being built. The solution is to either complete the type, remove the initializer, or fix the type of the declaration to a different complete type.

@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to access a member of a struct or union which does not exist. In practice this is a compiler error that prevents the application from being built. The solution is to remove the incorrect member expression or to fix the name of the member accessed to refer to one of the named members of the struct.

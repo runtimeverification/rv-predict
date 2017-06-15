@@ -11,6 +11,6 @@
 {% endblock %}
 {% block title %}{{filename}}{% endblock %}
 {% block content %}
-<h2>{{filename}}</h2>
-{{ code|highlight(errorlines)|safe }}
+<h1><a href="index.html">&laquo;</a> {{filename}}</h1>
+{{ code|highlight(errorlines, fileid)|safe }}
 {% endblock %}

@@ -1,0 +1,1 @@
+According to POSIX 2008, it is undefined behavior to call pthread_mutex_destroy on a mutex which is currently locked. In practice this may prevent any threads that are waiting on that mutex from waking correctly, leading to deadlock or other concurrency bugs in the application. The solution is to always unlock any mutexes prior to destroying them.

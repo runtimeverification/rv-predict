@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to declare a function that accepts a parameter, after adjustment, which is an incomplete type. In practice, this is a compiler error that prevents the application from being built. The correct solution is to complete the type of the parameter prior to declaring the function.

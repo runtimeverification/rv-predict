@@ -3,7 +3,8 @@ span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; }
 pre { line-height: 125%; }
 a.hll { color: #000000 }
 body .hll { background-color: #ffcccc }
-body  { background: #f8f8f8; }
+body .hll2 { background-color: #ffffcc }
+body  { background: #f8f8f8; font-family: sans-serif}
 body .c { color: #408080; font-style: italic } /* Comment */
 body .err { border: 1px solid #FF0000 } /* Error */
 body .k { color: #008000; font-weight: bold } /* Keyword */
@@ -179,4 +180,25 @@ div.highlight {
 
 .memory pre {
   white-space: pre-wrap;
+}
+
+h1 {
+    font-size: 1.5em;
+}
+
+h2 {
+    font-size: 1.25em;
+}
+
+.dataTables_filter {
+  float: right;
+  margin-top: 1em;
+}
+
+.dataTable tbody td.function {
+  white-space: nowrap;
+}
+
+div.float-left {
+  float: left;
 }

@@ -83,7 +83,7 @@ establish(int signum, void (*handler)(int))
 static void
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-s|-S]\n", progname);
+	fprintf(stderr, "usage: %s [-s|-v|-m]\n", progname);
 	exit(EXIT_FAILURE);
 }
 
@@ -112,7 +112,7 @@ main(int argc, char **argv)
 	}
 
 	signals_mask(SIGALRM, &oset);
-	signals_mask(SIGINT, &oset);
+	signals_mask(SIGINT, NULL);
 
 	establish(SIGINT, interrupt_handler);
 

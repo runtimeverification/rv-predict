@@ -14,7 +14,7 @@ cleandir distclean:
 install: all
 
 $(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall):
-	cd $(SRCDIR) && \
+	cd $(SRCDIR) && unset DESTDIR && \
 	LD_LIBRARY_PATH=$(HOME)/pkg/lib:/usr/lib/x86_64-linux-gnu \
 	C_INCLUDE_PATH=$(HOME)/pkg/include \
 	WITH_TESTS=no MAKEFLAGS= $(MAKE) MKPIC=no $(.TARGET)

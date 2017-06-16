@@ -746,8 +746,6 @@ public class Trace {
                         }
                     } else if (event.isSignalEvent()) {
                         tmp_events[tmp_size++] = event;
-                    } else if (state.config().isDebug() && event.isCallStackEvent()) {
-                        tmp_events[tmp_size++] = event;
                     } else {
                         // MetaEvents are thrown away
                     }
@@ -924,8 +922,6 @@ public class Trace {
                 }
             } else if (event.isSignalEvent()) {
                 // Do nothing for now, since signal events themselves are not involved with r/w.
-                endCrntBlock = false;
-            } else if (state.config().isDebug() && event.isCallStackEvent()) {
                 endCrntBlock = false;
             } else {
                 throw new IllegalStateException("Unexpected critical event: " + event);

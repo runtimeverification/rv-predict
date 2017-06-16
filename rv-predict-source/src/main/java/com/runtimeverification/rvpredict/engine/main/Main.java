@@ -28,21 +28,9 @@ public class Main {
      * The entry point of RV-Predict when it is started by script.
      */
     public static void main(String[] args) {
-        // TBD refactor licensing lines with instrument/Agent.java
-        String licenseURL = "https://runtimeverification.com/licensing";
-        Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
-        RVLicenseCache licenseCache = licensingSystem.getLicenseCache();
-        if (!licenseCache.isLicenseCached()) {
-            System.err.println("This product has no license on file.");
-            System.err.println("Sign up for a license at " + licenseURL + ".");
-            System.exit(1);
-        } else if (!licenseCache.isLicensed()) {
-            System.err.println("Your license is invalid or expired.");
-            System.err.println("Please renew it at " + licenseURL + ".");
-            System.exit(1);
-        }
-
         config = Configuration.instance(args);
+
+        LicenseChecker.validateOrDie(config.prompt_for_license);
 
         if (config.isLogging() || config.isProfiling()) {
             if (config.getJavaArguments().isEmpty()) {

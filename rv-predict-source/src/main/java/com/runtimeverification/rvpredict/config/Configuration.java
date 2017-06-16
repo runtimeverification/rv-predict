@@ -418,6 +418,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_version, description = "Print product version and exit", descriptionKey = "9100")
     public static boolean display_version;
 
+    private final static String opt_prompt_for_license = "--prompt-for-license";
+    @Parameter(names = opt_prompt_for_license, description = "If needed, prompt for a license account and password and download a license", descriptionKey = "9200")
+    public boolean prompt_for_license;
+
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";
     @Parameter(names = { short_opt_help, opt_help }, description = "Print help info", help = true, descriptionKey = "9900")

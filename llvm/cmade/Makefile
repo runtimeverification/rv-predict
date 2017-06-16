@@ -6,7 +6,7 @@ LLVMDIR?=$(LLVM1404)
 .elif exists($(LLVM1604))
 LLVMDIR?=$(LLVM1604)
 .else
-.error "Install $(LLVM1404) or $(LLVM1604)."
+.error "LLVM not found, please install it in one of these locations: $(LLVM1404) or $(LLVM1604)."
 .endif
 
 CLEANABLE_FILES=rvpinstrument.so

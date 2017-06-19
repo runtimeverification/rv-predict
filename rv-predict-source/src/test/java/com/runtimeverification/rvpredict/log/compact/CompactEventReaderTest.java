@@ -14,6 +14,8 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static com.runtimeverification.rvpredict.testutils.CompactEventTestUtils.CURRENT_VERSION;
+
 public class CompactEventReaderTest {
     private static final byte[] DELTA_0_THREAD_BEGIN =
             encodeInt(encodePcDelta(0, CompactEventReader.Type.THREAD_BEGIN));
@@ -24,7 +26,7 @@ public class CompactEventReaderTest {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
-                0, 0, 0, 0,  // version number
+                CURRENT_VERSION[0], CURRENT_VERSION[1], CURRENT_VERSION[2], CURRENT_VERSION[3],  // version number
                 '0', '1', '2', '3',  // byte order identifier
                 4,  // pointer width
                 4,  // default data width
@@ -48,7 +50,7 @@ public class CompactEventReaderTest {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
-                0, 0, 0, 0,  // version number
+                CURRENT_VERSION[0], CURRENT_VERSION[1], CURRENT_VERSION[2], CURRENT_VERSION[3],  // version number
                 '0', '1', '2', '3',  // byte order identifier
                 4,  // pointer width
                 4,  // default data width
@@ -69,7 +71,7 @@ public class CompactEventReaderTest {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
-                0, 0, 0, 0,  // version number
+                CURRENT_VERSION[0], CURRENT_VERSION[1], CURRENT_VERSION[2], CURRENT_VERSION[3],  // version number
                 '0', '1', '2', '3',  // byte order identifier
                 4,  // pointer width
                 4,  // default data width
@@ -91,7 +93,7 @@ public class CompactEventReaderTest {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
-                0, 0, 0, 0,  // version number
+                CURRENT_VERSION[0], CURRENT_VERSION[1], CURRENT_VERSION[2], CURRENT_VERSION[3],  // version number
                 '0', '1', '2', '3',  // byte order identifier
                 4,  // pointer width
                 4,  // default data width
@@ -130,7 +132,7 @@ public class CompactEventReaderTest {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
-                0, 0, 0, 0,  // version number
+                CURRENT_VERSION[0], CURRENT_VERSION[1], CURRENT_VERSION[2], CURRENT_VERSION[3],  // version number
                 '0', '1', '2', '3',  // byte order identifier
                 4,  // pointer width
                 4,  // default data width
@@ -164,7 +166,7 @@ public class CompactEventReaderTest {
         InputStream inputStream = new ByteBufferBackedInputStream(ByteBuffer.wrap(new byte[]{
                 // Event header
                 'R', 'V', 'P', '_',  // magic string, should be "RVP_"
-                0, 0, 0, 0,  // version number
+                CURRENT_VERSION[0], CURRENT_VERSION[1], CURRENT_VERSION[2], CURRENT_VERSION[3],  // version number
                 '0', '1', '2', '3',  // byte order identifier
                 4,  // pointer width
                 4,  // default data width

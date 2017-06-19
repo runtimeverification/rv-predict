@@ -12,6 +12,7 @@
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>native-z3</artifactId>
+            <!--classifier>jar-with-dlls</classifier-->
             <version>1.8.2-SNAPSHOT</version>
         </dependency>
         <dependency>

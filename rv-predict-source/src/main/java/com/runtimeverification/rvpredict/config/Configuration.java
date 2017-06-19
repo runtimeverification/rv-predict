@@ -71,6 +71,8 @@ public class Configuration implements Constants {
     public static final String METADATA_BIN = "metadata.bin";
     public static final String AGENT_RESOURCE_PATH = Agent.class.getName().replace(".","/") + ".class";
 
+    public static final String Z3_PATH = "z3lib";
+
 
     private static final List<String> LLVM_LIB_STRINGS = Arrays.asList(new String[]{
             "__libc",
@@ -781,4 +783,6 @@ public class Configuration implements Constants {
     }
 
     public boolean withoutGeneration() { return withoutGeneration; }
+
+    public boolean isDebug() { return debug; }
 }

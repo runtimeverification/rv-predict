@@ -37,7 +37,8 @@ public class RaceDetector implements Constants {
 
     public RaceDetector(Configuration config) {
         this.config = config;
-        Context z3Context = getZ3Context();
+        Context z3Context;
+        z3Context = getZ3Context();
         this.z3filter = new Z3Filter(z3Context, config.windowSize);
         try {
             /* setup the solver */
@@ -195,17 +196,14 @@ public class RaceDetector implements Constants {
         return context;
     }
 
-    static boolean ranIt = false;
     private static void extractZ3Library(Path tmpPath) {
-        boolean wasRan = ranIt;
-        if (wasRan)
-            return;
         String z3LibraryName = getNativeLibraryName();
         Path z3LibraryTarget = tmpPath.resolve(z3LibraryName);
         z3LibraryTarget.toFile().deleteOnExit();
         if (Files.exists(z3LibraryTarget)) return;
         String z3LibraryPath = getNativeLibraryPath() + "/" + z3LibraryName;
         try {
+            z3LibraryTarget.getParent().toFile().mkdirs();
             Path z3LibraryTempPath = Files.createTempFile(z3LibraryTarget.getParent(), "rvpredict-z3-", ".library");
             File z3LibraryTempFile = z3LibraryTempPath.toFile();
             InputStream in = RaceDetector.class.getResourceAsStream(z3LibraryPath);
@@ -228,6 +226,5 @@ public class RaceDetector implements Constants {
                 throw new RuntimeException(e);
             }
         }
-        ranIt = true;
     }
 }

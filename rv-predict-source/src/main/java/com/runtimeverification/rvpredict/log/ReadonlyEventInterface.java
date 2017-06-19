@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.log;
 
+import java.util.OptionalLong;
+
 public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterface> {
     long getEventId();
     long getOriginalThreadId();
@@ -20,6 +22,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long getFullReadSignalMask();
     long getSignalHandlerAddress();
     long getCanonicalFrameAddress();
+    OptionalLong getCallSiteAddress();
     long unsafeGetDataInternalIdentifier();
     long unsafeGetDataValue();
 

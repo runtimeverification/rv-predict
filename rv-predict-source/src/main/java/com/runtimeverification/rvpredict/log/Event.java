@@ -2,6 +2,8 @@ package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.util.Constants;
 
+import java.util.OptionalLong;
+
 /**
  * Class for representing an event as it is recorded in the log
  * @author TraianSF
@@ -162,13 +164,18 @@ public class Event extends ReadonlyEvent {
 
     @Override
     public long getCanonicalFrameAddress() {
-        assert false;
         return 0;
     }
 
     @Override
     public boolean isAtomic() {
         return getLockId() == Constants.ATOMIC_LOCK_C;
+    }
+
+    @Override
+    public OptionalLong getCallSiteAddress() {
+        assert getType() == EventType.INVOKE_METHOD;
+        return OptionalLong.empty();
     }
 
     @Override

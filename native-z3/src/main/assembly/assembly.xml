@@ -13,6 +13,7 @@
                 <include>com.microsoft.z3:libz3java</include>
                 <include>com.microsoft.z3:z3java</include>
             </includes>
+            <useProjectArtifact>false</useProjectArtifact>
             <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
         </dependencySet>
     </dependencySets>

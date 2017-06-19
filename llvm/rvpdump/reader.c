@@ -1120,13 +1120,15 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		    oi->oi_descr, ub->ub_cog.generation);
 		break;
 	case RVP_OP_ENTERFN:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s cfa %" PRIxPTR "\n",
+		printf("tid %" PRIu32 ".%" PRIu32 " %s %s cfa %" PRIxPTR " return %s\n",
 		    ps->ps_curthread, ps->ps_idepth,
 		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
 		        ps->ps_thread[ps->ps_curthread].
 			ts_lastpc[ps->ps_idepth]),
 		    oi->oi_descr,
-		    ub->ub_enterfn.cfa);
+		    ub->ub_enterfn.cfa,
+		    (*emitters->insnptr_to_string)(ps, buf[1], sizeof(buf[1]),
+		        ub->ub_enterfn.callsite));
 		break;
 	case RVP_OP_END:
 	default:
@@ -1382,7 +1384,7 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 	 */
 	const rvp_trace_header_t expected_th = {
 		  .th_magic = "RVP_"
-		, .th_version = {0, 0, 0, 2}
+		, .th_version = {0, 0, 0, 3}
 		, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
 		, .th_pointer_width = sizeof(rvp_addr_t)
 		, .th_data_width = sizeof(uint32_t)

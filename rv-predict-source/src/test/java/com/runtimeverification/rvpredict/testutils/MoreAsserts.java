@@ -41,6 +41,19 @@ public class MoreAsserts {
                 container.contains(substring));
     }
 
+    public static void assertNotSubstring(String substring, String container) {
+        assertNotSubstring(
+                "",
+                substring, container);
+    }
+
+    public static void assertNotSubstring(String message, String substring, String container) {
+        Assert.assertFalse(
+                "Expecting that '" + container + "' does not contain '" + substring + "', but it does.\n"
+                        + message,
+                container.contains(substring));
+    }
+
     public interface ThrowingRunnable {
         void run() throws Throwable;
     }

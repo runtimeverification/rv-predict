@@ -1,14 +1,14 @@
 package com.runtimeverification.rvpredict.log;
 
-import com.runtimeverification.rvpredict.log.printers.CfaPrinter;
 import com.runtimeverification.rvpredict.log.printers.DataAccessPrinter;
 import com.runtimeverification.rvpredict.log.printers.EstablishSignalPrinter;
+import com.runtimeverification.rvpredict.log.printers.InvokeMethodPrinter;
 import com.runtimeverification.rvpredict.log.printers.LockPrinter;
 import com.runtimeverification.rvpredict.log.printers.ReadWriteSignalMaskPrinter;
 import com.runtimeverification.rvpredict.log.printers.SignalHandlerPrinter;
+import com.runtimeverification.rvpredict.log.printers.SignalMaskPrinter;
 import com.runtimeverification.rvpredict.log.printers.SignalNumberPrinter;
 import com.runtimeverification.rvpredict.log.printers.ThreadEventPrinter;
-import com.runtimeverification.rvpredict.log.printers.SignalMaskPrinter;
 
 import java.util.concurrent.locks.Condition;
 
@@ -86,7 +86,7 @@ public enum EventType {
      */
     CLINIT_EXIT(new EventPrinter("classinitexit")),
 
-    INVOKE_METHOD(new CfaPrinter("invokemethod")),
+    INVOKE_METHOD(new InvokeMethodPrinter()),
 
     FINISH_METHOD(new EventPrinter("finishmethod")),
 

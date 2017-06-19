@@ -1,0 +1,63 @@
+Copyright (c) 2016, 2017 Runtime Verification, Inc.  All rights reserved.
+
+`raceless-signal` is a POSIX Threads-using C program that modifies
+a shared variable either in a couple of threads (the default
+mode) or else in a thread and in a signal handler (the mode when
+the option `-s` is provided on the command line).
+The program
+demonstrates RV-Predict/C's capability to accurately model
+the differences between a single thread racing with a signal
+handler, and one thread racing with a second thread.
+producer-consumer queue library.  The library itself does not provide
+any synchronization.  Library users must synchronize access to a queue,
+otherwise two or more threads accessing the same queue will corrupt it.
+
+# Sources
+
+raceless-signal.c	the test program
+signal.c		sources for establishing signals and signal masks
+signal.h
+
+# Compilation
+
+Using rvpc, a wrapper for clang that adds RV-Predict/C instrumentation, run
+
+	rvpc -o raceless-signal raceless-signal.c signals.c
+
+That produces an executable binary, `raceless-signal`.
+
+# Exploring RV-Predict/C with `raceless-signal`.
+
+If you run `raceless-signal` like this, RV-Predict/C will detect races:
+
+	rvpx ./raceless-signal
+
+Run `raceless-signal` like this to protect the shared variable with an
+atomic flag variable.  Data races still will be detected, because there
+are execution orderings where the atomic flag is not protective:
+
+	rvpx ./raceless-signal -v
+
+Add the command-line option `-s` to make `raceless-signal` run a signal
+handler that modifies the shared variable, instead of running a second
+thread.  Now, the atomic flag variable protects the shared variable,
+and no races will be reported:
+
+	rvpx ./raceless-signal -s -v
+
+Pass `-m` to make the thread block signals while it modifies the
+shared variable, using the signal mask.  No races will be found
+in that case, either:
+
+	rvpx ./raceless-signal -s -m
+
+Finally, you can use `-m` and `-v` together with `-s`, and no races
+will be detected:
+
+	rvpx ./raceless-signal -s -m -v
+
+Or, supply only the `-m` option---i.e., no `-s` option.  Two threads
+will run, and setting of the signal mask will not stop them from racing:
+
+	rvpx ./raceless-signal -m
+

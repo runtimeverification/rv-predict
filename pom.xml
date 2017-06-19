@@ -25,6 +25,7 @@
         <module>rv-predict-source</module>
         <module>rv-predict-tests</module>
         <module>rv-predict-installer</module>
+        <module>c-install</module>
     </modules>
     <url>http://www.runtimeverification.com</url>
     <scm>

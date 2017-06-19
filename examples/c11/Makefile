@@ -5,10 +5,11 @@
 #
 .-include "../mkbin.mk"
 
-FILESDIR=$(DATADIR)/examples/rv-predict-c/demo
+FILESDIR=$(DATADIR)/examples/rv-predict-c/c11
 INCSDIR=$(FILESDIR)
 INCS=lpcq.h nbcompat.h signals.h spcq.h
 FILES=Makefile
+FILES=README.lpcq README.raceless-signal
 FILES+=$(SRCS.dot-product) $(SRCS.square-sum) $(SRCS.memcpy)
 FILES+=$(SRCS.simplerace) $(SRCS.lpcq) $(SRCS.spcq) $(SRCS.raceless-signal)
 FILESMODE=0644

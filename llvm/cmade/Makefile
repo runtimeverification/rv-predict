@@ -10,9 +10,11 @@ LLVMDIR?=$(LLVM1604)
 .endif
 
 CLEANABLE_FILES=rvpinstrument.so
+.if $(RELEASE:Uno) != "yes"
 CLEANABLE_FILES+=libclang_rt.tsan_cxx-x86_64.a
 CLEANABLE_FILES+=libclang_rt.tsan_cxx-x86_64.a.syms
 CLEANABLE_FILES+=libclang_rt.tsan-x86_64.a
+.endif
 FILES=$(CLEANABLE_FILES)
 FILESMODE=0755
 FILESDIR=$(LIBDIR)

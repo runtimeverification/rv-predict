@@ -22,6 +22,8 @@ for arg in "$@"; do
 	case "$arg" in
 	--)	break
 		;;
+	-MD)	continue
+		;;
 	-M*|-E)	compile=no
 		link=no
 		continue

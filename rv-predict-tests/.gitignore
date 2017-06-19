@@ -1,0 +1,2 @@
+**/test/resources/*.actual.err
+**/test/resources/*.actual.out

@@ -67,9 +67,15 @@
 <!-- TBD move LICENSE.md somewhere sensible -->
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
 <!-- TBD new docs
-            <singlefile src="README.md" target="$INSTALL_PATH/README.md"/>
             <file src="docs" targetdir="$INSTALL_PATH"/>
 -->
+<!--
+            <singlefile src="USERS-MANUAL.md" target="$INSTALL_PATH/USERS-MANUAL.md"/>
+-->
+            <fileset dir="share/doc" casesensitive="yes" targetdir="$INSTALL_PATH/share/doc">
+                <os family="unix"/>
+            </fileset>
+            <singlefile src="share/doc/rv-predict-c/README.md" target="$INSTALL_PATH/README.md"/>
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.bat" />
                 <os family="windows"/>
@@ -93,30 +99,12 @@
             </fileset>
             <file src="rv-predict.jar" targetdir="$INSTALL_PATH/lib"/>
         </pack>
-<!--
         <pack name="Examples" required="no" installGroups="New Application" >
-            <description>Example Java programs illustrating RV-Predict's features.</description>
-            <fileset dir="examples" casesensitive="yes" targetdir="$INSTALL_PATH/examples">
-                <exclude name="bin/*"/>
-                <exclude name="log/*"/>
-            </fileset>
-            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
-                <include name="*.py" />
-            </fileset>
-            <executable targetfile="$INSTALL_PATH/bin/rv-predict" keep="true" stage="never" condition="!izpack.windowsinstall"/>
-        </pack>
--->
-<!--
-        <pack name="MSVC++ redistributable package" required="yes" installGroups="New Application" condition="izpack.windowsinstall">
-            <description>Microsoft Visual C++ dependent dlls required (on Windows) by the z3java library.</description>
-            <fileset dir="lib/native/windows32" targetdir="${ENV[SystemRoot]}/System32">
-                <os family="windows" arch="x86"/>
-            </fileset>
-            <fileset dir="lib/native/windows64" targetdir="${ENV[SystemRoot]}/System32">
-                <os family="windows" arch="amd64"/>
+            <description>Example C programs illustrating RV-Predict's features.</description>
+            <fileset dir="share/examples" casesensitive="yes" targetdir="$INSTALL_PATH/share/examples">
+                <os family="unix"/>
             </fileset>
         </pack>
--->
     </packs>
 
     <!-- The native libraries to add. This is required for creating shortcuts on Windows -->

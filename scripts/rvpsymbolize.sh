@@ -15,6 +15,11 @@ normalize()
 	sed 's/at \(0x[0-9a-f]\+\) dummy.c:999/{\1}/g'
 }
 
+clean_brackets()
+{
+	sed 's,\[\(0x[0-9a-f]\+\) : [^]]\+\],\[\1\],g'
+}
+
 signal_regex='\<\(S[0-9]\+\)\>'
 
 func_addr_regex='{\(0x[0-9a-f]\+\)}'
@@ -97,7 +102,8 @@ sed "s/.*$data_addr_regex.*/\1/g" | sort -u | \
     sed "$data_sym_sed_template" > $tmpdir/datasyms_sed_script
 
 sed -f $tmpdir/datasyms_sed_script < $tmpdir/original | \
-    sed -f $tmpdir/funcsyms_sed_script | sed -f $tmpdir/signal_sed_script
+    sed -f $tmpdir/funcsyms_sed_script | sed -f $tmpdir/signal_sed_script | \
+    clean_brackets
 
 if true; then
 	rm -rf $tmpdir

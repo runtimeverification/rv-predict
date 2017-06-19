@@ -1,6 +1,6 @@
 OS!=uname -s
 
-SUBDIR=examples scripts .WAIT llvm
+SUBDIR=doc examples scripts .WAIT llvm
 
 .if $(OS) == "Linux"
 SUBDIR+=elftoolchain .WAIT

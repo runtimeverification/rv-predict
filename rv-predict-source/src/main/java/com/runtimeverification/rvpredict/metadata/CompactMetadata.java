@@ -44,7 +44,7 @@ public class CompactMetadata implements MetadataInterface {
     }
 
     @Override
-    public String getRaceLocationSig(ReadonlyEventInterface e1,
+    public String getRaceDataSig(ReadonlyEventInterface e1,
             ReadonlyEventInterface e2, Trace trace, Configuration config) {
         StringBuilder sb = new StringBuilder();
         long idx = e1.getDataObjectExternalIdentifier();

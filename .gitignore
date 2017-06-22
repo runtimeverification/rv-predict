@@ -9,5 +9,6 @@ _mkc_*
 .project
 .recommenders
 .settings/
+**/.*.swp
 tags
 target/

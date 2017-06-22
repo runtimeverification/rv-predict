@@ -1,14 +1,32 @@
-# Using RV-Predict
+# RV-Predict User's Manual
+
+## Package contents
 
 The RV-Predict programs ordinarily are installed at
-$HOME/RV-Predict-C/bin/.  Make sure that directory is part of the
-executable search path, $PATH.  The important RV-Predict programs are
-`rvpc` and `rvpx`.
+`$HOME/RV-Predict-C/bin/`.
+
+`$HOME/RV-Predict-C/lib/` is where the product license key and other
+files that support RV-Predict are installed.  Those files must be present
+for RV-Predict/C to work, but the user does not ordinarily need to do
+anything with them.
+
+Documentation ordinarily resides at
+`$HOME/RV-Predict-C/share/doc/rv-predict-c/`.  This manual is ordinarily
+found under that directory, where it is called USERS-MANUAL.md.
+
+Examples are optionally installed at
+`$HOME/RV-Predict-C/share/examples/rv-predict-c/`.  There are a
+variety of examples in C and C++.  Look at the README files under
+`examples/rv-predict-c/` for more information.
+
+The important programs for the everyday RV-Predict are `rvpc` and `rvpx`:
 
 `rvpc`: a wrapper for `clang` that compiles and links programs with
     RV-Predict instrumentation.  When a program built with `rvpc` runs,
     it will ordinarily leave a trace file called `rvpredict.trace`
     in the current working directory.
+
+`rvpc++`: like `rvpc`, only for `clang++`.
 
 `rvpx`: a wrapper for programs that were built with RV-Predict
     instrumentation.  If you ordinarily run your program like
@@ -17,6 +35,10 @@ executable search path, $PATH.  The important RV-Predict programs are
     from `./rvpredict.trace` to a temporary directory.  Then it analyzes
     the trace for data races.  After reporting any data races on the
     standard error output, `rvpx` deletes the temporary directory.
+
+Advanced users may find a couple of other programs in the package useful.
+Those programs are `rvpsymbolize` and `rvpdump`.  Note that those programs
+may not appear in subsequent releases of RV-Predict:
 
 `rvpsymbolize`: a filter that takes the name of an ELF executable file,
     `program` as an argument.  `rvpsymbolize` copies its standard
@@ -45,7 +67,32 @@ executable search path, $PATH.  The important RV-Predict programs are
     option is deprecated; it may be removed from a future version of
     `rvpdump`.
 
-In /home/vagrant/lib/ are the RV-Predict Java classes, the runtime
-libraries for the latest edition of RV-Predict/C, and the product
-license key.  Those files must be present for RV-Predict/C to work,
-but the user does not ordinarily need to do anything with them.
+## Using RV-Predict
+
+### Getting started
+
+Make sure that the RV-Predict/C `bin` directory is in your PATH.
+Ordinarily, the directory to add to your PATH is `$HOME/RV-Predict-C/bin`.
+In Bourne shell and workalikes such as `bash`, you can add it to PATH
+like this:
+
+	export PATH=${HOME}/RV-Predict-C/bin:${PATH}
+
+In `csh` and `tcsh`, run this:
+
+	setenv PATH ${HOME}/RV-Predict-C/bin:${PATH}
+
+We recommend setting the proper PATH in your shell's login profile.
+
+### Compiling and running programs with RV-Predict
+
+The first step in using RV-Predict/C to detect data races is to
+compile your C program with the RV-Predict instrumentation and runtime.
+RV-Predict provides a script, `rvpc`, that runs your copy of `clang`,
+adding options that run the instrumentation plug-in and link with the
+RV-Predict runtime.  You can use `rvpc` as a drop-in replacement for
+`clang`.
+
+$ rvpc main.c
+
+`rvpc++` is a drop-in replacement for `clang++`.

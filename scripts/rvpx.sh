@@ -2,7 +2,7 @@
 
 set -e
 
-tmpdir=$(mktemp -d)
+tmpdir=$(mktemp -d -t $(basename $0).XXXXXX)
 exitcode=1
 
 progname=$1
@@ -29,8 +29,8 @@ cleanup_hook()
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
-        echo rm -rf $tmpdir 1>&2
-        rm -rf $tmpdir
+	echo $(basename $0): rm -rf $tmpdir 1>&2
+	rm -rf $tmpdir
 	exit $exitcode
 }
 
@@ -48,7 +48,7 @@ EOF
 
 	predict
 
-        exit $exitcode
+	exit $exitcode
 }
 
 # Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
@@ -77,9 +77,3 @@ set -e
 # If the command is not found (exit code 127) or if it is found, but not
 # executable (exit code 126), don't try to perform prediction.
 [ $exitcode -ne 126 -a $exitcode -ne 127 ] && predict
-
-trap - EXIT ALRM HUP INT PIPE QUIT TERM
-
-rm -rf $tmpdir
-
-exit $exitcode

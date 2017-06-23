@@ -26,10 +26,10 @@ rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar
 
 $(.CURDIR)/../target/release/rv-predict/rv-predict.jar: buildit
 
-#clean:
-#	@rm -rf $(.CURDIR)/../target
+clean cleandir distclean:
+	@cd $(.CURDIR)/.. && mvn -q clean
 
-CLEANDIRS+=$(.CURDIR)/../target $(.CURDIR)/../rv-predict-source/target
+#CLEANDIRS+=$(.CURDIR)/../target $(.CURDIR)/../rv-predict-source/target
 CLEANFILES+=$(CLEANABLE_FILES)
 
 .include <mkc.files.mk>

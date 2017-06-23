@@ -214,9 +214,9 @@ public class Race {
             if (!maybeEvent.isPresent()) {
                 sb.append(" before any event.\n");
             } else {
-                sb.append("\n");
                 heldLocks = trace.getHeldLocksAt(maybeEvent.get());
                 sb.append(getHeldLocksReport(heldLocks));
+                sb.append("\n");
                 generateStackTrace(maybeEvent.get(), heldLocks, sb);
             }
         }

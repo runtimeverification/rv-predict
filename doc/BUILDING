@@ -3,10 +3,12 @@ if you have downloaded binaries for Ubuntu 14.04:
 
 export PATH=${HOME}/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}
 
-JDK 1.8
-m4
 awk
-sed
-grep
-libarchive
 clang+llvm-3.8.1 with development components (.h, .a/.so files)
+grep
+JDK 1.8
+lex
+libarchive
+m4
+sed
+yacc

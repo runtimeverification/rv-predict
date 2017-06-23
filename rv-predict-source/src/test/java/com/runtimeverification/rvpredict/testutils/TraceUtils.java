@@ -205,6 +205,12 @@ public class TraceUtils {
 
     @SafeVarargs
     public final RawTrace createRawTrace(List<ReadonlyEventInterface>... events) {
+        return createRawTrace(true, events);
+    }
+
+    @SafeVarargs
+    public final RawTrace createRawTrace(
+            boolean threadStartsInTheCurrentWindow, List<ReadonlyEventInterface>... events) {
         int size = 0;
         for (List<ReadonlyEventInterface> eventList : events) {
             size += eventList.size();
@@ -223,8 +229,11 @@ public class TraceUtils {
         }
         int currentThreadNumber = this.nextThreadNumber;
         this.nextThreadNumber++;
-        return new RawTrace(0, pos, paddedEvents, paddedEvents[0].getSignalDepth(), currentThreadNumber);
+        return new RawTrace(
+                0, pos, paddedEvents, paddedEvents[0].getSignalDepth(),
+                currentThreadNumber, threadStartsInTheCurrentWindow);
     }
+
     @SafeVarargs
     public final List<ReadonlyEventInterface> flatten(List<ReadonlyEventInterface>... events) {
         List<ReadonlyEventInterface> flattened = new ArrayList<>();

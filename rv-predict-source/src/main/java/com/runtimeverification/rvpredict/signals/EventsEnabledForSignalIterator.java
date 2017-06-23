@@ -17,6 +17,7 @@ public class EventsEnabledForSignalIterator {
     private final boolean detectInterruptedThreadRace;
     private final long signalNumber;
     private final Iterator<ReadonlyEventInterface> eventsIterator;
+    private final boolean stopAtFirstMaskChangeEvent;
 
     private Optional<ReadonlyEventInterface> previousEvent;
     private Optional<ReadonlyEventInterface> currentEvent;
@@ -30,9 +31,12 @@ public class EventsEnabledForSignalIterator {
     public EventsEnabledForSignalIterator(
             Collection<ReadonlyEventInterface> events,
             boolean detectInterruptedThreadRace,
-            long signalNumber, boolean enabledAtStart) {
+            long signalNumber,
+            boolean enabledAtStart,
+            boolean stopAtFirstMaskChangeEvent) {
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
         this.signalNumber = signalNumber;
+        this.stopAtFirstMaskChangeEvent = stopAtFirstMaskChangeEvent;
         previousEvent = Optional.empty();
         currentEvent = Optional.empty();
         enabled = enabledAtStart;
@@ -50,7 +54,7 @@ public class EventsEnabledForSignalIterator {
 
     public boolean advance() {
         if (!enabled) {
-            if (!findNextEnabledEvent()) {
+            if (stopAtFirstMaskChangeEvent ||!findNextEnabledEvent()) {
                 previousEvent = Optional.empty();
                 return false;
             }
@@ -95,6 +99,11 @@ public class EventsEnabledForSignalIterator {
             return false;
         }
         ReadonlyEventInterface event = eventsIterator.next();
+        if (stopAtFirstMaskChangeEvent && Signals.signalEnableChange(event, signalNumber).isPresent()) {
+            enabled = false;
+            currentEvent = Optional.of(event);
+            return true;
+        }
         enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, event);
         currentEvent = Optional.of(event);
         return true;

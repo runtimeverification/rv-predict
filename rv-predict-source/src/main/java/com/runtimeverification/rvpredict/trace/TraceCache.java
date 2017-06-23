@@ -221,6 +221,7 @@ public class TraceCache {
 
     private RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
             int tidStart, int tidEnd, int signalDepth, long otid) {
+        boolean threadStartsInTheCurrentWindow;
         List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
         int n = tidEvents.size(), length = getNextPowerOfTwo(n);
         tidEvents.sort(ReadonlyEventInterface::compareTo);
@@ -228,9 +229,11 @@ public class TraceCache {
         if (signalDepth == 0) {
             OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
             threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
+            threadStartsInTheCurrentWindow = !maybeThreadId.isPresent();
         } else {
             boolean signalEnds = signalEndsNow(tidEvents);
             if (!signalStartsNow(tidEvents)) {
+                threadStartsInTheCurrentWindow = false;
                 OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
                 if (!maybeThreadId.isPresent()) {
                     throw new IllegalStateException("No thread id for existing signal.");
@@ -240,14 +243,16 @@ public class TraceCache {
                     crntState.exitSignal(signalDepth, otid);
                 }
             } else if (!signalEnds) {
+                threadStartsInTheCurrentWindow = true;
                 threadId = crntState.enterSignal(signalDepth, otid);
             } else {
+                threadStartsInTheCurrentWindow = true;
                 threadId = crntState.getNewThreadId();
             }
         }
         return new RawTrace(
                 0, n, tidEvents.toArray(new ReadonlyEventInterface[length]),
-                signalDepth, threadId);
+                signalDepth, threadId, threadStartsInTheCurrentWindow);
     }
 
     private boolean signalStartsNow(List<? extends ReadonlyEventInterface> events) {

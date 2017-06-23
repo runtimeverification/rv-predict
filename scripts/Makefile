@@ -8,7 +8,8 @@ NOMAN=
 #
 
 FILESMODE=0755
-FILES=rvpc.sh rvpsymbolize.sh rvpx.sh
+FILES=rvpa.sh rvpc.sh rvpsymbolize.sh rvpx.sh
+FILESNAME_rvpa.sh=rvpa
 FILESNAME_rvpc.sh=rvpc
 FILESNAME_rvpsymbolize.sh=rvpsymbolize
 FILESNAME_rvpx.sh=rvpx

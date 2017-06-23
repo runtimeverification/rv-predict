@@ -1,13 +1,13 @@
-An RV-Predict[C] event trace file starts with a header that indicates
+An RV-Predict/C event trace file starts with a header that indicates
 the format and version of the file.  Following the header are the event
 traces.  Traces continue right up to the end of the file, and in a
 well-formed event trace, the end of file should coincide with the end of
 the last trace.  In this way, you can stream a trace over a socket or
 other IPC.
 
-An RV-Predict[C] trace header is at byte 0 of a trace file.  The
+An RV-Predict/C trace header is at byte 0 of a trace file.  The
 header starts with 4 bytes of "magic" that serve to distinguish an
-RV-Predict[C] trace file from files in other formats.  The magic
+RV-Predict/C trace file from files in other formats.  The magic
 consists of the 8-bit ASCII representations for the characters 'R' 'V'
 'P' '_', in that order.
 
@@ -147,7 +147,7 @@ Likewise, for an n-bit delta field,
         ...,
         PC - (2^(n-1) - 1) * 28 = (2^(n-1) - 1, begin).
 
-The RV-Predict[C] runtime reserved all of those counters for itself
+The RV-Predict/C runtime reserved all of those counters for itself
 while it ran the system under test, so the reader can be certain that
 whenever they appear in the trace, there is no ambiguity: they encode a
 deltop rather than an instruction address.

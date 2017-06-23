@@ -186,7 +186,7 @@ public class MaximalCausalModelTest {
     }
 
     @Test
-    public void noRaceBecauseOfRestrictsOnDifferentThread() throws InvalidTraceDataException {
+    public void noRaceBecauseOfConstraintsOnDifferentThread() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;

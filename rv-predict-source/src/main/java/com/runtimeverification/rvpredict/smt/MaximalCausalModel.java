@@ -42,11 +42,11 @@ import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
 import com.runtimeverification.rvpredict.smt.formula.IntConstant;
 import com.runtimeverification.rvpredict.smt.formula.InterruptedThreadVariable;
 import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
-import com.runtimeverification.rvpredict.smt.restrictsources.DisjointLocks;
-import com.runtimeverification.rvpredict.smt.restrictsources.InterThreadOrdering;
-import com.runtimeverification.rvpredict.smt.restrictsources.IntraThreadOrdering;
-import com.runtimeverification.rvpredict.smt.restrictsources.SignalInterruptLocationsRestrictSource;
-import com.runtimeverification.rvpredict.smt.restrictsources.SignalsDoNotOverlapWhenInterruptingTheSameThread;
+import com.runtimeverification.rvpredict.smt.constraintsources.DisjointLocks;
+import com.runtimeverification.rvpredict.smt.constraintsources.InterThreadOrdering;
+import com.runtimeverification.rvpredict.smt.constraintsources.IntraThreadOrdering;
+import com.runtimeverification.rvpredict.smt.constraintsources.SignalInterruptLocationsConstraintSource;
+import com.runtimeverification.rvpredict.smt.constraintsources.SignalsDoNotOverlapWhenInterruptingTheSameThread;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.ThreadType;
@@ -111,7 +111,7 @@ public class MaximalCausalModel {
             Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
         MaximalCausalModel model = new MaximalCausalModel(trace, z3filter, solver, detectInterruptedThreadRace);
 
-        model.addRestricts();
+        model.addConstraints();
         return model;
     }
 
@@ -128,9 +128,9 @@ public class MaximalCausalModel {
         return LESS_THAN(OrderVariable.get(event1), OrderVariable.get(event2));
     }
 
-    private void addRestricts() {
-        ImmutableList<RestrictSourceWithHappensBefore> happensBeforeRestricts =
-                new ImmutableList.Builder<RestrictSourceWithHappensBefore>()
+    private void addConstraints() {
+        ImmutableList<ConstraintSourceWithHappensBefore> happensBeforeConstraints =
+                new ImmutableList.Builder<ConstraintSourceWithHappensBefore>()
                         .add(new IntraThreadOrdering(trace.eventsByThreadID()))
                         .add(new InterThreadOrdering(
                                 trace.getInterThreadSyncEvents(),
@@ -140,7 +140,7 @@ public class MaximalCausalModel {
                         .build();
 
         TransitiveClosure.Builder mhbClosureBuilder = TransitiveClosure.builder(trace.getSize());
-        happensBeforeRestricts.forEach(source -> source.addToMhbClosure(mhbClosureBuilder));
+        happensBeforeConstraints.forEach(source -> source.addToMhbClosure(mhbClosureBuilder));
         mhbClosure = mhbClosureBuilder.build();
 
         trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> lockRegions.forEach(locksetEngine::add));
@@ -149,12 +149,12 @@ public class MaximalCausalModel {
                 .filter(ttid -> trace.getThreadType(ttid) == ThreadType.SIGNAL)
                 .collect(Collectors.toList());
 
-        List<RestrictSource> restrictSources = new ImmutableList.Builder<RestrictSource>()
-                .addAll(happensBeforeRestricts)
+        List<ConstraintSource> constraintSources = new ImmutableList.Builder<ConstraintSource>()
+                .addAll(happensBeforeConstraints)
                 .add(new DisjointLocks(
                         trace.getLockIdToLockRegions().values(),
                         trace::threadsCanOverlap))
-                .add(new SignalInterruptLocationsRestrictSource(
+                .add(new SignalInterruptLocationsConstraintSource(
                         trace.eventsByThreadID(),
                         trace::getThreadType,
                         trace::getSignalNumber,
@@ -173,7 +173,7 @@ public class MaximalCausalModel {
                         trace::getThreadStartsInTheCurrentWindow))
                 .build();
 
-        restrictSources.forEach(source -> phiTau.add(source.createRestrict().createSmtFormula()));
+        constraintSources.forEach(source -> phiTau.add(source.createConstraint().createSmtFormula()));
     }
 
     private BoolFormula getPhiConc(MemoryAccessBlock block) {

@@ -18,12 +18,15 @@ public class EventReader implements IEventReader {
 
     private final LZ4BlockInputStream in;
 
+    private final long fileSize;
+
     private final ByteBuffer byteBuffer = ByteBuffer.allocate(Event.SIZEOF);
 
     private Event lastReadEvent;
 
     public EventReader(Path path) throws IOException {
         in = LZ4Utils.createDecompressionStream(path);
+        fileSize = in.available();
         readEvent();
     }
 
@@ -54,6 +57,11 @@ public class EventReader implements IEventReader {
     @Override
     public ReadonlyEventInterface lastReadEvent() {
         return lastReadEvent;
+    }
+
+    @Override
+    public long bytesRead() throws IOException {
+        return fileSize - in.available();
     }
 
     @Override

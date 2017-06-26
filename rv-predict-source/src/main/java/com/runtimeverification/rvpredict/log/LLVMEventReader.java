@@ -47,6 +47,11 @@ public class LLVMEventReader implements IEventReader {
     }
 
     @Override
+    public long bytesRead() {
+        return in.bytesRead();
+    }
+
+    @Override
     public void close() throws IOException {
         in.close();
     }

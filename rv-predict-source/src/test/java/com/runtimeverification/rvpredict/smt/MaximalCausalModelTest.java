@@ -8,6 +8,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.progressindicator.NullProgressIndicator;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.RawTrace;
@@ -1574,7 +1575,8 @@ public class MaximalCausalModelTest {
         mockConfiguration.windowSize = WINDOW_SIZE;
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
-        MaximalCausalModel model = MaximalCausalModel.create(trace, z3Filter, solver, detectInterruptedThreadRace);
+        MaximalCausalModel model = MaximalCausalModel.create(
+                trace, z3Filter, solver, new NullProgressIndicator(), detectInterruptedThreadRace);
 
         Map<String, List<Race>> sigToRaceSuspects = new HashMap<>();
         ArrayList<Race> raceSuspects = new ArrayList<>();

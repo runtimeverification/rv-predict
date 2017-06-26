@@ -90,7 +90,7 @@ public class TraceCacheTest {
                         beginThread1, readData1Thread1, beginThread2, readDataThread2, readData2Thread1));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -136,7 +136,7 @@ public class TraceCacheTest {
                         beginThread1, readData1Thread1, beginSignal, readDataSignal, readData2Thread1));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -192,7 +192,7 @@ public class TraceCacheTest {
                         readData2Thread1));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -244,7 +244,7 @@ public class TraceCacheTest {
                 new ListEventReader(Arrays.asList(beginThread1, readData1Thread1));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -280,7 +280,7 @@ public class TraceCacheTest {
                 new ListEventReader(Arrays.asList(beginThread1, readData1Thread1));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -317,7 +317,7 @@ public class TraceCacheTest {
                 new ListEventReader(Collections.singletonList(beginSignal));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -352,7 +352,7 @@ public class TraceCacheTest {
                 new ListEventReader(Collections.singletonList(readData));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -388,7 +388,7 @@ public class TraceCacheTest {
                 new ListEventReader(Arrays.asList(readData, endSignal));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -428,7 +428,7 @@ public class TraceCacheTest {
                 new ListEventReader(Arrays.asList(beginSignal, readData, endSignal));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -467,7 +467,7 @@ public class TraceCacheTest {
                 new ListEventReader(Arrays.asList(endSignal1, beginSignal2));
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -518,7 +518,7 @@ public class TraceCacheTest {
         ListEventReader eventReader = new ListEventReader(events);
 
         TraceCache traceCache =
-                TraceCache.createForTesting(
+                TestTraceCache.createForTesting(
                         mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
 
         Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
@@ -623,6 +623,11 @@ public class TraceCacheTest {
         @Override
         public ReadonlyEventInterface lastReadEvent() {
             return lastReadEvent;
+        }
+
+        @Override
+        public long bytesRead() throws IOException {
+            return 0;
         }
 
         @Override

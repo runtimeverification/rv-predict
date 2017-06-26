@@ -35,6 +35,12 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.progressindicator.ProgressIndicatorInterface;
+import com.runtimeverification.rvpredict.smt.constraintsources.DisjointLocks;
+import com.runtimeverification.rvpredict.smt.constraintsources.InterThreadOrdering;
+import com.runtimeverification.rvpredict.smt.constraintsources.IntraThreadOrdering;
+import com.runtimeverification.rvpredict.smt.constraintsources.SignalInterruptLocationsConstraintSource;
+import com.runtimeverification.rvpredict.smt.constraintsources.SignalsDoNotOverlapWhenInterruptingTheSameThread;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
@@ -42,11 +48,6 @@ import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
 import com.runtimeverification.rvpredict.smt.formula.IntConstant;
 import com.runtimeverification.rvpredict.smt.formula.InterruptedThreadVariable;
 import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
-import com.runtimeverification.rvpredict.smt.constraintsources.DisjointLocks;
-import com.runtimeverification.rvpredict.smt.constraintsources.InterThreadOrdering;
-import com.runtimeverification.rvpredict.smt.constraintsources.IntraThreadOrdering;
-import com.runtimeverification.rvpredict.smt.constraintsources.SignalInterruptLocationsConstraintSource;
-import com.runtimeverification.rvpredict.smt.constraintsources.SignalsDoNotOverlapWhenInterruptingTheSameThread;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.ThreadType;
@@ -105,21 +106,30 @@ public class MaximalCausalModel {
 
     private final com.microsoft.z3.Solver solver;
 
+    private final ProgressIndicatorInterface progressIndicator;
+
     private final boolean detectInterruptedThreadRace;
 
     public static MaximalCausalModel create(
-            Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
-        MaximalCausalModel model = new MaximalCausalModel(trace, z3filter, solver, detectInterruptedThreadRace);
+            Trace trace, Z3Filter z3filter, Solver solver,
+            ProgressIndicatorInterface progressIndicator,
+            boolean detectInterruptedThreadRace) {
+        MaximalCausalModel model = new MaximalCausalModel(
+                trace, z3filter, solver, progressIndicator, detectInterruptedThreadRace);
 
         model.addConstraints();
         return model;
     }
 
-    private MaximalCausalModel(Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
+    private MaximalCausalModel(
+            Trace trace, Z3Filter z3filter, Solver solver,
+            ProgressIndicatorInterface progressIndicator,
+            boolean detectInterruptedThreadRace) {
         this.trace = trace;
         this.z3filter = z3filter;
         this.solver = solver;
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
+        this.progressIndicator = progressIndicator;
         trace.eventsByThreadID().forEach((tid, events) ->
                 events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event)));
     }
@@ -353,6 +363,11 @@ public class MaximalCausalModel {
         if (sigToRaceSuspects.isEmpty()) {
             return Collections.emptyMap();
         }
+        ImmutableList<Map.Entry<String, List<Race>>> orderedSigToRaceSuspects =
+                ImmutableList.copyOf(sigToRaceSuspects.entrySet());
+
+        this.progressIndicator.startComputation(
+                orderedSigToRaceSuspects.stream().map(entry -> entry.getValue().size()).collect(Collectors.toList()));
 
 //        trace.logger().debug().println("start analyzing: " + trace.getBaseGID());
 //        sigToRaceSuspects.forEach((sig, l) -> trace.logger().debug().println(sig + ": " + l.size()));
@@ -371,18 +386,22 @@ public class MaximalCausalModel {
             /* check race suspects */
 
             boolean atLeastOneRace = false;
-            for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
+            for (int i = 0; i < orderedSigToRaceSuspects.size(); i++) {
+                this.progressIndicator.startRace(i);
+                Map.Entry<String, List<Race>> entry = orderedSigToRaceSuspects.get(i);
+                boolean hadRace = false;
                 for (Race race : entry.getValue()) {
+                    this.progressIndicator.startRaceAttempt();
                     solver.push();
                     solver.add(z3filter.filter(suspectToAsst.get(race)));
                     boolean isRace = solver.check() == Status.SATISFIABLE;
-                    atLeastOneRace |= isRace;
                     if (isRace) {
+                        hadRace = true;
                         Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution();
                         Map<Integer, Integer> signalParents = extractSignalParents();
                         fillSignalStack(threadToExecution, signalParents, race);
                         if (Configuration.debug) {
-                            dumpOrderingWithLessThreadSwitches(
+                            dumpOrdering(
                                     threadToExecution,
                                     Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
                                     signalParents);
@@ -393,6 +412,13 @@ public class MaximalCausalModel {
                         result.put(entry.getKey(), race);
                         break;
                     }
+                    this.progressIndicator.finishRaceAttempt();
+                }
+                if (hadRace) {
+                    atLeastOneRace = true;
+                    this.progressIndicator.raceFound();
+                } else {
+                    this.progressIndicator.noRaceFound();
                 }
             }
             if (!atLeastOneRace && Configuration.debug) {
@@ -472,7 +498,7 @@ public class MaximalCausalModel {
     private void findAndDumpOrdering() {
         solver.push();
         if (solver.check() == Status.SATISFIABLE) {
-            dumpOrderingWithLessThreadSwitches(
+            dumpOrdering(
                     extractExecution(), Optional.empty(), Optional.empty(), extractSignalParents());
         }
         solver.pop();
@@ -498,78 +524,6 @@ public class MaximalCausalModel {
     }
 
     private void dumpOrdering(
-            Map<Integer, List<EventWithOrder>> threadToExecution,
-            ReadonlyEventInterface firstRaceEvent, ReadonlyEventInterface secondRaceEvent,
-            Map<Integer, Integer> signalParents) {
-        System.out.println("Possible ordering of events ..........");
-        Map<Integer, Integer> lastIndexPerThread = new HashMap<>();
-        threadToExecution.keySet().forEach(threadId -> lastIndexPerThread.put(threadId, 0));
-
-        long lastThread = ((long) Integer.MAX_VALUE) + 1;
-        boolean hasData;
-        do {
-            hasData = false;
-            long minOrder = Integer.MAX_VALUE;
-            int minIndex = Integer.MAX_VALUE;
-            int minThread = Integer.MAX_VALUE;
-            for (Map.Entry<Integer, Integer> indexEntry : lastIndexPerThread.entrySet()) {
-                Integer threadId = indexEntry.getKey();
-                Integer index = indexEntry.getValue();
-                List<EventWithOrder> execution = threadToExecution.get(threadId);
-                if (index >= execution.size()) {
-                    continue;
-                }
-                EventWithOrder currentEvent = execution.get(index);
-                if (minOrder > currentEvent.getOrderId()
-                        || (minOrder == currentEvent.getOrderId() && minThread == threadId)) {
-                    minOrder = currentEvent.getOrderId();
-                    minIndex = index;
-                    minThread = threadId;
-                    hasData = true;
-                }
-            }
-            if (hasData) {
-                boolean foundRace = false;
-                EventWithOrder event = threadToExecution.get(minThread).get(minIndex);
-                lastIndexPerThread.put(minThread, minIndex + 1);
-                if (isRaceEvent(event, firstRaceEvent, secondRaceEvent)) {
-                    for (Map.Entry<Integer, Integer> indexEntry : lastIndexPerThread.entrySet()) {
-                        Integer threadId = indexEntry.getKey();
-                        Integer index = indexEntry.getValue();
-                        List<EventWithOrder> execution = threadToExecution.get(threadId);
-                        if (index >= execution.size()) {
-                            continue;
-                        }
-                        EventWithOrder currentEvent = execution.get(index);
-                        if (currentEvent.getEvent().getEventId() != event.getEvent().getEventId()
-                                && isRaceEvent(currentEvent, firstRaceEvent, secondRaceEvent)) {
-                            foundRace = true;
-                            lastIndexPerThread.put(threadId, index + 1);
-                            System.out.println("-- Found race for threads "
-                                    + threadDescription(minThread, event, signalParents) + " and "
-                                    + threadDescription(threadId, currentEvent, signalParents) + " --");
-                            lastThread = Integer.MAX_VALUE;
-                            System.out.println(prettyPrint(event.getEvent()));
-                            System.out.println(" -- vs");
-                            System.out.println(prettyPrint(currentEvent.getEvent()));
-                            break;
-                        }
-                    }
-                    assert foundRace;
-                }
-                if (!foundRace) {
-                    if (lastThread != minThread) {
-                        System.out.println(
-                                "-- Switching to thread " + threadDescription(minThread, event, signalParents) + " --");
-                        lastThread = minThread;
-                    }
-                    System.out.println(prettyPrint(event.getEvent()));
-                }
-            }
-        } while (hasData);
-    }
-
-    private void dumpOrderingWithLessThreadSwitches(
             Map<Integer, List<EventWithOrder>> threadToExecution,
             Optional<ReadonlyEventInterface> firstRaceEvent, Optional<ReadonlyEventInterface> secondRaceEvent,
             Map<Integer, Integer> signalParents) {
@@ -843,14 +797,6 @@ public class MaximalCausalModel {
         return event.getType().getPrinter().print(event);
     }
 
-    private boolean isRaceEvent(
-            EventWithOrder event,
-            ReadonlyEventInterface firstRaceEvent,
-            ReadonlyEventInterface secondRaceEvent) {
-        return (firstRaceEvent != null && firstRaceEvent.getEventId() == event.getEvent().getEventId())
-                || (secondRaceEvent != null && secondRaceEvent.getEventId() == event.getEvent().getEventId());
-    }
-
     private String threadDescription(int threadId, EventWithOrder event, Map<Integer, Integer> signalParents) {
         if (trace.getThreadType(threadId) == ThreadType.THREAD) {
             return "T" + event.getEvent().getOriginalThreadId();
@@ -887,7 +833,7 @@ public class MaximalCausalModel {
     private void checkTraceConsistency(Z3Filter z3filter, com.microsoft.z3.Solver solver)
             throws Exception {
         List<MemoryAccessBlock> blks = new ArrayList<>();
-        trace.memoryAccessBlocksByThreadID().values().forEach(l -> blks.addAll(l));
+        trace.memoryAccessBlocksByThreadID().values().forEach(blks::addAll);
         Collections.sort(blks);
 
         solver.push();

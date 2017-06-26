@@ -158,6 +158,7 @@ public class Trace {
      * Cache for the {@link #atLeastOneSigsetAllowsSignal(long, long)} method.
      */
     private final Map<Long, Map<Long, Boolean>> atLeastOneSigsetAllowsSignalCache;
+
     private final Map<Long, Map<Long, List<ReadonlyEventInterface>>> signalNumberToSignalHandlerToEstablishSignalEvents;
 
     /**

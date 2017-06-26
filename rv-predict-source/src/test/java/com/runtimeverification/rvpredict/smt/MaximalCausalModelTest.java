@@ -51,11 +51,13 @@ public class MaximalCausalModelTest {
     private static final long LOCK_1 = 500;
     private static final long SIGNAL_NUMBER_1 = 1;
     private static final long SIGNAL_NUMBER_2 = 2;
+    private static final long SIGNAL_NUMBER_63 = 63;
     private static final long SIGNAL_HANDLER_1 = 600;
     private static final long SIGNAL_HANDLER_2 = 601;
     private static final long ALL_SIGNALS_DISABLED_MASK = 0xffffffffffffffffL;
-    private static final long SIGNAL_1_ENABLED_MASK = ~(1 << SIGNAL_NUMBER_1);
-    private static final long SIGNAL_2_ENABLED_MASK = ~(1 << SIGNAL_NUMBER_2);
+    private static final long SIGNAL_1_ENABLED_MASK = ~(1L << SIGNAL_NUMBER_1);
+    private static final long SIGNAL_2_ENABLED_MASK = ~(1L << SIGNAL_NUMBER_2);
+    private static final long SIGNAL_63_ENABLED_MASK = 0x7fffffffffffffffL;
     private static final long GENERATION_1 = 700;
 
     private int nextIdDelta = 0;
@@ -786,6 +788,27 @@ public class MaximalCausalModelTest {
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        Assert.assertTrue(
+                hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), true));
+    }
+
+    @Test
+    public void setSignalMaskEnablesSignalsLongMask() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setSignalMask(SIGNAL_63_ENABLED_MASK),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.enableSignal(SIGNAL_NUMBER_63)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_63, SIGNAL_HANDLER_1, GENERATION_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
         Assert.assertTrue(

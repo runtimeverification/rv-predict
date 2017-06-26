@@ -37,7 +37,7 @@ public class Signals {
     }
 
     private static boolean signalInMask(long signalNumber, long mask) {
-        return (mask & (1 << signalNumber)) != 0;
+        return (mask & (1L << signalNumber)) != 0;
     }
 
 }

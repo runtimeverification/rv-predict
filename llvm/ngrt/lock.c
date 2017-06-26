@@ -29,8 +29,10 @@ int
 __rvpredict_pthread_mutex_init(pthread_mutex_t *restrict mtx,
    const pthread_mutexattr_t *restrict attr)
 {
-	if (attr != NULL) 
-		errx(EXIT_FAILURE, "%s: attr != NULL not supported", __func__);
+	if (attr != NULL) {
+		warnx("%s: not all pthread mutex attributes are supported",
+		    __func__);
+	}
 	return real_pthread_mutex_init(mtx, attr);
 }
 

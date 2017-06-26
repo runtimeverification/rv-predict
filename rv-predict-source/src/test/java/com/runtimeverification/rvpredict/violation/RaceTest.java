@@ -83,7 +83,7 @@ public class RaceTest {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
-        when(mockMetadata.getRaceLocationSig(
+        when(mockMetadata.getRaceDataSig(
                 extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration))
                 .thenReturn("<mock race report>");
 

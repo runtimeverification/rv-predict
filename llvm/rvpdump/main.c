@@ -15,8 +15,8 @@ static void __dead
 usage(const char *progname)
 {
 	fprintf(stderr,
-	    "usage: %s [-t <plain|legacy|symbol-friendly>] [<trace file>]\n",
-	    progname);
+	    "usage: %s [-g] "
+	    "[-t <plain|legacy|symbol-friendly>] [<trace file>]\n", progname);
 	exit(EXIT_FAILURE);
 }
 
@@ -26,17 +26,23 @@ main(int argc, char **argv)
 	int ch, fd;
 	const char *inputname;
 	const char *progname = argv[0];
-	rvp_output_type_t otype = RVP_OUTPUT_PLAIN_TEXT;
+	rvp_output_params_t op = {
+	  .op_type = RVP_OUTPUT_PLAIN_TEXT
+	, .op_emit_generation = false
+	};
 
-	while ((ch = getopt(argc, argv, "t:")) != -1) {
+	while ((ch = getopt(argc, argv, "gt:")) != -1) {
 		switch (ch) {
+		case 'g':
+			op.op_emit_generation = true;
+			break;
 		case 't':
 			if (strcmp(optarg, "legacy") == 0)
-				otype = RVP_OUTPUT_LEGACY_BINARY;
+				op.op_type = RVP_OUTPUT_LEGACY_BINARY;
 			else if (strcmp(optarg, "plain") == 0)
-				otype = RVP_OUTPUT_PLAIN_TEXT;
+				op.op_type = RVP_OUTPUT_PLAIN_TEXT;
 			else if (strcmp(optarg, "symbol-friendly") == 0)
-				otype = RVP_OUTPUT_SYMBOL_FRIENDLY;
+				op.op_type = RVP_OUTPUT_SYMBOL_FRIENDLY;
 			else
 				usage(progname);
 			break;
@@ -62,7 +68,7 @@ main(int argc, char **argv)
 		inputname = "<stdin>";
 	}
 
-	rvp_trace_dump(otype, fd);
+	rvp_trace_dump(&op, fd);
 
 	return EXIT_SUCCESS;
 }

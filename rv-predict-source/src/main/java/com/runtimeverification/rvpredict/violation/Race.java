@@ -115,12 +115,12 @@ public class Race {
         return "Race(" + addr + "," + loc1 + "," + loc2 + ")";
     }
 
-    public String getRaceLocationSig() {
-        return trace.metadata().getRaceLocationSig(e1, e2, trace, config);
+    public String getRaceDataSig() {
+        return trace.metadata().getRaceDataSig(e1, e2, trace, config);
     }
     public String generateRaceReport() {
         signatureProcessor.reset();
-        String locSig = trace.metadata().getRaceLocationSig(e1, e2, trace, config);
+        String locSig = trace.metadata().getRaceDataSig(e1, e2, trace, config);
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("Data race on %s:%n", locSig));
         boolean reportableRace;
@@ -188,13 +188,13 @@ public class Race {
         long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
-            sb.append(String.format("    Concurrent %s in thread T%s%s%n",
-                    e.isWrite() ? "write" : "read",
+            sb.append(String.format("    %s in thread %s%s%n",
+                    e.isWrite() ? "Write" : "Read",
                     otid,
                     getHeldLocksReport(heldLocks)));
         } else {
-            sb.append(String.format("    Concurrent %s in signal S%s%s%n",
-                    e.isWrite() ? "write" : "read",
+            sb.append(String.format("    %s in signal S%s%s%n",
+                    e.isWrite() ? "Write" : "Read",
                     sid,
                     getHeldLocksReport(heldLocks)));
         }
@@ -204,21 +204,21 @@ public class Race {
             sb.append("    Interrupting ");
             int ttid = stackEvent.getTtid();
             if (trace.getThreadType(ttid) == ThreadType.THREAD) {
-                sb.append("thread T");
+                sb.append("thread ");
                 sb.append(trace.getOriginalThreadIdForTraceThreadId(ttid));
             } else {
                 sb.append("signal S");
                 sb.append(trace.getSignalNumber(ttid));
             }
-            sb.append("\n");
             Optional<ReadonlyEventInterface> maybeEvent = signalStackEvents.get(stackIndex).getEvent();
             if (!maybeEvent.isPresent()) {
-                sb.append(" before any event.");
-                continue;
+                sb.append(" before any event.\n");
+            } else {
+                heldLocks = trace.getHeldLocksAt(maybeEvent.get());
+                sb.append(getHeldLocksReport(heldLocks));
+                sb.append("\n");
+                generateStackTrace(maybeEvent.get(), heldLocks, sb);
             }
-            heldLocks = trace.getHeldLocksAt(maybeEvent.get());
-            sb.append(getHeldLocksReport(heldLocks));
-            generateStackTrace(maybeEvent.get(), heldLocks, sb);
         }
         return atLeastOneKnownElementInTheTrace;
     }
@@ -252,7 +252,7 @@ public class Race {
             long parentOTID = metadata.getParentOTID(otid);
             if (parentOTID > 0) {
                 long locId = metadata.getOriginalThreadCreationLocId(otid);
-                sb.append(String.format("    T%s is created by T%s%n", otid, parentOTID));
+                sb.append(String.format("    Thread %s created by thread %s%n", otid, parentOTID));
                 if (locId >= 0) {
                     String locationSig = metadata.getLocationSig(locId);
                     signatureProcessor.process(locationSig);
@@ -262,9 +262,9 @@ public class Race {
                 }
             } else {
                 if (otid == 1) {
-                    sb.append(String.format("    T%s is the main thread%n", otid));
+                    sb.append(String.format("    Thread %s is the main thread%n", otid));
                 } else {
-                    sb.append(String.format("    T%s is created by n/a%n", otid));
+                    sb.append(String.format("    Thread %s is created by n/a%n", otid));
                 }
             }
         }
@@ -327,6 +327,8 @@ public class Race {
             }
             sb.append(heldLocks.get(i).getLockRepresentation());
         }
-        return sb.toString();
+        final boolean plural = heldLocks.size() > 1;
+        return String.format(" holding lock%s %s", plural ? "s" : "",
+          sb.toString());
     }
 }

@@ -19,6 +19,10 @@
 
 #define	RSVD_IDEPTH 0
 
+typedef char prebuf_t[
+    sizeof("tid 4294967295.4294967295 18446744073709551615 ") +
+    MAX(sizeof("{0x0123456789abcdef}"), sizeof("pc 0x0123456789abcdef"))];
+
 typedef union {
 	rvp_addr_t ub_pc;
 	rvp_begin_t ub_begin;
@@ -68,7 +72,7 @@ typedef struct _rvp_pstate rvp_pstate_t;
 
 typedef struct _rvp_emitters {
 	void (*init)(const rvp_pstate_t *);
-	void (*emit_jump)(const rvp_pstate_t *, rvp_addr_t);
+	void (*emit_nop)(const rvp_pstate_t *);
 	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
 	    bool, int);
 	char *(*dataptr_to_string)(const rvp_pstate_t *, char *, size_t,
@@ -98,6 +102,7 @@ struct _rvp_pstate {
 	const rvp_emitters_t	*ps_emitters;
 	uint32_t		ps_idepth;
 	int			ps_zeromasknum;
+	bool			ps_emit_generation;
 };
 
 typedef struct _intmax_item intmax_item_t;
@@ -120,6 +125,8 @@ typedef struct _intmax_table {
 	uint32_t	(*t_get_next_id)(uintmax_t);
 } intmax_table_t;
 
+static char *preamble_string(const rvp_pstate_t *, char *, size_t);
+
 char *insnptr_to_simple_string(const rvp_pstate_t *, char *, size_t,
     rvp_addr_t);
 char *insnptr_to_symbol_friendly_string(const rvp_pstate_t *, char *, size_t,
@@ -129,7 +136,7 @@ char *dataptr_to_simple_string(const rvp_pstate_t *, char *, size_t,
 char *dataptr_to_symbol_friendly_string(const rvp_pstate_t *, char *, size_t,
     rvp_addr_t);
 
-static void emit_no_jump(const rvp_pstate_t *, rvp_addr_t);
+static void emit_no_nop(const rvp_pstate_t *);
 static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
 static void emit_fork_metadata(uint64_t, uint64_t, uint32_t);
@@ -138,7 +145,7 @@ static uint32_t get_next_thdfd(uintmax_t);
 
 static void legacy_init(const rvp_pstate_t *);
 
-static void print_jump(const rvp_pstate_t *, rvp_addr_t);
+static void print_nop(const rvp_pstate_t *);
 static void print_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
 
@@ -210,14 +217,14 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 };
 
 static const rvp_emitters_t plain_text = {
-	  .emit_jump = print_jump
+	  .emit_nop = print_nop
 	, .emit_op = print_op
 	, .dataptr_to_string = dataptr_to_simple_string
 	, .insnptr_to_string = insnptr_to_simple_string
 };
 
 static const rvp_emitters_t symbol_friendly = {
-	  .emit_jump = print_jump
+	  .emit_nop = print_nop
 	, .emit_op = print_op
 	, .dataptr_to_string = dataptr_to_symbol_friendly_string
 	, .insnptr_to_string = insnptr_to_symbol_friendly_string
@@ -225,7 +232,7 @@ static const rvp_emitters_t symbol_friendly = {
 
 static const rvp_emitters_t legacy_binary = {
 	  .init = legacy_init
-	, .emit_jump = emit_no_jump
+	, .emit_nop = emit_no_nop
 	, .emit_op = emit_legacy_op
 };
 
@@ -351,6 +358,7 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 
 static void
 rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
+    const rvp_output_params_t *op,
     rvp_addr_t op0, uint32_t tid __unused, uint64_t generation __unused)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
@@ -358,6 +366,7 @@ rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
 	 */
 	deltops_t deltops;
 
+	ps->ps_emit_generation = op->op_emit_generation;
 	ps->ps_emitters = emitters;
 
 	ps->ps_deltop_center = op0;
@@ -402,7 +411,7 @@ legacy_init(const rvp_pstate_t *ps __unused)
 }
 
 static void
-emit_no_jump(const rvp_pstate_t *ps __unused, rvp_addr_t pc __unused)
+emit_no_nop(const rvp_pstate_t *ps __unused)
 {
 	return;
 }
@@ -904,15 +913,11 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 }
 
 static void
-print_jump(const rvp_pstate_t *ps, rvp_addr_t pc)
+print_nop(const rvp_pstate_t *ps)
 { 
-	const rvp_emitters_t *emitters = ps->ps_emitters;
-	char buf[MAX(sizeof("{0x0123456789abcdef}"),
-		     sizeof("pc 0x0123456789abcdef"))];
+	prebuf_t prebuf;
 
-	printf("tid %" PRIu32 ".%" PRIu32 " %s jump\n",
-	    ps->ps_curthread, ps->ps_idepth,
-	    (*emitters->insnptr_to_string)(ps, buf, sizeof(buf), pc));
+	printf("%s nop\n", preamble_string(ps, prebuf, sizeof(prebuf)));
 }
 
 static void
@@ -955,6 +960,50 @@ insnptr_to_symbol_friendly_string(const rvp_pstate_t *ps __unused,
 		errx(EXIT_FAILURE, "%s: snprintf failed", __func__);
 
 	return buf;
+}
+
+static char *
+lastpc_to_string(const rvp_pstate_t *ps, char *buf, size_t buflen)
+{
+	const rvp_emitters_t *emitters = ps->ps_emitters;
+
+	return (*emitters->insnptr_to_string)(ps, buf, buflen,
+	    ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth]);
+}
+
+char *
+preamble_string(const rvp_pstate_t *ps __unused, char *buf0, size_t buflen0)
+{
+	char *buf = buf0;
+	size_t buflen = buflen0;
+	int nwritten = snprintf(buf, buflen,
+	    "tid %" PRIu32 ".%" PRIu32 " ", ps->ps_curthread, ps->ps_idepth);
+
+	if (nwritten < 0 || nwritten >= buflen) {
+		errx(EXIT_FAILURE, "%s.%d: snprintf failed",
+		    __func__, __LINE__);
+	}
+
+	buf += nwritten;
+	buflen -= nwritten;
+
+	if (ps->ps_emit_generation) {
+		rvp_thread_pstate_t *ts = &ps->ps_thread[ps->ps_curthread];
+
+		nwritten = snprintf(buf, buflen, "gen %" PRIu64 " ",
+		    ts->ts_generation[ps->ps_idepth]);
+
+		if (nwritten < 0 || nwritten >= buflen) {
+			errx(EXIT_FAILURE, "%s.%d: snprintf failed",
+			    __func__, __LINE__);
+		}
+		buf += nwritten;
+		buflen -= nwritten;
+	}
+
+	lastpc_to_string(ps, buf, buflen);
+
+	return buf0;
 }
 
 char *
@@ -1023,18 +1072,15 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 			sizeof("[0x0123456789abcdef : "
 			       "0x0123456789abcdef/0x0123456789abcdef "
 			       "0x0123456789abcdef/0x0123456789abcdef]"))];
+	prebuf_t prebuf;
 
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
 	case RVP_OP_LOAD8:
 	case RVP_OP_STORE8:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s"
-		    " %s %#.*" PRIx64 " %s %s\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s %#.*" PRIx64 " %s %s\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, field_width,
 		    ub->ub_load8_store8.data,
 		    is_load ? "<-" : "->",
@@ -1042,28 +1088,18 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		        ub->ub_load8_store8.addr));
 		break;
 	case RVP_OP_ATOMIC_RMW4:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s"
-		    " %#.*" PRIx32 " <- %s <- %#.*" PRIx32 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
-		    oi->oi_descr,
-		    field_width, ub->ub_rmw4.oval,
+		printf("%s %s %#.*" PRIx32 " <- %s <- %#.*" PRIx32 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
+		    oi->oi_descr, field_width, ub->ub_rmw4.oval,
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_rmw4.addr),
 		    field_width, ub->ub_rmw4.nval);
 		break;
 	case RVP_OP_ATOMIC_RMW2:
 	case RVP_OP_ATOMIC_RMW1:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s"
-		    " %#.*" PRIxMAX " <- %s <- %#.*" PRIxMAX "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
-		    oi->oi_descr,
-		    field_width,
+		printf("%s %s %#.*" PRIxMAX " <- %s <- %#.*" PRIxMAX "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
+		    oi->oi_descr, field_width,
 		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(15, 0)),
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_rmw1_2.addr),
@@ -1082,12 +1118,9 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_STORE2:
 	case RVP_OP_LOAD1:
 	case RVP_OP_STORE1:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s %#.*" PRIx32
+		printf("%s %s %#.*" PRIx32
 		    " %s %s\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, field_width,
 		    ub->ub_load1_2_4_store1_2_4.data,
 		    is_load ? "<-" : "->",
@@ -1095,111 +1128,73 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		        ub->ub_load1_2_4_store1_2_4.addr));
 		break;
 	case RVP_OP_BEGIN:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s"
-		    " generation %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s generation %" PRIu64 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_begin.generation);
 		break;
 	case RVP_OP_SIGDEPTH:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s -> %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s -> %" PRIu32 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_sigdepth.depth);
 		break;
 	case RVP_OP_COG:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s -> %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s -> %" PRIu64 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_cog.generation);
 		break;
 	case RVP_OP_ENTERFN:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s cfa %" PRIxPTR " return %s\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
-		    oi->oi_descr,
-		    ub->ub_enterfn.cfa,
+		printf("%s %s cfa %" PRIxPTR " return %s\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
+		    oi->oi_descr, ub->ub_enterfn.cfa,
 		    (*emitters->insnptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_enterfn.callsite));
 		break;
 	case RVP_OP_END:
 	default:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
-		    oi->oi_descr);
+		printf("%s %s\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)), oi->oi_descr);
 		break;
 	case RVP_OP_FORK:
 	case RVP_OP_JOIN:
 	case RVP_OP_SWITCH:
-		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " %s %s tid %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s tid %" PRIu32 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_fork_join_switch.tid);
 		// TBD create a fledgling rvp_thread_pstate_t on fork?
 		break;
 	case RVP_OP_ENTERSIG:
 		printf(
-		    "tid %" PRIu32 ".%" PRIu32 " %s %s signal %" PRIu32
+		    "%s %s signal %" PRIu32
 		    " handler %#016" PRIxPTR " generation %" PRIu64 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_entersig.signum,
 		    ub->ub_entersig.handler, ub->ub_entersig.generation);
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s %s\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s %s\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_acquire_release.addr));
 		break;
 	case RVP_OP_SIGDIS:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s signal %" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s signal %" PRIu32 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_sigest.signum);
 		break;
 	case RVP_OP_SIGEST:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s signal %" PRIu32
+		printf("%s %s signal %" PRIu32
 		    " handler %#016" PRIxPTR " mask #%" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    ub->ub_sigest.signum,
 		    ub->ub_sigest.handler,
 		    ub->ub_sigest.masknum);
 		break;
 	case RVP_OP_SIGMASKMEMO:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s #%" PRIu32
-		    " origin %" PRIu32 " bits %#016" PRIx64 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s #%" PRIu32 " origin %" PRIu32 " bits %#016" PRIx64 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    ub->ub_sigmaskmemo.masknum,
 		    ub->ub_sigmaskmemo.origin,
@@ -1209,20 +1204,13 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_SIGSETMASK:
 	case RVP_OP_SIGBLOCK:
 	case RVP_OP_SIGUNBLOCK:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s #%" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s #%" PRIu32 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_sigmask_access.masknum);
 		break;
 	case RVP_OP_SIGGETSETMASK:
-		printf("tid %" PRIu32 ".%" PRIu32 " %s %s #%" PRIu32
-		    " -> #%" PRIu32 "\n",
-		    ps->ps_curthread, ps->ps_idepth,
-		    (*emitters->insnptr_to_string)(ps, buf[0], sizeof(buf[0]),
-		        ps->ps_thread[ps->ps_curthread].
-			ts_lastpc[ps->ps_idepth]),
+		printf("%s %s #%" PRIu32 " -> #%" PRIu32 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    ub->ub_sigmask_rmw.omasknum,
 		    ub->ub_sigmask_rmw.masknum);
@@ -1251,7 +1239,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	if (pc_is_not_deltop(ps, ub->ub_pc)) {
 		ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] =
 		    ub->ub_pc;
-		(*emitters->emit_jump)(ps, ub->ub_pc);
+		(*emitters->emit_nop)(ps);
 		advance(&ub->ub_bytes[0], nfullp, sizeof(ub->ub_pc));
 		return 0;
 	}
@@ -1372,7 +1360,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 }
 
 void
-rvp_trace_dump(rvp_output_type_t otype, int fd)
+rvp_trace_dump(const rvp_output_params_t *op, int fd)
 {
 	int cmp;
 	rvp_pstate_t ps0;
@@ -1403,7 +1391,7 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 	};
 	const rvp_emitters_t *emitters;
 
-	switch (otype) {
+	switch (op->op_type) {
 	case RVP_OUTPUT_SYMBOL_FRIENDLY:
 		emitters = &symbol_friendly;
 		break;
@@ -1415,7 +1403,7 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 		break;
 	default:
 		errx(EXIT_FAILURE, "%s: unknown output type %d", __func__,
-		     otype);
+		     op->op_type);
 	}
 
 	if ((nread = readv(fd, iov, __arraycount(iov))) == -1)
@@ -1451,7 +1439,7 @@ rvp_trace_dump(rvp_output_type_t otype, int fd)
 		    __func__, tid);
 	}
 
-	rvp_pstate_init(ps, emitters, pc0, tid, generation);
+	rvp_pstate_init(ps, emitters, op, pc0, tid, generation);
 
 	if (emitters->init != NULL)
 		(*emitters->init)(ps);

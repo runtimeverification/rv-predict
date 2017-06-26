@@ -83,7 +83,7 @@ establish(int signum, void (*handler)(int))
 static void
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-s|-v|-m]\n", progname);
+	fprintf(stderr, "usage: %s [-l|-m|-s|-v]\n", progname);
 	exit(EXIT_FAILURE);
 }
 
@@ -93,10 +93,15 @@ main(int argc, char **argv)
 	int i, opt;
 	sigset_t oset;
 	pthread_t consumer;
-	bool block_with_variable = false, block_with_mask = false;
+	bool block_with_lock = false, block_with_mask = false,
+	    block_with_variable = false;
+	pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
-	while ((opt = getopt(argc, argv, "msv")) != -1) {
+	while ((opt = getopt(argc, argv, "lmsv")) != -1) {
 		switch (opt) {
+		case 'l':
+			block_with_lock = true;
+			break;
 		case 'm':
 			block_with_mask = true;
 			break;
@@ -136,13 +141,17 @@ main(int argc, char **argv)
 		sigset_t tset;
 		if (block_with_variable)
 			shared.alarm_blocked = true;
-		else if (block_with_mask)
+		if (block_with_mask)
 			signals_mask(SIGALRM, &tset);
+		if (block_with_lock)
+			pthread_mutex_lock(&mtx);
 		shared.count = -shared.count;
 		if (block_with_variable)
 			shared.alarm_blocked = false;
-		else if (block_with_mask)
+		if (block_with_mask)
 			signals_restore(&tset);
+		if (block_with_lock)
+			pthread_mutex_unlock(&mtx);
 		if (use_signal)
 			pause();
 		else

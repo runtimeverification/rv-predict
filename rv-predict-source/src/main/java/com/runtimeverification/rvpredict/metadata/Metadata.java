@@ -72,7 +72,7 @@ public class Metadata implements MetadataInterface, Serializable {
         return varId;
     }
 
-    public String getRaceLocationSigHelper(ReadonlyEventInterface e1, ReadonlyEventInterface e2, Configuration config) {
+    public String getRaceDataSigHelper(ReadonlyEventInterface e1, ReadonlyEventInterface e2, Configuration config) {
         StringBuilder sb = new StringBuilder();
         if(config.isLLVMPrediction()) {
             long idx = e1.getDataObjectExternalIdentifier();
@@ -94,9 +94,9 @@ public class Metadata implements MetadataInterface, Serializable {
     }
 
     @Override
-    public String getRaceLocationSig(ReadonlyEventInterface e1,
-	    ReadonlyEventInterface e2, Trace trace, Configuration config) {
-        String locSig = getRaceLocationSigHelper(e1, e2, config);
+    public String getRaceDataSig(ReadonlyEventInterface e1,
+        ReadonlyEventInterface e2, Trace trace, Configuration config) {
+        String locSig = getRaceDataSigHelper(e1, e2, config);
         switch (locSig.charAt(0)) {
             case '#':
                 return "array element " + locSig;

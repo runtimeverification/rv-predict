@@ -2,13 +2,40 @@
 
 set -e
 
+cleanup_hook()
+{
+	trap - EXIT ALRM HUP INT PIPE QUIT TERM
+
+	reason=$1
+	if true; then
+		echo "$(basename $0): caught signal $reason.  Cleaning up." 1>&2
+	fi
+	for core in $(ls $tmpdir/*core 2> /dev/null); do
+		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
+		exit $exitcode
+	done
+	echo $(basename $0): rm -rf $tmpdir 1>&2
+	rm -rf $tmpdir
+	exit $exitcode
+}
+
+# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
+PS1=""
+
+trap_with_reason()
+{
+	func="$1"
+	shift
+	for reason; do
+		trap "$func $reason" $reason
+	done
+}
+
 usage()
 {
 	echo "usage: $(basename $0) program" 1>&2
 	exit 1
 }
-
-[ $# -eq 1 ] || usage
 
 normalize()
 {
@@ -19,16 +46,6 @@ clean_brackets()
 {
 	sed 's,\[\(0x[0-9a-f]\+\) : [^]]\+\],\[\1\],g'
 }
-
-signal_regex='\<\(S[0-9]\+\)\>'
-
-func_addr_regex='{\(0x[0-9a-f]\+\)}'
-func_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.*\)$,s|\1|in \2 at \3|g,'
-
-data_addr_regex='\(\[0x[0-9a-f]\+[^]]*\]\)'
-data_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.\+\)$,s|\3|\2 at \1|g,'
-
-tmpdir=$(mktemp -d)
 
 last_n_components()
 {
@@ -47,6 +64,23 @@ last_n_components()
 		echo $filename
 	fi
 }
+
+[ $# -eq 1 ] || usage
+
+set -i
+trap_with_reason cleanup_hook EXIT ALRM HUP INT PIPE QUIT TERM
+set +i
+
+signal_regex='\<\(S[0-9]\+\)\>'
+
+func_addr_regex='{\(0x[0-9a-f]\+\)}'
+func_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.*\)$,s|\1|in \2 at \3|g,'
+
+data_addr_regex='\(\[0x[0-9a-f]\+[^]]*\]\)'
+data_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.\+\)$,s|\3|\2 at \1|g,'
+
+tmpdir=$(mktemp -d -t $(basename $0).XXXXXX)
+exitcode=1
 
 #
 # TBD split lines after each address, just in case there is >1 per line
@@ -110,5 +144,9 @@ if true; then
 else
 	echo look in $tmpdir 1>&2
 fi
+
+trap - EXIT ALRM HUP INT PIPE QUIT TERM
+
+rm -rf $tmpdir
 
 exit 0

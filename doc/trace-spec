@@ -1,13 +1,13 @@
-An RV-Predict[C] event trace file starts with a header that indicates
+An RV-Predict/C event trace file starts with a header that indicates
 the format and version of the file.  Following the header are the event
 traces.  Traces continue right up to the end of the file, and in a
 well-formed event trace, the end of file should coincide with the end of
 the last trace.  In this way, you can stream a trace over a socket or
 other IPC.
 
-An RV-Predict[C] trace header is at byte 0 of a trace file.  The
+An RV-Predict/C trace header is at byte 0 of a trace file.  The
 header starts with 4 bytes of "magic" that serve to distinguish an
-RV-Predict[C] trace file from files in other formats.  The magic
+RV-Predict/C trace file from files in other formats.  The magic
 consists of the 8-bit ASCII representations for the characters 'R' 'V'
 'P' '_', in that order.
 
@@ -147,7 +147,7 @@ Likewise, for an n-bit delta field,
         ...,
         PC - (2^(n-1) - 1) * 28 = (2^(n-1) - 1, begin).
 
-The RV-Predict[C] runtime reserved all of those counters for itself
+The RV-Predict/C runtime reserved all of those counters for itself
 while it ran the system under test, so the reader can be certain that
 whenever they appear in the trace, there is no ambiguity: they encode a
 deltop rather than an instruction address.
@@ -291,9 +291,21 @@ trace ::= (delta, 'load[n]') addr value
                 and established, for all threads, the signal handler
                 at address `handler` on signal number `signal-number`.
                 `mask-number` tells the number of a previously-memoized
-                signal mask (see operation `sig-mask-memo`); that mask
-                will be in effect while `handler` runs for the given
-                signal number.
+                signal mask (see operation `sig-mask-memo`).  When
+                `handler` runs, the signal mask is set to the union of
+                the current signal mask and the signal mask given by
+                `mask-number`.  After the `handler` runs, the signal mask
+                is restored to its previous value.  This behavior conforms
+                to that described for POSIX signals in the NetBSD 5.0
+                (3 June 2006) manual for sigaction(2), which says:
+
+                        When a signal is delivered to a process a new
+                        signal mask is installed for the duration of the
+                        process' signal handler (or until a sigprocmask(2)
+                        call is made).  This mask is formed by taking
+                        the union of the current signal mask, the signal
+                        to be delivered, and the signal mask associated
+                        with the handler to be invoked, sa_mask.
 
 		`handler` is an address `ptrw` that starts on the first
 		32-bit boundary after the deltop.
@@ -331,14 +343,22 @@ trace ::= (delta, 'load[n]') addr value
                 and entered the signal handler, `handler` that was
                 established on `signal-number`.
 
+                The signal mask is set to the union of the current
+                signal mask and the signal mask given when the signal
+                was established by a 'sig-est' event.
+
                 `self.PC <- self.PC + delta`
 		`self.signal_mask[self.signal_depth] <-
-		     handler_mask[signal-number]`
+		    self.signal_mask[self.signal_depth - 1] |
+		    handler_mask[signal-number]`
 
 	| (delta, 'exit-signal') 
 
                 The current thread added `delta` to its program counter
                 and exited the last signal handler that it entered.
+
+                The signal mask is restored to the value it had before
+                the corresponding 'enter-signal' event.
 
                 `self.PC <- self.PC + delta`
 

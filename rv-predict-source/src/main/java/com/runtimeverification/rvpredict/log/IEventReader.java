@@ -12,5 +12,7 @@ public interface IEventReader extends Closeable {
 
     ReadonlyEventInterface readEvent() throws IOException;
 
-    public ReadonlyEventInterface lastReadEvent();
+    ReadonlyEventInterface lastReadEvent();
+
+    long bytesRead() throws IOException;
 }

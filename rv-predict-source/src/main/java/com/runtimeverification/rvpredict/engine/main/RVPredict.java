@@ -32,6 +32,7 @@ import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUT
 import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +41,10 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.CompactMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.progressindicator.ConsoleOneLineProgressIndicatorUI;
+import com.runtimeverification.rvpredict.progressindicator.ProgressIndicator;
+import com.runtimeverification.rvpredict.progressindicator.ProgressTimerThread;
+import com.runtimeverification.rvpredict.trace.JavaTraceCache;
 import com.runtimeverification.rvpredict.trace.LLVMCompactTraceCache;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -67,7 +72,8 @@ public class RVPredict {
                 traceCache = new LLVMTraceCache(config, Metadata.singleton());
             }
         } else {
-            traceCache = new TraceCache(config, Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace()));
+            traceCache = new JavaTraceCache(
+                    config, Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace()));
         }
         this.detector = new RaceDetector(config);
     }
@@ -75,23 +81,31 @@ public class RVPredict {
     public void start() {
         try {
             traceCache.setup();
-            // process the trace window by window
-            Trace trace;
-            while (true) {
-                if ((trace = traceCache.getTraceWindow()) != null) {
-                    detector.run(trace);
-                } else {
-                    break;
+            ProgressIndicator progressIndicator = new ProgressIndicator(
+                    traceCache.getFileSize(),
+                    config.solver_timeout,
+                    new ConsoleOneLineProgressIndicatorUI(),
+                    Clock.systemDefaultZone());
+            try (ProgressTimerThread ignored = new ProgressTimerThread(progressIndicator)) {
+                // process the trace window by window
+                Trace trace;
+                while (true) {
+                    if ((trace = traceCache.getTraceWindow()) != null) {
+                        detector.run(trace, progressIndicator);
+                        progressIndicator.endWindow(traceCache.getTotalRead());
+                    } else {
+                        break;
+                    }
                 }
-            }
 
-            List<String> reports = detector.getRaceReports();
-            if (reports.isEmpty()) {
-                config.logger().report("No races found.", Logger.MSGTYPE.INFO);
-            } else {
-                reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
+                List<String> reports = detector.getRaceReports();
+                if (reports.isEmpty()) {
+                    config.logger().report("No races found.", Logger.MSGTYPE.INFO);
+                } else {
+                    reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
+                }
+                traceCache.getLockGraph().runDeadlockDetection();
             }
-            traceCache.getLockGraph().runDeadlockDetection();
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());

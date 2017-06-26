@@ -2,14 +2,13 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LLVMEventReader;
-import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
-import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.util.Logger;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.util.OptionalLong;
 
 /**
  * Class reading the trace from an LLVM execution debug log.
@@ -18,6 +17,7 @@ import java.util.Arrays;
  */
 public class LLVMTraceCache extends TraceCache {
     private final Metadata metadata;
+    private OptionalLong fileSize;
 
     public LLVMTraceCache(Configuration config, Metadata metadata) {
         super(config, metadata);
@@ -25,7 +25,7 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private interface MetadataLogger {
-         public void log(Object[] args);
+        void log(Object[] args);
     }
 
     private class BinaryReader {
@@ -51,34 +51,17 @@ public class LLVMTraceCache extends TraceCache {
     }
 
     private void parseVarInfo() throws IOException {
-        parseInfo(new MetadataLogger() {
-            @Override
-            public void log(Object[] args) {
-                metadata.setVariableSig((Integer)args[0], (String)args[1]);
-            }
-        }, new BinaryReader() {
+        parseInfo(args -> metadata.setVariableSig((Integer)args[0], (String)args[1]), new BinaryReader() {
         }, "var");
     }
 
     private void parseLocInfo() throws IOException {
-        parseInfo(new MetadataLogger() {
-            @Override
-            public void log(Object[] args) {
-                metadata.setLocationSig((Integer)args[0], (String)args[1]);
-            }
-        }, new BinaryReader()
+        parseInfo(args -> metadata.setLocationSig((Integer)args[0], (String)args[1]), new BinaryReader()
          , "loc");
     }
 
     private void parseThdInfo() throws IOException {
-        parseInfo(new MetadataLogger() {
-
-            @Override
-            public void log(Object[] args) {
-                metadata.addOriginalThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]);
-
-            }
-        }, new BinaryReader() {
+        parseInfo(args -> metadata.addOriginalThreadCreationInfo((long)args[0], (long)args[1], (int)args[2]), new BinaryReader() {
 
             @Override
             public Object[] read(BinaryParser in) throws IOException {
@@ -95,7 +78,7 @@ public class LLVMTraceCache extends TraceCache {
         try {
             parseVarInfo();
         } catch (Metadata.TooManyVariables e) {
-            config.logger().report("Maximum number of variables allowed (" + metadata.MAX_NUM_OF_VARIABLES +
+            config.logger().report("Maximum number of variables allowed (" + Metadata.MAX_NUM_OF_VARIABLES +
                     ") exceeded.", Logger.MSGTYPE.ERROR);
         }
         parseLocInfo();
@@ -107,10 +90,19 @@ public class LLVMTraceCache extends TraceCache {
         readMetadata();
         int logId = 0;
         Path path = config.getTraceFilePath(logId);
+        long size = 0;
         while(path.toFile().exists()) {
+            size += path.toFile().length();
             readers.add(new LLVMEventReader(path));
             ++logId;
             path = config.getTraceFilePath(logId);
         }
+        fileSize = OptionalLong.of(size);
+    }
+
+    @Override
+    public long getFileSize() {
+        assert fileSize.isPresent();
+        return fileSize.getAsLong();
     }
 }

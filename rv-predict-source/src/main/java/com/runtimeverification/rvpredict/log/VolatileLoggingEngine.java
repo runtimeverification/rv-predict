@@ -39,6 +39,7 @@ import java.util.concurrent.locks.LockSupport;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.progressindicator.NullProgressIndicator;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
@@ -209,7 +210,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             if (rawTraces.size() == 1) {
                 crntState.fastProcess(rawTraces.iterator().next());
             } else {
-                detector.run(crntState.initNextTraceWindow(rawTraces));
+                detector.run(crntState.initNextTraceWindow(rawTraces), new NullProgressIndicator());
             }
         } catch (Throwable e) {
             config.logger().debug(e);
@@ -243,7 +244,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
      * However, the race detection thread only reads {@code cursor} after
      * blocking the GID counter and all on-going {@code finalizeEvents()}
      * finish, while the logging thread only writes to {@code cursor} after
-     * successfully acquiring GIDs and before incrementing the {@link finalized}
+     * successfully acquiring GIDs and before incrementing the {@link VolatileLoggingEngine#finalized}
      * counter. Therefore, it is impossible for the two threads to access
      * {@code cursor} concurrently.
      *

@@ -21,10 +21,12 @@ public class BinaryParser implements Closeable {
 
     private final ByteBuffer byteBuffer = ByteBuffer.allocate(8).order(ByteOrder.nativeOrder());
 
-    private BufferedInputStream in;
+    private final BufferedInputStream in;
+    private long bytesRead;
 
-    public BinaryParser(File file) throws IOException {
+    BinaryParser(File file) throws IOException {
         in = new BufferedInputStream(new FileInputStream(file));
+        bytesRead = 0;
     }
 
     public BinaryParser(Path path) throws IOException {
@@ -36,10 +38,11 @@ public class BinaryParser implements Closeable {
         if(rd == -1) {
             throw new EOFException();
         }
+        bytesRead++;
         return rd;
     }
 
-    private final void putBytes(int n) throws IOException {
+    private void putBytes(int n) throws IOException {
         for(int i = 0; i < n; ++i) {
             byteBuffer.put((byte)readByte());
         }
@@ -60,7 +63,7 @@ public class BinaryParser implements Closeable {
         return ret;
     }
 
-    public final String readString() throws IOException {
+    final String readString() throws IOException {
         StringBuilder sb = new StringBuilder();
 
         int rd = readByte();
@@ -76,5 +79,9 @@ public class BinaryParser implements Closeable {
     @Override
     public void close() throws IOException {
         in.close();
+    }
+
+    public long bytesRead() {
+        return bytesRead;
     }
 }

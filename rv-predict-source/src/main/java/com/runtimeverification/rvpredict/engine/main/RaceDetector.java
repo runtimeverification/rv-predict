@@ -1,22 +1,31 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import java.io.*;
-import java.lang.reflect.Field;
-import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
 import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.progressindicator.ProgressIndicatorInterface;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Detects data races from a given {@link Trace} object.
@@ -102,7 +111,7 @@ public class RaceDetector implements Constants {
         return sigToRaceCandidates;
     }
 
-    public void run(Trace trace) {
+    public void run(Trace trace, ProgressIndicatorInterface progressIndicator) {
         if (!trace.mayContainRaces()) {
             return;
         }
@@ -113,7 +122,8 @@ public class RaceDetector implements Constants {
         }
 
         Map<String, Race> result =
-                MaximalCausalModel.create(trace, z3filter, solver, config.detectInterruptedThreadRace())
+                MaximalCausalModel.create(
+                        trace, z3filter, solver, progressIndicator, config.detectInterruptedThreadRace())
                         .checkRaceSuspects(sigToRaceSuspects);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
@@ -123,7 +133,7 @@ public class RaceDetector implements Constants {
         });
     }
 
-    public static String getNativeLibraryPath() {
+    private static String getNativeLibraryPath() {
         String nativePath = "/native";
         Configuration.OS os = Configuration.OS.current();
         String property = System.getProperty("os.arch");
@@ -141,7 +151,7 @@ public class RaceDetector implements Constants {
         return nativePath;
     }
 
-    public static String getNativeLibraryName() {
+    private static String getNativeLibraryName() {
         Configuration.OS os = Configuration.OS.current();
         switch (os) {
         case OSX:

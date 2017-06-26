@@ -124,7 +124,7 @@ public class CompactEventReader implements IEventReader {
 
         public List<ReadonlyEventInterface> read(
                 Context context, CompactEventFactory compactEventFactory,
-                TraceHeader header, InputStream stream)
+                TraceHeader header, InputStreamByteCounterWrapper stream)
                 throws InvalidTraceDataException, IOException {
             if (buffer == null) {
                 buffer = new byte[reader.size(header)];
@@ -188,7 +188,7 @@ public class CompactEventReader implements IEventReader {
     private TraceHeader header;
     private CompactEventFactory factory;
     private Context context;
-    private InputStream inputStream;
+    private InputStreamByteCounterWrapper inputStream;
     private ByteBuffer pcBuffer;
     private Address pc;
     private long minDeltaAndEventType;
@@ -201,7 +201,7 @@ public class CompactEventReader implements IEventReader {
         this(new BufferedInputStream(new FileInputStream(path.toFile())));
     }
     public CompactEventReader(InputStream inputStream) throws IOException, InvalidTraceDataException {
-        this.inputStream = inputStream;
+        this.inputStream = new InputStreamByteCounterWrapper(inputStream);
         header = new TraceHeader(inputStream);
         pc = new Address(header);
         pcBuffer = ByteBuffer.allocate(pc.size()).order(header.getByteOrder());
@@ -288,8 +288,36 @@ public class CompactEventReader implements IEventReader {
     }
 
     @Override
+    public long bytesRead() throws IOException {
+        return inputStream.getBytesRead();
+    }
+
+    @Override
     public void close() throws IOException {
         inputStream.close();
     }
 
+    static class InputStreamByteCounterWrapper {
+        private final InputStream inputStream;
+        private long bytesRead;
+
+        private InputStreamByteCounterWrapper(InputStream inputStream) {
+            this.inputStream = inputStream;
+            this.bytesRead = 0;
+        }
+
+        private int read(byte[] buffer) throws IOException {
+            int count = inputStream.read(buffer);
+            bytesRead += count;
+            return count;
+        }
+
+        private void close() throws IOException {
+            inputStream.close();
+        }
+
+        private long getBytesRead() {
+            return bytesRead;
+        }
+    }
 }

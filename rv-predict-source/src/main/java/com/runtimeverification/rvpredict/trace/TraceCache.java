@@ -3,17 +3,13 @@ package com.runtimeverification.rvpredict.trace;
 import com.google.common.annotations.VisibleForTesting;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
-import com.runtimeverification.rvpredict.log.EventReader;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.IEventReader;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
-import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -27,7 +23,7 @@ import java.util.OptionalInt;
  * @author TraianSF
  * @author YilongL
  */
-public class TraceCache {
+public abstract class TraceCache {
 
     private final LockGraph lockGraph;
 
@@ -35,7 +31,7 @@ public class TraceCache {
 
     private final TraceState crntState;
 
-    protected long lastGID = 0;
+    private long lastGID = 0;
     protected final int capacity;
     private final ArrayList<ReadonlyEventInterface> eventsBuffer;
 
@@ -44,11 +40,12 @@ public class TraceCache {
     /**
      * Creates a new {@code TraceCache} structure for a trace log.
      */
-    public TraceCache(Configuration config, MetadataInterface metadata) {
+    TraceCache(Configuration config, MetadataInterface metadata) {
         this(config, new TraceState(config, metadata), new LockGraph(config, metadata), Collections.emptyList());
     }
 
-    private TraceCache(
+    @VisibleForTesting
+    TraceCache(
             Configuration config, TraceState traceState, LockGraph lockGraph, List<IEventReader> defaultReaders) {
         this.config = config;
         this.crntState = traceState;
@@ -62,30 +59,8 @@ public class TraceCache {
         eventsBuffer = new ArrayList<>(capacity);
     }
 
-    @VisibleForTesting
-    static TraceCache createForTesting(
-            Configuration config, TraceState traceState, LockGraph lockGraph, List<IEventReader> readers) {
-        return new TraceCache(config, traceState, lockGraph, readers);
-    }
-
-    public void setup() throws IOException {
-        int logFileId = 0;
-        if (config.isCompactTrace()) {
-            try {
-                readers.add(new CompactEventReader(config.getCompactTraceFilePath()));
-            } catch (InvalidTraceDataException e) {
-                throw new IOException(e);
-            }
-            return;
-        }
-        while (true) {
-            Path path = config.getTraceFilePath(logFileId++);
-            if (!path.toFile().exists()) {
-                break;
-            }
-            readers.add(new EventReader(path));
-        }
-    }
+    public abstract void setup() throws IOException;
+    public abstract long getFileSize();
 
     public LockGraph getLockGraph() {
         return lockGraph;
@@ -94,11 +69,11 @@ public class TraceCache {
     /**
      * Returns the power of two that is greater than the given integer.
      */
-    protected static final int getNextPowerOfTwo(int x) {
+    private static int getNextPowerOfTwo(int x) {
         return 1 << (32 - Integer.numberOfLeadingZeros(x));
     }
 
-    protected final List<RawTrace> readEventWindow() throws IOException {
+    private List<RawTrace> readEventWindow() throws IOException {
         List<RawTrace> rawTraces =  new ArrayList<>();
 	final int maxEvents = config.windowSize;
 	if (Configuration.debug)
@@ -268,5 +243,13 @@ public class TraceCache {
 
         /* finish reading events and create the Trace object */
         return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
+    }
+
+    public long getTotalRead() throws IOException {
+        long bytesRead = 0;
+        for (IEventReader reader : readers) {
+            bytesRead += reader.bytesRead();
+        }
+        return bytesRead;
     }
 }

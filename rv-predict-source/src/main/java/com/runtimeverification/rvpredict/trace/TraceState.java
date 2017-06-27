@@ -139,6 +139,11 @@ public class TraceState {
         t_ttidToJoinEvent.clear();
         t_signalToTtidWhereEnabledAtStart.clear();
         t_signalToTtidWhereDisabledAtStart.clear();
+        t_ttidsThatCanOverlap.clear();
+        t_signalIsEnabledForThreadCache.clear();
+        t_atLeastOneSigsetAllowsSignalCache.clear();
+        t_originalTidToTraceTid.clear();
+        t_signalNumberToSignalHandlerToEstablishSignalEvents.clear();
         return new Trace(this, rawTraces,
                 t_eventIdToTtid,
                 t_ttidToThreadInfo,

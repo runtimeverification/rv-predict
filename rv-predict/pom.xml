@@ -12,6 +12,7 @@
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>rv-predict-jar</artifactId>
             <version>${project.version}</version>
+            <classifier>assembly-with-dll</classifier>
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>

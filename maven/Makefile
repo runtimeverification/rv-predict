@@ -15,7 +15,7 @@ buildit: .PHONY
 	@cd $(.CURDIR)/../rv-predict-source/target/classes && jar cf $(.CURDIR)/../target/release/rv-predict/rv-predict.jar .
 .else
 	# I used to pass -DskipTests -DskipDocs here.
-	cd $(.CURDIR)/.. && mvn -q package
+	cd $(.CURDIR)/.. && mvn -Dobfuscate -q package
 .endif
 
 rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar

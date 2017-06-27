@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+set -u
 
 usage()
 {
@@ -9,6 +10,8 @@ usage()
 }
 
 [ $# -eq 1 ] || usage
+
+version=$1
 
 rm -f rv-predict-c.tar.gz
 mkcmake RELEASE=yes PREFIX= bin_targz

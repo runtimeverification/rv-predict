@@ -14,7 +14,6 @@ cleanup_hook()
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
-	echo $(basename $0): rm -rf $tmpdir 1>&2
 	rm -rf $tmpdir
 	exit $exitcode
 }

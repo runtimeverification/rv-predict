@@ -10,8 +10,8 @@ usage()
 
 [ $# -eq 1 ] || usage
 
-rm -f rv-predict.tar.gz
+rm -f rv-predict-c.tar.gz
 mkcmake RELEASE=yes PREFIX= bin_targz
-mv rv-predict.tar.gz rv-predict-c-${version}.tar.gz
+mv rv-predict-c.tar.gz rv-predict-c-${version}.tar.gz
 
 exit 0

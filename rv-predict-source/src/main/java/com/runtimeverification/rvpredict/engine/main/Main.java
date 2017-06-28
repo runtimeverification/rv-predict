@@ -31,17 +31,7 @@ public class Main {
         // TBD refactor licensing lines with instrument/Agent.java
         String licenseURL = "https://runtimeverification.com/licensing";
         Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
-        RVLicenseCache licenseCache = licensingSystem.getLicenseCache();
-        if (!licenseCache.isLicenseCached()) {
-            System.err.println("This product has no license on file.");
-            System.err.println("Sign up for a license at " + licenseURL + ".");
-            System.exit(1);
-        } else if (!licenseCache.isLicensed()) {
-            System.err.println("Your license is invalid or expired.");
-            System.err.println("Please renew it at " + licenseURL + ".");
-            System.exit(1);
-        }
-
+        licensingSystem.exitIfUnlicensed();
         config = Configuration.instance(args);
 
         if (config.isLogging() || config.isProfiling()) {

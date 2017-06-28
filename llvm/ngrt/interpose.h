@@ -41,4 +41,6 @@ INTERPOSE_DECLS(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE_DECLS(int, sigaction, int, const struct sigaction *,
     struct sigaction *);
 
+INTERPOSE_DECLS(int, sigsuspend, const sigset_t *);
+
 #endif /* _RVP_INTERPOSE_H_ */

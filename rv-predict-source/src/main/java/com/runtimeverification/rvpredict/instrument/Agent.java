@@ -16,6 +16,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.io.Resources;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.engine.main.LicenseChecker;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.PersistentLoggingEngine;
@@ -124,19 +125,7 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void printStartupInfo() {
-        // TBD refactor licensing lines with engine/main/Main.java
-        String licenseURL = "https://runtimeverification.com/licensing";
-        Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
-        RVLicenseCache licenseCache = licensingSystem.getLicenseCache();
-        if (!licenseCache.isLicenseCached()) {
-            System.err.println("This product has no license on file.");
-            System.err.println("Sign up for a license at " + licenseURL + ".");
-            System.exit(1);
-        } else if (!licenseCache.isLicensed()) {
-            System.err.println("Your license is invalid or expired.");
-            System.err.println("Please renew it at " + licenseURL + ".");
-            System.exit(1);
-        }
+        LicenseChecker.validateOrDie(config.prompt_for_license);
         config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {
             config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);

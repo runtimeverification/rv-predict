@@ -321,7 +321,7 @@ mask_to_sigset(uint64_t mask, sigset_t *set)
 		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
 
 	for (signum = signals_origin; signum < nsignals; signum++) {
-		uint64_t testbit = 1U << (signum - signals_origin);
+		uint64_t testbit = (uint64_t)1 << (signum - signals_origin);
 		if ((mask & testbit) != 0 && (rc = sigaddset(set, signum)) != 0)
 			err(EXIT_FAILURE, "%s: sigaddset", __func__);
 	}
@@ -336,7 +336,7 @@ sigset_to_mask(const sigset_t *set)
 
 	for (signum = signals_origin; signum < nsignals; signum++) {
 		if (sigismember(set, signum) == 1)
-			mask |= 1U << (signum - signals_origin);
+			mask |= (uint64_t)1 << (signum - signals_origin);
 	}
 	return mask;
 }

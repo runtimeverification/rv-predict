@@ -442,7 +442,7 @@ public class Configuration implements Constants {
     private Configuration() { }
 
     private void printLicense() {
-        Licensing licensingSystem = new Licensing(AGENT_RESOURCE_PATH, "predict");
+        Licensing licensingSystem = Licensing.fromUserConfigDirectory("predict");
         licensingSystem.getLicenseCache().getLicense().printInfo();
     }
 

@@ -1,51 +1,43 @@
 package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.licensing.Licensing;
-import com.runtimeverification.licensing.RVLicenseCache;
-import com.runtimeverification.rvpredict.config.Configuration;
+
+import static com.runtimeverification.licensing.Licensing.LICENSE_URL;
 
 public class LicenseChecker {
-    private static final String LICENSE_URL = "https://runtimeverification.com/licensing";
-
     public static void validateOrDie(boolean promptForLicense) {
-        Licensing licensingSystem = new Licensing(Configuration.AGENT_RESOURCE_PATH, "predict");
-        LicenseStatus licenseStatus = getLicenseStatus(licensingSystem);
-        if (licenseStatus != LicenseStatus.VALID && promptForLicense) {
-            licensingSystem.promptForLicense();
-            licenseStatus = getLicenseStatus(licensingSystem);
+        Licensing licensingSystem = Licensing.fromUserConfigDirectory("predict");
+        Licensing.LicenseStatus licenseStatus = licensingSystem.getLicenseStatus();
+        if (licenseStatus == Licensing.LicenseStatus.VALID) {
+            return;
         }
+        if (promptForLicense) {
+            licensingSystem.promptForLicenseIfNeeded(LicenseChecker::errorMessage);
+        } else {
+            System.out.println(errorMessage(licenseStatus));
+            System.exit(1);
+        }
+        // Double check just in case.
+        if (licensingSystem.getLicenseStatus() != Licensing.LicenseStatus.VALID) {
+            System.exit(1);
+        }
+    }
+
+    private static String errorMessage(Licensing.LicenseStatus licenseStatus) {
         switch (licenseStatus) {
             case NO_LICENSE:
-                System.err.println("This product has no license on file.");
-                System.err.println("Please sign up for a license at " + LICENSE_URL + ",");
-                System.err.println("then run this tool with --prompt-for-license.");
-                System.exit(1);
-            case EXPIRED:
-                System.err.println("Your license is invalid or expired.");
-                System.err.println("Please renew it at " + LICENSE_URL + ",");
-                System.err.println("then run this tool with --prompt-for-license.");
-                System.exit(1);
+                return "This product has no license on file.\n"
+                        + "Please sign up for a license at " + LICENSE_URL + ","
+                        + "then run this tool with --prompt-for-license.";
+            case INVALID_OR_EXPIRED:
+                return "Your license is invalid or expired.\n"
+                        + "Please renew it at " + LICENSE_URL + ","
+                        + "then run this tool with --prompt-for-license.";
             case VALID:
-                break;
+                return "Your license is valid.";
             default:
                 assert false : "Unknown license status: " + licenseStatus;
+                return "Unknown license status: " + licenseStatus;
         }
-    }
-
-    private enum LicenseStatus {
-        VALID,
-        NO_LICENSE,
-        EXPIRED
-    }
-
-    private static LicenseStatus getLicenseStatus(Licensing licensingSystem) {
-        RVLicenseCache licenseCache = licensingSystem.getLicenseCache();
-        if (!licenseCache.isLicenseCached()) {
-            return LicenseStatus.NO_LICENSE;
-        }
-        if (!licenseCache.isLicensed()) {
-            return LicenseStatus.EXPIRED;
-        }
-        return LicenseStatus.VALID;
     }
 }

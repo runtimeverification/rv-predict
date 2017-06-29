@@ -35,6 +35,7 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.smt.constraintsources.SignalStartMask;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
 import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
@@ -158,14 +159,21 @@ public class MaximalCausalModel {
                         trace.eventsByThreadID(),
                         trace::getThreadType,
                         trace::getSignalNumber,
-                        trace::getSignalHandler,
-                        trace::getEstablishSignalEvents,
                         trace::getStartEventForTtid,
                         trace::getJoinEventForTtid,
                         trace::getTtidsWhereSignalIsEnabledAtStart,
                         trace::getTtidsWhereSignalIsDisabledAtStart,
-                        detectInterruptedThreadRace,
-                        this::happensBefore))
+                        detectInterruptedThreadRace))
+                .add(new SignalStartMask(
+                        trace.eventsByThreadID(),
+                        trace::getThreadType,
+                        trace::getSignalNumber,
+                        trace::getSignalHandler,
+                        trace::getThreadStartsInTheCurrentWindow,
+                        trace::getSignalEndsInTheCurrentWindow,
+                        trace::getSignalEnabledAtStart,
+                        trace::getEstablishSignalEvents,
+                        trace::getPreviousWindowEstablishEvent))
                 .add(new SignalsDoNotOverlapWhenInterruptingTheSameThread(
                         allSignalTtids,
                         trace::getFirstEvent,

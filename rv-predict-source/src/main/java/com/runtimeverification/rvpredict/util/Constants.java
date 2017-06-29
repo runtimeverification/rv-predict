@@ -25,4 +25,6 @@ public interface Constants {
     long INVALID_ADDRESS = -1L;
 
     int INVALID_TTID = -1;
+
+    long MAX_SIGNAL_NUMBER = 63L;
 }

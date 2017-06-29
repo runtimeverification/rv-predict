@@ -68,6 +68,9 @@ public class Trace {
 
     private final List<RawTrace> rawTraces;
 
+    private final Map<Long, Map<Long, ReadonlyEventInterface>>
+            t_signalNumberToHandlerToPreviousWindowEstablishEvent;
+
     /**
      * Map from an event's ID to its thread information.
      */
@@ -225,6 +228,9 @@ public class Trace {
         computeSignalEnableStatusAtStart(
                 ttidToStartEvent, signalToTtidWhereEnabledAtStart, signalToTtidWhereDisabledAtStart);
         computeThreadsWhichCanOverlap();
+
+        t_signalNumberToHandlerToPreviousWindowEstablishEvent =
+                state.getSignalNumberToHandlerToPreviousWindowEstablishEvent();
     }
 
     public MetadataInterface metadata() {
@@ -325,6 +331,10 @@ public class Trace {
 
     public Boolean getThreadStartsInTheCurrentWindow(Integer ttid) {
         return ttidToThreadInfo.get(ttid).getThreadStartsInTheCurrentWindow();
+    }
+
+    public boolean getSignalEndsInTheCurrentWindow(Integer signalTtid) {
+        return ttidToThreadInfo.get(signalTtid).getSignalEndsInTheCurrentWindow();
     }
 
     public List<ReadonlyEventInterface> getInterThreadSyncEvents() {
@@ -725,6 +735,7 @@ public class Trace {
                                 .computeIfAbsent(event.getSignalHandlerAddress(), k -> new ArrayList<>())
                                 .add(event);
                     }
+                    state.onSignalEvent(event);
                 } else {
 		    if (state.config().isDebug())
 		        System.err.println(event.getType());
@@ -1062,8 +1073,8 @@ public class Trace {
         if (threadsWhereSignal1IsEnabled.size() > 1 || threadsWhereSignal2IsEnabled.size() > 1) {
             return true;
         }
-        assert threadsWhereSignal1IsEnabled.size() > 0;
-        assert threadsWhereSignal2IsEnabled.size() > 0;
+        assert threadsWhereSignal1IsEnabled.size() > 0 : signalNumber1;
+        assert threadsWhereSignal2IsEnabled.size() > 0 : signalNumber2;
         // TODO(virgil): Here and above I could also check that the threads can, indeed, overlap.
         return !threadsWhereSignal1IsEnabled.get(0).equals(threadsWhereSignal2IsEnabled.get(0));
     }
@@ -1100,6 +1111,16 @@ public class Trace {
         return signalToTtidWhereDisabledAtStart.getOrDefault(signalNumber, Collections.emptySet());
     }
 
+    public Optional<Boolean> getSignalEnabledAtStart(Integer ttid, Long signalNumber) {
+        if (getTtidsWhereSignalIsEnabledAtStart(signalNumber).contains(ttid)) {
+            return Optional.of(Boolean.TRUE);
+        }
+        if (getTtidsWhereSignalIsDisabledAtStart(signalNumber).contains(ttid)) {
+            return Optional.of(Boolean.FALSE);
+        }
+        return Optional.empty();
+    }
+
     public Optional<ReadonlyEventInterface> getStartEventForTtid(Integer entryTtid) {
         return Optional.ofNullable(ttidToStartEvent.get(entryTtid));
     }
@@ -1110,5 +1131,12 @@ public class Trace {
 
     public Collection<Integer> getThreadIds() {
         return ttidToThreadInfo.keySet();
+    }
+
+    public Optional<ReadonlyEventInterface> getPreviousWindowEstablishEvent(long signalNumber, long signalHandler) {
+        return Optional.ofNullable(
+                t_signalNumberToHandlerToPreviousWindowEstablishEvent
+                        .getOrDefault(signalNumber, Collections.emptyMap())
+                        .get(signalHandler));
     }
 }

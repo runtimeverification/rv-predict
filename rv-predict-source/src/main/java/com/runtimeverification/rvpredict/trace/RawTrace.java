@@ -24,7 +24,7 @@ public class RawTrace {
     private final ReadonlyEventInterface[] events;
 
     public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth, int threadId,
-            boolean threadStartsInTheCurrentWindow) {
+            boolean threadStartsInTheCurrentWindow, boolean signalEndsInTheCurrentWindow) {
         long signalNumber = com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL;
         long signalHandler = Constants.INVALID_ADDRESS;
         if (signalDepth != 0) {
@@ -52,7 +52,8 @@ public class RawTrace {
                 signalNumber,
                 signalHandler,
                 signalDepth,
-                threadStartsInTheCurrentWindow);
+                threadStartsInTheCurrentWindow,
+                signalEndsInTheCurrentWindow);
         this.start = start;
         this.mask = events.length - 1;
         this.size = (end - start + events.length) & mask;

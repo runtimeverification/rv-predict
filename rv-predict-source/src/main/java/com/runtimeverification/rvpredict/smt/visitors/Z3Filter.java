@@ -81,6 +81,12 @@ public class Z3Filter {
         }
 
         @Override
+        public void visit(SignalEnabledOnThreadStartVariable variable) throws Z3Exception {
+            result = interruptedThreadVariables.computeIfAbsent(
+                    variable.getId(), k -> context.mkIntConst(variable.toString()));
+        }
+
+        @Override
         public void visit(IntConstant constant) throws Z3Exception {
             result = context.mkInt(constant.getValue());
             disposables.add(result);

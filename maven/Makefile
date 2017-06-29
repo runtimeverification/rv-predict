@@ -7,6 +7,12 @@ FILESMODE_rv-predict.jar.copy=0644
 
 FILESDIR_rv-predict.jar.copy=$(LIBDIR)
 
+.if ${NOISY:Uno} == "no"
+MAVEN_OPTS=-q
+.else
+MAVEN_OPTS=
+.endif
+
 buildit: .PHONY
 .if $(RELEASE:Uno) == "no"
 	@cd $(.CURDIR)/../native-z3 && mvn -q -DskipTests -DskipDocs install
@@ -15,7 +21,7 @@ buildit: .PHONY
 	@cd $(.CURDIR)/../rv-predict-source/target/classes && jar cf $(.CURDIR)/../target/release/rv-predict/rv-predict.jar .
 .else
 	# I used to pass -DskipTests -DskipDocs here.
-	cd $(.CURDIR)/.. && mvn -Dobfuscate -U package
+	cd $(.CURDIR)/.. && mvn -Dobfuscate -U $(MAVEN_OPTS) package
 .endif
 
 rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar

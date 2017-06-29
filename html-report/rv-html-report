@@ -76,6 +76,7 @@ dirname = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument("input", nargs='+', help="json file generated with kcc -fissue-report")
 parser.add_argument("-o", "--output", help="Directory to output html report to")
+parser.add_argument("--encoding", help="Encoding used by source files in your project")
 args = parser.parse_args()
 if not args.output:
   args.output = "output"
@@ -148,8 +149,17 @@ for ix, err in enumerate(errors):
 
 def render_code(rel, abs, path, errors):
     filename = abs
+    directory = os.path.dirname(path)
+    if not os.path.exists(args.output + '/' + directory):
+      os.makedirs(args.output + '/' + directory)
     with open(filename, 'r') as f, open(args.output + '/' + path + '.html', 'w') as target:
         code = f.read()
+        if args.encoding:
+          try:
+            code = code.decode(args.encoding)
+          except UnicodeDecodeError:
+            print("Error in " + abs)
+            raise
         template = env.get_template('sourcefile.html')
         if errors:
             errorlines = errorsByFile[rel]
@@ -159,7 +169,7 @@ def render_code(rel, abs, path, errors):
                                      errorlines=errorlines,
                                      code=code,
                                      info=rel,
-                                     fileid=path))
+                                     fileid=path).encode('utf-8'))
 
 
 def render_error(err):
@@ -186,6 +196,8 @@ env.globals[u'errors'] = errors
 
 fileids = {}
 
+if os.path.exists(args.output + '/static/'):
+  shutil.rmtree(args.output + '/static/')
 shutil.copytree(dirname + '/static/', args.output + '/static/')
 for template in ['index.html', 'error-descriptions.html']:
     render_template(template)

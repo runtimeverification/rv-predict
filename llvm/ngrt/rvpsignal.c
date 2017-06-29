@@ -13,6 +13,7 @@
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
+REAL_DEFN(int, sigsuspend, const sigset_t *);
 
 typedef int (*rvp_change_sigmask_t)(int, const sigset_t *, sigset_t *);
 
@@ -83,6 +84,9 @@ rvp_signal_init(void)
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const sigset_t *, sigset_t *),
 	    pthread_sigmask);
+	ESTABLISH_PTR_TO_REAL(
+	    int (*)(const sigset_t *),
+	    sigsuspend);
 	rvp_signal_table_init();
 }
 
@@ -321,7 +325,7 @@ mask_to_sigset(uint64_t mask, sigset_t *set)
 		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
 
 	for (signum = signals_origin; signum < nsignals; signum++) {
-		uint64_t testbit = 1U << (signum - signals_origin);
+		uint64_t testbit = (uint64_t)1 << (signum - signals_origin);
 		if ((mask & testbit) != 0 && (rc = sigaddset(set, signum)) != 0)
 			err(EXIT_FAILURE, "%s: sigaddset", __func__);
 	}
@@ -336,7 +340,7 @@ sigset_to_mask(const sigset_t *set)
 
 	for (signum = signals_origin; signum < nsignals; signum++) {
 		if (sigismember(set, signum) == 1)
-			mask |= 1U << (signum - signals_origin);
+			mask |= (uint64_t)1 << (signum - signals_origin);
 	}
 	return mask;
 }
@@ -498,7 +502,7 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
     const sigset_t *set, sigset_t *oldset)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
-	uint64_t mask, omask;
+	uint64_t actual_omask, mask, omask;
 	int rc;
 
 	/* TBD trace a read from `set` and, if `oldset` is not NULL,
@@ -509,6 +513,13 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		return rc;
 
 	omask = t->t_intrmask;
+
+	actual_omask = sigset_to_mask(oldset);
+
+#if 0
+	if (actual_omask != 0 && omask != actual_omask)
+		raise(SIGTRAP);
+#endif
 
 	if (set == NULL) {
 		if (oldset != NULL)
@@ -536,6 +547,20 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		rvp_thread_trace_setmask(t, how, mask, retaddr);
 
 	return 0;
+}
+
+int
+__rvpredict_sigsuspend(const sigset_t *mask)
+{
+	rvp_thread_t *t = rvp_thread_for_curthr();
+	const void *retaddr = __builtin_return_address(0);
+	uint64_t omask = t->t_intrmask;
+	/* TBD record read of `mask` */
+	int rc = real_sigsuspend(mask);
+	/* TBD save errno here; restore before return */
+	rvp_thread_trace_getsetmask(t, omask, sigset_to_mask(mask), retaddr);
+	rvp_thread_trace_setmask(t, SIG_SETMASK, omask, retaddr);
+	return rc;
 }
 
 int
@@ -620,3 +645,4 @@ out:
 INTERPOSE(int, sigprocmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, sigaction, int, const struct sigaction *, struct sigaction *);
+INTERPOSE(int, sigsuspend, const sigset_t *);

@@ -61,7 +61,7 @@ sigeqset(const sigset_t *l, const sigset_t *r)
 		if ((rmemb = sigismember(r, i)) == -1)
 			err(EXIT_FAILURE, "%s: sigismember", __func__);
 
-		if (lmemb != rmemb) 
+		if (lmemb != rmemb)
 			return false;
 	}
 	return true;

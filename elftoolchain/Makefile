@@ -11,9 +11,13 @@ cleandir distclean:
 
 #.export DOLLAR MAKEOBJDIR
 
+# TBD
+tags:
+	@touch $(.CURDIR)/tags
+
 install: all
 
-$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall):
+$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags):
 	cd $(SRCDIR) && unset DESTDIR && \
 	LD_LIBRARY_PATH=$(HOME)/pkg/lib:/usr/lib/x86_64-linux-gnu \
 	C_INCLUDE_PATH=$(HOME)/pkg/include \

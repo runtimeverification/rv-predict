@@ -15,6 +15,9 @@ cleandir distclean:
 tags:
 	@touch $(.CURDIR)/tags
 
+uninstall:
+	@echo "Nothing to do for $(.TARGET)"
+
 install: all
 
 $(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags):

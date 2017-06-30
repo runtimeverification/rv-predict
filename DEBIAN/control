@@ -1,0 +1,11 @@
+Package: rv-predict-c
+Version: 0.4-1
+Architecture: amd64
+Depends: clang (>= 1:3.8~), clang (<< 1:3.9~), java8-runtime
+Section: devel
+Maintainer: David Young <david.young@runtimeverification.com>
+Description: RV-Predict/C predicts data races in C and C++
+  programs.  Use RV-Predict/C compiles and runs a C/C++ program with
+  instrumentation that produces an execution trace.  RV-Predict/C
+  analyzes the execution trace and reports the data races that could
+  occur.

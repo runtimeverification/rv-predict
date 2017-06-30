@@ -19,7 +19,7 @@ fi
 
 rvpredict()
 {
-	libdir=$(dirname $0)/../lib
+	sharedir=$(dirname $0)/../share/rv-predict-c
 
 	min_major="1"
 	min_minor="8"
@@ -52,8 +52,8 @@ EOF
 		exit 2
 	fi
 
-	${_java} -ea -jar ${libdir}/rv-predict.jar "$@"
+	${_java} -ea -jar ${sharedir}/rv-predict.jar "$@"
 }
 
-rvpredict --offline --window 2000 --detect-interrupted-thread-race --compact-trace --llvm-predict . 2>&1 | \
+rvpredict --offline --window 2000 --detect-interrupted-thread-race --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
 rvpsymbolize $progpath 1>&2

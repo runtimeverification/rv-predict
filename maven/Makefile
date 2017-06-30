@@ -5,7 +5,7 @@ FILESNAME_rv-predict.jar.copy=rv-predict.jar
 
 FILESMODE_rv-predict.jar.copy=0644
 
-FILESDIR_rv-predict.jar.copy=$(LIBDIR)
+FILESDIR_rv-predict.jar.copy=$(DATADIR)/rv-predict-c
 
 .if ${NOISY:Uno} == "no"
 MAVEN_OPTS=-q
@@ -13,6 +13,10 @@ MAVEN_OPTS=-q
 MAVEN_OPTS=
 .endif
 
+.if $(.TARGETS) != "" && $(.TARGETS:Ninstall) == ""
+buildit: .PHONY
+	@echo "Skipping Maven step on implicit 'all' target"
+.else
 buildit: .PHONY
 .if $(RELEASE:Uno) == "no"
 	@cd $(.CURDIR)/../native-z3 && mvn -q -DskipTests -DskipDocs install
@@ -22,6 +26,7 @@ buildit: .PHONY
 .else
 	# I used to pass -DskipTests -DskipDocs here.
 	cd $(.CURDIR)/.. && mvn -Dobfuscate -U $(MAVEN_OPTS) package
+.endif
 .endif
 
 rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar

@@ -1,6 +1,7 @@
 *~
 .cache
 .classpath
+*.deb
 EVALUATION-LICENSE.md
 .idea
 *.iml

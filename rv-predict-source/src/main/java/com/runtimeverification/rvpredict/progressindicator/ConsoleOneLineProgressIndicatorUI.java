@@ -11,11 +11,14 @@ public class ConsoleOneLineProgressIndicatorUI implements ProgressIndicatorUI {
             OneItemProgress totalTasksProgress,
             OneItemProgress smtTimeMillis) {
         System.out.print(String.format(
-                "Input: %1$3d%%. Races found: %2$3d. Current input tasks: %3$3d%%. Time left: %4$ss.\r",
+                "Input: %1$3d%%. Races found: %2$3d. Current input tasks: %3$3d%%. Time left: %4$2ss.\r",
                 inputFile.intPercentageDone(),
                 racesFound,
                 totalTasksProgress.intPercentageDone(),
                 TimeUnit.MILLISECONDS.toSeconds(smtTimeMillis.getTotal() - smtTimeMillis.getDone())));
         System.out.flush();
+    }
+    public void reportEnd() {
+        System.out.println();
     }
 }

@@ -97,6 +97,8 @@ public class RVPredict {
                         break;
                     }
                 }
+                progressIndicator.end();
+                System.out.println();
 
                 List<String> reports = detector.getRaceReports();
                 if (reports.isEmpty()) {

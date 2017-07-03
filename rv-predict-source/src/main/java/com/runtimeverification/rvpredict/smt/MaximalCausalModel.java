@@ -1,4 +1,4 @@
-/*******************************************************************************
+/* ******************************************************************************
  * Copyright (c) 2013 University of Illinois
  *
  * All rights reserved.
@@ -25,7 +25,7 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- ******************************************************************************/
+ * *****************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
 import com.google.common.collect.ImmutableList;
@@ -420,7 +420,7 @@ public class MaximalCausalModel {
                             Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
                             fillSignalStack(threadToExecution, signalParents, race);
                             if (Configuration.debug) {
-                                dumpOrderingWithLessThreadSwitches(
+                                dumpOrdering(
                                         threadToExecution,
                                         Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
                                         signalParents);
@@ -830,14 +830,6 @@ public class MaximalCausalModel {
 
     private String prettyPrint(ReadonlyEventInterface event) {
         return event.getType().getPrinter().print(event);
-    }
-
-    private boolean isRaceEvent(
-            EventWithOrder event,
-            ReadonlyEventInterface firstRaceEvent,
-            ReadonlyEventInterface secondRaceEvent) {
-        return (firstRaceEvent != null && firstRaceEvent.getEventId() == event.getEvent().getEventId())
-                || (secondRaceEvent != null && secondRaceEvent.getEventId() == event.getEvent().getEventId());
     }
 
     private String threadDescription(int threadId, EventWithOrder event, Map<Integer, Integer> signalParents) {

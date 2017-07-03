@@ -7,4 +7,5 @@ interface ProgressIndicatorUI {
             long racesFound,
             OneItemProgress totalTasksProgress,
             OneItemProgress smtTimeMillis);
+    void reportEnd();
 }

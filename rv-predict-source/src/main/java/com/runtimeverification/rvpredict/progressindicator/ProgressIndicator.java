@@ -73,6 +73,10 @@ public class ProgressIndicator implements ProgressIndicatorInterface {
         reportUiState();
     }
 
+    public synchronized void end() {
+        reportUiState();
+        ui.reportEnd();
+    }
     public synchronized void endWindow(long filePosition) {
         inputFile = inputFile.withProgress(filePosition - inputFile.getDone());
         this.maybeComputationData = Optional.empty();

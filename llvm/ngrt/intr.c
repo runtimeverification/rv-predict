@@ -26,7 +26,7 @@ static int rvp_static_nintrs = 0;
 static bool intr_debug = false;
 
 static int
-static_intr_compare(const void *l, const void *r)
+rvp_static_intr_compare(const void *l, const void *r)
 {
 	const rvp_static_intr_t *lsi = l, *rsi = r;
 
@@ -34,7 +34,7 @@ static_intr_compare(const void *l, const void *r)
 }
 
 static void
-static_intr_handler(int signum)
+rvp_static_intr_handler(int signum)
 {
 	int i;
 
@@ -62,7 +62,7 @@ rvp_static_intrs_init(void)
 	}
 
 	qsort(rvp_static_intr, rvp_static_nintrs, sizeof(rvp_static_intr[0]),
-	    static_intr_compare);
+	    rvp_static_intr_compare);
 
 	for (i = 0; i < rvp_static_nintrs; i++) {
 		if (i == 0 ||
@@ -112,7 +112,7 @@ rvp_static_intrs_init(void)
 			if (sigaddset(&sa.sa_mask, avail_signals[j]) == -1)
 				err(EXIT_FAILURE, "%s: sigaddset", __func__);
 		}
-		sa.sa_handler = static_intr_handler;
+		sa.sa_handler = rvp_static_intr_handler;
 		if (sigaction(avail_signals[i], &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
 

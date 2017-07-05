@@ -19,9 +19,6 @@ cleanup_hook()
 	exit $exitcode
 }
 
-# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
-PS1=""
-
 trap_with_reason()
 {
 	func="$1"
@@ -33,7 +30,7 @@ trap_with_reason()
 
 usage()
 {
-	echo "usage: $(basename $0) program" 1>&2
+	echo "usage: $(basename $0) [--filter [no-signal,no-system]] program" 1>&2
 	exit 1
 }
 
@@ -65,7 +62,35 @@ last_n_components()
 	fi
 }
 
+while [ $# -gt 1 ]; do
+	case $1 in
+	--filter)
+		shift
+		for filt in $(echo $1 | sed 's/,/ /g'); do
+			case $filt in
+			no-signal|no-system)
+				eval filter_${filt##no-}=no
+				;;
+			*)
+				usage
+				;;
+			esac
+		done
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	*)	break
+		;;
+	esac
+done
+
 [ $# -eq 1 ] || usage
+
+# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
+PS1=""
 
 set -i
 trap_with_reason cleanup_hook EXIT ALRM HUP INT PIPE QUIT TERM
@@ -119,12 +144,17 @@ S8	SIGFPE
 S9	SIGKILL
 EOF
 
-grep "$signal_regex" < $tmpdir/original | \
-sed "s/.*$signal_regex.*/\1/g" | sort -u | \
-join -1 1 -2 1 -o '2.1 2.2' - $tmpdir/signal-mapping | \
-while read signum signame; do
-	echo "s/\\<$signum\\>/$signame/g"
-done > $tmpdir/signal_sed_script
+if [ ${filter_signal:-yes} = yes ]
+then
+	grep "$signal_regex" < $tmpdir/original | \
+	sed "s/.*$signal_regex.*/\1/g" | sort -u | \
+	join -1 1 -2 1 -o '2.1 2.2' - $tmpdir/signal-mapping | \
+	while read signum signame; do
+		echo "s/\\<$signum\\>/$signame/g"
+	done > $tmpdir/signal_sed_script
+else
+	touch $tmpdir/signal_sed_script
+fi
 
 #
 # TBD split lines after each address, just in case there is >1 per line

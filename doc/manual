@@ -96,3 +96,20 @@ RV-Predict runtime.  You can use `rvpc` as a drop-in replacement for
 $ rvpc main.c
 
 `rvpc++` is a drop-in replacement for `clang++`.
+
+Add to rvpa, rvpx, and rvpsymbolize a --filter option that tells a keyword      
+list of filters to disable: no-symbol, no-system, no-trim, no-signal.         
+Implement no-symbol, no-trim, and no-signal.                               
+                             
+no-symbol disables symbolization altogether.
+
+no-signal disables conversion from RV-Predict's signal-number 
+representation, S1..Sn, to UNIX symbols like SIGHUP, SIGSEGV.        
+
+no-trim leaves in symbols below main() on the stack, and it leaves
+in symbols that belong to the RV-Predict runtime.
+                                                          
+no-system, which is not implemented yet, I intend to stop the   
+symbolization from filtering symbols that are defined in system header          
+files and libraries.  There is no such filtering, now.
+

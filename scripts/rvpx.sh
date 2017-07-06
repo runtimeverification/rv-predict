@@ -25,7 +25,6 @@ cleanup_hook()
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
-	echo $(basename $0): rm -rf $tmpdir 1>&2
 	rm -rf $tmpdir
 	exit $exitcode
 }
@@ -46,7 +45,7 @@ EOF
 	# executable (exit code 126), don't try to perform prediction.
 	[ $exitcode -ne 126 -a $exitcode -ne 127 ] && predict
 
-	exit $exitcode
+	cleanup_hook EXIT
 }
 
 trap_with_reason()

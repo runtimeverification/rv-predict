@@ -2,7 +2,6 @@ NOMAN=
 .include "../compat.mk"
 
 CC=clang
-LDFLAGS+=-static
 PROG=rvsyms
 SRCS=rvsyms.c strstk.c
 WARNS=4

@@ -1,34 +1,193 @@
-# RV-Predict User's Manual
+# RV-Predict/C User's Manual
+
+RV-Predict/C is a data-race detector for C programs.  It compiles
+and runs your program with instrumentation that produces a trace of
+variable accesses and other important events.  Then, it analyzes the
+trace to predict data races.  RV-Predict/C's data-race predictions
+are both *sound* and *maximal*.  *Sound* means that there are no false
+positives: RV-Predict/C will not predict a data race if one cannot occur.
+*Maximal* means that no technique can predict more data races from the
+same program trace.
+
+RV-Predict/C can predict data races in programs that contain a mixture
+of threads and UNIX signal handlers.  In this document, the generic
+term "sequence of control" refers to a thread, a signal handler, or an
+interrupt service routine (ISR).
+
+RV-Predict/C reports a data race when two different sequences of control
+access the same variable, one of the accesses was a write, and there
+was no synchronization between the accesses.
+
+## Using RV-Predict/C
+
+### Getting started
+
+Make sure that the RV-Predict/C `bin` directory is in your PATH.
+Ordinarily, the RV-Predict/C programs will be in `/usr/bin/`, and
+`/usr/bin/` will be part of the system's default PATH.
+
+### Compiling and running programs with RV-Predict/C
+
+The first step in using RV-Predict/C to detect data races is to
+compile your C program with the RV-Predict/C instrumentation and runtime.
+RV-Predict/C provides a script, `rvpc`, that runs your system's existing
+copy of `clang`, adding options that run the instrumentation plug-in
+and link with the RV-Predict/C runtime.  You can use `rvpc` as a drop-in
+replacement for `clang`.  See the `clang` manual page for details about
+how to use it.
+
+`rvpc++` is a drop-in replacement for `clang++`.
+
+Here is a typical `rvpc` invocation that produces an executable binary,
+`lpcq`:
+
+	$ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
+
+When you run the binary,
+
+	$ ./lpcq
+	read item 0
+	read item 1
+	read item 2
+	read item 3
+	read item 4
+
+it writes a trace of the program execution to the file `rvpredict.trace`
+in the current directory.
+
+You can analyze the trace using `rvpa`, which prints race reports to
+its standard error output.  `rvpa` requires one argument, the name of
+the binary.  It expects to find rvpredict.trace in the current directory.
+
+	$ rvpa ./lpcq
+	Data race on [0x00000000020d1fe0]:
+	    Read in thread 2
+	      > in lpcq_get at .../c11/lpcq.c:34:2
+		in consume at .../c11/lpcq_main.c:104
+	    Thread 2 created by thread 1
+		in main at .../c11/lpcq_main.c:230
+
+	    Write in thread 1
+	      > in lpcq_put at .../c11/lpcq.c:49
+		in produce at .../c11/lpcq_main.c:164
+		in main at .../c11/lpcq_main.c:243
+	    Thread 1 is the main thread
+
+
+	Data race on q.tailp at lpcq_main.c;main:
+	    Read in thread 2
+	      > in lpcq_get at .../c11/lpcq.c:26:19
+		in consume at .../c11/lpcq_main.c:104
+	    Thread 2 created by thread 1
+		in main at .../c11/lpcq_main.c:230
+
+	    Write in thread 1
+	      > in lpcq_put at .../c11/lpcq.c:48
+		in produce at .../c11/lpcq_main.c:164
+		in main at .../c11/lpcq_main.c:243
+	    Thread 1 is the main thread
+
+The `rvpx` script provides a shortcut: it runs your program and analyzes
+it one step, and it does not leave an `rvpredict.trace` file in your
+home directory.  On the `rvpx` command line, tell the name of a program
+that was compiled with `rvpc`, and the program arguments:
+
+	$ rvpx ./lpcq -s
+	read item 0
+	read item 1
+	read item 2
+	read item 3
+	read item 4
+	Data race on [0x00007ffd19f94658]:
+	    Write in thread 2
+	      > in lpcq_get at .../c11/lpcq.c:36
+		in consume at .../c11/lpcq_main.c:104
+	    Thread 2 created by thread 1
+		in main at .../c11/lpcq_main.c:230
+
+	    Read in signal SIGALRM
+	      > in lpcq_put at .../c11/lpcq.c:47:19
+		in handler at .../c11/lpcq_main.c:139:1
+	    Interrupting thread 2
+	      > in lpcq_get at .../c11/lpcq.c:36
+		in consume at .../c11/lpcq_main.c:104
+	    Thread 2 created by thread 1
+		in main at .../c11/lpcq_main.c:230
+
+	.
+	.
+	.
+
+Both `rvpa` and `rvpx` accept a `--filter` option that disables
+conversions applied to the raw data-race reports.  `--filter` takes one or
+more comma-separated arguments, `no-symbol`, `no-trim`, and `no-signal`.
+`no-symbol` disables conversion of data addresses to variable names,
+and instruction address to line and column numbers.  When `no-trim` is a
+`--filter` argument, data-race reports will show stack frames belonging
+to the RV-Predict/C runtime as well as stack frames below each thread's
+start routine and below `main`.  `no-signal` suppresses conversion of
+signal numbers `S1..Sn` to UNIX symbols like SIGHUP and SIGSEGV.
+
+### Understanding data-race reports
+
+If RV-Predict/C finds a feasible schedule of your program where two
+different threads access the same variable, one of the accesses is
+a write, and there is no synchronization between the accesses,
+then it reports a data race.
+
+RV-Predict/C detects a data race when two different sequences of control
+access the same variable, one of the accesses is a write, and the accesses
+are not synchronized with each other.
+
+A data-race reports begin with the text "Data race on " starting in the
+first column.  Subsequent lines of the report are indented by four or
+more spaces.
+
+	Data race on [0x00007ffd19f94658]:
+	    Write in thread 2
+	      > in lpcq_get at .../c11/lpcq.c:36
+		in consume at .../c11/lpcq_main.c:104
+	    Thread 2 created by thread 1
+		in main at .../c11/lpcq_main.c:230
+
+	    Read in signal SIGALRM
+	      > in lpcq_put at .../c11/lpcq.c:47:19
+		in handler at .../c11/lpcq_main.c:139:1
+	    Interrupting thread 2
+	      > in lpcq_get at .../c11/lpcq.c:36
+		in consume at .../c11/lpcq_main.c:104
+	    Thread 2 created by thread 1
+		in main at .../c11/lpcq_main.c:230
+
+Each report contains two "stanzas" that describe the accesses
+that were involved in the data race.
 
 ## Package contents
 
-The RV-Predict programs ordinarily are installed at
-`$HOME/RV-Predict-C/bin/`.
-
-`$HOME/RV-Predict-C/lib/` is where the product license key and other
-files that support RV-Predict are installed.  Those files must be present
+The RV-Predict/C programs ordinarily are installed in `/usr`.
+`/usr/share/rv-predict-c/` is where the product license key and other
+files that support RV-Predict/C are installed.  Those files must be present
 for RV-Predict/C to work, but the user does not ordinarily need to do
 anything with them.
 
-Documentation ordinarily resides at
-`$HOME/RV-Predict-C/share/doc/rv-predict-c/`.  This manual is ordinarily
-found under that directory, where it is called USERS-MANUAL.md.
+Documentation ordinarily resides at `/usr/share/doc/rv-predict-c/`.
+This manual is ordinarily found under that directory, where it is called
+USERS-MANUAL.md.
 
-Examples are optionally installed at
-`$HOME/RV-Predict-C/share/examples/rv-predict-c/`.  There are a
-variety of examples in C and C++.  Look at the README files under
+Examples are installed at `/usr/share/examples/rv-predict-c/`.  There are
+a variety of examples in C and C++.  Look at the README files under
 `examples/rv-predict-c/` for more information.
 
-The important programs for the everyday RV-Predict are `rvpc` and `rvpx`:
+The most important programs for the everyday RV-Predict/C user are `rvpc` and `rvpx`:
 
 `rvpc`: a wrapper for `clang` that compiles and links programs with
-    RV-Predict instrumentation.  When a program built with `rvpc` runs,
-    it will ordinarily leave a trace file called `rvpredict.trace`
+    RV-Predict/C instrumentation.  When a program built with `rvpc` runs, it
+    will ordinarily leave a trace of its activity called `rvpredict.trace`
     in the current working directory.
 
 `rvpc++`: like `rvpc`, only for `clang++`.
 
-`rvpx`: a wrapper for programs that were built with RV-Predict
+`rvpx`: a wrapper for programs that were built with RV-Predict/C
     instrumentation.  If you ordinarily run your program like
     `<command> <arguments>`, then run `rvpx <command> <arguments>` to
     see data-race reports. `rvpx` redirects the trace file for <command>
@@ -38,21 +197,22 @@ The important programs for the everyday RV-Predict are `rvpc` and `rvpx`:
 
 Advanced users may find a couple of other programs in the package useful.
 Those programs are `rvpsymbolize` and `rvpdump`.  Note that those programs
-may not appear in subsequent releases of RV-Predict:
+may not appear in subsequent releases of RV-Predict/C:
 
 `rvpsymbolize`: a filter that takes the name of an ELF executable file,
-    `program` as an argument.  `rvpsymbolize` copies its standard
-    input to its standard output with data and instruction addresses
-    converted to symbols: using the DWARF debug information in `program`,
-    `rvpsymbolize` replaces each hexadecimal instruction pointer enclosed
-    in curly braces, {0x...}, with the corresponding function name,
-    file, line number, and optional column number.  It also replaces
-    each hexadecimal data address enclosed in square brackets, [0x...],
-    with the corresponding symbol name.  For structures, `rvpsymbolize`
-    makes a best effort to tell a data member name, and for arrays,
-    `rvpsymbolize` makes a best effort to tell an array index.
+    `program` as an argument. `rvpsymbolize` copies its standard input
+    to its standard output with data and instruction addresses converted
+    to symbols: using the DWARF debug information in `program`,
+    `rvpsymbolize` replaces each hexadecimal instruction pointer
+    enclosed in curly braces, {0x...}, with the corresponding function
+    name, file, line number, and optional column number.  It also
+    replaces each hexadecimal data address enclosed in square brackets,
+    [0x...], with the corresponding symbol name.  For an address inside
+    of a structure, `rvpsymbolize` makes a best effort to tell the data
+    member's name, and for an address inside of an array, `rvpsymbolize`
+    makes a best effort to tell the array index.
 
-`rvpdump`: a program that will read an RV-Predict compact trace
+`rvpdump`: a program that will read an RV-Predict/C compact trace
     file, `rvpredict.trace`, and print it to standard output in a
     human-readable format (default action) or, if the `-t legacy`
     option is provided, translate from the compact trace format to the
@@ -67,49 +227,6 @@ may not appear in subsequent releases of RV-Predict:
     option is deprecated; it may be removed from a future version of
     `rvpdump`.
 
-## Using RV-Predict
+## Known issues
 
-### Getting started
-
-Make sure that the RV-Predict/C `bin` directory is in your PATH.
-Ordinarily, the directory to add to your PATH is `$HOME/RV-Predict-C/bin`.
-In Bourne shell and workalikes such as `bash`, you can add it to PATH
-like this:
-
-	export PATH=${HOME}/RV-Predict-C/bin:${PATH}
-
-In `csh` and `tcsh`, run this:
-
-	setenv PATH ${HOME}/RV-Predict-C/bin:${PATH}
-
-We recommend setting the proper PATH in your shell's login profile.
-
-### Compiling and running programs with RV-Predict
-
-The first step in using RV-Predict/C to detect data races is to
-compile your C program with the RV-Predict instrumentation and runtime.
-RV-Predict provides a script, `rvpc`, that runs your copy of `clang`,
-adding options that run the instrumentation plug-in and link with the
-RV-Predict runtime.  You can use `rvpc` as a drop-in replacement for
-`clang`.
-
-$ rvpc main.c
-
-`rvpc++` is a drop-in replacement for `clang++`.
-
-Add to rvpa, rvpx, and rvpsymbolize a --filter option that tells a keyword      
-list of filters to disable: no-symbol, no-system, no-trim, no-signal.         
-Implement no-symbol, no-trim, and no-signal.                               
-                             
-no-symbol disables symbolization altogether.
-
-no-signal disables conversion from RV-Predict's signal-number 
-representation, S1..Sn, to UNIX symbols like SIGHUP, SIGSEGV.        
-
-no-trim leaves in symbols below main() on the stack, and it leaves
-in symbols that belong to the RV-Predict runtime.
-                                                          
-no-system, which is not implemented yet, I intend to stop the   
-symbolization from filtering symbols that are defined in system header          
-files and libraries.  There is no such filtering, now.
 

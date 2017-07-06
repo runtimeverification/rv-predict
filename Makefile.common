@@ -1,0 +1,12 @@
+.if defined(FAKEROOT_FIFO) && defined(INSTALL)
+.if !exists($(FAKEROOT_FIFO))
+.error "FAKEROOT_FIFO=$(FAKEROOT_FIFO) is defined but missing."
+.endif
+INSTALL:=fakeroot -s $(FAKEROOT_FIFO) $(INSTALL)
+BINOWN=root
+BINGRP=root
+FILESOWN=root
+FILESGRP=root
+LIBOWN=root
+LIBGRP=root
+.endif

@@ -1,7 +1,0 @@
-#!/bin/sh
-RVPREDICT=rv-predict
-"$@"
-#$RVPREDICT --window 64 --offline --llvm-predict .
-$RVPREDICT --offline --window 4000 --llvm-predict .
-rm *.bin *.txt *.log
-

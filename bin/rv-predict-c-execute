@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-PATH=$PATH:.
-"$1"; $(dirname "$0")/rv-predict --window 4000 --llvm-predict "." && rm *_trace\.bin && rm *_metadata\.bin

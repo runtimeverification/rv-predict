@@ -27,14 +27,12 @@
 
 bool use_signal = false;
 
-typedef struct _shared {
+static struct {
 	volatile int count;
 	volatile _Atomic bool alarm_blocked;
 	volatile bool interrupted;
-} shared_t;
-
-static shared_t shared = {
-	  .count = 1
+} shared = {
+	  .count = 0
 	, .alarm_blocked = ATOMIC_VAR_INIT(false)
 	, .interrupted = false
 };
@@ -45,7 +43,7 @@ alarm_handler(int signum __unused)
 	if (shared.alarm_blocked)
 		return;
 
-	if (shared.count < -1 || 1 < shared.count)
+	if (shared.count < 0 || 25 < shared.count)
 		abort();
 }
 
@@ -145,7 +143,7 @@ main(int argc, char **argv)
 			signals_mask(SIGALRM, &tset);
 		if (block_with_lock)
 			pthread_mutex_lock(&mtx);
-		shared.count = -shared.count;
+		shared.count++;
 		if (block_with_variable)
 			shared.alarm_blocked = false;
 		if (block_with_mask)

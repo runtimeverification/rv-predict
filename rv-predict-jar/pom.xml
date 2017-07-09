@@ -8,6 +8,11 @@
     <artifactId>rv-predict-jar</artifactId>
     <dependencies>
         <dependency>
+            <groupId>com.runtimeverification.licensing</groupId>
+            <artifactId>rv-licensing</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+        <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>rv-predict-source</artifactId>
             <version>${project.version}</version>

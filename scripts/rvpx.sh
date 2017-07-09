@@ -68,6 +68,10 @@ while [ $# -gt 1 ]; do
 		shift
 		shift
 		;;
+	--prompt-for-license)
+		passthrough="${passthrough:-} $1"
+		shift
+		;;
 	--)
 		shift
 		break

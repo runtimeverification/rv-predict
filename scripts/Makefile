@@ -14,7 +14,5 @@ FILESNAME_rvpc.sh=rvpc
 FILESNAME_rvpsymbolize.sh=rvpsymbolize
 FILESNAME_rvpx.sh=rvpx
 LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
-#FILESOWN=root
-#FILESGRP=root
 
 .include <mkc.files.mk>

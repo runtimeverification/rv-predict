@@ -113,6 +113,10 @@ while [ $# -gt 1 ]; do
 		window="--window $1"
 		shift
 		;;
+	--prompt-for-license)
+		prompt=$1
+		shift
+		;;
 	--)
 		shift
 		break
@@ -131,6 +135,6 @@ else
 	progpath=$(pwd)/${progname}
 fi
 
-rvpredict --offline ${window:---window 2000} --detect-interrupted-thread-race \
+rvpredict --offline ${prompt:-} ${window:---window 2000} --detect-interrupted-thread-race \
     --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
     symbolize ${symbolize_passthrough} $progpath 1>&2

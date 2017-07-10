@@ -2,7 +2,7 @@
 
 set -e
 
-more<<END-OF-LICENSE
+more -d<<END-OF-LICENSE
 --------------------------------------------------------------------------------
 RUNTIME VERIFICATION "AS IS" 30-DAY EVALUATION LICENSE AGREEMENT (NON
 PRODUCTION LICENSE)
@@ -93,17 +93,22 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+END-OF-LICENSE
+
+cat<<ACCEPT-TO-INSTALL
 
 If you do not accept the license, installation will be cancelled.
 
-END-OF-LICENSE
+ACCEPT-TO-INSTALL
 
 read -p "Do you accept the license? [y/n] " yn
 
 if [ x${yn%%[yY]} = x ]; then
+	echo
 	echo "License accepted.  Continuing."
 	exit 0
 else
+	echo
 	echo "Not accepted.  Cancelling installation."
 	exit 1
 fi

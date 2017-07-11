@@ -14,7 +14,6 @@ cleanup_hook()
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
-	echo $(basename $0): rm -rf $tmpdir 1>&2
 	rm -rf $tmpdir
 	exit $exitcode
 }
@@ -30,7 +29,7 @@ trap_with_reason()
 
 usage()
 {
-	echo "usage: $(basename $0) [--filter [no-signal|no-system]] program" 1>&2
+	echo "usage: $(basename $0) [--filter no-shorten|no-signal|no-system] program" 1>&2
 	exit 1
 }
 
@@ -48,12 +47,13 @@ last_n_components()
 {
 	ncomponents=$1
 	filename=$2
-	result=$(basename $filename)
+	residue=$filename
+	result=$(basename $residue)
 	while [ $ncomponents -gt 1 ]; do
-		filename=$(dirname $filename)
-		[ $filename = "." ] && break
+		residue=$(dirname $residue)
+		[ $residue = "." ] && break
 		ncomponents=$((ncomponents - 1))
-		result=$(basename $filename)/$result
+		result=$(basename $residue)/$result
 	done
 	if [ $((${#result} + 4)) -lt ${#filename} ]; then
 		echo ".../${result}"
@@ -68,7 +68,7 @@ while [ $# -gt 1 ]; do
 		shift
 		for filt in $(echo $1 | sed 's/,/ /g'); do
 			case $filt in
-			no-signal|no-system)
+			no-shorten|no-signal|no-system)
 				eval filter_${filt##no-}=no
 				;;
 			*)
@@ -118,7 +118,11 @@ s/\([^:]\+\)\(:[^;]\+\);\(.\+\);;\(.\+\)$/\4 \1 \2 \3/
 s/\([^;]\+\);\(.\+\);;\(.\+\)$/\3 \1 :: \2/' | \
 tee $tmpdir/funcsyms_proto_proto_script | \
 while read regex path linecol symbol; do
-	shortened_path=$(last_n_components 2 $path)
+	if [ ${filter_shorten:-yes} = yes ]; then
+		shortened_path=$(last_n_components 2 $path)
+	else
+		shortened_path=$path
+	fi
 	echo "${regex};;${symbol};;${shortened_path}${linecol##::}"
 done | tee $tmpdir/funcsyms_proto_script | sed "$func_sym_sed_template" > $tmpdir/funcsyms_sed_script
 

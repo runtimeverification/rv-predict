@@ -69,7 +69,6 @@ public class Configuration implements Constants {
     private static final String COMPACT_TRACE_FILE_NAME = "rvpredict.trace";
 
     public static final String METADATA_BIN = "metadata.bin";
-    public static final String AGENT_RESOURCE_PATH = Agent.class.getName().replace(".","/") + ".class";
 
     public static final String Z3_PATH = "z3lib";
 
@@ -442,7 +441,10 @@ public class Configuration implements Constants {
     private Configuration() { }
 
     private void printLicense() {
-        Licensing licensingSystem = Licensing.fromUserConfigDirectory("predict");
+        Licensing licensingSystem = Licensing.fromLocations(
+                "predict",
+                Licensing.LicenseLocation.USER_DIRECTORY,
+                Arrays.asList(Licensing.LicenseLocation.values()));
         licensingSystem.getLicenseCache().getLicense().printInfo();
     }
 

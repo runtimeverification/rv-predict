@@ -1,12 +1,19 @@
 package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.licensing.Licensing;
+import com.runtimeverification.rvpredict.config.Configuration;
+
+import java.util.Arrays;
+import java.util.Optional;
 
 import static com.runtimeverification.licensing.Licensing.LICENSE_URL;
 
 public class LicenseChecker {
     public static void validateOrDie(boolean promptForLicense) {
-        Licensing licensingSystem = Licensing.fromUserConfigDirectory("predict");
+        Licensing licensingSystem = Licensing.fromLocations(
+                "predict",
+                Licensing.LicenseLocation.USER_DIRECTORY,
+                Arrays.asList(Licensing.LicenseLocation.values()));
         Licensing.LicenseStatus licenseStatus = licensingSystem.getLicenseStatus();
         if (licenseStatus == Licensing.LicenseStatus.VALID) {
             return;

@@ -30,7 +30,7 @@ trap_with_reason()
 
 usage()
 {
-	echo "usage: $(basename $0) [--filter [no-signal,no-system]] program" 1>&2
+	echo "usage: $(basename $0) [--filter [no-signal|no-system]] program" 1>&2
 	exit 1
 }
 

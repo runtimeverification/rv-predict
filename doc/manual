@@ -41,16 +41,20 @@ how to use it.
 Here is a typical `rvpc` invocation that produces an executable binary,
 `lpcq`:
 
-	$ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
+```
+$ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
+```
 
 When you run the binary,
 
-	$ ./lpcq
-	read item 0
-	read item 1
-	read item 2
-	read item 3
-	read item 4
+```
+$ ./lpcq
+read item 0
+read item 1
+read item 2
+read item 3
+read item 4
+```
 
 it writes a trace of the program execution to the file `rvpredict.trace`
 in the current directory.
@@ -59,64 +63,67 @@ You can analyze the trace using `rvpa`, which prints race reports to
 its standard error output.  `rvpa` requires one argument, the name of
 the binary.  It expects to find rvpredict.trace in the current directory.
 
-	$ rvpa ./lpcq
-	Data race on [0x00000000020d1fe0]:
-	    Read in thread 2
-	      > in lpcq_get at .../c11/lpcq.c:34:2
-		in consume at .../c11/lpcq_main.c:104
-	    Thread 2 created by thread 1
-		in main at .../c11/lpcq_main.c:230
+```
+$ rvpa ./lpcq
+Data race on [0x00000000020d1fe0]:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:34:2
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
 
-	    Write in thread 1
-	      > in lpcq_put at .../c11/lpcq.c:49
-		in produce at .../c11/lpcq_main.c:164
-		in main at .../c11/lpcq_main.c:243
-	    Thread 1 is the main thread
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:49
+	in produce at .../c11/lpcq_main.c:164
+	in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
 
 
-	Data race on q.tailp at lpcq_main.c;main:
-	    Read in thread 2
-	      > in lpcq_get at .../c11/lpcq.c:26:19
-		in consume at .../c11/lpcq_main.c:104
-	    Thread 2 created by thread 1
-		in main at .../c11/lpcq_main.c:230
+Data race on q.tailp at lpcq_main.c;main:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:26:19
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
 
-	    Write in thread 1
-	      > in lpcq_put at .../c11/lpcq.c:48
-		in produce at .../c11/lpcq_main.c:164
-		in main at .../c11/lpcq_main.c:243
-	    Thread 1 is the main thread
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:48
+	in produce at .../c11/lpcq_main.c:164
+	in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+```
 
 The `rvpx` script provides a shortcut: it runs your program and analyzes
 it one step, and it does not leave an `rvpredict.trace` file in your
 home directory.  On the `rvpx` command line, tell the name of a program
 that was compiled with `rvpc`, and the program arguments:
 
-	$ rvpx ./lpcq -s
-	read item 0
-	read item 1
-	read item 2
-	read item 3
-	read item 4
-	Data race on [0x00007ffd19f94658]:
-	    Write in thread 2
-	      > in lpcq_get at .../c11/lpcq.c:36
-		in consume at .../c11/lpcq_main.c:104
-	    Thread 2 created by thread 1
-		in main at .../c11/lpcq_main.c:230
+```
+$ rvpx ./lpcq -s
+read item 0
+read item 1
+read item 2
+read item 3
+read item 4
+Data race on [0x00007ffd19f94658]:
+    Write in thread 2
+      > in lpcq_get at .../c11/lpcq.c:36
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
 
-	    Read in signal SIGALRM
-	      > in lpcq_put at .../c11/lpcq.c:47:19
-		in handler at .../c11/lpcq_main.c:139:1
-	    Interrupting thread 2
-	      > in lpcq_get at .../c11/lpcq.c:36
-		in consume at .../c11/lpcq_main.c:104
-	    Thread 2 created by thread 1
-		in main at .../c11/lpcq_main.c:230
-
-	.
-	.
-	.
+    Read in signal SIGALRM
+      > in lpcq_put at .../c11/lpcq.c:47:19
+	in handler at .../c11/lpcq_main.c:139:1
+    Interrupting thread 2
+      > in lpcq_get at .../c11/lpcq.c:36
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
+.
+.
+.
+```
 
 Both `rvpa` and `rvpx` accept a `--filter` option that disables
 conversions applied to the raw data-race reports.  `--filter` takes one or
@@ -139,36 +146,114 @@ RV-Predict/C detects a data race when two different sequences of control
 access the same variable, one of the accesses is a write, and the accesses
 are not synchronized with each other.
 
-A data-race reports begin with the text "Data race on " starting in the
-first column.  Subsequent lines of the report are indented by four or
-more spaces.
+A data-race reports begin with the text "Data race on" starting in the
+first column.  Subsequent lines of the same report are indented by four
+or more spaces.
 
-	Data race on [0x00007ffd19f94658]:
-	    Write in thread 2
-	      > in lpcq_get at .../c11/lpcq.c:36
-		in consume at .../c11/lpcq_main.c:104
-	    Thread 2 created by thread 1
-		in main at .../c11/lpcq_main.c:230
+```
+Data race on [0x00007ffd19f94658]:
+    Write in thread 2
+      > in lpcq_get at .../c11/lpcq.c:36
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
 
-	    Read in signal SIGALRM
-	      > in lpcq_put at .../c11/lpcq.c:47:19
-		in handler at .../c11/lpcq_main.c:139:1
-	    Interrupting thread 2
-	      > in lpcq_get at .../c11/lpcq.c:36
-		in consume at .../c11/lpcq_main.c:104
-	    Thread 2 created by thread 1
-		in main at .../c11/lpcq_main.c:230
+    Read in signal SIGALRM
+      > in lpcq_put at .../c11/lpcq.c:47:19
+	in handler at .../c11/lpcq_main.c:139:1
+    Interrupting thread 2
+      > in lpcq_get at .../c11/lpcq.c:36
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
+```
 
-Each report contains two "stanzas" that describe the accesses
-that were involved in the data race.
+Each report contains two "stanzas" that describe the accesses that
+were involved in the data race, and where those accesses occurred.
+The first line of each stanza tells what kind of access occurred (a Read
+or a Write), and which sequence of control was involved---"thread 2",
+for example, or "signal SIGALRM".  The following lines in each stanza
+provide additional context, beginning with a stack trace (a '>' marks
+the top of stack).  If the access occurred in a signal handler, then
+following the stack trace is a clause such as "Interrupting thread 2", and
+following that, another stack trace.
+
+One signal can interrupt another.  When one signal interrupts another and
+then participates in a data race, then its report stanza will contain
+one or more lines starting "Interrupting signal", followed by the name
+of the interrupted signal and a stack trace.
+
+By default, a data-race report is "symbolized".  That is, instruction
+addresses are converted to a filename, line number, and optional
+column number of a C/C++ statement or expression, and data addresses
+are converted to a variable name.  Addresses that cannot be symbolized
+are printed as hexadecimal numbers inside of brackets.  Curly braces,
+`{}` are used for instruction addresses.  Square brackets, `[]`, are
+used for data addresses.  Thus the report above describes a race on the
+data address at 0x00007ffd19f94658.
+
+RV-Predict/C is capable of symbolizing some data addresses that reside
+on the stack---e.g., local variables.  It qualifies the name of the
+variable with the name of the function where it is declared, and the name
+of the source file where the function appears.  In this way, a data-race
+report beginning
+
+```
+Data race on q.tailp at lpcq_main.c;main:
+```
+
+is about the local variable `q` of function `main`.
+
+## Building projects with RV-Predict/C
+
+The RV-Predict/C instrumenting compiler, `rvpc`, is a drop-in
+replacement for `clang` in most projects.  It is only necessary to
+change the variable(s) that control which compiler is used.  Sometimes
+it is necessary to indicate a different linker than the default, too.
+Here are examples for a few popular programs.
+
+### CMake
+
+The variables `CMAKE_C_COMPILER` and `CMAKE_CXX_COMPILER` control the
+compiler that a CMake project uses.  On the cmake command line, pass
+`-DCMAKE_C_COMPILER=rvpc` to compile with RV-Predict/C instrumentation
+instead of using the default C compiler.  To use RV-Predict/C instead
+of the default C++ compiler, pass `-DCMAKE_CXX_COMPILER=rvpc++`.
+
+### UNIX make(1) utility
+
+Frequently it is possible to override the compiler and linker that a
+Makefile uses by setting CC and LD variables on the make(1) command line.
+To replace the standard compiler and linker with RV-Predict/C:
+
+```
+make CC=rvpc LD=rvpc
+```
+
+### GNU autoconf scripts (./configure)
+
+To configure a GNU autoconf project to compile with RV-Predict/C
+instrumentation,
+set CC and LD in the configure script's environment.  For example,
+in Bourne shell (and bash):
+
+```
+CC=rvpc LD=rvpc ./configure
+```
+
+In csh/tcsh:
+
+```
+env CC=rvpc LD=rvpc ./configure
+```
 
 ## Package contents
 
-The RV-Predict/C programs ordinarily are installed in `/usr`.
-`/usr/share/rv-predict-c/` is where the product license key and other
-files that support RV-Predict/C are installed.  Those files must be present
-for RV-Predict/C to work, but the user does not ordinarily need to do
-anything with them.
+The RV-Predict/C programs ordinarily are installed in `/usr`,
+especially when they are installed from the Debian binary package.
+`/usr/share/rv-predict-c/` is where files that support RV-Predict/C
+are installed.  Those files must be present for RV-Predict/C to work,
+but the user does not ordinarily need to do anything with them.
 
 Documentation ordinarily resides at `/usr/share/doc/rv-predict-c/`.
 This manual is ordinarily found under that directory, where it is called
@@ -178,7 +263,8 @@ Examples are installed at `/usr/share/examples/rv-predict-c/`.  There are
 a variety of examples in C and C++.  Look at the README files under
 `examples/rv-predict-c/` for more information.
 
-The most important programs for the everyday RV-Predict/C user are `rvpc` and `rvpx`:
+The most important programs for the everyday RV-Predict/C user are `rvpc`
+and `rvpx`:
 
 `rvpc`: a wrapper for `clang` that compiles and links programs with
     RV-Predict/C instrumentation.  When a program built with `rvpc` runs, it
@@ -229,4 +315,10 @@ may not appear in subsequent releases of RV-Predict/C:
 
 ## Known issues
 
+RV-Predict/C does not filter system include files and libraries from
+data-race reports.  This is especially apparent in C++ programs.
+This will be fixed in the 2.1 release.
 
+## Further reading
+
+... PLDI paper ...

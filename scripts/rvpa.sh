@@ -4,7 +4,7 @@ set -e
 
 usage()
 {
-	echo "usage: $(basename $0) --filter [no-symbol,no-system,no-trim,no-signal] program" 1>&2
+	echo "usage: $(basename $0) --filter [no-symbol|no-system|no-trim|no-signal] program" 1>&2
 	exit 1
 }
 

@@ -4,7 +4,7 @@ set -e
 
 usage()
 {
-	echo "usage: $(basename $0) --filter [no-symbol|no-system|no-trim|no-signal] program" 1>&2
+	echo "usage: $(basename $0) [--filter no-shorten|no-symbol|no-system|no-trim|no-signal] program" 1>&2
 	exit 1
 }
 
@@ -98,7 +98,7 @@ while [ $# -gt 1 ]; do
 		shift
 		for filt in $(echo $1 | sed 's/,/ /g'); do
 			case $filt in
-			no-trim|no-symbol)
+			no-symbol|no-trim)
 				eval filter_${filt##no-}=no
 				;;
 			*)

@@ -1,5 +1,9 @@
 #!/bin/sh
 
+#
+# lintian(1) wants for this file to be present.  set -e also appeases
+# lintian(1)
+#
 set -e
 
 exit 0

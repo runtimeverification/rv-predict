@@ -11,6 +11,6 @@
 {% endblock %}
 {% block title %}{{filename}}{% endblock %}
 {% block content %}
-<h1><a href="index.html">&laquo;</a> {{filename}}</h1>
+<h1><a href="{{output_dir}}/index.html"><img alt="Report Index" class="breadcrumb" src="{{output_dir}}/static/rv_logo.png"/></a> &raquo; {{filename}}</h1>
 {{ code|highlight(errorlines, fileid)|safe }}
 {% endblock %}

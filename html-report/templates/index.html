@@ -5,8 +5,14 @@
 <script type="text/javascript">
   $(document).ready(function() {
   var table = $("#myTable").DataTable( {
+  fixedHeader: {
+    headerOffset: $("#myTableHeader").outerHeight(true),
+    header: true
+  },
   paging: false,
   dom: 'rtB',
+  stateSave: true,
+  stateDuration: -1,
   buttons: [
   {extend:'csv',filename:'errors'},
   {extend:'excel',filename:'errors'},
@@ -20,8 +26,24 @@
   {"name": "line"},
   ]
   } );
+
+  $(window).bind('beforeunload', function() {
+    if (typeof(Storage) !== "undefined") {
+      sessionStorage.myTable_searchValue = $("#myTable_search").val();
+      sessionStorage.myTable_scrollTop = $(window).scrollTop();
+    }
+  });
+
+  if (typeof(Storage) !== "undefined") {
+    if (sessionStorage.myTable_searchValue) {
+      $("#myTable_search").val(sessionStorage.myTable_searchValue);
+    }
+    if (sessionStorage.myTable_scrollTop) {
+      $(window).scrollTop(sessionStorage.myTable_scrollTop);
+    }
+  }
   
-    $("#myTable_search")
+  $("#myTable_search")
     .on("keyup", function() { // filter according to key pressed
       var text = this.value.trim();
       var regex;
@@ -57,11 +79,13 @@
 {% endblock %}
 
 {% block content %}
+<div id="myTableHeader">
 <div class="float-left">
-<h1>RV-Match Error Report</h1>
+<h1><img class="home-icon" src="static/rv_logo.png" alt="Runtime Verification"/> RV-Match Error Report</h1>
 </div>
 <div id="myTable_filter" class="dataTables_filter"><label>Search:<input id="myTable_search" class="" placeholder="" aria-controls="myTable" type="search"></label></div>
-<table id="myTable" class="tablesorter">
+</div>
+<table id="myTable" class="tablesorter myTable">
   <thead>
     <tr>
       <th class="dt-right">ID</th>
@@ -77,7 +101,13 @@
       <td class="dt-right"><a href="error-{{err.index}}.html">{{err.index}}</a></td>
       <td><a href="error-{{err.index}}.html">{{err.errdesc}}</a></td>
       <td>{{err.function}}</td>
-      <td><a href="{{err.file}}.html">{{err.file}}</a></td>
+      <td>
+      {% if err.abs_file %}
+        <a href=".{{err.abs_file}}.html">{{err.file}}</a>
+      {% else %}
+        {{err.file}}
+      {% endif %}
+      </td>
       <td class="dt-right">{{err.line}}</td>
     </tr>
 {% endfor %}

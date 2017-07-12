@@ -1,7 +1,7 @@
 /* Copyright (c) 2017 Runtime Verification, Inc. (RV-Match team). All Rights Reserved. */
 td.linenos { background-color: #f0f0f0; padding-right: 10px; }
-span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; }
-pre { line-height: 125%; }
+span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; display: inline-block; }
+div.pre { line-height: 125%; }
 a.hll { color: #000000 }
 body .hll { background-color: #ffcccc }
 body .hll2 { background-color: #ffffcc }
@@ -202,4 +202,83 @@ h2 {
 
 div.float-left {
   float: left;
+}
+
+a {
+  text-decoration: none;
+}
+
+div.stack-frame {
+  cursor: auto;
+}
+
+div.stack-frame pre{
+  margin: 0;
+}
+
+.expand span.lineno {
+  text-align: right;
+}
+
+span.mono {
+  white-space: pre;
+  font-family: monospace;
+}
+
+#expList li.expand {
+  line-height: 100%;
+}
+
+div.pre {
+  white-space: pre;
+  font-family: monospace;
+}
+
+#myTableHeader {
+  position: fixed;
+  top: 0;
+  width: 99%;
+  background-color: #f8f8f8;
+  z-index: 2;
+  height: 4em;
+}
+
+.dataTables_wrapper {
+  top: 4em;
+}
+table.dataTable.myTable thead th {
+  font-weight: normal;
+  padding: 0px 10px;
+  background-color: #f8f8f8;
+}
+table.dataTable.myTable tbody td {
+  padding: 4px 10px;
+}
+.dataTables_wrapper div.dt-buttons {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: #f8f8f8;
+  padding-top: 6px;
+  border-top: 1px #111 solid;
+}
+table.dataTable.myTable tfoot th {
+  border: none;
+  padding: 10px 18px 2em 18px;
+}
+
+body {
+  margin-top: 0;
+}
+
+@media only screen and (max-width: 70ex) {
+    #myTableHeader h1 {
+        display: none;
+    }
+}
+
+img.home-icon, img.breadcrumb {
+  height: 1.5em;
+  width: auto;
+  vertical-align: text-bottom;
 }

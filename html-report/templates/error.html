@@ -3,45 +3,86 @@
 {% block head %}
 <script type="text/javascript">
 
-  function show3lines(line, context) {
-    showline(line, context);
-    line++;
-    showline(line, context);
-    line++;
-    showline(line, context);
+  function showNLines(n, startLine, context) {
+    for (i = startLine; i < startLine + n; i++) {
+      showline(i, context);
+    }
   }
 
   function showline(line, context) {
     $(".line-"+line, context).show();
   }
 
+  function expandUp(fileId, line, obj) {
+    var $div = $("[data-fileid=" + fileId + "][data-line=" + line + "]");
+    var oldStart = Number($div.attr("data-context-start"));
+    var dStart = Number($div.attr("data-context-dstart"));
+    if (isNaN(dStart)) { dStart = 10;}
+    var start = oldStart - dStart;
+    if (start < 0) {
+      start = 0;
+      $(obj).hide();
+    }
+    showNLines(oldStart-start, start+1, $div);
+    $div.attr("data-context-start", start);
+    $div.attr("data-context-dstart", 2*dStart);
+  }
+
+  function expandDown(fileId, line, obj) {
+    var $div = $("[data-fileid=" + fileId + "][data-line=" + line + "]");
+    var oldEnd = Number($div.attr("data-context-end"));
+    var size = Number($div.attr("size"));
+    var dEnd = Number($div.attr("data-context-dend"));
+    if (isNaN(dEnd)) { dEnd = 10;}
+    var end = oldEnd + dEnd;
+    if (end > size + 1) {
+      end = size + 1;
+      $(obj).hide();
+    }
+    showNLines(end-oldEnd, oldEnd, $div);
+    $div.attr("data-context-end", end);
+    $div.attr("data-context-dend", 2*dEnd);
+  }
+
   $(document).ready(function() {
   $("[data-fileid]").each(function(){
+  var obj=this;
   var dat = this.dataset.fileid;
   var path=dat+".html ."+dat;
   // cast to integer
   var line = +this.dataset.line;
-  $(this).load(path, function() {
+  $(".stack-frame", this).load(path, function() {
+  var size = $(".line", this).length;
+  $(".expand span.lineno", obj).width($(".line span.lineno", obj).width());
   $(".line", this).hide();
-  $(".line-"+line).addClass("hll2");
-  showline(line, this);
-  show3lines(line+1, this);
-  show3lines(line-3, this);
+  $(obj).attr("size", size);
+  $(".line-"+line, this).addClass("hll2");
+  showNLines(7, line-3, this);
+  if (line-3 <= 1) {
+    $(".expand-up", obj).hide();
+  }
+  if (line+3 >= size) {
+    $(".expand-down", obj).hide();
+  }
   });
   });
   });
 </script>
 {% endblock %}
 {% block content %}
-<h1><a href="index.html">&laquo;</a> Error {{err.index}}</h1>
+<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/></a>{% if err.primary_trace.frames[0].loc.abs_file != "<unknown>" %} &raquo; <a href="{{output_dir}}{{err.primary_trace.frames[0].loc.abs_file}}.html">{{err.primary_trace.frames[0].loc.rel_file}}</a>{% endif %} &raquo; Error {{err.index}}</h1>
 <h2>{{err.description}}</h2>
 <div id="listContainer">
   <ul id="expList">
-  {% for frame in err.traces[0].frames %}
+  {% for frame in err.primary_trace.frames %}
   {% if loop.first %}<li class="expanded">in{% else %}<li>called by{%
-    endif %} {{frame.symbol}} at {{frame.loc.rel_file}}
-    <ul><li><div data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}"></div>
-    </li></ul></li>
+    endif %} {{frame.symbol}} at {% if frame.loc.abs_file != "<unknown>" %}<a href="{{output_dir}}{{frame.loc.abs_file}}.html">{{frame.loc.rel_file}}</a>{% else %}{{frame.loc.rel_file}}{% endif %}
+    <ul data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}">
+      <li class="expand expand-up" onClick="expandUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
+      <li><div class="stack-frame pre"></div>
+      </li>
+      <li class="expand expand-down" onClick="expandDown('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
+    </ul></li>
   {% endfor %}
   </ul>
 </div>

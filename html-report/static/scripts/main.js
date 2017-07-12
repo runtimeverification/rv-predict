@@ -1,10 +1,10 @@
 function prepareList() {
-	$('#expList').find('li:has(ul)').unbind('click').click(function(event) {
+	$('#expList').find('li:has(ul)').click(function(event) {
 		if(this == event.target) {
 			$(this).toggleClass('expanded');
 			$(this).children('ul').toggle('medium');
 		}
-		return false;
+		return true;
 	}).not(".expanded").addClass('collapsed').removeClass('expanded').children('ul').hide();
 };
 

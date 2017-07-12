@@ -18,12 +18,13 @@ class LinkedHtmlFormatter(HtmlFormatter):
         HtmlFormatter.__init__(self, **kwargs)
         self.hl_links = kwargs['hl_links']
         self.fileid = kwargs['fileid']
+        self.output_dir = os.path.relpath(args.output, os.path.dirname(args.output + '/' + self.fileid))
 
     def wrap(self, source, outfile):
         return self._wrap_code(source)
 
     def _wrap_code(self, source):
-        yield 0, '<div class="' + self.fileid + '"><pre>'
+        yield 0, '<div class="' + self.fileid + ' pre">'
         lineno = 0
         for (i, txt) in source:
             if i == 1:
@@ -33,7 +34,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                     if len(self.hl_links[lineno]) == 1:
                         err = self.hl_links[lineno][0]
                         ix = err[u'index']
-                        tgt = 'error-%d.html' % ix
+                        tgt = '%s/error-%d.html' % (self.output_dir, ix)
                         yield 0, '<a class="hll" href="%s">' % tgt
                         yield i, txt
                         yield 0, '</a>'
@@ -44,7 +45,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                         yield 0, '<span class="lineno">   </span>'
                         msg = '%s (%s)' % (err[u'description'], err[u'error_id'])
                         ix = err[u'index']
-                        tgt = 'error-%d.html' % ix
+                        tgt = '%s/error-%d.html' % (self.output_dir, ix)
                         line = '<a href="%s"> %s Error #%d</a>\n' % (tgt, msg, ix)
                         yield 0, line
                     yield 0, '</div></div>'
@@ -54,13 +55,13 @@ class LinkedHtmlFormatter(HtmlFormatter):
                     yield 0, '</span>'
             else:
                 yield i, txt
-        yield 0, '</pre></div>'
+        yield 0, '</div>'
 
 
 def highlight_c(code, hl_links, fileid):
     hl_lines = hl_links.keys()
     return highlight(code,
-                     CLexer(),
+                     CLexer(stripnl=False),
                      LinkedHtmlFormatter(hl_lines=hl_lines, hl_links=hl_links, linenos='inline', fileid=fileid))
 
 
@@ -94,8 +95,8 @@ def listdict():
 
 def null_loc():
     return {
-        u'rel_file': u'missing',
-        u'abs_file': u'missing',
+        u'rel_file': u'<unknown>',
+        u'abs_file': u'<unknown>',
         u'line': 0,
         u'column': 0,
         u'system_header': False,
@@ -103,7 +104,7 @@ def null_loc():
 
 def null_frame():
     return {
-        u'symbol': u'unknown',
+        u'symbol': u'<unknown>',
         u'loc': null_loc(),
         u'locks': [],
         u'language': u'C',
@@ -116,34 +117,41 @@ for ix, err in enumerate(errors):
     if (u'traces' in err):
         traces = err[u'traces']
         if traces:
-            frames = traces[0][u'frames']
+            for trace in traces:
+              frames = trace[u'frames']
+              if frames:
+                primary_trace = trace
+                break
             if not frames:
                 frames.append(null_frame())
         else:
             err[u'traces'] = [{u'frames': [null_frame()]}]
-        frame = traces[0][u'frames'][0]
+        frame = primary_trace[u'frames'][0]
         for tr in traces:
             for fr in tr[u'frames']:
                 if (u'loc' in fr):
                     loc = fr[u'loc']
-                    if loc[u'rel_file'] != "missing":
+                    if loc[u'rel_file'] != "<unknown>":
                         files[loc[u'abs_file']] = loc[u'rel_file']
     else:
         frame = err[u'loc']
-        err[u'traces']=[{u'frames': [frame]}]
+        primary_trace = {u'frames': [frame]}
+        err[u'traces']=[primary_trace]
         if (u'loc' in frame):
             loc = frame[u'loc']
-            if loc[u'rel_file'] != "missing":
+            if loc[u'rel_file'] != "<unknown>":
                 files[loc[u'abs_file']] = loc[u'rel_file']
     if (u'loc' in frame):
         loc = frame[u'loc']
         err[u'file'] = loc[u'rel_file']
+        err[u'abs_file'] = loc[u'abs_file']
         err[u'line'] = loc[u'line']
     else:
-        err[u'file'] = u'missing'
+        err[u'file'] = u'<unknown>'
         err[u'line'] = 0
         frame[u'loc'] = null_loc()
     err[u'function'] = frame[u'symbol']
+    err[u'primary_trace'] = primary_trace
     errorsByFile[err[u'file']][err[u'line']].append(err)
 
 
@@ -169,19 +177,20 @@ def render_code(rel, abs, path, errors):
                                      errorlines=errorlines,
                                      code=code,
                                      info=rel,
+                                     output_dir=os.path.relpath(args.output, os.path.dirname(args.output + '/' + path)),
                                      fileid=path).encode('utf-8'))
 
 
 def render_error(err):
     template = env.get_template('error.html')
     with open('%s/error-%d.html' % (args.output, err[u'index']), 'w') as target:
-        target.write(template.render(err=err, fileids=fileids))
+        target.write(template.render(err=err, output_dir=".", fileids=fileids))
 
 
 def render_template(filename):
     with open(args.output + '/' + filename, 'w') as target:
         template = env.get_template(filename)
-        target.write(template.render())
+        target.write(template.render(output_dir="."))
 
 
 env = Environment(
@@ -202,7 +211,7 @@ shutil.copytree(dirname + '/static/', args.output + '/static/')
 for template in ['index.html', 'error-descriptions.html']:
     render_template(template)
 for abs,rel in files.iteritems():
-    render_code(rel,abs,rel,True)
+    render_code(rel,abs,abs,True)
     fileids[abs] = str(uuid.uuid4())
     render_code(rel,abs,fileids[abs], False)
 for err in errors:

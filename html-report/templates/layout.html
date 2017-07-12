@@ -4,11 +4,14 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>{% block title %}Welcome to Clay{% endblock %}</title>
-  <link rel="shortcut icon" type="image/x-icon" href="static/favicon.ico"/>
-  <link href="static/style.css" rel="stylesheet"/>
-  <link rel="stylesheet" type="text/css" href="static/styles/datatables.css"/>
-  <script src="static/scripts/datatables.js"></script>
-  <script src="static/scripts/main.js"></script>
+  <link rel="icon" href="{{output_dir}}/static/favicon.ico" type="image/x-icon"/> 
+  <link rel="shortcut icon" href="{{output_dir}}/static/favicon.ico" type="image/x-icon"/>
+
+
+  <link href="{{output_dir}}/static/style.css" rel="stylesheet"/>
+  <link rel="stylesheet" type="text/css" href="{{output_dir}}/static/styles/datatables.css"/>
+  <script src="{{output_dir}}/static/scripts/datatables.js"></script>
+  <script src="{{output_dir}}/static/scripts/main.js"></script>
   {% block head %}{% endblock %}
 </head>
 <body>

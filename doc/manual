@@ -14,10 +14,6 @@ of threads and UNIX signal handlers.  In this document, the generic
 term "sequence of control" refers to a thread, a signal handler, or an
 interrupt service routine (ISR).
 
-RV-Predict/C reports a data race when two different sequences of control
-access the same variable, one of the accesses was a write, and there
-was no synchronization between the accesses.
-
 ## Using RV-Predict/C
 
 ### Getting started
@@ -28,13 +24,13 @@ Ordinarily, the RV-Predict/C programs will be in `/usr/bin/`, and
 
 ### Compiling and running programs with RV-Predict/C
 
-The first step in using RV-Predict/C to detect data races is to
-compile your C program with the RV-Predict/C instrumentation and runtime.
+The first step in using RV-Predict/C to detect data races is to compile
+your C program with the RV-Predict/C instrumentation and runtime.
 RV-Predict/C provides a script, `rvpc`, that runs your system's existing
 copy of `clang`, adding options that run the instrumentation plug-in
 and link with the RV-Predict/C runtime.  You can use `rvpc` as a drop-in
-replacement for `clang`.  See the `clang` manual page for details about
-how to use it.
+replacement for `clang`.  Read the `clang` manual page for details about
+how to use `clang`.
 
 `rvpc++` is a drop-in replacement for `clang++`.
 
@@ -138,15 +134,11 @@ signal numbers `S1..Sn` to UNIX symbols like SIGHUP and SIGSEGV.
 ### Understanding data-race reports
 
 If RV-Predict/C finds a feasible schedule of your program where two
-different threads access the same variable, one of the accesses is
-a write, and there is no synchronization between the accesses,
+different sequences of control access the same variable, one of the
+accesses is a write, and there is no synchronization between the accesses,
 then it reports a data race.
 
-RV-Predict/C detects a data race when two different sequences of control
-access the same variable, one of the accesses is a write, and the accesses
-are not synchronized with each other.
-
-A data-race reports begin with the text "Data race on" starting in the
+A data-race report begins with the text "Data race on" starting in the
 first column.  Subsequent lines of the same report are indented by four
 or more spaces.
 
@@ -178,8 +170,8 @@ the top of stack).  If the access occurred in a signal handler, then
 following the stack trace is a clause such as "Interrupting thread 2", and
 following that, another stack trace.
 
-One signal can interrupt another.  When one signal interrupts another and
-then participates in a data race, then its report stanza will contain
+One signal can interrupt another.  When one signal interrupts another
+and then participates in a data race, its report stanza will contain
 one or more lines starting "Interrupting signal", followed by the name
 of the interrupted signal and a stack trace.
 
@@ -273,13 +265,14 @@ and `rvpx`:
 
 `rvpc++`: like `rvpc`, only for `clang++`.
 
-`rvpx`: a wrapper for programs that were built with RV-Predict/C
-    instrumentation.  If you ordinarily run your program like
-    `<command> <arguments>`, then run `rvpx <command> <arguments>` to
-    see data-race reports. `rvpx` redirects the trace file for <command>
-    from `./rvpredict.trace` to a temporary directory.  Then it analyzes
-    the trace for data races.  After reporting any data races on the
-    standard error output, `rvpx` deletes the temporary directory.
+`rvpx`: a wrapper for running and analyzing programs that were built
+    with RV-Predict/C instrumentation.  If you ordinarily run your
+    program like `<command> <arguments>`, then run `rvpx <command>
+    <arguments>` to see data-race reports. `rvpx` redirects the
+    trace file for <command> from `./rvpredict.trace` to a temporary
+    directory.  Then it analyzes the trace for data races.  After
+    reporting any data races on the standard error output, `rvpx`
+    deletes the temporary directory.
 
 Advanced users may find a couple of other programs in the package useful.
 Those programs are `rvpsymbolize` and `rvpdump`.  Note that those programs
@@ -300,20 +293,21 @@ may not appear in subsequent releases of RV-Predict/C:
 
 `rvpdump`: a program that will read an RV-Predict/C compact trace
     file, `rvpredict.trace`, and print it to standard output in a
-    human-readable format (default action) or, if the `-t legacy`
-    option is provided, translate from the compact trace format to the
-    legacy trace format.  Either provide the name of the trace file on
+    human-readable format.  Either provide the name of the trace file on
     the command line, `rvpdump rvpredict.trace`, or feed the trace into
     standard input, `rvpdump < rvpredict.trace`.
 
     Use the option `-t symbol-friendly` to produce human-readable output
     that is suitable for symbolization using `rvpsymbolize`.
 
-    A user does not ordinarily need to run `rvpdump`.  The `-t legacy`
-    option is deprecated; it may be removed from a future version of
-    `rvpdump`.
+    A user does not ordinarily need to run `rvpdump`.
 
 ## Known issues
+
+RV-Predict/C may sometimes detect two or more races between a thread
+and a signal that interrupts it, when only one of the races is valid.
+This is the only instance where RV-Predict/C is known to report a false
+positive.  This will be fixed in the 2.1 release.
 
 RV-Predict/C does not filter system include files and libraries from
 data-race reports.  This is especially apparent in C++ programs.

@@ -26,7 +26,7 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     long unsafeGetDataInternalIdentifier();
     long unsafeGetDataValue();
 
-    String getLockRepresentation();
+    LockRepresentation getLockRepresentation();
     ReadonlyEventInterface copy();
     /**
      * Returns an identifier of the object containing the data that is accessed

@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.metadata;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.trace.Trace;
 
@@ -57,6 +58,11 @@ public class CompactMetadata implements MetadataInterface {
     @Override
     public String getVariableSig(long idx) {
         return String.format("[0x%016x]", idx);
+    }
+
+    @Override
+    public String getLockSig(LockRepresentation lockRepresentation) {
+        return lockRepresentation.getLockName() + "@" + getVariableSig(lockRepresentation.getLockAddress());
     }
 
     private static class EventBracket {

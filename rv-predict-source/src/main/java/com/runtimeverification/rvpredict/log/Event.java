@@ -179,23 +179,23 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
-    public String getLockRepresentation() {
+    public LockRepresentation getLockRepresentation() {
         assert isPreLock() || isLock();
         long lockId = getLockId();
         int upper32 = (int)(lockId >> 32);
-        String lower32 = Integer.toHexString((int) lockId);
+        int lower32 = (int) lockId;
         if (getType() == EventType.READ_LOCK) {
             assert upper32 == 0;
-            return "ReadLock@" + lower32;
+            return new LockRepresentation(LockRepresentation.LockType.READ_LOCK, lower32);
         } else {
             switch (upper32) {
                 case Constants.MONITOR_C:
-                    return "Monitor@" + lower32;
+                    return new LockRepresentation(LockRepresentation.LockType.MONITOR, lower32);
                 case Constants.ATOMIC_LOCK_C:
-                    return "AtomicLock@" + lower32;
+                    return new LockRepresentation(LockRepresentation.LockType.ATOMIC_LOCK, lower32);
                 default:
                     assert upper32 == 0;
-                    return "WriteLock@" + lower32;
+                    return new LockRepresentation(LockRepresentation.LockType.WRITE_LOCK, lower32);
             }
         }
     }

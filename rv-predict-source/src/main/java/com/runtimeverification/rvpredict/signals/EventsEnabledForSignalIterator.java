@@ -31,7 +31,7 @@ public class EventsEnabledForSignalIterator {
     private boolean firstStep;
     private boolean reuseLastEvent;
 
-    public static EventsEnabledForSignalIterator createWithNoInterruptedThreadRaceDetectionStrictMode(
+    static EventsEnabledForSignalIterator createWithNoInterruptedThreadRaceDetectionStrictMode(
             Collection<ReadonlyEventInterface> events,
             long signalNumber,
             boolean enabledAtStart,
@@ -59,7 +59,7 @@ public class EventsEnabledForSignalIterator {
                 stopAtFirstMaskChangeEvent);
     }
 
-    public static EventsEnabledForSignalIterator createWithInterruptedThreadRaceDetectionStrictMode(
+    static EventsEnabledForSignalIterator createWithInterruptedThreadRaceDetectionStrictMode(
             Collection<ReadonlyEventInterface> events,
             long signalNumber,
             boolean enabledAtStart,

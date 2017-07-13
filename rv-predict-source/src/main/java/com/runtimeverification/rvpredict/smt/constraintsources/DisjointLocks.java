@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.smt.constraintsources;
 
 import com.google.common.collect.ImmutableList;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
 import com.runtimeverification.rvpredict.smt.constraints.And;
@@ -27,7 +28,7 @@ public class DisjointLocks implements ConstraintSource {
     }
 
     @Override
-    public ModelConstraint createConstraint() {
+    public ModelConstraint createConstraint(ConstraintType constraintType) {
         ImmutableList.Builder<ModelConstraint> constraints = new ImmutableList.Builder<>();
         lockRegionsCollection.forEach(lockRegions -> {
             /* assert lock regions mutual exclusion */

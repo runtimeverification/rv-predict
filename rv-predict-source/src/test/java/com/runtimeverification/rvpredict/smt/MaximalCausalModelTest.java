@@ -1596,7 +1596,7 @@ public class MaximalCausalModelTest {
 
         Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
     }
-/*
+
     @Test
     public void signalDoesNotRaceWithThreadBecauseTheyOverlapTooMuchAtomicDisabling() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
@@ -1664,23 +1664,24 @@ public class MaximalCausalModelTest {
                 tu.createRawTrace(
                         tu.nonAtomicStore(ADDRESS_2, VALUE_1),
                         tu.nonAtomicStore(ADDRESS_3, VALUE_1),
-                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
                         tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
                         tu.enableSignal(SIGNAL_NUMBER_1),
                         tu.enableSignal(SIGNAL_NUMBER_2),
                         tu.atomicStore(ADDRESS_2, VALUE_2),
-                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
-                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                         tu.nonAtomicLoad(ADDRESS_2, VALUE_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
                         tu.atomicStore(ADDRESS_3, VALUE_2),
                         tu.atomicStore(ADDRESS_3, VALUE_1),
                         tu.exitSignal()),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
-                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.atomicLoad(ADDRESS_3, VALUE_2),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.exitSignal()));
 
@@ -1688,7 +1689,7 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
     }
-*/
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
@@ -1751,10 +1752,14 @@ public class MaximalCausalModelTest {
             boolean detectInterruptedThreadRace) {
         com.microsoft.z3.Context context = RaceDetector.getZ3Context();
         Z3Filter z3Filter = new Z3Filter(context, WINDOW_SIZE);
-        Solver solver = context.mkSimpleSolver();
+        Solver fastSolver = context.mkSimpleSolver();
         Params params = context.mkParams();
         params.add("timeout", TIMEOUT_MILLIS);
-        solver.setParameters(params);
+        fastSolver.setParameters(params);
+        Solver soundSolver = context.mkSimpleSolver();
+        params = context.mkParams();
+        params.add("timeout", TIMEOUT_MILLIS);
+        soundSolver.setParameters(params);
 
         mockConfiguration.windowSize = WINDOW_SIZE;
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
@@ -1765,7 +1770,8 @@ public class MaximalCausalModelTest {
         for (List<RawTrace> rawTraces : rawTracesList) {
             trace = traceState.initNextTraceWindow(rawTraces);
         }
-        MaximalCausalModel model = MaximalCausalModel.create(trace, z3Filter, solver, detectInterruptedThreadRace);
+        MaximalCausalModel model = MaximalCausalModel.create(
+                trace, z3Filter, fastSolver, soundSolver, detectInterruptedThreadRace);
 
         Map<String, List<Race>> sigToRaceSuspects = new HashMap<>();
         ArrayList<Race> raceSuspects = new ArrayList<>();

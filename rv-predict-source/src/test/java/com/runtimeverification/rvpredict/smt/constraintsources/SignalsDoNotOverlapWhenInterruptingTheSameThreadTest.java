@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.smt.constraintsources;
 
 import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
 import com.runtimeverification.rvpredict.testutils.ModelConstraintUtils;
@@ -47,7 +48,7 @@ public class SignalsDoNotOverlapWhenInterruptingTheSameThreadTest {
                 mockLastEventExtractor,
                 mockThreadStartsInCurrentWindow
         );
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -64,7 +65,7 @@ public class SignalsDoNotOverlapWhenInterruptingTheSameThreadTest {
                 mockLastEventExtractor,
                 mockThreadStartsInCurrentWindow
         );
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -85,7 +86,7 @@ public class SignalsDoNotOverlapWhenInterruptingTheSameThreadTest {
                 mockLastEventExtractor,
                 mockThreadStartsInCurrentWindow
         );
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "30", "o4", "40",
                 "citv101", "1", "citv102", "2"
@@ -129,7 +130,7 @@ public class SignalsDoNotOverlapWhenInterruptingTheSameThreadTest {
                 mockLastEventExtractor,
                 mockThreadStartsInCurrentWindow
         );
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "30", "o4", "40",
                 "citv101", "1", "citv102", "2"
@@ -173,7 +174,7 @@ public class SignalsDoNotOverlapWhenInterruptingTheSameThreadTest {
                 mockLastEventExtractor,
                 mockThreadStartsInCurrentWindow
         );
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "30", "o4", "40",
                 "citv101", "1", "citv102", "2"
@@ -217,7 +218,7 @@ public class SignalsDoNotOverlapWhenInterruptingTheSameThreadTest {
                 mockLastEventExtractor,
                 mockThreadStartsInCurrentWindow
         );
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "citv101", "1", "citv102", "2"
         )));

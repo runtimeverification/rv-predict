@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.smt.constraintsources;
 
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
 import com.runtimeverification.rvpredict.testutils.ModelConstraintUtils;
@@ -53,7 +54,7 @@ public class DisjointLocksTest {
     @Test
     public void alwaysTrueWithoutLocks() {
         ConstraintSource constraintSource = new DisjointLocks(Collections.emptyList(), (t1, t2) -> true);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -64,7 +65,7 @@ public class DisjointLocksTest {
                         new LockRegion(mockLock_1_1, mockUnlock_1_1, 1)
                 )),
                 (t1, t2) -> true);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -76,7 +77,7 @@ public class DisjointLocksTest {
                         new LockRegion(mockLock_1_2, mockUnlock_1_2, 1)
                 )),
                 (t1, t2) -> true);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -88,7 +89,7 @@ public class DisjointLocksTest {
                         new LockRegion(mockLock_1_2, mockUnlock_1_2, 2)
                 )),
                 (t1, t2) -> true);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "30", "o4", "40")));
         Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
@@ -109,7 +110,7 @@ public class DisjointLocksTest {
                         new LockRegion(mockLock_1_2, mockUnlock_1_2, 2)
                 )),
                 (t1, t2) -> false);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -125,7 +126,7 @@ public class DisjointLocksTest {
                         new LockRegion(mockLock_1_2, mockUnlock_1_2, 2)
                 )),
                 (t1, t2) -> true);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -141,7 +142,7 @@ public class DisjointLocksTest {
                         new LockRegion(mockLock_1_2, mockUnlock_1_2, 2)
                 )),
                 (t1, t2) -> true);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "30", "o4", "40")));
         Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
@@ -167,7 +168,7 @@ public class DisjointLocksTest {
                                 new LockRegion(mockLock_2_2, mockUnlock_2_2, 4)
                         )),
                 (t1, t2) -> true);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "30", "o4", "40",
                 "o5", "15", "o6", "25", "o7", "35", "o8", "45")));

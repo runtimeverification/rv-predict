@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 
-import static com.runtimeverification.rvpredict.testutils.TestUtils.fromOptional;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -42,10 +41,6 @@ public class EventsEnabledForSignalIteratorTest {
         nextIdDelta = 0;
         when(mockContext.newId()).then(invocation -> BASE_ID + nextIdDelta++);
     }
-
-    /*
-     * Tests for the case when we can't race with the main thread, both in strict and fast detection mode.
-     */
 
     @Test
     public void iteratesThroughEventsWhenNotDisabled() throws InvalidTraceDataException {
@@ -80,6 +75,34 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
                 stop(first(e3), Optional.empty()));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), first(e2)),
+                stop(first(e1), first(e3)),
+                stop(first(e2), Optional.empty()));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), first(e2)),
+                stop(first(e1), first(e3)),
+                stop(first(e2), Optional.empty()));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), Optional.empty()));
     }
 
     @Test
@@ -100,6 +123,27 @@ public class EventsEnabledForSignalIteratorTest {
 
         assertIteratorStops(
                 EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
                         events, SIGNAL_NUMBER,
                         false,  // enabledAtStart
                         false  // stopAtFirstMaskChangeEvent
@@ -138,6 +182,32 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
                 stop(first(e3), Optional.empty()));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), Optional.empty()));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), Optional.empty()));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), Optional.empty()));
     }
 
     @Test
@@ -171,6 +241,115 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)));
+    }
+
+    @Test
+    public void iterationWithMultipleEnableAndDisableEvents()
+            throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+        List<ReadonlyEventInterface> e3;
+        List<ReadonlyEventInterface> e4;
+        List<ReadonlyEventInterface> e5;
+        List<ReadonlyEventInterface> e6;
+        List<ReadonlyEventInterface> e7;
+        List<ReadonlyEventInterface> e8;
+        List<ReadonlyEventInterface> e9;
+        List<ReadonlyEventInterface> events = tu.flatten(
+                e1 = tu.enableSignal(SIGNAL_NUMBER),
+                e2 = tu.nonAtomicStore(ADDRESS, VALUE_1),
+                e3 = tu.nonAtomicStore(ADDRESS, VALUE_2),
+                e4 = tu.disableSignal(SIGNAL_NUMBER),
+                tu.nonAtomicStore(ADDRESS, VALUE_3),
+                e5 = tu.enableSignal(SIGNAL_NUMBER),
+                e6 = tu.nonAtomicStore(ADDRESS, VALUE_4),
+                e7 = tu.disableSignal(SIGNAL_NUMBER),
+                e8 = tu.enableSignal(SIGNAL_NUMBER),
+                e9 = tu.disableSignal(SIGNAL_NUMBER)
+        );
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(first(e5), first(e6)),
+                stop(first(e6), first(e7)),
+                stop(last(e8), first(e9)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(first(e5), first(e6)),
+                stop(first(e6), first(e7)),
+                stop(last(e8), first(e9)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), first(e4)),
+                stop(first(e5), first(e7)),
+                stop(last(e8), first(e9)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), first(e4)),
+                stop(first(e5), first(e7)),
+                stop(last(e8), first(e9)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e4)),
+                stop(first(e5), first(e7)),
+                stop(last(e8), first(e9)));
     }
 
     @Test
@@ -209,6 +388,33 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
                 stop(first(e3), first(e4)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e4)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e4)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e4)));
     }
 
     @Test
@@ -239,113 +445,6 @@ public class EventsEnabledForSignalIteratorTest {
                         false  // stopAtFirstMaskChangeEvent
                 ),
                 stop(first(e1), first(e2)));
-    }
-
-    /*
-     * Tests for the case when we can race with the main thread, both in fast and strict detection mode.
-     */
-
-    @Test
-    public void iterationWhenDetectingRacesWithSameThread() throws InvalidTraceDataException {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-        List<ReadonlyEventInterface> e3;
-        List<ReadonlyEventInterface> events = tu.flatten(
-                e1 = tu.nonAtomicStore(ADDRESS, VALUE_1),
-                e2 = tu.nonAtomicStore(ADDRESS, VALUE_2),
-                e3 = tu.nonAtomicStore(ADDRESS, VALUE_3)
-        );
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
-                        events, SIGNAL_NUMBER,
-                        true,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(Optional.empty(), Optional.empty()));
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
-                        events, SIGNAL_NUMBER,
-                        true,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(Optional.empty(), first(e2)),
-                stop(first(e1), first(e3)),
-                stop(first(e2), Optional.empty()));
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
-                        events, SIGNAL_NUMBER,
-                        true,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(Optional.empty(), first(e2)),
-                stop(first(e1), first(e3)),
-                stop(first(e2), Optional.empty()));
-    }
-
-    @Test
-    public void iterationUntilDisablingWhenDetectingRacesWithSameThread() throws InvalidTraceDataException {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-        List<ReadonlyEventInterface> e3;
-        List<ReadonlyEventInterface> events = tu.flatten(
-                e1 = tu.nonAtomicStore(ADDRESS, VALUE_1),
-                e2 = tu.nonAtomicStore(ADDRESS, VALUE_2),
-                e3 = tu.disableSignal(SIGNAL_NUMBER),
-                tu.nonAtomicStore(ADDRESS, VALUE_3)
-        );
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
-                        events, SIGNAL_NUMBER,
-                        true,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(Optional.empty(), first(e3)));
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
-                        events, SIGNAL_NUMBER,
-                        true,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(Optional.empty(), first(e2)),
-                stop(first(e1), first(e3)));
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
-                        events, SIGNAL_NUMBER,
-                        true,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(Optional.empty(), first(e2)),
-                stop(first(e1), first(e3)));
-    }
-
-    @Test
-    public void iterationAfterEnablingWhenDetectingRacesWithSameThread() throws InvalidTraceDataException {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-        List<ReadonlyEventInterface> e3;
-        List<ReadonlyEventInterface> events = tu.flatten(
-                tu.nonAtomicStore(ADDRESS, VALUE_1),
-                e1 = tu.enableSignal(SIGNAL_NUMBER),
-                e2 = tu.nonAtomicStore(ADDRESS, VALUE_2),
-                e3 = tu.nonAtomicStore(ADDRESS, VALUE_3)
-        );
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
-                        events, SIGNAL_NUMBER,
-                        false,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(first(e1), Optional.empty()));
 
         assertIteratorStops(
                 EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
@@ -353,8 +452,7 @@ public class EventsEnabledForSignalIteratorTest {
                         false,  // enabledAtStart
                         false  // stopAtFirstMaskChangeEvent
                 ),
-                stop(first(e1), first(e3)),
-                stop(first(e2), Optional.empty()));
+                stop(first(e1), first(e2)));
 
         assertIteratorStops(
                 EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
@@ -362,34 +460,7 @@ public class EventsEnabledForSignalIteratorTest {
                         false,  // enabledAtStart
                         false  // stopAtFirstMaskChangeEvent
                 ),
-                stop(first(e1), first(e3)),
-                stop(first(e2), Optional.empty()));
-    }
-
-    @Test
-    public void iterationBetweenEnablingAndDisablingWhenDetectingRacesWithSameThread()
-            throws InvalidTraceDataException {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-        List<ReadonlyEventInterface> e3;
-        List<ReadonlyEventInterface> e4;
-        List<ReadonlyEventInterface> e5;
-        List<ReadonlyEventInterface> e6;
-        List<ReadonlyEventInterface> e7;
-        List<ReadonlyEventInterface> e8;
-        List<ReadonlyEventInterface> events = tu.flatten(
-                e1 = tu.enableSignal(SIGNAL_NUMBER),
-                e2 = tu.nonAtomicStore(ADDRESS, VALUE_1),
-                e3 = tu.nonAtomicStore(ADDRESS, VALUE_2),
-                e4 = tu.disableSignal(SIGNAL_NUMBER),
-                tu.nonAtomicStore(ADDRESS, VALUE_3),
-                e5 = tu.enableSignal(SIGNAL_NUMBER),
-                tu.nonAtomicStore(ADDRESS, VALUE_4),
-                e6 = tu.disableSignal(SIGNAL_NUMBER),
-                e7 = tu.enableSignal(SIGNAL_NUMBER),
-                e8 = tu.disableSignal(SIGNAL_NUMBER)
-        );
+                stop(first(e1), first(e2)));
 
         assertIteratorStops(
                 EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
@@ -397,35 +468,11 @@ public class EventsEnabledForSignalIteratorTest {
                         false,  // enabledAtStart
                         false  // stopAtFirstMaskChangeEvent
                 ),
-                stop(first(e1), first(e4)),
-                stop(first(e5), first(e6)),
-                stop(last(e7), first(e8)));
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
-                        events, SIGNAL_NUMBER,
-                        false,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(first(e1), first(e3)),
-                stop(first(e2), first(e4)),
-                stop(first(e5), first(e6)),
-                stop(last(e7), first(e8)));
-
-        assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
-                        events, SIGNAL_NUMBER,
-                        false,  // enabledAtStart
-                        false  // stopAtFirstMaskChangeEvent
-                ),
-                stop(first(e1), first(e3)),
-                stop(first(e2), first(e4)),
-                stop(first(e5), first(e6)),
-                stop(last(e7), first(e8)));
+                stop(first(e1), first(e2)));
     }
 
     @Test
-    public void fastIterationStopsAtLockBorders()
+    public void iterationDoesNotCrossLockBorders()
             throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         List<ReadonlyEventInterface> e1;
@@ -444,13 +491,31 @@ public class EventsEnabledForSignalIteratorTest {
         );
 
         assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionStrictMode(
                         events, SIGNAL_NUMBER,
                         false,  // enabledAtStart
                         false  // stopAtFirstMaskChangeEvent
                 ),
-                stop(first(e1), first(e4)),
-                stop(first(e4), first(e6)));
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(first(e4), second(e4)),
+                stop(second(e4), last(e4)),
+                stop(last(e4), first(e5)),
+                stop(first(e5), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(first(e4), second(e4)),
+                stop(second(e4), first(e5)),
+                stop(first(e5), first(e6)));
 
         assertIteratorStops(
                 EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
@@ -473,10 +538,19 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e2), first(e4)),
                 stop(first(e4), first(e5)),
                 stop(last(e4), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e4)),
+                stop(first(e4), first(e6)));
     }
 
     @Test
-    public void fastIterationStopsAtFirstEnableEventWhenRequested()
+    public void stopsAtFirstEnableEventWhenRequested()
             throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         List<ReadonlyEventInterface> e1;
@@ -494,13 +568,42 @@ public class EventsEnabledForSignalIteratorTest {
         );
 
         assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionStrictMode(
                         events, SIGNAL_NUMBER,
                         true,  // enabledAtStart
                         true  // stopAtFirstMaskChangeEvent
                 ),
-                stop(Optional.empty(), first(e3)),
-                stop(first(e3), first(e5)));
+                stop(Optional.empty(), first(e1)),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), second(e3)),
+                stop(second(e3), last(e3)),
+                stop(last(e3), first(e4)),
+                stop(first(e4), first(e5)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        true  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), first(e1)),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), second(e3)),
+                stop(second(e3), first(e4)),
+                stop(first(e4), first(e5)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        true  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), first(e2)),
+                stop(first(e1), first(e3)),
+                stop(first(e3), last(e3)),
+                stop(last(e3), first(e5)));
 
         assertIteratorStops(
                 EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
@@ -523,6 +626,15 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e1), first(e3)),
                 stop(first(e3), first(e4)),
                 stop(last(e3), first(e5)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        true  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), first(e3)),
+                stop(first(e3), first(e5)));
     }
 
     @Test
@@ -540,17 +652,36 @@ public class EventsEnabledForSignalIteratorTest {
                 e3 = tu.atomicStore(ADDRESS, VALUE_3),
                 e4 = tu.nonAtomicStore(ADDRESS, VALUE_4),
                 e5 = tu.disableSignal(SIGNAL_NUMBER),
-                tu.nonAtomicStore(ADDRESS, VALUE_5)
+                tu.nonAtomicStore(ADDRESS, VALUE_5),
+                tu.enableSignal(SIGNAL_NUMBER)
         );
 
         assertIteratorStops(
-                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionStrictMode(
                         events, SIGNAL_NUMBER,
                         true,  // enabledAtStart
                         true  // stopAtFirstMaskChangeEvent
                 ),
-                stop(Optional.empty(), first(e3)),
-                stop(first(e3), first(e5)));
+                stop(Optional.empty(), first(e1)),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), second(e3)),
+                stop(second(e3), last(e3)),
+                stop(last(e3), first(e4)),
+                stop(first(e4), first(e5)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        true  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), first(e1)),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), second(e3)),
+                stop(second(e3), first(e4)),
+                stop(first(e4), first(e5)));
 
         assertIteratorStops(
                 EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
@@ -573,6 +704,15 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e1), first(e3)),
                 stop(first(e3), first(e4)),
                 stop(last(e3), first(e5)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        true,  // enabledAtStart
+                        true  // stopAtFirstMaskChangeEvent
+                ),
+                stop(Optional.empty(), first(e3)),
+                stop(first(e3), first(e5)));
     }
 
     @Test
@@ -641,22 +781,35 @@ public class EventsEnabledForSignalIteratorTest {
     }
 
     private void assertIteratorStops(EventsEnabledForSignalIterator iterator, Stop ... stops) {
+        int stopIndex = -1;
         for (Stop stop : stops) {
+            stopIndex++;
+            String stopName = "stop #" + stopIndex;
             Assert.assertTrue(iterator.advance());
             Optional<ReadonlyEventInterface> previous =
                     iterator.getPreviousEventWithDefault(Optional.empty());
             if (stop.first.isPresent()) {
-                Assert.assertEquals("First stop event: ", stop.first.get(), fromOptional(previous));
+                Assert.assertTrue(
+                        "Expected the previous event at " + stopName + " to be " + stop.first.get()
+                                + " but got no event.",
+                        previous.isPresent());
+                Assert.assertEquals("Previous event at " + stopName + ": ", stop.first.get(), previous.get());
             } else {
-                Assert.assertFalse(previous.isPresent());
+                Assert.assertFalse(
+                        "Expected no event for the previous event at " + stopName + ".", previous.isPresent());
             }
             Optional<ReadonlyEventInterface> current =
                     iterator.getCurrentEventWithDefault(Optional.empty());
             if (stop.second.isPresent()) {
-                Assert.assertTrue("Expected: " + stop.second.get() + " but got no event.", current.isPresent());
-                Assert.assertEquals("Second stop event: ", stop.second.get(), current.get());
+                Assert.assertTrue(
+                        "Expected the current event at " + stopName + " to be " + stop.second.get()
+                                + " but got no event.",
+                        current.isPresent());
+                Assert.assertEquals(
+                        "Current event at " + stopName + ": ", stop.second.get(), current.get());
             } else {
-                Assert.assertFalse(current.isPresent());
+                Assert.assertFalse(
+                        "Expected no event for the current event at " + stopName + ".", current.isPresent());
             }
         }
         Assert.assertFalse(iterator.advance());
@@ -679,6 +832,11 @@ public class EventsEnabledForSignalIteratorTest {
     private Optional<ReadonlyEventInterface> first(List<ReadonlyEventInterface> events) {
         assert !events.isEmpty();
         return Optional.of(events.get(0));
+    }
+
+    private Optional<ReadonlyEventInterface> second(List<ReadonlyEventInterface> events) {
+        assert 1 < events.size();
+        return Optional.of(events.get(1));
     }
 
     private Optional<ReadonlyEventInterface> last(List<ReadonlyEventInterface> events) {

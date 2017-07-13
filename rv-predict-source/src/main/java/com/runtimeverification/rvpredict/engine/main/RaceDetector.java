@@ -33,7 +33,8 @@ public class RaceDetector implements Constants {
 
     private final Z3Filter z3filter;
 
-    private final com.microsoft.z3.Solver solver;
+    private final com.microsoft.z3.Solver fastSolver;
+    private final com.microsoft.z3.Solver soundSolver;
 
     public RaceDetector(Configuration config) {
         this.config = config;
@@ -43,10 +44,14 @@ public class RaceDetector implements Constants {
         try {
             /* setup the solver */
             // mkSimpleSolver < mkSolver < mkSolver("QF_IDL")
-            this.solver = z3Context.mkSimpleSolver();
+            this.fastSolver = z3Context.mkSimpleSolver();
             Params params = z3Context.mkParams();
-            params.add("timeout", config.solver_timeout * 1000);
-            solver.setParameters(params);
+            params.add("timeout", config.solver_timeout * 900);
+            fastSolver.setParameters(params);
+            this.soundSolver = z3Context.mkSimpleSolver();
+            params = z3Context.mkParams();
+            params.add("timeout", config.solver_timeout * 100);
+            soundSolver.setParameters(params);
         } catch (Z3Exception e) {
             throw new RuntimeException(e);
         }
@@ -113,7 +118,8 @@ public class RaceDetector implements Constants {
         }
 
         Map<String, Race> result =
-                MaximalCausalModel.create(trace, z3filter, solver, config.detectInterruptedThreadRace())
+                MaximalCausalModel.create(
+                        trace, z3filter, soundSolver, fastSolver, config.detectInterruptedThreadRace())
                         .checkRaceSuspects(sigToRaceSuspects);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {

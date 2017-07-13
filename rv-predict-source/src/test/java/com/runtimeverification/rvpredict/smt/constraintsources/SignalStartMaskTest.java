@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableMap;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.VariableSource;
 import com.runtimeverification.rvpredict.testutils.ModelConstraintUtils;
@@ -128,7 +129,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -141,7 +142,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -160,7 +161,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "sm_101_3", "0",
                 "citv101", "100")));
@@ -188,7 +189,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
@@ -215,7 +216,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         Consumer<VariableSource> assertUnconstrained = mockVariableSource -> assertSignalCanBeEnabedOnThread(
                 constraint,
@@ -261,7 +262,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
@@ -290,7 +291,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         assertSignalIsDisabledOnThread(
                 constraint,
@@ -328,7 +329,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         Consumer<VariableSource> assertSignalDisabled = mockVariableSource -> assertSignalIsDisabledOnThread(
                 constraint,
@@ -378,7 +379,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         Consumer<VariableSource> assertSignalDisabled = mockVariableSource -> assertSignalIsDisabledOnThread(
                 constraint,
@@ -419,7 +420,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         Consumer<VariableSource> assertSignalDisabled = mockVariableSource -> assertSignalIsDisabledOnThread(
                 constraint,
@@ -457,7 +458,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
@@ -506,7 +507,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         assertSignalIsDisabledOnThread(
                 constraint,
@@ -541,7 +542,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         VariableSource mockVariableSource = ModelConstraintUtils.orderedEvents("o3", ENABLE_2_60, "o4");
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
@@ -571,7 +572,7 @@ public class SignalStartMaskTest {
                 mockTtidToSignalNumber, mockTtidToSignalHandler,
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         assertSignalIsDisabledOnThread(
                 constraint,

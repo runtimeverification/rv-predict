@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.smt.constraintsources;
 
 import com.google.common.collect.ImmutableMap;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
 import com.runtimeverification.rvpredict.testutils.ModelConstraintUtils;
@@ -35,14 +36,14 @@ public class IntraThreadOrderingTest {
     @Test
     public void alwaysTrueWithoutEvents() {
         ConstraintSource constraintSource = new IntraThreadOrdering(Collections.emptyMap());
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
     @Test
     public void alwaysTrueWithOneEmptyThread() {
         ConstraintSource constraintSource = new IntraThreadOrdering(Collections.singletonMap(5, Collections.emptyList()));
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -50,7 +51,7 @@ public class IntraThreadOrderingTest {
     public void alwaysTrueWithOneEventOneThread() {
         ConstraintSource constraintSource = new IntraThreadOrdering(
                 Collections.singletonMap(5, Collections.singletonList(mockEvent1)));
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -58,7 +59,7 @@ public class IntraThreadOrderingTest {
     public void eventsOnSingleThreadMustBeOrdered() {
         ConstraintSource constraintSource = new IntraThreadOrdering(
                 Collections.singletonMap(5, Arrays.asList(mockEvent1, mockEvent2, mockEvent3)));
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "30")));
         Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
@@ -77,7 +78,7 @@ public class IntraThreadOrderingTest {
                 ImmutableMap.of(
                         5, Collections.singletonList(mockEvent1),
                         6, Collections.singletonList(mockEvent2)));
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -87,7 +88,7 @@ public class IntraThreadOrderingTest {
                 ImmutableMap.of(
                         5, Arrays.asList(mockEvent1, mockEvent2),
                         6, Arrays.asList(mockEvent3, mockEvent4)));
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "15", "o4", "20")));
         Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(

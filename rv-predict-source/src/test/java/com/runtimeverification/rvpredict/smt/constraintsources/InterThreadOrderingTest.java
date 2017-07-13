@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.smt.constraintsources;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
 import com.runtimeverification.rvpredict.testutils.ModelConstraintUtils;
@@ -44,7 +45,7 @@ public class InterThreadOrderingTest {
                 otid -> OptionalInt.empty(),
                 ttid -> Optional.empty(),
                 ttid -> Optional.empty());
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -55,7 +56,7 @@ public class InterThreadOrderingTest {
                 otidToTtid(2, 3),
                 ttidToEvent(3, mockEvent2),
                 ttid -> Optional.empty());
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20")));
         Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
@@ -71,7 +72,7 @@ public class InterThreadOrderingTest {
                 otidToTtid(2, 3),
                 ttid -> Optional.empty(),
                 ttid -> Optional.empty());
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -82,7 +83,7 @@ public class InterThreadOrderingTest {
                 otid -> OptionalInt.empty(),
                 ttidToEvent(3, mockEvent2),
                 ttid -> Optional.empty());
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -93,7 +94,7 @@ public class InterThreadOrderingTest {
                 otidToTtid(2, 5),
                 ttid -> Optional.empty(),
                 ttidToEvent(5, mockEvent2));
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o3", "20", "o2", "10")));
         Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
@@ -109,7 +110,7 @@ public class InterThreadOrderingTest {
                 otidToTtid(2, 5),
                 ttid -> Optional.empty(),
                 ttid -> Optional.empty());
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 
@@ -120,7 +121,7 @@ public class InterThreadOrderingTest {
                 otid -> OptionalInt.empty(),
                 ttid -> Optional.empty(),
                 ttidToEvent(5, mockEvent2));
-        ModelConstraint constraint = constraintSource.createConstraint();
+        ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
         Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
     }
 

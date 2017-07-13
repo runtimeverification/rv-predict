@@ -384,8 +384,8 @@ public class MaximalCausalModel {
                     solver.push();
                     solver.add(z3filter.filter(suspectToAsst.get(race)));
                     boolean isRace = solver.check() == Status.SATISFIABLE;
-                    atLeastOneRace |= isRace;
                     if (isRace) {
+                        atLeastOneRace = true;
                         Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution();
                         Map<Integer, Integer> signalParents = extractSignalParents();
                         fillSignalStack(threadToExecution, signalParents, race);
@@ -438,6 +438,18 @@ public class MaximalCausalModel {
         race.setSecondSignalStack(computeSignalStack(threadToExecution, signalParents, race.secondEvent()));
     }
 
+    private OptionalLong findEventOrder(
+            int ttid,
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            ReadonlyEventInterface event) {
+        for (EventWithOrder eventWithOrder : threadToExecution.get(ttid)) {
+            if (eventWithOrder.getEvent().getEventId() == event.getEventId()) {
+                return OptionalLong.of(eventWithOrder.getOrderId());
+            }
+        }
+        return OptionalLong.empty();
+    }
+
     private List<Race.SignalStackEvent> computeSignalStack(
             Map<Integer, List<EventWithOrder>> threadToExecution,
             Map<Integer, Integer> signalParents,
@@ -446,15 +458,9 @@ public class MaximalCausalModel {
         int ttid = trace.getTraceThreadId(event);
         signalStack.add(Race.SignalStackEvent.fromEvent(event, ttid));
 
-        Long firstEventOrder = null;
-        for (EventWithOrder eventWithOrder : threadToExecution.get(ttid)) {
-            if (eventWithOrder.getEvent().getEventId() == event.getEventId()) {
-                firstEventOrder = eventWithOrder.getOrderId();
-                break;
-            }
-        }
-        assert firstEventOrder != null;
-        long currentEventOrder = firstEventOrder;
+        OptionalLong maybeFirstEventOrder = findEventOrder(ttid, threadToExecution, event);
+        assert maybeFirstEventOrder.isPresent();
+        long currentEventOrder = maybeFirstEventOrder.getAsLong();
 
         while (trace.getThreadType(ttid) != ThreadType.THREAD) {
             int parentTtid = signalParents.get(ttid);

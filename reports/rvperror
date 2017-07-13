@@ -1,0 +1,5 @@
+#!/bin/sh
+metadata=$(tempfile)
+trap "rm -rf $metadata" EXIT INT TERM
+printf '{"suppressions":[{"condition":["Category","LintError"],"suppress":false}],"message_length":80,"format":"Console","previous_errors":[],"fatal_errors":false,"rv_error":""}\n' > $metadata
+"$(dirname "$0")/rvpsymbolize-json" "$@" | rv-error $metadata

@@ -116,12 +116,20 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
                     isSignal
                             ? getLastEvent(interruptedTtid)
                             : ttidToJoinEvent.apply(interruptedTtid);
-            EventsEnabledForSignalIterator iterator =
-                    new EventsEnabledForSignalIterator(
-                            interruptedThreadEvents, detectInterruptedThreadRace, signalNumber,
-                            false,  // enabledAtStart
-                            false  // stopAtFirstMaskChangeEvent
-                    );
+            EventsEnabledForSignalIterator iterator;
+            if (detectInterruptedThreadRace) {
+                iterator = EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        interruptedThreadEvents, signalNumber,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
+            } else {
+                iterator = EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        interruptedThreadEvents, signalNumber,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                );
+            }
             while (iterator.advance()) {
                 Optional<ReadonlyEventInterface> previousEvent = iterator.getPreviousEventWithDefault(Optional.empty());
                 assert previousEvent.isPresent();
@@ -167,12 +175,20 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             int interruptedTtid) {
         Optional<ReadonlyEventInterface> joinThreadEvent = ttidToJoinEvent.apply(interruptedTtid);
         Optional<ReadonlyEventInterface> startThreadEvent = ttidToStartEvent.apply(interruptedTtid);
-        EventsEnabledForSignalIterator iterator =
-                new EventsEnabledForSignalIterator(
-                        interruptedThreadEvents, detectInterruptedThreadRace, interruptingSignalNumber,
-                        true,  // enabledAtStart
-                        true  // stopAtFirstMaskChangeEvent
-                );
+        EventsEnabledForSignalIterator iterator;
+        if (detectInterruptedThreadRace) {
+            iterator = EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                    interruptedThreadEvents, interruptingSignalNumber,
+                    true,  // enabledAtStart
+                    true  // stopAtFirstMaskChangeEvent
+            );
+        } else {
+            iterator = EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                    interruptedThreadEvents, interruptingSignalNumber,
+                    true,  // enabledAtStart
+                    true  // stopAtFirstMaskChangeEvent
+            );
+        }
         ImmutableList.Builder<ModelConstraint> possibleInterruptions = new ImmutableList.Builder<>();
         while (iterator.advance()) {
             possibleInterruptions.add(signalInterruptsBetweenEvents(
@@ -197,12 +213,20 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
         }
         ImmutableList.Builder<ModelConstraint> possibleInterruptionPlaces = new ImmutableList.Builder<>();
 
-        EventsEnabledForSignalIterator iterator =
-                new EventsEnabledForSignalIterator(
-                        interruptedThreadEvents, detectInterruptedThreadRace, interruptingSignalNumber,
-                        true,  // enabledAtStart
-                        true  // stopAtFirstMaskChangeEvent
-                );
+        EventsEnabledForSignalIterator iterator;
+        if (detectInterruptedThreadRace) {
+            iterator = EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                    interruptedThreadEvents, interruptingSignalNumber,
+                    true,  // enabledAtStart
+                    true  // stopAtFirstMaskChangeEvent
+            );
+        } else {
+            iterator = EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                    interruptedThreadEvents, interruptingSignalNumber,
+                    true,  // enabledAtStart
+                    true  // stopAtFirstMaskChangeEvent
+            );
+        }
         while (iterator.advance()) {
             Optional<ReadonlyEventInterface> previousEvent =
                     iterator.getPreviousEventWithDefault(firstInterruptedSignalEvent);

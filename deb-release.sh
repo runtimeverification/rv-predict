@@ -30,11 +30,31 @@ if ! type mkcmake > /dev/null 2>&1; then
 	export PATH=${HOME}/pkg/bin:${PATH}
 fi
 
+# I do not want to run this script as root, but the files in a Debian
+# binary package need to have the proper ownership, root:root.  In
+# Ubuntu, the way for an unprivileged user to install a file "as if"
+# using root permissions is with fakeroot. fakeroot will save file
+# meta-information to a file, however, independent invocations of
+# fakeroot truncate the meta-information file.  In order to accumulate
+# meta-information over several invocations of 'fakeroot install -o root
+# -g root ...', I use a FIFO as the output file.  I empty the FIFO to a
+# regular file in the background using tail -f.
+#
+# TBD: this would be a lot easier with NetBSD's install(1), mtree(1),
+# and pax(1) utilities, so someday I may install a NetBSD cross
+# toolchain on the RV, Inc., development boxes.
+# 
 mkfifo ${rootfifo}
 tail -f ${rootfifo} > ${rootsave} &
 
 # avoid creating files & directories with permissions 0775 
 umask 022
+
+#
+# Call mkcmake with FAKEROOT_FIFO set so that meta-information is
+# captured.  When FAKEROOT_FIFO is set, Makefile.common sets INSTALL to
+# fakeroot $(INSTALL) -s $(FAKEROOT_FIFO).
+#
 mkcmake FAKEROOT_FIFO=${rootfifo} RELEASE=yes DESTDIR=${destdir} PREFIX=/usr install
 fakeroot -s ${rootfifo} cp -rp DEBIAN ${destdir}/.
 cat > ${tmpdir}/control <<END_OF_CONTROL
@@ -54,5 +74,11 @@ END_OF_CONTROL
 fakeroot -s ${rootfifo} install -o root -g root -m 0664 \
     ${tmpdir}/control ${destdir}/DEBIAN/control
 fakeroot -s ${rootfifo} chown -R root:root ${destdir}/DEBIAN
+
+#
+# Use `fakeroot -i ${rootsave}` to invoke `dpkg-deb` so that
+# in the binary package `dpkg-deb` builds, the meta-information
+# that we accumulated previously takes effect.
+#
 fakeroot -i ${rootsave} dpkg-deb -b ${destdir} rv-predict-c-${version}.deb
 exit 0

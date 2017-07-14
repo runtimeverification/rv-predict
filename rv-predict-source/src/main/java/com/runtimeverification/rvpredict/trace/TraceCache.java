@@ -18,7 +18,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -98,15 +100,15 @@ public class TraceCache {
         return 1 << (32 - Integer.numberOfLeadingZeros(x));
     }
 
-    protected final List<RawTrace> readEventWindow() throws IOException {
-        List<RawTrace> rawTraces =  new ArrayList<>();
-	final int maxEvents = config.windowSize;
-	if (Configuration.debug)
-	    System.err.println(readers.size() + " readers");
+    private List<RawTrace> readEventWindow() throws IOException {
+        List<RawTrace> rawTraces = new ArrayList<>();
+        final int maxEvents = config.windowSize;
+        if (Configuration.debug)
+            System.err.println(readers.size() + " readers");
         ArrayList<ReadonlyEventInterface> events = new ArrayList<>(eventsBuffer);
-	eventsBuffer.clear();
-	events.ensureCapacity(capacity);
-	for (int i = events.size(); i < maxEvents + 1; i++) {
+        eventsBuffer.clear();
+        events.ensureCapacity(capacity);
+        for (int i = events.size(); i < maxEvents + 1; i++) {
             ReadonlyEventInterface event;
             long leastGID = Long.MAX_VALUE;
             IEventReader leastReader = null;
@@ -116,8 +118,8 @@ public class TraceCache {
                 event = reader.lastReadEvent();
                 if (event != null && event.getEventId() < leastGID) {
 //                      System.err.println("choosing new reader because gid " + event.getEventId() + " < " + leastGID);
-                        leastReader = reader;
-                        leastGID = event.getEventId();
+                    leastReader = reader;
+                    leastGID = event.getEventId();
                 }
             }
             if (leastReader == null)
@@ -127,41 +129,41 @@ public class TraceCache {
             events.add(event);
 //          System.err.println("adding event " + event.getEventId());
             try {
-		leastReader.readEvent();
+                leastReader.readEvent();
             } catch (EOFException e) {
-		readers.remove(leastReader);
+                readers.remove(leastReader);
             }
         }
         if (Configuration.debug)
             System.err.println("got " + events.size() + " events out of " + maxEvents);
         final int n = events.size();
         if (n <= 0)
-                return rawTraces;
+            return rawTraces;
         int nextGenStart = maxEvents + 1;
-        final long genMask = (long)0xffff << 48;
+        final long genMask = (long) 0xffff << 48;
         if (n < nextGenStart)
-                nextGenStart = n;
+            nextGenStart = n;
         else for (int i = n - 1; i > 0; i--) {
-                if ((events.get(i - 1).getEventId() & genMask) !=
+            if ((events.get(i - 1).getEventId() & genMask) !=
                     (events.get(i).getEventId() & genMask)) {
-                        nextGenStart = i;
-                        break;
-                }
+                nextGenStart = i;
+                break;
+            }
         }
         if (nextGenStart == maxEvents + 1 && !config.withoutGeneration()) {
-                System.err.println("no change of generation in " +
+            System.err.println("no change of generation in " +
                     (maxEvents + 1) + " events");
-                return rawTraces;                // XXX
+            return rawTraces;                // XXX
         }
         if (Configuration.debug) {
-                System.err.println("buffering " + (n - nextGenStart) +
+            System.err.println("buffering " + (n - nextGenStart) +
                     " events after window boundary");
         }
         eventsBuffer.addAll(events.subList(nextGenStart, n));
         events.subList(nextGenStart, n).clear();
         /* Make GIDs compact. */
         for (int i = 0; i < nextGenStart; i++)
-                events.set(i, events.get(i).destructiveWithEventId(lastGID + i));
+            events.set(i, events.get(i).destructiveWithEventId(lastGID + i));
         lastGID += maxEvents;
         splitTracesIntoThreads(rawTraces, events, nextGenStart);
         return rawTraces;
@@ -219,14 +221,15 @@ public class TraceCache {
         }
     }
 
-    private RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
+    private RawTrace tidSpanToRawTrace(List<ReadonlyEventInterface> events,
             int tidStart, int tidEnd, int signalDepth, long otid) {
         boolean threadStartsInTheCurrentWindow;
         boolean signalEndsInTheCurrentWindow = false;
-        List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
+        List<ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
         int n = tidEvents.size(), length = getNextPowerOfTwo(n);
         tidEvents.sort(ReadonlyEventInterface::compareTo);
         int threadId;
+        OptionalLong previousWindowSignalNumber = OptionalLong.empty();
         if (signalDepth == 0) {
             OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
             threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
@@ -240,12 +243,15 @@ public class TraceCache {
                     throw new IllegalStateException("No thread id for existing signal.");
                 }
                 threadId = maybeThreadId.getAsInt();
+                previousWindowSignalNumber = crntState.getSignalNumberForThreadAtWindowStart(threadId);
                 if (signalEndsInTheCurrentWindow) {
                     crntState.exitSignal(signalDepth, otid);
                 }
             } else if (!signalEndsInTheCurrentWindow) {
                 threadStartsInTheCurrentWindow = true;
-                threadId = crntState.enterSignal(signalDepth, otid);
+                Optional<ReadonlyEventInterface> signalStartEvent = getSignalStartEvent(events);
+                assert signalStartEvent.isPresent();
+                threadId = crntState.enterSignal(signalDepth, otid, signalStartEvent.get().getSignalNumber());
             } else {
                 threadStartsInTheCurrentWindow = true;
                 threadId = crntState.getNewThreadId();
@@ -253,18 +259,24 @@ public class TraceCache {
         }
         return new RawTrace(
                 0, n, tidEvents.toArray(new ReadonlyEventInterface[length]),
-                signalDepth, threadId, threadStartsInTheCurrentWindow, signalEndsInTheCurrentWindow);
+                signalDepth, threadId, threadStartsInTheCurrentWindow, signalEndsInTheCurrentWindow,
+                previousWindowSignalNumber);
     }
 
-    private boolean signalStartsNow(List<? extends ReadonlyEventInterface> events) {
-        return events.stream().anyMatch(event -> event.getType() == EventType.ENTER_SIGNAL);
+    private Optional<ReadonlyEventInterface> getSignalStartEvent(List<ReadonlyEventInterface> events) {
+        return events.stream().filter(event -> event.getType() == EventType.ENTER_SIGNAL).findAny();
     }
 
-    private boolean signalEndsNow(List<? extends ReadonlyEventInterface> events) {
+    private boolean signalStartsNow(List<ReadonlyEventInterface> events) {
+        return getSignalStartEvent(events).isPresent();
+    }
+
+    private boolean signalEndsNow(List<ReadonlyEventInterface> events) {
         return events.stream().anyMatch(event -> event.getType() == EventType.EXIT_SIGNAL);
     }
 
     public Trace getTraceWindow() throws IOException {
+        crntState.startWindow();
         List<RawTrace> rawTraces = readEventWindow();
 
         /* finish reading events and create the Trace object */

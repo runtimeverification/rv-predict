@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
@@ -204,7 +205,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
                     rawTraces.add(new RawTrace(
                             b.start, b.cursor, b.events, 0, threadId,
-                            threadStartsInTheCurrentWindow, false));
+                            threadStartsInTheCurrentWindow, false,
+                            OptionalLong.empty()));
                 }
             }
             if (rawTraces.size() == 1) {

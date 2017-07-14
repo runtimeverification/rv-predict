@@ -5,6 +5,8 @@ import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.util.Constants;
 
+import java.util.OptionalLong;
+
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array
  * of events obtained from an {@link ILoggingEngine}.
@@ -24,11 +26,12 @@ public class RawTrace {
     private final ReadonlyEventInterface[] events;
 
     public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth, int threadId,
-            boolean threadStartsInTheCurrentWindow, boolean signalEndsInTheCurrentWindow) {
-        long signalNumber = com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL;
+            boolean threadStartsInTheCurrentWindow, boolean signalEndsInTheCurrentWindow,
+            OptionalLong previousWindowSignalNumber) {
+        long signalNumber =
+                previousWindowSignalNumber.orElse(com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL);
         long signalHandler = Constants.INVALID_ADDRESS;
         if (signalDepth != 0) {
-            // TODO(virgil): Keep the signal number in the ThreadState class.
             for (int i = start; i < end; i++) {
                 ReadonlyEventInterface event = events[i];
                 if (event.getType() == EventType.ENTER_SIGNAL) {
@@ -38,6 +41,8 @@ public class RawTrace {
                 }
             }
         }
+        assert (signalNumber == com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL)
+                == (signalDepth == 0);
         long originalThreadId = Constants.INVALID_THREAD_ID;
         if (start < end) {
             originalThreadId = events[start].getOriginalThreadId();

@@ -27,6 +27,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 
+import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -793,9 +794,9 @@ public class TraceTest {
         Trace trace = createTrace(rawTraces);
 
         ImmutableList<ReadonlyEventInterface> event1Stack =
-                ImmutableList.copyOf(trace.getStacktraceAt(TraceUtils.extractSingleEvent(event1List)));
+                ImmutableList.copyOf(trace.getStacktraceAt(extractSingleEvent(event1List)));
         ImmutableList<ReadonlyEventInterface> event2Stack =
-                ImmutableList.copyOf(trace.getStacktraceAt(TraceUtils.extractSingleEvent(event2List)));
+                ImmutableList.copyOf(trace.getStacktraceAt(extractSingleEvent(event2List)));
 
         Assert.assertEquals(3, event1Stack.size());
         Assert.assertEquals(EventType.READ, event1Stack.get(0).getType());
@@ -841,6 +842,50 @@ public class TraceTest {
         createTrace(rawTraces);
 
         verify(mockTraceState, times(3)).onSignalEvent(any());
+    }
+
+    @Test
+    public void signalsAreEnabledIfRunningAtWindowStart() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        tu.createRawTrace(
+                true,
+                tu.atomicStore(ADDRESS_1, VALUE_1)
+        );
+        tu.createRawTrace(
+                true,
+                tu.switchThread(THREAD_ID_1, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1)
+        );
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        false,
+                        tu.setPc(PC_BASE),
+                        tu.switchThread(THREAD_ID_1, NO_SIGNAL),
+                        e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)
+                ),
+                tu.createRawTrace(
+                        false,
+                        tu.switchThread(THREAD_ID_1, ONE_SIGNAL),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.exitSignal()
+                ));
+
+        when(mockConfiguration.stacks()).thenReturn(true);
+
+        when(mockTraceState.getTtidFromOtidAndSignalDepthAtStart(THREAD_ID_1, 0)).thenReturn(1);
+        when(mockTraceState.getUnfinishedSignalTtidsAtWindowStart()).thenReturn(ImmutableList.of(2));
+
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertEquals(1, trace.getTraceThreadId(extractSingleEvent(e1)));
+        Assert.assertEquals(2, trace.getTraceThreadId(extractSingleEvent(e2)));
+
+        Assert.assertTrue(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(1));
     }
 
     private Trace createTrace(List<RawTrace> rawTraces) {

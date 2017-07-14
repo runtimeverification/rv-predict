@@ -18,7 +18,7 @@
         <dependency>
             <groupId>com.runtimeverification.licensing</groupId>
             <artifactId>rv-licensing</artifactId>
-            <version>1.4.0</version>
+            <version>1.4.4</version>
         </dependency>
         <dependency>
             <groupId>com.beust</groupId>

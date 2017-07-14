@@ -5,7 +5,7 @@
 #
 .include <bsd.own.mk>
 
-PROGS=eitherorboth sigcount
+PROGS=eitherorboth raise sigcount
 
 CC=clang
 CFLAGS+=-std=c11
@@ -16,6 +16,7 @@ LDADD+=-g
 CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
 SRCS.eitherorboth=eitherorboth.c
 SRCS.sigcount=sigcount.c
+SRCS.raise=raise.c
 WARNS=4
 
 .include <bsd.prog.mk>

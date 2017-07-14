@@ -9,6 +9,7 @@ _mkc_*
 *.o
 *.pico
 *.po
+raise
 sigcount
 *.so
 .*.swp

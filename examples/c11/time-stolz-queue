@@ -1,0 +1,46 @@
+#!/bin/sh
+
+usage()
+{
+	echo "usage: $(basename $0) [tsan | rvp]" 1>&2
+	exit 1
+}
+
+with_tsan()
+{
+	echo trying with tsan
+	count=200
+	while [ $count -gt 0 ]; do
+		count=$((count - 1))
+		./stolz-queue.tsan > /dev/null
+	done
+}
+
+with_rvp()
+{
+	echo trying with rv-predict
+	count=200
+	while [ $count -gt 0 ]; do
+		count=$((count - 1))
+		./stolz-queue.rvp > /dev/null
+	done
+}
+
+if [ $# -eq 0 ]; then
+	time ./time-stolz-queue tsan
+	time ./time-stolz-queue rvp
+elif [ $# -eq 1 ]; then
+	case $1 in
+	tsan)
+		with_tsan
+		;;
+	rvp)
+		with_rvp
+		;;
+	*)
+		usage
+		;;
+	esac
+fi
+
+exit 0

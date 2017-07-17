@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+set -u
 
 cleanup_hook()
 {
@@ -29,7 +30,7 @@ trap_with_reason()
 
 usage()
 {
-	echo "usage: $(basename $0) [--filter no-shorten|no-signal|no-system] program" 1>&2
+	echo "usage: $(basename $0) [--no-shorten|--no-signal|--no-system] program" 1>&2
 	exit 1
 }
 
@@ -64,18 +65,8 @@ last_n_components()
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--filter)
-		shift
-		for filt in $(echo $1 | sed 's/,/ /g'); do
-			case $filt in
-			no-shorten|no-signal|no-system)
-				eval filter_${filt##no-}=no
-				;;
-			*)
-				usage
-				;;
-			esac
-		done
+	--no-shorten|--no-signal|--no-system)
+		eval filter_${1##--no-}=no
 		shift
 		;;
 	--)

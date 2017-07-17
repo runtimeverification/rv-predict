@@ -315,4 +315,17 @@ This will be fixed in the 2.1 release.
 
 ## Further reading
 
-... PLDI paper ...
+The following papers best describe the technology in RV-Predict/C:
+
+    Jeff Huang, Patrick O'Neil Meredith, and Grigore Rosu. 2014.
+    "Maximal sound predictive race detection with control flow abstraction."
+    In Proceedings of the 35th ACM SIGPLAN Conference on
+    Programming Language Design and Implementation (PLDI '14).
+    ACM, New York, NY, USA, 337-348.
+
+    Traian-Florin Serbanuta, Feng Chen, and Grigore Rosu. 2012.
+    "Maximal Causal Models for Sequentially Consistent Systems."
+    In Proceedings of the 3rd International Conference on
+    Runtime Verification (RV '12).
+    LNCS Volume 7687, 2013, pp. 136-150
+

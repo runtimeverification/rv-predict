@@ -114,8 +114,8 @@ public class Metadata implements MetadataInterface, Serializable {
     }
 
     @Override
-    public String getLockSig(LockRepresentation lockRepresentation) {
-        return lockRepresentation.toString();
+    public String getLockSig(ReadonlyEventInterface event, Trace trace) {
+        return event.getLockRepresentation().toString();
     }
 
     public class TooManyVariables extends RuntimeException {}

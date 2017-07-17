@@ -98,28 +98,33 @@ public class MaximalCausalModel {
     /**
      * The formula that describes the maximal causal model of the trace tau.
      */
-    private final FormulaTerm.Builder phiTau = FormulaTerm.andBuilder();
+    private final FormulaTerm.Builder unsoundButFastPhiTau = FormulaTerm.andBuilder();
+    private final FormulaTerm.Builder soundPhiTau = FormulaTerm.andBuilder();
 
     private final Map<String, ReadonlyEventInterface> nameToEvent = new HashMap<>();
 
     private final Z3Filter z3filter;
 
-    private final com.microsoft.z3.Solver solver;
+    private final com.microsoft.z3.Solver fastSolver;
+    private final com.microsoft.z3.Solver soundSolver;
 
     private final boolean detectInterruptedThreadRace;
 
     public static MaximalCausalModel create(
-            Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
-        MaximalCausalModel model = new MaximalCausalModel(trace, z3filter, solver, detectInterruptedThreadRace);
+            Trace trace, Z3Filter z3filter, Solver fastSolver, Solver soundSolver, boolean detectInterruptedThreadRace) {
+        MaximalCausalModel model = new MaximalCausalModel(
+                trace, z3filter, fastSolver, soundSolver, detectInterruptedThreadRace);
 
         model.addConstraints();
         return model;
     }
 
-    private MaximalCausalModel(Trace trace, Z3Filter z3filter, Solver solver, boolean detectInterruptedThreadRace) {
+    private MaximalCausalModel(
+            Trace trace, Z3Filter z3filter, Solver fastSolver, Solver soundSolver, boolean detectInterruptedThreadRace) {
         this.trace = trace;
         this.z3filter = z3filter;
-        this.solver = solver;
+        this.fastSolver = fastSolver;
+        this.soundSolver = soundSolver;
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
         trace.eventsByThreadID().forEach((tid, events) ->
                 events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event)));
@@ -181,7 +186,12 @@ public class MaximalCausalModel {
                         trace::getThreadStartsInTheCurrentWindow))
                 .build();
 
-        constraintSources.forEach(source -> phiTau.add(source.createConstraint().createSmtFormula()));
+        constraintSources.forEach(source -> unsoundButFastPhiTau.add(source
+                .createConstraint(ConstraintType.UNSOUND_BUT_FAST)
+                .createSmtFormula()));
+        constraintSources.forEach(source -> soundPhiTau.add(source
+                .createConstraint(ConstraintType.SOUND)
+                .createSmtFormula()));
     }
 
     private BoolFormula getPhiConc(MemoryAccessBlock block) {
@@ -362,41 +372,43 @@ public class MaximalCausalModel {
             return Collections.emptyMap();
         }
 
-//        trace.logger().debug().println("start analyzing: " + trace.getBaseGID());
-//        sigToRaceSuspects.forEach((sig, l) -> trace.logger().debug().println(sig + ": " + l.size()));
-
         Map<String, Race> result = new HashMap<>();
         try {
-            solver.push();
+            fastSolver.push();
+            soundSolver.push();
             /* translate our formula into Z3 AST format */
-            solver.add(z3filter.filter(phiTau.build()));
-            for (Map.Entry<ReadonlyEventInterface, BoolFormula> entry : readToPhiConc.entrySet()) {
-                solver.add(z3filter.filter(BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()),
-                        entry.getValue())));
-            }
-//            checkTraceConsistency(z3filter, solver);
+            fastSolver.add(z3filter.filter(unsoundButFastPhiTau.build()));
+            soundSolver.add(z3filter.filter(soundPhiTau.build()));
+            addPhiConc(fastSolver);
+            addPhiConc(soundSolver);
 
             /* check race suspects */
 
             boolean atLeastOneRace = false;
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
-                    solver.push();
-                    solver.add(z3filter.filter(suspectToAsst.get(race)));
-                    boolean isRace = solver.check() == Status.SATISFIABLE;
-                    atLeastOneRace |= isRace;
+                    fastSolver.push();
+                    fastSolver.add(z3filter.filter(suspectToAsst.get(race)));
+                    boolean isRace = fastSolver.check() == Status.SATISFIABLE;
                     if (isRace) {
-                        Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution();
-                        Map<Integer, Integer> signalParents = extractSignalParents();
-                        fillSignalStack(threadToExecution, signalParents, race);
-                        if (Configuration.debug) {
-                            dumpOrderingWithLessThreadSwitches(
-                                    threadToExecution,
-                                    Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
-                                    signalParents);
+                        soundSolver.push();
+                        soundSolver.add(z3filter.filter(suspectToAsst.get(race)));
+                        isRace = soundSolver.check() == Status.SATISFIABLE;
+                        atLeastOneRace |= isRace;
+                        if (isRace) {
+                            Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution(soundSolver);
+                            Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
+                            fillSignalStack(threadToExecution, signalParents, race);
+                            if (Configuration.debug) {
+                                dumpOrderingWithLessThreadSwitches(
+                                        threadToExecution,
+                                        Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
+                                        signalParents);
+                            }
                         }
+                        soundSolver.pop();
                     }
-                    solver.pop();
+                    fastSolver.pop();
                     if (isRace) {
                         result.put(entry.getKey(), race);
                         break;
@@ -404,9 +416,10 @@ public class MaximalCausalModel {
                 }
             }
             if (!atLeastOneRace && Configuration.debug) {
-                findAndDumpOrdering();
+                findAndDumpOrdering(soundSolver);
             }
-            solver.pop();
+            fastSolver.pop();
+            soundSolver.pop();
             z3filter.clear();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -415,7 +428,14 @@ public class MaximalCausalModel {
         return result;
     }
 
-    private Map<Integer, Integer> extractSignalParents() {
+    private void addPhiConc(Solver solver) throws Exception {
+        for (Map.Entry<ReadonlyEventInterface, BoolFormula> entry : readToPhiConc.entrySet()) {
+            solver.add(z3filter.filter(BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()),
+                    entry.getValue())));
+        }
+    }
+
+    private Map<Integer, Integer> extractSignalParents(Solver solver) {
         Model model = solver.getModel();
         Map<Integer, Integer> signalParents = new HashMap<>();
         for (FuncDecl f : model.getConstDecls()) {
@@ -438,6 +458,18 @@ public class MaximalCausalModel {
         race.setSecondSignalStack(computeSignalStack(threadToExecution, signalParents, race.secondEvent()));
     }
 
+    private OptionalLong findEventOrder(
+            int ttid,
+            Map<Integer, List<EventWithOrder>> threadToExecution,
+            ReadonlyEventInterface event) {
+        for (EventWithOrder eventWithOrder : threadToExecution.get(ttid)) {
+            if (eventWithOrder.getEvent().getEventId() == event.getEventId()) {
+                return OptionalLong.of(eventWithOrder.getOrderId());
+            }
+        }
+        return OptionalLong.empty();
+    }
+
     private List<Race.SignalStackEvent> computeSignalStack(
             Map<Integer, List<EventWithOrder>> threadToExecution,
             Map<Integer, Integer> signalParents,
@@ -446,15 +478,9 @@ public class MaximalCausalModel {
         int ttid = trace.getTraceThreadId(event);
         signalStack.add(Race.SignalStackEvent.fromEvent(event, ttid));
 
-        Long firstEventOrder = null;
-        for (EventWithOrder eventWithOrder : threadToExecution.get(ttid)) {
-            if (eventWithOrder.getEvent().getEventId() == event.getEventId()) {
-                firstEventOrder = eventWithOrder.getOrderId();
-                break;
-            }
-        }
-        assert firstEventOrder != null;
-        long currentEventOrder = firstEventOrder;
+        OptionalLong maybeFirstEventOrder = findEventOrder(ttid, threadToExecution, event);
+        assert maybeFirstEventOrder.isPresent();
+        long currentEventOrder = maybeFirstEventOrder.getAsLong();
 
         while (trace.getThreadType(ttid) != ThreadType.THREAD) {
             int parentTtid = signalParents.get(ttid);
@@ -477,16 +503,16 @@ public class MaximalCausalModel {
         return signalStack;
     }
 
-    private void findAndDumpOrdering() {
+    private void findAndDumpOrdering(Solver solver) {
         solver.push();
         if (solver.check() == Status.SATISFIABLE) {
             dumpOrderingWithLessThreadSwitches(
-                    extractExecution(), Optional.empty(), Optional.empty(), extractSignalParents());
+                    extractExecution(solver), Optional.empty(), Optional.empty(), extractSignalParents(solver));
         }
         solver.pop();
     }
 
-    private Map<Integer, List<EventWithOrder>> extractExecution() {
+    private Map<Integer, List<EventWithOrder>> extractExecution(Solver solver) {
         Model model = solver.getModel();
         Map<Integer, List<EventWithOrder>> threadToExecution = new HashMap<>();
         for (FuncDecl f : model.getConstDecls()) {

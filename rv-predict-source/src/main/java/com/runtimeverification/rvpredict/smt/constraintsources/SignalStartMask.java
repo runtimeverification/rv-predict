@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.constraints.And;
 import com.runtimeverification.rvpredict.smt.constraints.Before;
@@ -59,7 +60,7 @@ public class SignalStartMask implements ConstraintSource {
     }
 
     @Override
-    public ModelConstraint createConstraint() {
+    public ModelConstraint createConstraint(ConstraintType constraintType) {
         Set<Long> interestingSignalNumbers = ttidToEvents.keySet().stream()
                 .filter(ttid -> ttidToType.apply(ttid) == ThreadType.SIGNAL)
                 .map(ttidToSignalNumber)

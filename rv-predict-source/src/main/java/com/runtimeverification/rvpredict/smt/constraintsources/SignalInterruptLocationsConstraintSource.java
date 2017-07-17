@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.smt.constraintsources;
 import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.signals.EventsEnabledForSignalIterator;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.constraints.And;
@@ -69,7 +70,7 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
     }
 
     @Override
-    public ModelConstraint createConstraint() {
+    public ModelConstraint createConstraint(ConstraintType constraintType) {
         ImmutableList.Builder<ModelConstraint> allSignalConstraints = new ImmutableList.Builder<>();
         eventsByThreadID.keySet().stream()
                 .filter(interruptingTtid -> ttidToThreadType.apply(interruptingTtid) == ThreadType.SIGNAL)
@@ -82,15 +83,35 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
                     allSignalConstraints.add(computeSignalInterruptionConstraint(
                             interruptingTtid,
                             maybefirstEvent.get(), maybeLastEvent.get(),
-                            ttidToSignalNumber.apply(interruptingTtid)));
+                            ttidToSignalNumber.apply(interruptingTtid),
+                            constraintType));
                 });
         return new And(allSignalConstraints.build());
+    }
+
+    private EventsEnabledForSignalIterator createEventsIterator(
+            Collection<ReadonlyEventInterface> events,
+            long signalNumber,
+            boolean enabledAtStart,
+            boolean stopAtFirstMaskChangeEvent,
+            ConstraintType constraintType) {
+        if (!detectInterruptedThreadRace) {
+            return EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                    events, signalNumber, enabledAtStart, stopAtFirstMaskChangeEvent);
+        }
+        if (constraintType == ConstraintType.UNSOUND_BUT_FAST) {
+            return EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                    events, signalNumber, enabledAtStart, stopAtFirstMaskChangeEvent);
+        }
+        return EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                events, signalNumber, enabledAtStart, stopAtFirstMaskChangeEvent);
     }
 
     private ModelConstraint computeSignalInterruptionConstraint(
             Integer interruptingTtid,
             ReadonlyEventInterface firstEvent, ReadonlyEventInterface lastEvent,
-            long signalNumber) {
+            long signalNumber,
+            ConstraintType constraintType) {
         Set<Integer> ttidWhereEnabledAtStart = signalNumberToTtidsWhereEnabledAtStart.apply(signalNumber);
         Set<Integer> ttidWhereDisabledAtStart = signalNumberToTtidsWhereDisabledAtStart.apply(signalNumber);
         ImmutableList.Builder<ModelConstraint> possibleSignalInterruptions = new ImmutableList.Builder<>();
@@ -105,7 +126,8 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
                         firstEvent, lastEvent,
                         interruptedThreadEvents,
                         interruptedTtid,
-                        ttidWhereEnabledAtStart.contains(interruptedTtid)));
+                        ttidWhereEnabledAtStart.contains(interruptedTtid),
+                        constraintType));
             }
             if (interruptedThreadEvents.isEmpty()) {
                 return;
@@ -116,12 +138,12 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
                     isSignal
                             ? getLastEvent(interruptedTtid)
                             : ttidToJoinEvent.apply(interruptedTtid);
-            EventsEnabledForSignalIterator iterator =
-                    new EventsEnabledForSignalIterator(
-                            interruptedThreadEvents, detectInterruptedThreadRace, signalNumber,
-                            false,  // enabledAtStart
-                            false  // stopAtFirstMaskChangeEvent
-                    );
+            EventsEnabledForSignalIterator iterator = createEventsIterator(
+                    interruptedThreadEvents, signalNumber,
+                    false,  // enabledAtStart
+                    false,  // enabledAtStart
+                    constraintType
+            );
             while (iterator.advance()) {
                 Optional<ReadonlyEventInterface> previousEvent = iterator.getPreviousEventWithDefault(Optional.empty());
                 assert previousEvent.isPresent();
@@ -142,20 +164,23 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             ReadonlyEventInterface firstInterruptingSignalEvent, ReadonlyEventInterface lastInterruptingSignalEvent,
             Collection<ReadonlyEventInterface> interruptedThreadEvents,
             int interruptedTtid,
-            boolean enabledAtStart) {
+            boolean enabledAtStart,
+            ConstraintType constraintType) {
         if (ttidToThreadType.apply(interruptedTtid) == ThreadType.SIGNAL) {
             return signalInterruptsSignalAtStartWhenSigsetMaskAllowsIt(
                     interruptingSignalTtid, interruptingSignalNumber,
                     firstInterruptingSignalEvent, lastInterruptingSignalEvent,
                     interruptedThreadEvents,
-                    interruptedTtid);
+                    interruptedTtid,
+                    constraintType);
         }
         if (enabledAtStart) {
             return signalInterruptsThreadAtStart(
                     interruptingSignalTtid, interruptingSignalNumber,
                     firstInterruptingSignalEvent, lastInterruptingSignalEvent,
                     interruptedThreadEvents,
-                    interruptedTtid);
+                    interruptedTtid,
+                    constraintType);
         }
         return new False();
     }
@@ -164,15 +189,16 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             int interruptingSignalTtid, long interruptingSignalNumber,
             ReadonlyEventInterface firstInterruptingSignalEvent, ReadonlyEventInterface lastInterruptingSignalEvent,
             Collection<ReadonlyEventInterface> interruptedThreadEvents,
-            int interruptedTtid) {
+            int interruptedTtid,
+            ConstraintType constraintType) {
         Optional<ReadonlyEventInterface> joinThreadEvent = ttidToJoinEvent.apply(interruptedTtid);
         Optional<ReadonlyEventInterface> startThreadEvent = ttidToStartEvent.apply(interruptedTtid);
-        EventsEnabledForSignalIterator iterator =
-                new EventsEnabledForSignalIterator(
-                        interruptedThreadEvents, detectInterruptedThreadRace, interruptingSignalNumber,
-                        true,  // enabledAtStart
-                        true  // stopAtFirstMaskChangeEvent
-                );
+        EventsEnabledForSignalIterator iterator = createEventsIterator(
+                interruptedThreadEvents, interruptingSignalNumber,
+                true,  // enabledAtStart
+                true,  // stopAtFirstMaskChangeEvent
+                constraintType
+        );
         ImmutableList.Builder<ModelConstraint> possibleInterruptions = new ImmutableList.Builder<>();
         while (iterator.advance()) {
             possibleInterruptions.add(signalInterruptsBetweenEvents(
@@ -190,19 +216,20 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             int interruptingSignalTtid, long interruptingSignalNumber,
             ReadonlyEventInterface firstInterruptingSignalEvent, ReadonlyEventInterface lastInterruptingSignalEvent,
             Collection<ReadonlyEventInterface> interruptedThreadEvents,
-            int interruptedSignalTtid) {
+            int interruptedSignalTtid,
+            ConstraintType constraintType) {
         Optional<ReadonlyEventInterface> firstInterruptedSignalEvent = getFirstEvent(interruptedSignalTtid);
         if (!firstInterruptedSignalEvent.isPresent()) {
             return new False();
         }
         ImmutableList.Builder<ModelConstraint> possibleInterruptionPlaces = new ImmutableList.Builder<>();
 
-        EventsEnabledForSignalIterator iterator =
-                new EventsEnabledForSignalIterator(
-                        interruptedThreadEvents, detectInterruptedThreadRace, interruptingSignalNumber,
-                        true,  // enabledAtStart
-                        true  // stopAtFirstMaskChangeEvent
-                );
+        EventsEnabledForSignalIterator iterator = createEventsIterator(
+                interruptedThreadEvents, interruptingSignalNumber,
+                true,  // enabledAtStart
+                true,  // stopAtFirstMaskChangeEvent
+                constraintType
+        );
         while (iterator.advance()) {
             Optional<ReadonlyEventInterface> previousEvent =
                     iterator.getPreviousEventWithDefault(firstInterruptedSignalEvent);
@@ -210,8 +237,8 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             possibleInterruptionPlaces.add(
                     new SectionOccursBetweenEvents(
                             firstInterruptingSignalEvent, lastInterruptingSignalEvent,
-                            previousEvent,
-                            iterator.getCurrentEventWithDefault(getLastEvent(interruptedSignalTtid)))
+                            previousEvent, iterator.getCurrentEventWithDefault(getLastEvent(interruptedSignalTtid))
+                    )
             );
         }
         return new And(

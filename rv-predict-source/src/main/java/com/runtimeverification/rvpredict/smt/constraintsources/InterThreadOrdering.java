@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.smt.constraintsources;
 
 import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.ConstraintSourceWithHappensBefore;
 import com.runtimeverification.rvpredict.smt.TransitiveClosure;
@@ -32,7 +33,7 @@ public class InterThreadOrdering implements ConstraintSourceWithHappensBefore {
     }
 
     @Override
-    public ModelConstraint createConstraint() {
+    public ModelConstraint createConstraint(ConstraintType constraintType) {
         ImmutableList.Builder<ModelConstraint> constraints = new ImmutableList.Builder<>();
         processSyncEvents(
                 (event, first) -> constraints.add(new Before(event, first)),

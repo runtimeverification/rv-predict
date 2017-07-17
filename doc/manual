@@ -121,15 +121,15 @@ Data race on [0x00007ffd19f94658]:
 .
 ```
 
-Both `rvpa` and `rvpx` accept a `--filter` option that disables
-conversions applied to the raw data-race reports.  `--filter` takes one or
-more comma-separated arguments, `no-symbol`, `no-trim`, and `no-signal`.
-`no-symbol` disables conversion of data addresses to variable names,
-and instruction address to line and column numbers.  When `no-trim` is a
-`--filter` argument, data-race reports will show stack frames belonging
-to the RV-Predict/C runtime as well as stack frames below each thread's
-start routine and below `main`.  `no-signal` suppresses conversion of
-signal numbers `S1..Sn` to UNIX symbols like SIGHUP and SIGSEGV.
+Both `rvpa` and `rvpx` accept options that disable conversions applied
+to the raw data-race reports.  `--no-symbol` disables conversion of data
+addresses to variable names, and instruction address to line and column
+numbers.  When `--no-trim` is given, data-race reports will show stack
+frames belonging to the RV-Predict/C runtime as well as stack frames
+below each thread's start routine and below `main`.  `--no-signal`
+suppresses conversion of signal numbers `S1..Sn` to UNIX symbols like
+SIGHUP and SIGSEGV.  `--no-shorten` stops paths from being shortened by
+replacing one or more leading components with a single ellipsis, `...`.
 
 ### Understanding data-race reports
 

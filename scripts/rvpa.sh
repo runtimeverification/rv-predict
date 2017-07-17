@@ -1,10 +1,11 @@
 #!/bin/sh
 
 set -e
+set -u
 
 usage()
 {
-	echo "usage: $(basename $0) [--filter no-shorten|no-symbol|no-system|no-trim|no-signal] program" 1>&2
+	echo "usage: $(basename $0) [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--] program" 1>&2
 	exit 1
 }
 
@@ -94,18 +95,12 @@ symbolize_passthrough=
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--filter)
+	--no-symbol|--no-trim)
+		eval filter_${1##--no-}=no
 		shift
-		for filt in $(echo $1 | sed 's/,/ /g'); do
-			case $filt in
-			no-symbol|no-trim)
-				eval filter_${filt##no-}=no
-				;;
-			*)
-				symbolize_passthrough="${symbolize_passthrough:-} --filter ${filt}"
-				;;
-			esac
-		done
+		;;
+	--no-*)
+		symbolize_passthrough="${symbolize_passthrough:-} ${1}"
 		shift
 		;;
 	--window)

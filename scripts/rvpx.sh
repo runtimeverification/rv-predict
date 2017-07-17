@@ -1,10 +1,11 @@
 #!/bin/sh
 
 set -e
+set -u
 
 usage()
 {
-	echo "usage: $(basename $0) [--window size] [--filter no-shorten|no-symbol|no-system|no-trim] program [ arg1 ... ]" 1>&2
+	echo "usage: $(basename $0) [--window size] [--no-shorten|--no-symbol|----no-system|--no-trim] [--] program [ arg1 ... ]" 1>&2
 	exit 1
 }
 
@@ -63,11 +64,12 @@ passthrough=
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--filter|--window)
+	--window)
 		passthrough="${passthrough:-} $1 $2"
 		shift
 		shift
 		;;
+	--no-shorten|--no-signal|--no-symbol|----no-system|--no-trim|\
 	--prompt-for-license)
 		passthrough="${passthrough:-} $1"
 		shift

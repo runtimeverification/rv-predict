@@ -69,7 +69,7 @@ while [ $# -gt 1 ]; do
 		shift
 		shift
 		;;
-	--no-shorten|--no-signal|--no-symbol|----no-system|--no-trim|\
+	--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim|\
 	--prompt-for-license)
 		passthrough="${passthrough:-} $1"
 		shift

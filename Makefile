@@ -1,5 +1,7 @@
 OS!=uname -s
 
+PROJECTNAME=rv-predict-c
+
 SUBDIR=doc examples scripts .WAIT llvm
 
 .if $(OS) == "Linux"

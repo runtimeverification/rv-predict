@@ -4,22 +4,13 @@ set -e
 
 usage()
 {
-	echo "usage: $(basename $0) program" 1>&2
+	echo "usage: $(basename $0) [--filter no-shorten|no-symbol|no-system|no-trim|no-signal] program" 1>&2
 	exit 1
 }
 
-[ $# -eq 1 ] || usage
-
-progname=$1
-if [ ${progname##/} != ${progname} ]; then
-	progpath=${progname}
-else
-	progpath=$(pwd)/${progname}
-fi
-
 rvpredict()
 {
-	libdir=$(dirname $0)/../lib
+	sharedir=$(dirname $0)/../share/rv-predict-c
 
 	min_major="1"
 	min_minor="8"
@@ -52,8 +43,98 @@ EOF
 		exit 2
 	fi
 
-	${_java} -ea -jar ${libdir}/rv-predict.jar "$@"
+	${_java} -ea -jar ${sharedir}/rv-predict.jar "$@"
 }
 
-rvpredict --offline --window 2000 --detect-interrupted-thread-race --compact-trace --llvm-predict . 2>&1 | \
-rvpsymbolize $progpath 1>&2
+trim_stack()
+{
+	# TBD suppress __rvpredict_ and rvp_ symbols first by
+	# converting to, say, ##suppressed##, then removing ##suppressed##
+	# and stanzas consisting only of ##suppressed## in a second stage
+	awk 'BEGIN { saw_stack_bottom = 0 }
+	/^ {6,6}[> ] in rvp_[a-zA-Z_][0-9a-zA-Z_]* at / {
+		saw_stack_bottom = 1
+		next
+	}
+	/^ {6,6}[> ] in __rvpredict_[a-zA-Z_][0-9a-zA-Z_]* at / {
+		saw_stack_bottom = 1
+		next
+	}
+	/^ {6,6}[> ] in main at / {
+		print
+		saw_stack_bottom = 1
+		next
+	}
+	/^ {0,7}[^ ]/ {
+		saw_stack_bottom = 0
+	}
+	/^$/ {
+		saw_stack_bottom = 0
+	}
+	{
+		if (!saw_stack_bottom)
+			print
+	}'
+}
+
+symbolize()
+{
+	if [ ${filter_symbol:-yes} = yes -a ${filter_trim:-yes} = yes ]
+	then
+		rvpsymbolize "$@" | trim_stack
+	elif [ ${filter_symbol:-yes} = yes ]
+	then
+		rvpsymbolize "$@"
+	else
+		cat
+	fi
+}
+
+symbolize_passthrough=
+
+while [ $# -gt 1 ]; do
+	case $1 in
+	--filter)
+		shift
+		for filt in $(echo $1 | sed 's/,/ /g'); do
+			case $filt in
+			no-symbol|no-trim)
+				eval filter_${filt##no-}=no
+				;;
+			*)
+				symbolize_passthrough="${symbolize_passthrough:-} --filter ${filt}"
+				;;
+			esac
+		done
+		shift
+		;;
+	--window)
+		shift
+		window="--window $1"
+		shift
+		;;
+	--prompt-for-license)
+		prompt=$1
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	*)	break
+		;;
+	esac
+done
+
+[ $# -eq 1 ] || usage
+
+progname=$1
+if [ ${progname##/} != ${progname} ]; then
+	progpath=${progname}
+else
+	progpath=$(pwd)/${progname}
+fi
+
+rvpredict --offline ${prompt:-} ${window:---window 2000} --detect-interrupted-thread-race \
+    --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
+    symbolize ${symbolize_passthrough} $progpath 1>&2

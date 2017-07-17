@@ -25,8 +25,11 @@ static int rvp_static_nintrs = 0;
 
 static bool intr_debug = false;
 
+static const int avail_signals[] = {SIGALRM, SIGCHLD, SIGUSR2};
+static sigset_t intr_mask;
+
 static int
-static_intr_compare(const void *l, const void *r)
+rvp_static_intr_compare(const void *l, const void *r)
 {
 	const rvp_static_intr_t *lsi = l, *rsi = r;
 
@@ -34,7 +37,7 @@ static_intr_compare(const void *l, const void *r)
 }
 
 static void
-static_intr_handler(int signum)
+rvp_static_intr_handler(int signum)
 {
 	int i;
 
@@ -45,12 +48,24 @@ static_intr_handler(int signum)
 	}
 }
 
-static const int avail_signals[] = {SIGALRM, SIGUSR1, SIGUSR2};
+#if 0
+static void
+rvp_static_intr_fire_all(void)
+{
+	int i;
+
+	for (i = 0; i < rvp_static_nintrs; i++) {
+		const rvp_static_intr_t *si = &rvp_static_intr[i];
+		raise(si->si_signum);
+	}
+}
+#endif
 
 void
 rvp_static_intrs_init(void)
 {
-	int i, j, nprio = 0;
+	int i, j, nprio = 0, rc;
+	sigset_t original_mask;
 
 	const char *debugenv = getenv("RVP_INTR_DEBUG");
 
@@ -61,8 +76,27 @@ rvp_static_intrs_init(void)
 		    rvp_static_nintrs);
 	}
 
+	rc = pthread_sigmask(SIG_BLOCK, NULL, &original_mask);
+	if (rc != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+
+	if (sigemptyset(&intr_mask) != 0)
+		errx(EXIT_FAILURE, "%s: sigemptyset", __func__);
+
+	for (i = 0; i < __arraycount(avail_signals); i++) {
+		if (sigismember(&original_mask, avail_signals[i]) == 1) {
+			errx(EXIT_FAILURE,
+			    "%s: did not expect signal %d to be masked",
+			    __func__, avail_signals[i]);
+		}
+		if (sigaddset(&intr_mask, avail_signals[i]) != 0)
+			errx(EXIT_FAILURE, "%s: sigaddset", __func__);
+	}
+
 	qsort(rvp_static_intr, rvp_static_nintrs, sizeof(rvp_static_intr[0]),
-	    static_intr_compare);
+	    rvp_static_intr_compare);
 
 	for (i = 0; i < rvp_static_nintrs; i++) {
 		if (i == 0 ||
@@ -112,7 +146,7 @@ rvp_static_intrs_init(void)
 			if (sigaddset(&sa.sa_mask, avail_signals[j]) == -1)
 				err(EXIT_FAILURE, "%s: sigaddset", __func__);
 		}
-		sa.sa_handler = static_intr_handler;
+		sa.sa_handler = rvp_static_intr_handler;
 		if (sigaction(avail_signals[i], &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
 
@@ -120,31 +154,15 @@ rvp_static_intrs_init(void)
 	}
 }
 
-static sigset_t old_mask;
-
-void
-__rvpredict_intr_init(void)
-{
-	int rc;
-
-	rc = pthread_sigmask(SIG_BLOCK, NULL, &old_mask);
-	if (rc != 0) {
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
-}
-
 void
 __rvpredict_intr_disable(void)
 {
 	int rc;
-	sigset_t full_mask;
 
-	if (sigfillset(&full_mask) != 0)
-		err(EXIT_FAILURE, "%s: sigfillset", __func__);
-
-	rc = pthread_sigmask(SIG_BLOCK, &full_mask, NULL);
-	if (rc != 0) {
+#if 0
+	rvp_static_intr_fire_all();
+#endif
+	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
 	}
@@ -155,11 +173,13 @@ __rvpredict_intr_enable(void)
 {
 	int rc;
 
-	rc = pthread_sigmask(SIG_SETMASK, &old_mask, NULL);
-	if (rc != 0) {
+	if ((rc = pthread_sigmask(SIG_UNBLOCK, &intr_mask, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
 	}
+#if 0
+	rvp_static_intr_fire_all();
+#endif
 }
 
 void

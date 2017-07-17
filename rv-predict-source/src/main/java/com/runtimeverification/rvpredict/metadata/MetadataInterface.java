@@ -14,5 +14,5 @@ public interface MetadataInterface {
     long getParentOTID(long otid);
     String getVariableSig(long idx);
     boolean isVolatile(long addressForVolatileCheck);
-    String getLockSig(LockRepresentation lockRepresentation);
+    String getLockSig(ReadonlyEventInterface event, Trace trace);
 }

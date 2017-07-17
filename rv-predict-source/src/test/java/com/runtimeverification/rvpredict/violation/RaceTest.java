@@ -194,10 +194,11 @@ public class RaceTest {
 
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
+        List<ReadonlyEventInterface> e3;
 
         List<RawTrace> rawTraces = Arrays.asList(
                 tu.createRawTrace(
-                        tu.lock(10),
+                        e3 = tu.lock(10),
                         e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)
                 ),
                 tu.createRawTrace(
@@ -209,7 +210,7 @@ public class RaceTest {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
-        when(mockMetadata.getLockSig(new LockRepresentation(LockRepresentation.LockType.WRITE_LOCK, 10)))
+        when(mockMetadata.getLockSig(extractSingleEvent(e3), trace))
                 .thenReturn("<mock lock representation>");
 
         Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);

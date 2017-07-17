@@ -305,7 +305,7 @@ public class Race {
         if (event.isLock()) {
             sb.append(String.format(
                     "        - locked %s %s%s%n",
-                    metadata.getLockSig(event.getLockRepresentation()),
+                    metadata.getLockSig(event, trace),
                     metadata.getLocationPrefix(),
                     locSig));
         } else {
@@ -326,7 +326,7 @@ public class Race {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(metadata.getLockSig(heldLocks.get(i).getLockRepresentation()));
+            sb.append(metadata.getLockSig(heldLocks.get(i), trace));
         }
         final boolean plural = heldLocks.size() > 1;
         return String.format(" holding lock%s %s", plural ? "s" : "",

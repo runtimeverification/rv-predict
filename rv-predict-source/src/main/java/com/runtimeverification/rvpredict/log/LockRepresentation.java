@@ -26,6 +26,10 @@ public class LockRepresentation {
         this.lockAddress = lockAddress;
     }
 
+    public LockType getLockType() {
+        return lockType;
+    }
+
     public String getLockName() {
         return lockType.getLockName();
     }

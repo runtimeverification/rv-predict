@@ -23,6 +23,7 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -474,6 +475,7 @@ public class MaximalCausalModelTest {
                 tu.switchThread(THREAD_1, ONE_SIGNAL),
                 tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                 e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                tu.exitSignal(),
 
                 tu.switchThread(THREAD_1, NO_SIGNAL),
                 tu.disableSignal(SIGNAL_NUMBER_1),
@@ -1039,8 +1041,11 @@ public class MaximalCausalModelTest {
     }
 
     @Test
-    public void signalRacesWithSignalMovedToInterruptIt() throws InvalidTraceDataException {
+    public void signalDoesNotRaceWithSignalMovedToInterruptItWhenDisabled() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> previousSigest =
+                tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK);
 
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
@@ -1072,7 +1077,48 @@ public class MaximalCausalModelTest {
 
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
-        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, previousSigest, true));
+    }
+
+    @Test
+    public void signalRacesWithSignalMovedToInterruptItWhenEnabled() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> previousSigest =
+                tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.disableSignal(SIGNAL_NUMBER_1),
+                tu.disableSignal(SIGNAL_NUMBER_2),
+                tu.enableSignal(SIGNAL_NUMBER_1),
+                tu.enableSignal(SIGNAL_NUMBER_2),
+
+                tu.switchThread(THREAD_1, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+
+                tu.switchThread(THREAD_1, TWO_SIGNALS),
+                tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                tu.exitSignal(),
+
+                tu.switchThread(THREAD_1, ONE_SIGNAL),
+                tu.exitSignal(),
+
+                tu.switchThread(THREAD_1, NO_SIGNAL),
+                e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                tu.disableSignal(SIGNAL_NUMBER_1),
+                tu.enableSignal(SIGNAL_NUMBER_2));
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_1, ONE_SIGNAL),
+                tu.extractRawTrace(events, THREAD_1, TWO_SIGNALS));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, previousSigest, true));
     }
 
     @Test
@@ -1110,18 +1156,23 @@ public class MaximalCausalModelTest {
         List<List<ReadonlyEventInterface>> events = Arrays.asList(
                 tu.disableSignal(SIGNAL_NUMBER_1),
                 tu.disableSignal(SIGNAL_NUMBER_2),
+                tu.atomicStore(ADDRESS_2, VALUE_2),
                 tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
                 tu.enableSignal(SIGNAL_NUMBER_1),
+                tu.enableSignal(SIGNAL_NUMBER_2),
 
                 tu.switchThread(THREAD_1, ONE_SIGNAL),
                 tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                tu.atomicStore(ADDRESS_2, VALUE_1),
 
                 tu.switchThread(THREAD_1, TWO_SIGNALS),
                 tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                tu.atomicLoad(ADDRESS_2, VALUE_1),
                 e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                 tu.exitSignal(),
 
                 tu.switchThread(THREAD_1, ONE_SIGNAL),
+                tu.atomicStore(ADDRESS_2, VALUE_2),
                 tu.exitSignal(),
 
                 tu.switchThread(THREAD_1, NO_SIGNAL),
@@ -1182,19 +1233,26 @@ public class MaximalCausalModelTest {
                 tu.createRawTrace(
                         tu.disableSignal(SIGNAL_NUMBER_1),
                         tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.atomicStore(ADDRESS_2, VALUE_2),
                         tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
                         tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
                         tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
                         e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
                         tu.disableSignal(SIGNAL_NUMBER_1),
+                        tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.atomicStore(ADDRESS_2, VALUE_1),
                         tu.enableSignal(SIGNAL_NUMBER_2)),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.atomicStore(ADDRESS_2, VALUE_1),
+                        tu.atomicStore(ADDRESS_2, VALUE_2),
                         tu.exitSignal()),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
                         tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                        tu.atomicLoad(ADDRESS_2, VALUE_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.exitSignal()));
 
@@ -1275,20 +1333,25 @@ public class MaximalCausalModelTest {
                 tu.createRawTrace(
                         tu.disableSignal(SIGNAL_NUMBER_1),
                         tu.disableSignal(SIGNAL_NUMBER_2),
+                        tu.atomicStore(ADDRESS_2, VALUE_2),
                         tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
                         tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
                         tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
                         e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
                         tu.disableSignal(SIGNAL_NUMBER_1),
                         tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
-                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                        tu.atomicStore(ADDRESS_2, VALUE_1)),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.atomicStore(ADDRESS_2, VALUE_1),
+                        tu.atomicStore(ADDRESS_2, VALUE_2),
                         tu.exitSignal()),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
                         tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                        tu.atomicLoad(ADDRESS_2, VALUE_1),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.exitSignal()));
 
@@ -1405,46 +1468,102 @@ public class MaximalCausalModelTest {
     }
 
     @Test
-    public void signalsEnabledOnThreadStartedBySignalIfEnabledExplicitlyBySignal() throws InvalidTraceDataException {
+    public void keepsLockStateBetweenWindows() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
 
-        List<RawTrace> rawTraces = Arrays.asList(
+        List<RawTrace> rawTraces1 = Arrays.asList(
                 tu.createRawTrace(
-                        tu.disableSignal(SIGNAL_NUMBER_1),
-                        tu.disableSignal(SIGNAL_NUMBER_2),
-                        tu.nonAtomicStore(ADDRESS_2, VALUE_2),
-                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
-                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.lock(LOCK_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1)));
+
+        List<RawTrace> rawTraces2 = Arrays.asList(
+                tu.createRawTrace(
+                        false,
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.unlock(LOCK_1)),
+                tu.createRawTrace(
+                        false,
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        e2 = tu.nonAtomicLoad(ADDRESS_2, VALUE_1),
+                        tu.unlock(LOCK_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRaceMultipleWindows(
+                Arrays.asList(rawTraces1, rawTraces2), event1, event2, true));
+    }
+
+    @Test
+    public void keepsSignalEstablishEventsBetweenWindows() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces2 = Arrays.asList(
+                tu.createRawTrace(
+                        true,
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.atomicStore(ADDRESS_1, VALUE_1),
                         tu.enableSignal(SIGNAL_NUMBER_1),
-                        tu.disableSignal(SIGNAL_NUMBER_1),
-                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
-                        tu.enableSignal(SIGNAL_NUMBER_2)),
-                tu.createRawTrace(
-                        tu.switchThread(THREAD_1, ONE_SIGNAL),
-                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
                         tu.enableSignal(SIGNAL_NUMBER_2),
-                        tu.threadStart(THREAD_2),
-                        tu.exitSignal()),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_2)),
                 tu.createRawTrace(
+                        true,
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
-                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
-                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.atomicStore(ADDRESS_1,VALUE_2),
+                        tu.atomicStore(ADDRESS_1, VALUE_1),
                         tu.exitSignal()),
                 tu.createRawTrace(
-                        tu.switchThread(THREAD_2, NO_SIGNAL),
-                        tu.nonAtomicStore(ADDRESS_2, VALUE_2)
-                ));
+                        true,
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.atomicLoad(ADDRESS_1, VALUE_2),
+                        e2 = tu.nonAtomicLoad(ADDRESS_2, VALUE_1),
+                        tu.exitSignal()));
 
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
-        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
+
+        List<RawTrace> rawTraces1 = Arrays.asList(
+                tu.createRawTrace(
+                        false,
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1)));
+
+        Assert.assertTrue(hasRaceMultipleWindows(
+                Arrays.asList(rawTraces1, rawTraces2), event1, event2, true));
+
+        rawTraces1 = Arrays.asList(
+                tu.createRawTrace(
+                        false,
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1)));
+
+        Assert.assertFalse(hasRaceMultipleWindows(
+                Arrays.asList(rawTraces1, rawTraces2), event1, event2, true));
     }
 
     @Test
-    public void signalsDisabledOnThreadStartedBySignalIfDisabledExplicitlyBySignal() throws InvalidTraceDataException {
+    public void usesThreadMaskForSignalMask() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;
@@ -1452,77 +1571,30 @@ public class MaximalCausalModelTest {
 
         List<RawTrace> rawTraces = Arrays.asList(
                 tu.createRawTrace(
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
                         tu.disableSignal(SIGNAL_NUMBER_1),
                         tu.disableSignal(SIGNAL_NUMBER_2),
-                        tu.nonAtomicStore(ADDRESS_2, VALUE_2),
                         tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
-                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+
                         tu.enableSignal(SIGNAL_NUMBER_1),
-                        tu.disableSignal(SIGNAL_NUMBER_1),
-                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
-                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
+                        tu.disableSignal(SIGNAL_NUMBER_2),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
                         tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
-                        tu.disableSignal(SIGNAL_NUMBER_2),
-                        tu.threadStart(THREAD_2),
                         tu.exitSignal()),
                 tu.createRawTrace(
                         tu.switchThread(THREAD_1, ONE_SIGNAL),
-                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
-                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
-                        tu.exitSignal()),
-                tu.createRawTrace(
-                        tu.switchThread(THREAD_2, NO_SIGNAL),
-                        tu.nonAtomicStore(ADDRESS_2, VALUE_2)
-                ));
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, GENERATION_1),
+                        e2 = tu.nonAtomicLoad(ADDRESS_2, VALUE_1),
+                        tu.exitSignal()));
 
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
+
         Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
-    }
-
-    @Test
-    public void signalsEnabledOnThreadStartedBySignalIfEnabledImplicitlyBySignal() throws InvalidTraceDataException {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
-
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-
-        List<List<ReadonlyEventInterface>> events = Arrays.asList(
-                tu.disableSignal(SIGNAL_NUMBER_1),
-                tu.disableSignal(SIGNAL_NUMBER_2),
-                tu.nonAtomicStore(ADDRESS_2, VALUE_2),
-                tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, ALL_SIGNALS_DISABLED_MASK),
-                tu.enableSignal(SIGNAL_NUMBER_1),
-
-                tu.switchThread(THREAD_1, ONE_SIGNAL),
-                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
-
-                tu.switchThread(THREAD_1, TWO_SIGNALS),
-                tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
-                e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
-                tu.exitSignal(),
-
-                tu.switchThread(THREAD_1, ONE_SIGNAL),
-                tu.threadStart(THREAD_2),
-                tu.exitSignal(),
-
-                tu.switchThread(THREAD_2, NO_SIGNAL),
-                tu.nonAtomicStore(ADDRESS_2, VALUE_2),
-
-                tu.switchThread(THREAD_1, NO_SIGNAL),
-                e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1));
-
-        List<RawTrace> rawTraces = Arrays.asList(
-                tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
-                tu.extractRawTrace(events, THREAD_1, ONE_SIGNAL),
-                tu.extractRawTrace(events, THREAD_1, TWO_SIGNALS),
-                tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
-
-        ReadonlyEventInterface event1 = extractSingleEvent(e1);
-        ReadonlyEventInterface event2 = extractSingleEvent(e2);
-        Assert.assertTrue(hasRace(rawTraces, event1, event2, true));
     }
 
     // TODO: Tests with writes that enable certain reads, both with and without signals.
@@ -1545,14 +1617,34 @@ public class MaximalCausalModelTest {
             List<RawTrace> rawTraces,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             boolean detectInterruptedThreadRace) {
-        Map<String, Race> races = findRaces(rawTraces, e1, e2, detectInterruptedThreadRace);
+        Map<String, Race> races = findRaces(
+                Collections.singletonList(rawTraces), e1, e2, Collections.emptyList(), detectInterruptedThreadRace);
+        return races.size() > 0;
+    }
+
+    private boolean hasRaceMultipleWindows(
+            List<List<RawTrace>> rawTraces,
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2,
+            boolean detectInterruptedThreadRace) {
+        Map<String, Race> races = findRaces(rawTraces, e1, e2, Collections.emptyList(), detectInterruptedThreadRace);
+        return races.size() > 0;
+    }
+
+    private boolean hasRace(
+            List<RawTrace> rawTraces,
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2,
+            List<ReadonlyEventInterface> previousSigestEvents,
+            boolean detectInterruptedThreadRace) {
+        Map<String, Race> races = findRaces(
+                Collections.singletonList(rawTraces), e1, e2, previousSigestEvents, detectInterruptedThreadRace);
         return races.size() > 0;
     }
 
     private Optional<Race> findRace(
             List<RawTrace> rawTraces,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
-        Map<String, Race> races = findRaces(rawTraces, e1, e2, true);
+        Map<String, Race> races = findRaces(
+                Collections.singletonList(rawTraces), e1, e2, Collections.emptyList(), true);
         Assert.assertTrue(races.size() < 2);
         if (!races.isEmpty()) {
             return Optional.of(races.values().iterator().next());
@@ -1561,8 +1653,9 @@ public class MaximalCausalModelTest {
     }
 
     private Map<String, Race> findRaces(
-            List<RawTrace> rawTraces,
+            List<List<RawTrace>> rawTracesList,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
+            List<ReadonlyEventInterface> previousSigestEvents,
             boolean detectInterruptedThreadRace) {
         com.microsoft.z3.Context context = RaceDetector.getZ3Context();
         Z3Filter z3Filter = new Z3Filter(context, WINDOW_SIZE);
@@ -1573,7 +1666,13 @@ public class MaximalCausalModelTest {
 
         mockConfiguration.windowSize = WINDOW_SIZE;
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        Trace trace = traceState.initNextTraceWindow(rawTraces);
+        previousSigestEvents.forEach(traceState::onSignalEvent);
+
+        Trace trace = null;
+        assert !rawTracesList.isEmpty();
+        for (List<RawTrace> rawTraces : rawTracesList) {
+            trace = traceState.initNextTraceWindow(rawTraces);
+        }
         MaximalCausalModel model = MaximalCausalModel.create(trace, z3Filter, solver, detectInterruptedThreadRace);
 
         Map<String, List<Race>> sigToRaceSuspects = new HashMap<>();

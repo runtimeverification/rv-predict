@@ -29,6 +29,9 @@ import java.util.Set;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -812,6 +815,32 @@ public class TraceTest {
         Assert.assertEquals(CANONICAL_FRAME_ADDRESS_2, event2Stack.get(2).getCanonicalFrameAddress());
         Assert.assertEquals(EventType.INVOKE_METHOD, event2Stack.get(3).getType());
         Assert.assertEquals(CANONICAL_FRAME_ADDRESS_1, event2Stack.get(3).getCanonicalFrameAddress());
+    }
+
+    @Test
+    public void passesSignalEventsToState() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setPc(PC_BASE),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_MASK_1),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_1)
+                ),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_2, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_1)
+                ));
+
+        when(mockConfiguration.stacks()).thenReturn(true);
+
+        verify(mockTraceState, never()).onSignalEvent(any());
+
+        createTrace(rawTraces);
+
+        verify(mockTraceState, times(3)).onSignalEvent(any());
     }
 
     private Trace createTrace(List<RawTrace> rawTraces) {

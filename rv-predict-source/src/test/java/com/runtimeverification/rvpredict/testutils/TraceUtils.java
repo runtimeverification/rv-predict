@@ -10,7 +10,9 @@ import org.junit.Assert;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalLong;
 
 import static com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES;
@@ -19,6 +21,7 @@ import static org.mockito.Mockito.when;
 public class TraceUtils {
     private final Context mockContext;
     private final CompactEventFactory compactEventFactory;
+    private final Map<Long, Map<Integer, Integer>> threadIdToSignalDepthToTtid;
 
     private long nextPc;
     private long threadId;
@@ -32,6 +35,7 @@ public class TraceUtils {
         this.signalDepth = initialSignalDepth;
         this.nextPc = nextPc;
         this.nextThreadNumber = 1;
+        this.threadIdToSignalDepthToTtid = new HashMap<>();
     }
 
     public List<ReadonlyEventInterface> switchThread(long threadId, int signalDepth) {
@@ -227,11 +231,21 @@ public class TraceUtils {
                 pos++;
             }
         }
-        int currentThreadNumber = this.nextThreadNumber;
-        this.nextThreadNumber++;
+        int currentThreadNumber;
+        if (threadStartsInTheCurrentWindow) {
+            currentThreadNumber = this.nextThreadNumber;
+            threadIdToSignalDepthToTtid
+                    .computeIfAbsent(paddedEvents[0].getOriginalThreadId(), k -> new HashMap<>())
+                    .put(paddedEvents[0].getSignalDepth(), currentThreadNumber);
+            this.nextThreadNumber++;
+        } else {
+            currentThreadNumber = threadIdToSignalDepthToTtid
+                    .computeIfAbsent(paddedEvents[0].getOriginalThreadId(), k -> new HashMap<>())
+                    .get(paddedEvents[0].getSignalDepth());
+        }
         return new RawTrace(
                 0, pos, paddedEvents, paddedEvents[0].getSignalDepth(),
-                currentThreadNumber, threadStartsInTheCurrentWindow);
+                currentThreadNumber, threadStartsInTheCurrentWindow, true);
     }
 
     @SafeVarargs

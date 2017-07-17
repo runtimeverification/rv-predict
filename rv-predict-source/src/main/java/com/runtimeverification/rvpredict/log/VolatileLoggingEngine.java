@@ -203,7 +203,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                     config.logger().debug(otid + " -> " + threadId);
 
                     rawTraces.add(new RawTrace(
-                            b.start, b.cursor, b.events, 0, threadId, threadStartsInTheCurrentWindow));
+                            b.start, b.cursor, b.events, 0, threadId,
+                            threadStartsInTheCurrentWindow, false));
                 }
             }
             if (rawTraces.size() == 1) {

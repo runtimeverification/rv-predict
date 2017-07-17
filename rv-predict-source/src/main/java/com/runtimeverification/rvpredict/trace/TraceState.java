@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.trace;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
@@ -11,12 +12,14 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -45,6 +48,9 @@ public class TraceState {
      */
     private final Table<Integer, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
+
+    private final Map<Long, Map<Long, ReadonlyEventInterface>> t_signalNumberToHandlerToLastWindowEstablishEvents =
+            new HashMap<>();
 
     private final Configuration config;
 
@@ -209,6 +215,18 @@ public class TraceState {
         }
     }
 
+    public void onSignalEvent(ReadonlyEventInterface event) {
+        if (event.getType() == EventType.ESTABLISH_SIGNAL) {
+            Optional<ReadonlyEventInterface> previousEvent =
+                    getPreviousEstablishEvent(event.getSignalNumber(), event.getSignalHandlerAddress());
+            if (!previousEvent.isPresent() || previousEvent.get().getEventId() < event.getEventId()) {
+                t_signalNumberToHandlerToLastWindowEstablishEvents
+                        .computeIfAbsent(event.getSignalNumber(), k -> new HashMap<>())
+                        .put(event.getSignalHandlerAddress(), event);
+            }
+        }
+    }
+
     public boolean isInsideClassInitializer(int ttid) {
         try {
             return tidToClinitDepth.computeIfAbsent(ttid).intValue() > 0;
@@ -249,6 +267,8 @@ public class TraceState {
                 onMetaEvent(event, ttid);
             } else if (event.isStart()) {
                 updateThreadLocToUserLoc(event, ttid);
+            } else if (event.isSignalEvent()) {
+                onSignalEvent(event);
             }
         }
     }
@@ -327,6 +347,17 @@ public class TraceState {
         int id = getNewThreadId();
         t_unfinishedThreads.put(new SignalThreadId(0, otid), id);
         return id;
+    }
+
+    private Optional<ReadonlyEventInterface> getPreviousEstablishEvent(long signalNumber, long signalHandler) {
+        return Optional.ofNullable(
+                t_signalNumberToHandlerToLastWindowEstablishEvents
+                        .getOrDefault(signalNumber, Collections.emptyMap())
+                        .get(signalHandler));
+    }
+
+    Map<Long, Map<Long, ReadonlyEventInterface>> getSignalNumberToHandlerToPreviousWindowEstablishEvent() {
+        return t_signalNumberToHandlerToLastWindowEstablishEvents;
     }
 
     private class SignalThreadId {

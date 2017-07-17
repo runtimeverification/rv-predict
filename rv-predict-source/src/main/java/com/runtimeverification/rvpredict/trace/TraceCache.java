@@ -222,6 +222,7 @@ public class TraceCache {
     private RawTrace tidSpanToRawTrace(List<? extends ReadonlyEventInterface> events,
             int tidStart, int tidEnd, int signalDepth, long otid) {
         boolean threadStartsInTheCurrentWindow;
+        boolean signalEndsInTheCurrentWindow = false;
         List<? extends ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
         int n = tidEvents.size(), length = getNextPowerOfTwo(n);
         tidEvents.sort(ReadonlyEventInterface::compareTo);
@@ -231,7 +232,7 @@ public class TraceCache {
             threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
             threadStartsInTheCurrentWindow = !maybeThreadId.isPresent();
         } else {
-            boolean signalEnds = signalEndsNow(tidEvents);
+            signalEndsInTheCurrentWindow = signalEndsNow(tidEvents);
             if (!signalStartsNow(tidEvents)) {
                 threadStartsInTheCurrentWindow = false;
                 OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
@@ -239,10 +240,10 @@ public class TraceCache {
                     throw new IllegalStateException("No thread id for existing signal.");
                 }
                 threadId = maybeThreadId.getAsInt();
-                if (signalEnds) {
+                if (signalEndsInTheCurrentWindow) {
                     crntState.exitSignal(signalDepth, otid);
                 }
-            } else if (!signalEnds) {
+            } else if (!signalEndsInTheCurrentWindow) {
                 threadStartsInTheCurrentWindow = true;
                 threadId = crntState.enterSignal(signalDepth, otid);
             } else {
@@ -252,7 +253,7 @@ public class TraceCache {
         }
         return new RawTrace(
                 0, n, tidEvents.toArray(new ReadonlyEventInterface[length]),
-                signalDepth, threadId, threadStartsInTheCurrentWindow);
+                signalDepth, threadId, threadStartsInTheCurrentWindow, signalEndsInTheCurrentWindow);
     }
 
     private boolean signalStartsNow(List<? extends ReadonlyEventInterface> events) {

@@ -7,16 +7,18 @@ class ThreadInfo {
     private final long signalNumber;
     private final long signalHandler;
     private final int signalDepth;
-    // TODO(virgil): This is not the right place for this bit, it is not thread-specific, it is
+    // TODO(virgil): This is not the right place for these bits, they are not thread-specific, they are
     // thread-and-window-specific.
     private final boolean threadStartsInTheCurrentWindow;
+    private final boolean signalEndsInTheCurrentWindow;
 
     ThreadInfo(
             ThreadType threadType,
             int id,
             long originalThreadId,
             long signalNumber, long signalHandler, int signalDepth,
-            boolean threadStartsInTheCurrentWindow) {
+            boolean threadStartsInTheCurrentWindow,
+            boolean signalEndsInTheCurrentWindow) {
         this.threadType = threadType;
         this.id = id;
         this.originalThreadId = originalThreadId;
@@ -24,6 +26,7 @@ class ThreadInfo {
         this.signalHandler = signalHandler;
         this.signalDepth = signalDepth;
         this.threadStartsInTheCurrentWindow = threadStartsInTheCurrentWindow;
+        this.signalEndsInTheCurrentWindow = signalEndsInTheCurrentWindow;
     }
 
     public int getId() {
@@ -52,5 +55,9 @@ class ThreadInfo {
 
     boolean getThreadStartsInTheCurrentWindow() {
         return threadStartsInTheCurrentWindow;
+    }
+
+    boolean getSignalEndsInTheCurrentWindow() {
+        return signalEndsInTheCurrentWindow;
     }
 }

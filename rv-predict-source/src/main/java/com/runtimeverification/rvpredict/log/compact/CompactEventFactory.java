@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 import java.util.Arrays;
@@ -153,22 +154,22 @@ public class CompactEventFactory {
             }
 
             @Override
-            public String getLockRepresentation() {
-                String prefix;
+            public LockRepresentation getLockRepresentation() {
+                LockRepresentation.LockType lockType;
                 switch (lockReason) {
                     case NORMAL:
-                        prefix = "WriteLock@";
+                        lockType = LockRepresentation.LockType.WRITE_LOCK;
                         break;
                     case ATOMIC:
-                        prefix = "AtomicLock@";
+                        lockType = LockRepresentation.LockType.ATOMIC_LOCK;
                         break;
                     case SIGNAL:
-                        prefix = "SignalLock@";
+                        lockType = LockRepresentation.LockType.SIGNAL_LOCK;
                         break;
                     default:
                         throw new IllegalStateException("Unknown lock type: " + lockReason);
                 }
-                return prefix + getLockId();
+                return new LockRepresentation(lockType, getLockId());
             }
 
             @Override

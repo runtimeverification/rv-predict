@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.metadata;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.trace.Trace;
 
@@ -8,6 +9,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,15 +50,28 @@ public class CompactMetadata implements MetadataInterface {
             ReadonlyEventInterface e2, Trace trace, Configuration config) {
         StringBuilder sb = new StringBuilder();
         long idx = e1.getDataObjectExternalIdentifier();
-        sb.append(String.format("[0x%016x", idx));
-        generateBracketing(e1, Arrays.asList(trace.getStacktraceAt(e1), trace.getStacktraceAt(e2)), sb);
-        sb.append("]");
+        formatAddressWithBracketing(idx, Arrays.asList(trace.getStacktraceAt(e1), trace.getStacktraceAt(e2)), sb);
         return sb.toString();
     }
 
     @Override
     public String getVariableSig(long idx) {
         return String.format("[0x%016x]", idx);
+    }
+
+    @Override
+    public String getLockSig(ReadonlyEventInterface event, Trace trace) {
+        StringBuilder sb = new StringBuilder();
+        LockRepresentation lockRepresentation = event.getLockRepresentation();
+        if (lockRepresentation.getLockType() != LockRepresentation.LockType.WRITE_LOCK) {
+            // All the compact trace locks should be write locks, this code is just in case
+            // something unexpected happens.
+            sb.append(lockRepresentation.getLockName());
+            sb.append("@");
+        }
+        formatAddressWithBracketing(
+                lockRepresentation.getLockAddress(), Collections.singletonList(trace.getStacktraceAt(event)), sb);
+        return sb.toString();
     }
 
     private static class EventBracket {
@@ -101,9 +116,15 @@ public class CompactMetadata implements MetadataInterface {
         }
     }
 
+    private void formatAddressWithBracketing(
+            long address, List<Collection<ReadonlyEventInterface>> stackTraces, StringBuilder sb) {
+        sb.append(String.format("[0x%016x", address));
+        generateBracketing(address, stackTraces, sb);
+        sb.append("]");
+    }
+
     private void generateBracketing(
-            ReadonlyEventInterface event, List<Collection<ReadonlyEventInterface>> stackTraces, StringBuilder sb) {
-        long address = event.getDataObjectExternalIdentifier();
+            long address, List<Collection<ReadonlyEventInterface>> stackTraces, StringBuilder sb) {
         EventBracket globalBefore = new EventBracket(address, EventBracket.Where.BEFORE);
         EventBracket globalAfter = new EventBracket(address, EventBracket.Where.AFTER);
         for (Collection<ReadonlyEventInterface> stack : stackTraces) {

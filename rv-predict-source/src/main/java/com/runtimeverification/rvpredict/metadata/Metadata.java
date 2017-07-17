@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.metadata;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
+import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.trace.Trace;
 import org.apache.commons.lang3.tuple.Pair;
@@ -110,6 +111,11 @@ public class Metadata implements MetadataInterface, Serializable {
     @Override
     public String getVariableSig(long varId) {
         return varIdToVarSig[Math.toIntExact(varId)];
+    }
+
+    @Override
+    public String getLockSig(ReadonlyEventInterface event, Trace trace) {
+        return event.getLockRepresentation().toString();
     }
 
     public class TooManyVariables extends RuntimeException {}

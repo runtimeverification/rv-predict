@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.violation;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -185,6 +186,53 @@ public class RaceTest {
 
         MoreAsserts.assertNotSubstring("<method 2 start>", report);
         MoreAsserts.assertNotSubstring("<method 3 start>", report);
+    }
+
+    @Test
+    public void raceDescriptionContainsLocksFormattedByMetadata() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+        List<ReadonlyEventInterface> e3;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        e3 = tu.lock(10),
+                        e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)
+                ),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+
+        mockConfiguration.windowSize = WINDOW_SIZE;
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        Trace trace = traceState.initNextTraceWindow(rawTraces);
+
+        when(mockMetadata.getLockSig(extractSingleEvent(e3), trace))
+                .thenReturn("<mock lock representation>");
+
+        Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
+        race.setFirstSignalStack(Collections.emptyList());
+        race.setSecondSignalStack(Collections.emptyList());
+
+        String report = race.generateRaceReport();
+        String[] pieces = report.split("\n");
+        boolean hasHoldingLock = false;
+        boolean hasStackLock = false;
+        for (String piece : pieces) {
+            if (piece.contains("holding lock")) {
+                MoreAsserts.assertSubstring("<mock lock representation>", piece);
+                hasHoldingLock = true;
+            }
+            if (piece.contains("- locked")) {
+                MoreAsserts.assertSubstring("<mock lock representation>", piece);
+                hasStackLock = true;
+            }
+        }
+        Assert.assertTrue(hasHoldingLock);
+        Assert.assertTrue(hasStackLock);
     }
 
     private static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {

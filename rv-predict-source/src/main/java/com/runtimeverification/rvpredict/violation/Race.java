@@ -127,13 +127,13 @@ public class Race {
 
         if (trace.metadata().getLocationSig(e1.getLocationId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
-            reportableRace = generateMemAccReport(e1, getFirstSignalStack(), sb);
+            reportableRace = generateMemAccReport(e1, getFirstSignalStack(), trace.metadata(), sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e2, getSecondSignalStack(), sb);
+            reportableRace |= generateMemAccReport(e2, getSecondSignalStack(), trace.metadata(), sb);
         } else {
-            reportableRace = generateMemAccReport(e2, getSecondSignalStack(), sb);
+            reportableRace = generateMemAccReport(e2, getSecondSignalStack(), trace.metadata(), sb);
             sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
-            reportableRace |= generateMemAccReport(e1, getFirstSignalStack(), sb);
+            reportableRace |= generateMemAccReport(e1, getFirstSignalStack(), trace.metadata(), sb);
         }
 
         sb.append(String.format("%n"));
@@ -183,7 +183,8 @@ public class Race {
     }
 
     private boolean generateMemAccReport(
-            ReadonlyEventInterface e, List<SignalStackEvent> signalStackEvents, StringBuilder sb) {
+            ReadonlyEventInterface e, List<SignalStackEvent> signalStackEvents,
+            MetadataInterface metadata, StringBuilder sb) {
         long otid = e.getOriginalThreadId();
         long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
@@ -191,12 +192,12 @@ public class Race {
             sb.append(String.format("    %s in thread %s%s%n",
                     e.isWrite() ? "Write" : "Read",
                     otid,
-                    getHeldLocksReport(heldLocks)));
+                    getHeldLocksReport(heldLocks, metadata)));
         } else {
             sb.append(String.format("    %s in signal S%s%s%n",
                     e.isWrite() ? "Write" : "Read",
                     sid,
-                    getHeldLocksReport(heldLocks)));
+                    getHeldLocksReport(heldLocks, metadata)));
         }
         boolean atLeastOneKnownElementInTheTrace = generateStackTrace(e, heldLocks, sb);
         for (int stackIndex = 1; stackIndex < signalStackEvents.size(); stackIndex++) {
@@ -215,7 +216,7 @@ public class Race {
                 sb.append(" before any event.\n");
             } else {
                 heldLocks = trace.getHeldLocksAt(maybeEvent.get());
-                sb.append(getHeldLocksReport(heldLocks));
+                sb.append(getHeldLocksReport(heldLocks, metadata));
                 sb.append("\n");
                 generateStackTrace(maybeEvent.get(), heldLocks, sb);
             }
@@ -304,7 +305,7 @@ public class Race {
         if (event.isLock()) {
             sb.append(String.format(
                     "        - locked %s %s%s%n",
-                    event.getLockRepresentation(),
+                    metadata.getLockSig(event, trace),
                     metadata.getLocationPrefix(),
                     locSig));
         } else {
@@ -317,7 +318,7 @@ public class Race {
         return true;
     }
 
-    private String getHeldLocksReport(List<ReadonlyEventInterface> heldLocks) {
+    private String getHeldLocksReport(List<ReadonlyEventInterface> heldLocks, MetadataInterface metadata) {
         if (heldLocks.isEmpty())
             return "";
         StringBuilder sb = new StringBuilder();
@@ -325,7 +326,7 @@ public class Race {
             if (i > 0) {
                 sb.append(", ");
             }
-            sb.append(heldLocks.get(i).getLockRepresentation());
+            sb.append(metadata.getLockSig(heldLocks.get(i), trace));
         }
         final boolean plural = heldLocks.size() > 1;
         return String.format(" holding lock%s %s", plural ? "s" : "",

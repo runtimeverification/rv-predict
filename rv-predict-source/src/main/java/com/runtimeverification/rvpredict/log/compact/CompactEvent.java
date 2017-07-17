@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.log.compact;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEvent;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
@@ -97,7 +98,7 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
-    public String getLockRepresentation() {
+    public LockRepresentation getLockRepresentation() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }
 

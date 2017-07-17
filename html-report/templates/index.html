@@ -102,7 +102,7 @@
       <td><a href="error-{{err.index}}.html">{{err.errdesc}}</a></td>
       <td>{{err.function}}</td>
       <td>
-      {% if err.abs_file %}
+      {% if not err.missing %}
         <a href=".{{err.abs_file}}.html">{{err.file}}</a>
       {% else %}
         {{err.file}}

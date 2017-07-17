@@ -97,6 +97,7 @@ def null_loc():
     return {
         u'rel_file': u'<unknown>',
         u'abs_file': u'<unknown>',
+        u'missing': True,
         u'line': 0,
         u'column': 0,
         u'system_header': False,
@@ -131,6 +132,7 @@ for ix, err in enumerate(errors):
             for fr in tr[u'frames']:
                 if (u'loc' in fr):
                     loc = fr[u'loc']
+                    loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
                     if loc[u'rel_file'] != "<unknown>":
                         files[loc[u'abs_file']] = loc[u'rel_file']
     else:
@@ -143,10 +145,13 @@ for ix, err in enumerate(errors):
                 files[loc[u'abs_file']] = loc[u'rel_file']
     if (u'loc' in frame):
         loc = frame[u'loc']
+        loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
+        err[u'missing'] = not os.path.exists(loc[u'abs_file'])
         err[u'file'] = loc[u'rel_file']
         err[u'abs_file'] = loc[u'abs_file']
         err[u'line'] = loc[u'line']
     else:
+        err[u'missing'] = True
         err[u'file'] = u'<unknown>'
         err[u'line'] = 0
         frame[u'loc'] = null_loc()
@@ -160,6 +165,8 @@ def render_code(rel, abs, path, errors):
     directory = os.path.dirname(path)
     if not os.path.exists(args.output + '/' + directory):
       os.makedirs(args.output + '/' + directory)
+    if not os.path.exists(filename):
+      return
     with open(filename, 'r') as f, open(args.output + '/' + path + '.html', 'w') as target:
         code = f.read()
         if args.encoding:

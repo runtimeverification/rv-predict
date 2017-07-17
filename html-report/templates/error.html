@@ -70,19 +70,21 @@
 </script>
 {% endblock %}
 {% block content %}
-<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/></a>{% if err.primary_trace.frames[0].loc.abs_file != "<unknown>" %} &raquo; <a href="{{output_dir}}{{err.primary_trace.frames[0].loc.abs_file}}.html">{{err.primary_trace.frames[0].loc.rel_file}}</a>{% endif %} &raquo; Error {{err.index}}</h1>
+<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/></a>{% if not err.primary_trace.frames[0].loc.missing %} &raquo; <a href="{{output_dir}}{{err.primary_trace.frames[0].loc.abs_file}}.html">{{err.primary_trace.frames[0].loc.rel_file}}</a>{% endif %} &raquo; Error {{err.index}}</h1>
 <h2>{{err.description}}</h2>
 <div id="listContainer">
   <ul id="expList">
   {% for frame in err.primary_trace.frames %}
   {% if loop.first %}<li class="expanded">in{% else %}<li>called by{%
-    endif %} {{frame.symbol}} at {% if frame.loc.abs_file != "<unknown>" %}<a href="{{output_dir}}{{frame.loc.abs_file}}.html">{{frame.loc.rel_file}}</a>{% else %}{{frame.loc.rel_file}}{% endif %}
+    endif %} {{frame.symbol}} at {% if not frame.loc.missing %}<a href="{{output_dir}}{{frame.loc.abs_file}}.html">{{frame.loc.rel_file}}</a>
     <ul data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}">
       <li class="expand expand-up" onClick="expandUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
       <li><div class="stack-frame pre"></div>
       </li>
       <li class="expand expand-down" onClick="expandDown('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
-    </ul></li>
+    </ul>
+    {% else %}{{frame.loc.rel_file}}:{{frame.loc.line}}{% endif %}
+    </li>
   {% endfor %}
   </ul>
 </div>

@@ -24,9 +24,10 @@ let rvsyms_raw str =
 let rvsyms_field str =
   let raw = rvsyms_raw str in
   if raw = "" then str else
-  let parts = Str.split_delim (Str.regexp ";;") raw in
+  let parts = Str.split_delim (Str.regexp ";") raw in
   match parts with
-  | loc :: symbol :: [] -> symbol ^ " at " ^ loc
+  | loc :: _ :: _  :: symbol :: [] -> symbol ^ " at " ^ loc
+  | loc :: _  :: symbol :: [] -> symbol ^ " at " ^ loc
   | _ -> failwith "could not parse field in rvsyms output"
 
 let parse_loc loc =
@@ -43,11 +44,7 @@ let rvsyms_frame str =
   | loc  :: symbol :: [] -> (symbol, Some (parse_loc loc))
   | _ -> (str, None)
 
-let symbolize_field = function
-| {address=a; frame1=None; frame2=None} -> rvsyms_field ("[0x" ^ a ^ "]")
-| {address=a; frame1=Some {pc=pc; cfa=cfa}; frame2=None} -> rvsyms_field ("[0x" ^ a ^ " : 0x" ^ pc ^ "/0x" ^ cfa ^ "]")
-| {address=a; frame1=Some {pc=pc1; cfa=cfa1}; frame2=Some {pc=pc2; cfa=cfa2}} -> rvsyms_field ("[0x" ^ a ^ " : 0x" ^ pc1 ^ "/0x" ^ cfa1 ^ " 0x" ^ pc2 ^ "/0x" ^ cfa2 ^ "]")
-| {frame1=None; frame2=Some _} -> invalid_arg "malformed field json with only frame2"
+let symbolize_field (c: raw_field) : string = match c with {address=a} -> rvsyms_field a
 
 let rvpsigname = function
 |  1 -> "SIGHUP"
@@ -77,11 +74,11 @@ let strs = List.map symbolize_component_field fields in
 format_description fmt strs
 
 let symbolize_lock raw : lock =
-let (symbol, loc) = rvsyms_frame ("{0x" ^ raw.locked_at ^ "}") in
+let (symbol, loc) = rvsyms_frame raw.locked_at in
 {id=symbolize_field raw.id; locked_at={symbol=symbol; loc=loc; locks=[]}}
 
 let symbolize_frame raw : frame =
-let (symbol, loc) = rvsyms_frame ("{0x" ^ raw.address ^ "}") in
+let (symbol, loc) = rvsyms_frame raw.address in
 {symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks}
 
 let symbolize_trace_component (raw : raw_trace_component) : trace_component =
@@ -95,8 +92,16 @@ format_description fmt strs
 let symbolize raw = 
 {description=symbolize_format_str raw.description_format raw.description_fields; traces=List.map symbolize_trace raw.traces; category=raw.category; error_id=raw.error_id; citations=[]; friendly_cat=None; long_desc=None}
 
-let lexer = Yojson.init_lexer ()
-let buf = Lexing.from_channel stdin
-let err = Error_j.read_raw_stack_error lexer buf
-let symbolized = symbolize err
-let () = print_string (Error_j.string_of_stack_error symbolized)
+let magic = "[RV-Predict]"
+let magic_len = String.length magic
+
+let () = try 
+  while true do
+    let line = input_line stdin in
+    if String.length line >= magic_len && String.sub line 0 magic_len = magic then prerr_endline line else
+    let err = Error_j.raw_stack_error_of_string line in
+    let symbolized = symbolize err in
+    print_string (Error_j.string_of_stack_error symbolized);
+    print_newline ()
+  done
+with End_of_file -> ()

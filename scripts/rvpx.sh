@@ -11,6 +11,7 @@ usage()
 
 predict()
 {
+	if [ -n "${RV_ISSUE_REPORT+x}" ]; then export RV_ISSUE_REPORT="`pwd`/$RV_ISSUE_REPORT"; fi
 	cd $tmpdir && rvpa ${passthrough} ${progpath}
 }
 

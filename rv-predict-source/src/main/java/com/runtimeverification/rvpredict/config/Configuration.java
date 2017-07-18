@@ -784,6 +784,10 @@ public class Configuration implements Constants {
         return compactTrace;
     }
 
+    public boolean isJsonReport() {
+        return compactTrace;
+    }
+
     public boolean noPrediction() {
         return prediction == null;
     }

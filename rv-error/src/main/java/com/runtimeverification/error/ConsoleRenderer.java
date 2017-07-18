@@ -35,14 +35,14 @@ public class ConsoleRenderer extends Renderer {
     }
 
     void renderTrace(StringBuilder sb, Trace trace) {
-        if (trace.description != null) {
+        if (trace.components.get(0).description != null) {
             sb.append("  ");
-            sb.append(trace.description);
+            sb.append(trace.components.get(0).description);
             newline(sb);
         }
-        if (trace.frames.size() > 0) {
-            renderFrame(sb, "at", trace.frames.get(0));
-            trace.frames.subList(1, trace.frames.size()).forEach(f -> renderFrame(sb, "by", f));
+        if (trace.components.get(0).frames.size() > 0) {
+            renderFrame(sb, "at", trace.components.get(0).frames.get(0));
+            trace.components.get(0).frames.subList(1, trace.components.get(0).frames.size()).forEach(f -> renderFrame(sb, "by", f));
         }
     }
 

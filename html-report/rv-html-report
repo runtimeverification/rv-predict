@@ -108,7 +108,6 @@ def null_frame():
         u'symbol': u'<unknown>',
         u'loc': null_loc(),
         u'locks': [],
-        u'language': u'C',
     }
 
 errorsByFile = defaultdict(listdict)
@@ -119,17 +118,17 @@ for ix, err in enumerate(errors):
         traces = err[u'traces']
         if traces:
             for trace in traces:
-              frames = trace[u'frames']
+              frames = trace[u'components'][0][u'frames']
               if frames:
-                primary_trace = trace
+                primary_component = trace[u'components'][0]
                 break
             if not frames:
                 frames.append(null_frame())
         else:
             err[u'traces'] = [{u'frames': [null_frame()]}]
-        frame = primary_trace[u'frames'][0]
+        frame = primary_component[u'frames'][0]
         for tr in traces:
-            for fr in tr[u'frames']:
+            for fr in tr[u'components'][0][u'frames']:
                 if (u'loc' in fr):
                     loc = fr[u'loc']
                     loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
@@ -137,8 +136,8 @@ for ix, err in enumerate(errors):
                         files[loc[u'abs_file']] = loc[u'rel_file']
     else:
         frame = err[u'loc']
-        primary_trace = {u'frames': [frame]}
-        err[u'traces']=[primary_trace]
+        primary_component = {u'frames': [frame]}
+        err[u'traces']={u'components': [primary_component]}
         if (u'loc' in frame):
             loc = frame[u'loc']
             if loc[u'rel_file'] != "<unknown>":
@@ -156,7 +155,7 @@ for ix, err in enumerate(errors):
         err[u'line'] = 0
         frame[u'loc'] = null_loc()
     err[u'function'] = frame[u'symbol']
-    err[u'primary_trace'] = primary_trace
+    err[u'primary_component'] = primary_component
     errorsByFile[err[u'file']][err[u'line']].append(err)
 
 

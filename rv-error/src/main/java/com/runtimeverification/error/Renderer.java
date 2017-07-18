@@ -52,10 +52,10 @@ public abstract class Renderer {
 
     public boolean render(StackError error, String json) {
         Frame topFrame;
-        if (error.traces.size() == 0 || error.traces.get(0).frames.size() == 0) {
+        if (error.traces.size() == 0 || error.traces.get(0).components.get(0).frames.size() == 0) {
             topFrame = new Frame();
         } else {
-            topFrame = error.traces.get(0).frames.get(0);
+            topFrame = error.traces.get(0).components.get(0).frames.get(0);
         }
         error.error_id = getRealErrorId(error.error_id, error.category);
         error.citations = getCitations(error.error_id);

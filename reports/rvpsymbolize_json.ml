@@ -75,11 +75,11 @@ format_description fmt strs
 
 let symbolize_lock raw : lock =
 let (symbol, loc) = rvsyms_frame raw.locked_at in
-{id=symbolize_field raw.id; locked_at={symbol=symbol; loc=loc; locks=[]}}
+{id=symbolize_field raw.id; locked_at={symbol=symbol; loc=loc; locks=[]; elided=false}}
 
 let symbolize_frame raw : frame =
 let (symbol, loc) = rvsyms_frame raw.address in
-{symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks}
+{symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks; elided=false}
 
 let symbolize_trace_component (raw : raw_trace_component) : trace_component =
 {description=Some (symbolize_format_str raw.description_format raw.description_fields); frames=List.map symbolize_frame raw.frames}

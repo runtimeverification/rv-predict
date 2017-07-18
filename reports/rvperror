@@ -41,7 +41,7 @@ EOF
 metadata=$(tempfile)
 trap "rm -rf $metadata" EXIT INT TERM
 printf '{"suppressions":[{"condition":["Category","LintError"],"suppress":false}],"message_length":80,"format":"Console","previous_errors":[],"fatal_errors":false,"rv_error":""}\n' > $metadata
-rvpsymbolize-json "$@" | while read -r line
+while read -r line
 do
   printf '%s' "$line" | rverror $metadata
 done

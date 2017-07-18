@@ -82,10 +82,10 @@ symbolize()
 {
 	if [ ${filter_symbol:-yes} = yes -a ${filter_trim:-yes} = yes ]
 	then
-		rvperror "$@" | trim_stack
+		rvpsymbolize-json "$@" | rvptrimframe | rvperror
 	elif [ ${filter_symbol:-yes} = yes ]
 	then
-		rvperror "$@"
+		rvpsymbolize-json "$@" | rvperror
 	else
 		cat
 	fi

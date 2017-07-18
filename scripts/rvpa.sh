@@ -82,10 +82,10 @@ symbolize()
 {
 	if [ ${filter_symbol:-yes} = yes -a ${filter_trim:-yes} = yes ]
 	then
-		rvpsymbolize "$@" | trim_stack
+		rvperror "$@" | trim_stack
 	elif [ ${filter_symbol:-yes} = yes ]
 	then
-		rvpsymbolize "$@"
+		rvperror "$@"
 	else
 		cat
 	fi

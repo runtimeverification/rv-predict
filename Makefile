@@ -2,7 +2,7 @@ OS!=uname -s
 
 PROJECTNAME=rv-predict-c
 
-SUBDIR=doc examples scripts .WAIT llvm
+SUBDIR=doc examples scripts .WAIT llvm reports
 
 .if $(OS) == "Linux"
 SUBDIR+=elftoolchain .WAIT

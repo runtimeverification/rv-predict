@@ -72,10 +72,50 @@
                             <artifactId>libz3java</artifactId>
                             <version>4.4.0</version>
                             <type>so</type>
+                            <classifier>linux32</classifier>
+                            <overWrite>false</overWrite>
+                            <outputDirectory>${project.build.directory}/classes/native/linux32</outputDirectory>
+                            <destFileName>libz3java.so</destFileName>
+                        </artifactItem>
+                        <artifactItem>
+                            <groupId>com.microsoft.z3</groupId>
+                            <artifactId>libz3java</artifactId>
+                            <version>4.4.0</version>
+                            <type>so</type>
                             <classifier>linux64</classifier>
                             <overWrite>false</overWrite>
                             <outputDirectory>${project.build.directory}/classes/native/linux64</outputDirectory>
                             <destFileName>libz3java.so</destFileName>
+                        </artifactItem>
+                        <artifactItem>
+                            <groupId>com.microsoft.z3</groupId>
+                            <artifactId>z3java</artifactId>
+                            <version>4.4.0</version>
+                            <type>dll</type>
+                            <classifier>windows32</classifier>
+                            <overWrite>false</overWrite>
+                            <outputDirectory>${project.build.directory}/classes/native/windows32</outputDirectory>
+                            <destFileName>z3java.dll</destFileName>
+                        </artifactItem>
+                        <artifactItem>
+                            <groupId>com.microsoft.z3</groupId>
+                            <artifactId>z3java</artifactId>
+                            <version>4.4.0</version>
+                            <type>dll</type>
+                            <classifier>windows64</classifier>
+                            <overWrite>false</overWrite>
+                            <outputDirectory>${project.build.directory}/classes/native/windows64</outputDirectory>
+                            <destFileName>z3java.dll</destFileName>
+                        </artifactItem>
+                        <artifactItem>
+                            <groupId>com.microsoft.z3</groupId>
+                            <artifactId>libz3java</artifactId>
+                            <version>4.4.0</version>
+                            <type>dylib</type>
+                            <classifier>osx</classifier>
+                            <overWrite>false</overWrite>
+                            <outputDirectory>${project.build.directory}/classes/native/osx</outputDirectory>
+                            <destFileName>libz3java.dylib</destFileName>
                         </artifactItem>
                     </artifactItems>
                     <outputDirectory>${project.build.directory}/wars</outputDirectory>
@@ -83,33 +123,6 @@
                     <overWriteSnapshots>true</overWriteSnapshots>
                 </configuration>
             </plugin>
-            <!--plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.4.1</version>
-                <executions>
-                    <execution>
-                        <id>jar-with-dlls</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptor>src/main/assembly/assembly.xml</descriptor>
-                            <appendAssemblyId>true</appendAssemblyId>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>2.4</version>
-                <executions>
-                    <execution>
-                        <id>default-jar</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin-->
         </plugins>
     </build>
 </project>

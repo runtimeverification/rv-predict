@@ -1,20 +1,17 @@
 #!/bin/sh
 
 set -e
+set -u
 
-tmpdir=$(mktemp -d -t $(basename $0).XXXXXX)
-exitcode=1
-
-progname=$1
-if [ ${progname##/} != ${progname} ]; then
-	progpath=${progname}
-else
-	progpath=$(pwd)/${progname}
-fi
+usage()
+{
+	echo "usage: $(basename $0) [--window size] [--no-shorten|--no-symbol|--no-system|--no-trim] [--] program [ arg1 ... ]" 1>&2
+	exit 1
+}
 
 predict()
 {
-	cd $tmpdir && rvpa ${progpath}
+	cd $tmpdir && rvpa ${passthrough} ${progpath}
 }
 
 cleanup_hook()
@@ -29,7 +26,6 @@ cleanup_hook()
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
-	echo $(basename $0): rm -rf $tmpdir 1>&2
 	rm -rf $tmpdir
 	exit $exitcode
 }
@@ -46,13 +42,12 @@ $(basename $0): signal again to cancel.
 EOF
 	fi
 
-	predict
+	# If the command is not found (exit code 127) or if it is found, but not
+	# executable (exit code 126), don't try to perform prediction.
+	[ $exitcode -ne 126 -a $exitcode -ne 127 ] && predict
 
-	exit $exitcode
+	cleanup_hook EXIT
 }
-
-# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
-PS1=""
 
 trap_with_reason()
 {
@@ -62,6 +57,43 @@ trap_with_reason()
 		trap "$func $reason" $reason
 	done
 }
+
+tmpdir=$(mktemp -d -t $(basename $0).XXXXXX)
+exitcode=1
+passthrough=
+
+while [ $# -gt 1 ]; do
+	case $1 in
+	--window)
+		passthrough="${passthrough:-} $1 $2"
+		shift
+		shift
+		;;
+	--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim|\
+	--prompt-for-license)
+		passthrough="${passthrough:-} $1"
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	*)	break
+		;;
+	esac
+done
+
+[ $# -ge 1 ] || usage
+
+progname=$1
+if [ ${progname##/} != ${progname} ]; then
+	progpath=${progname}
+else
+	progpath=$(pwd)/${progname}
+fi
+
+# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
+PS1=""
 
 set -i
 trap_with_reason exit_hook EXIT ALRM HUP INT PIPE QUIT TERM
@@ -73,7 +105,3 @@ set +e
 "$@"
 exitcode=$?
 set -e
-
-# If the command is not found (exit code 127) or if it is found, but not
-# executable (exit code 126), don't try to perform prediction.
-[ $exitcode -ne 126 -a $exitcode -ne 127 ] && predict

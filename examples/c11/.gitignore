@@ -14,5 +14,7 @@ simplerace
 spcq
 square-sum
 stolz-queue
+stolz-queue.rvp
+stolz-queue.tsan
 .*.swp
 tags

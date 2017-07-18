@@ -4,6 +4,9 @@
 # That is, it is not reliant on any bash-isms.
 #
 
+set -e
+set -u
+
 pass_dir=$(dirname $0)/../lib
 runtime_dir=$(dirname $0)/../lib
 

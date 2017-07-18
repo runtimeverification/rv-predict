@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+set -u
 
 cleanup_hook()
 {
@@ -14,13 +15,9 @@ cleanup_hook()
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
-	echo $(basename $0): rm -rf $tmpdir 1>&2
 	rm -rf $tmpdir
 	exit $exitcode
 }
-
-# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
-PS1=""
 
 trap_with_reason()
 {
@@ -33,7 +30,7 @@ trap_with_reason()
 
 usage()
 {
-	echo "usage: $(basename $0) program" 1>&2
+	echo "usage: $(basename $0) [--no-shorten|--no-signal|--no-system] program" 1>&2
 	exit 1
 }
 
@@ -51,12 +48,13 @@ last_n_components()
 {
 	ncomponents=$1
 	filename=$2
-	result=$(basename $filename)
+	residue=$filename
+	result=$(basename $residue)
 	while [ $ncomponents -gt 1 ]; do
-		filename=$(dirname $filename)
-		[ $filename = "." ] && break
+		residue=$(dirname $residue)
+		[ $residue = "." ] && break
 		ncomponents=$((ncomponents - 1))
-		result=$(basename $filename)/$result
+		result=$(basename $residue)/$result
 	done
 	if [ $((${#result} + 4)) -lt ${#filename} ]; then
 		echo ".../${result}"
@@ -65,7 +63,25 @@ last_n_components()
 	fi
 }
 
+while [ $# -gt 1 ]; do
+	case $1 in
+	--no-shorten|--no-signal|--no-system)
+		eval filter_${1##--no-}=no
+		shift
+		;;
+	--)
+		shift
+		break
+		;;
+	*)	break
+		;;
+	esac
+done
+
 [ $# -eq 1 ] || usage
+
+# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
+PS1=""
 
 set -i
 trap_with_reason cleanup_hook EXIT ALRM HUP INT PIPE QUIT TERM
@@ -93,7 +109,11 @@ s/\([^:]\+\)\(:[^;]\+\);\(.\+\);;\(.\+\)$/\4 \1 \2 \3/
 s/\([^;]\+\);\(.\+\);;\(.\+\)$/\3 \1 :: \2/' | \
 tee $tmpdir/funcsyms_proto_proto_script | \
 while read regex path linecol symbol; do
-	shortened_path=$(last_n_components 2 $path)
+	if [ ${filter_shorten:-yes} = yes ]; then
+		shortened_path=$(last_n_components 2 $path)
+	else
+		shortened_path=$path
+	fi
 	echo "${regex};;${symbol};;${shortened_path}${linecol##::}"
 done | tee $tmpdir/funcsyms_proto_script | sed "$func_sym_sed_template" > $tmpdir/funcsyms_sed_script
 
@@ -119,12 +139,17 @@ S8	SIGFPE
 S9	SIGKILL
 EOF
 
-grep "$signal_regex" < $tmpdir/original | \
-sed "s/.*$signal_regex.*/\1/g" | sort -u | \
-join -1 1 -2 1 -o '2.1 2.2' - $tmpdir/signal-mapping | \
-while read signum signame; do
-	echo "s/\\<$signum\\>/$signame/g"
-done > $tmpdir/signal_sed_script
+if [ ${filter_signal:-yes} = yes ]
+then
+	grep "$signal_regex" < $tmpdir/original | \
+	sed "s/.*$signal_regex.*/\1/g" | sort -u | \
+	join -1 1 -2 1 -o '2.1 2.2' - $tmpdir/signal-mapping | \
+	while read signum signame; do
+		echo "s/\\<$signum\\>/$signame/g"
+	done > $tmpdir/signal_sed_script
+else
+	touch $tmpdir/signal_sed_script
+fi
 
 #
 # TBD split lines after each address, just in case there is >1 per line

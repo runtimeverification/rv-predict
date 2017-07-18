@@ -16,7 +16,7 @@ jarfile=$2
 (
 	echo "Main-Class: com.runtimeverification.rvpredict.engine.main.Main"
 	echo -n "Class-Path: "
-	cd ${progdir}/../rv-predict-jar && \
+	cd ${progdir}/../rv-predict-source && \
 	mvn -q dependency:build-classpath -Dmdep.outputFile=/dev/stdout | \
 	sed 's/[^:]*rv-predict-source-[^:]*.jar://g' | sed 's/:/\n  /g' | grep -v '^[[:space:]]*$'
 ) > ${objdir}/manifest

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2016 Runtime Verification, Inc.
- * All rights reserved.
+ * Copyright (c) 2016, 2017 Runtime Verification, Inc.  All rights reserved.
  */
 /*
  * Copyright (c) 2009, David Anderson.
@@ -29,14 +28,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  */
-/* simplereader.c
- * This is an example of code reading dwarf .debug_info.
- * It is kept as simple as possible to expose essential features.
+/* rvsyms.c
+ *
+ * rvsyms converts instruction and data addresses to symbols using
+ * an ELF binary's DWARF information.
+ *
  * It does not do all possible error reporting or error handling.
-
- * To use, try
- *     make
- *     ./simplereader simplereader
+ *
+ * rvsyms makes a best effort to convert a data address to a variable name.
+ * If a data address is in an aggregate, rvsyms tries to produce a
+ * dot-separated "path" to the most specific member that contains the
+ * address.  For a data address inside of an array, rvsyms tries to produce
+ * indices in square brackets.
+ *
+ * As of this writing, rvsyms assumes that every address indicates a
+ * char-sized memory cell.
  */
 #include <assert.h>
 #include <err.h>

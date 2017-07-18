@@ -19,18 +19,18 @@ SUBDIR += libpe
 .endif
 
 # Build tools after the libraries.
-SUBDIR += addr2line
+#SUBDIR += addr2line
 #SUBDIR += ar
-SUBDIR += brandelf
-SUBDIR += cxxfilt
+#SUBDIR += brandelf
+#SUBDIR += cxxfilt
 #SUBDIR += elfcopy
-SUBDIR += elfdump
-SUBDIR += findtextrel
-SUBDIR += ld
-SUBDIR += nm
-SUBDIR += readelf
-SUBDIR += size
-SUBDIR += strings
+#SUBDIR += elfdump
+#SUBDIR += findtextrel
+#SUBDIR += ld
+#SUBDIR += nm
+#SUBDIR += readelf
+#SUBDIR += size
+#SUBDIR += strings
 
 # Build the test suites.
 .if exists(${.CURDIR}/test) && defined(WITH_TESTS) && ${WITH_TESTS:tl} == "yes"

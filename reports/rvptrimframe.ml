@@ -14,9 +14,11 @@ let magic_len = String.length magic
 let rec trim_rvp frames = match frames with
 | [] -> []
 | frame :: tail ->
-    if String.length frame.symbol >= magic_len 
+    if frame.symbol = "__rvpredict_thread_wrapper" then
+      []
+    else if String.length frame.symbol >= magic_len 
         && String.sub frame.symbol 0 magic_len = magic then
-      trim_rvp frames
+      trim_rvp tail
     else
       frame :: (trim_rvp tail)
 
@@ -53,21 +55,21 @@ let rec trim_library frames = match frames with
 let trim_frames frames =
   trim_main (trim_rvp (trim_library frames)) 
 
-let trim_component (c: trace_component) : trace_component = 
+let trim_component (c: stack_trace_component) : stack_trace_component = 
 {c with frames=trim_frames c.frames}
 
-let trim_trace (tr: trace) =
+let trim_trace (tr: stack_trace) =
 {tr with components=List.map trim_component tr.components}
 
 let trim_error (err: stack_error) =
-{err with traces=List.map trim_trace err.traces}
+{err with stack_traces=List.map trim_trace err.stack_traces}
 
-let is_real_trace (tr: trace) = match tr with
+let is_real_trace (tr: stack_trace) = match tr with
 | {components={frames=_ :: _} :: _} -> true
 | _ -> false
 
 let is_real_race (err: stack_error) = match err with
-{traces=traces} -> List.fold_left (||) false (List.map is_real_trace traces)
+{stack_traces=traces} -> List.fold_left (||) false (List.map is_real_trace traces)
 
 let () = try
   while true do

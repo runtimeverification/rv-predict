@@ -96,4 +96,13 @@ public class IntraThreadOrderingTest {
         Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                 "o1", "10", "o2", "20", "o3", "20", "o4", "15")));
     }
+
+    @Test
+    public void doesNotCrashWithEmptyThreads() {
+        ConstraintSource constraintSource = new IntraThreadOrdering(
+                ImmutableMap.of(
+                        5, Arrays.asList(mockEvent1, mockEvent2),
+                        6, Collections.emptyList()));
+        constraintSource.createConstraint(ConstraintType.SOUND);
+    }
 }

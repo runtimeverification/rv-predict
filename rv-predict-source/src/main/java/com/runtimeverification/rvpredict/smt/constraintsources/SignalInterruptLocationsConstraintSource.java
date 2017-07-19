@@ -3,8 +3,8 @@ package com.runtimeverification.rvpredict.smt.constraintsources;
 import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.signals.EventsEnabledForSignalIterator;
-import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ConstraintSource;
+import com.runtimeverification.rvpredict.smt.ConstraintType;
 import com.runtimeverification.rvpredict.smt.ModelConstraint;
 import com.runtimeverification.rvpredict.smt.constraints.And;
 import com.runtimeverification.rvpredict.smt.constraints.Before;
@@ -76,8 +76,14 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
                 .filter(interruptingTtid -> ttidToThreadType.apply(interruptingTtid) == ThreadType.SIGNAL)
                 .forEach(interruptingTtid -> {
                     Optional<ReadonlyEventInterface> maybefirstEvent = getFirstEvent(interruptingTtid);
+                    if (!maybefirstEvent.isPresent()) {
+                        // A signal without events is one that started before the current window and will end in
+                        // a future window.
+                        allSignalConstraints.add(createEmptySignalConstraint(
+                                interruptingTtid, ttidToSignalNumber.apply(interruptingTtid)));
+                        return;
+                    }
                     Optional<ReadonlyEventInterface> maybeLastEvent = getLastEvent(interruptingTtid);
-                    assert maybefirstEvent.isPresent();
                     assert maybeLastEvent.isPresent();
 
                     allSignalConstraints.add(computeSignalInterruptionConstraint(
@@ -87,6 +93,24 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
                             constraintType));
                 });
         return new And(allSignalConstraints.build());
+    }
+
+    private ModelConstraint createEmptySignalConstraint(int interruptingTtid, long signalNumber) {
+        Set<Integer> ttidWhereEnabledAtStart = signalNumberToTtidsWhereEnabledAtStart.apply(signalNumber);
+        Set<Integer> ttidWhereDisabledAtStart = signalNumberToTtidsWhereDisabledAtStart.apply(signalNumber);
+        ImmutableList.Builder<ModelConstraint> possibleSignalInterruptions = new ImmutableList.Builder<>();
+        eventsByThreadID.forEach((interruptedTtid, interruptedThreadEvents) -> {
+            if (interruptedTtid.equals(interruptingTtid)) {
+                return;
+            }
+            if (!ttidWhereDisabledAtStart.contains(interruptedTtid)) {
+                possibleSignalInterruptions.add(emptySignalInterrupts(
+                        interruptingTtid, signalNumber,
+                        interruptedTtid,
+                        ttidWhereEnabledAtStart.contains(interruptedTtid)));
+            }
+        });
+        return new Or(possibleSignalInterruptions.build());
     }
 
     private EventsEnabledForSignalIterator createEventsIterator(
@@ -119,7 +143,6 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             if (interruptedTtid.equals(interruptingTtid)) {
                 return;
             }
-
             if (!ttidWhereDisabledAtStart.contains(interruptedTtid)) {
                 possibleSignalInterruptions.add(signalInterruptsAtStart(
                         interruptingTtid, signalNumber,
@@ -157,6 +180,30 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             }
         });
         return new Or(possibleSignalInterruptions.build());
+    }
+
+    private ModelConstraint emptySignalInterrupts(
+            int interruptingSignalTtid, long interruptingSignalNumber,
+            int interruptedTtid,
+            boolean enabledAtStart) {
+        if (ttidToThreadType.apply(interruptedTtid) == ThreadType.SIGNAL) {
+            Optional<ReadonlyEventInterface> firstInterruptedSignalEvent = getFirstEvent(interruptedTtid);
+            if (firstInterruptedSignalEvent.isPresent()) {
+                return new False();
+            }
+            return new And(
+                    new SignalInterruptsThread(interruptingSignalTtid, interruptedTtid),
+                    new SignalEnabledOnThreadValue(interruptedTtid, interruptingSignalNumber, true));
+        }
+        if (enabledAtStart) {
+            Optional<ReadonlyEventInterface> joinThreadEvent = ttidToJoinEvent.apply(interruptedTtid);
+            Optional<ReadonlyEventInterface> startThreadEvent = ttidToStartEvent.apply(interruptedTtid);
+            if (startThreadEvent.isPresent() || joinThreadEvent.isPresent()) {
+                return new False();
+            }
+            return new SignalInterruptsThread(interruptingSignalTtid, interruptedTtid);
+        }
+        return new False();
     }
 
     private ModelConstraint signalInterruptsAtStart(
@@ -220,7 +267,9 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
             ConstraintType constraintType) {
         Optional<ReadonlyEventInterface> firstInterruptedSignalEvent = getFirstEvent(interruptedSignalTtid);
         if (!firstInterruptedSignalEvent.isPresent()) {
-            return new False();
+            return new And(
+                    new SignalInterruptsThread(interruptingSignalTtid, interruptedSignalTtid),
+                    new SignalEnabledOnThreadValue(interruptedSignalTtid, interruptingSignalNumber, true));
         }
         ImmutableList.Builder<ModelConstraint> possibleInterruptionPlaces = new ImmutableList.Builder<>();
 
@@ -260,11 +309,13 @@ public class SignalInterruptLocationsConstraintSource implements ConstraintSourc
 
     private Optional<ReadonlyEventInterface> getFirstEvent(int ttid) {
         List<ReadonlyEventInterface> events = eventsByThreadID.get(ttid);
-        return events == null ? Optional.empty() : Optional.of(events.get(0));
+        assert events != null;
+        return events.isEmpty() ? Optional.empty() : Optional.of(events.get(0));
     }
 
     private Optional<ReadonlyEventInterface> getLastEvent(int ttid) {
         List<ReadonlyEventInterface> events = eventsByThreadID.get(ttid);
-        return events == null ? Optional.empty() : Optional.of(events.get(events.size() - 1));
+        assert events != null;
+        return events.isEmpty() ? Optional.empty() : Optional.of(events.get(events.size() - 1));
     }
 }

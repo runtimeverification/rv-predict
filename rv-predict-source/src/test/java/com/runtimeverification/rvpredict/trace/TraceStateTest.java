@@ -1,11 +1,14 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.log.compact.Context;
+import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
-import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.util.Constants;
+import com.runtimeverification.rvpredict.testutils.TestUtils;
+import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -13,9 +16,12 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.util.List;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
+import static com.runtimeverification.rvpredict.testutils.MoreAsserts.hasSize;
+import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractEventByType;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -23,14 +29,27 @@ public class TraceStateTest {
     private final static long THREAD_ID = 10L;
     private final static long THREAD_ID_2 = 11L;
 
+    private static final int NO_SIGNAL = 0;
+    private static final int ONE_SIGNAL = 0;
+    private static final long NO_ENABLED_SIGNAL_MASK = ~0L;
     private final static long SIGNAL_NUMBER_1 = 13L;
 
     private final static long SIGNAL_HANDLER_1 = 101L;
 
-    @Mock private Configuration mockConfiguration;
-    @Mock private MetadataInterface mockMetadata;
-    @Mock private ReadonlyEventInterface mockEvent1;
-    @Mock private ReadonlyEventInterface mockEvent2;
+    private final static long PC_BASE = 201L;
+
+    private static final long GENERATION = 301;
+
+    @Mock
+    private Configuration mockConfiguration;
+    @Mock
+    private MetadataInterface mockMetadata;
+    @Mock
+    private ReadonlyEventInterface mockEvent1;
+    @Mock
+    private ReadonlyEventInterface mockEvent2;
+    @Mock
+    private Context mockContext;
 
     @Before
     public void setUp() {
@@ -40,111 +59,210 @@ public class TraceStateTest {
     }
 
     @Test
-    public void generatesThreadIds() {
+    public void remembersPreviousWindowEstablishEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        Assert.assertEquals(1, traceState.getNewThreadId());
+        tu.setTraceState(traceState);
+
+        List<ReadonlyEventInterface> e1;
+
+        List<RawTrace> rawTraces = ImmutableList.of(
+                tu.createRawTrace(
+                        e1 = tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, NO_ENABLED_SIGNAL_MASK)
+                )
+        );
+
+        traceState.initNextTraceWindow(rawTraces);
+        traceState.preStartWindow();
+
+        Assert.assertEquals(
+                extractEventByType(e1, EventType.ESTABLISH_SIGNAL),
+                TestUtils.fromOptional(traceState.getPreviousWindowEstablishEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1)));
     }
 
     @Test
-    public void remembersThreadsWhenGeneratingThreadIds() {
+    public void remembersTheLastPreviousWindowEstablishEvent() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        Assert.assertEquals(1, traceState.getNewThreadId(THREAD_ID));
-        OptionalInt threadId = traceState.getUnfinishedThreadId(0, THREAD_ID);
-        Assert.assertTrue(threadId.isPresent());
-        Assert.assertEquals(1, threadId.getAsInt());
-        Assert.assertFalse(traceState.getUnfinishedThreadId(1, THREAD_ID).isPresent());
-        Assert.assertFalse(traceState.getUnfinishedThreadId(0, THREAD_ID_2).isPresent());
+        tu.setTraceState(traceState);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces1 = ImmutableList.of(
+                tu.createRawTrace(
+                        e1 = tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, NO_ENABLED_SIGNAL_MASK)
+                )
+        );
+        List<RawTrace> rawTraces2 = ImmutableList.of(
+                tu.createRawTrace(
+                        e2 = tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, NO_ENABLED_SIGNAL_MASK)
+                )
+        );
+
+        traceState.initNextTraceWindow(rawTraces1);
+        traceState.preStartWindow();
+        Assert.assertEquals(
+                extractEventByType(e1, EventType.ESTABLISH_SIGNAL),
+                TestUtils.fromOptional(traceState.getPreviousWindowEstablishEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1)));
+
+        traceState.initNextTraceWindow(rawTraces2);
+        traceState.preStartWindow();
+        Assert.assertEquals(
+                extractEventByType(e2, EventType.ESTABLISH_SIGNAL),
+                TestUtils.fromOptional(traceState.getPreviousWindowEstablishEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1)));
+
+        traceState.initNextTraceWindow(rawTraces1);
+        traceState.preStartWindow();
+        Assert.assertEquals(
+                extractEventByType(e2, EventType.ESTABLISH_SIGNAL),
+                TestUtils.fromOptional(traceState.getPreviousWindowEstablishEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1)));
     }
 
     @Test
-    public void remembersSignalsWhenGeneratingThreadIds() {
+    public void remembersTheLastPreviousWindowEstablishEventWhenFastProcessing() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        Assert.assertEquals(1, traceState.enterSignal(1, THREAD_ID, SIGNAL_NUMBER_1));
-        OptionalInt threadId = traceState.getUnfinishedThreadId(1, THREAD_ID);
-        Assert.assertTrue(threadId.isPresent());
-        Assert.assertEquals(1, threadId.getAsInt());
-        Assert.assertFalse(traceState.getUnfinishedThreadId(0, THREAD_ID).isPresent());
-        Assert.assertFalse(traceState.getUnfinishedThreadId(1, THREAD_ID_2).isPresent());
-        Assert.assertFalse(traceState.getSignalNumberForThreadAtWindowStart(threadId.getAsInt()).isPresent());
+        tu.setTraceState(traceState);
 
-        traceState.startWindow();
-        threadId = traceState.getUnfinishedThreadId(1, THREAD_ID);
-        Assert.assertTrue(threadId.isPresent());
-        Assert.assertEquals(1, threadId.getAsInt());
-        Assert.assertFalse(traceState.getUnfinishedThreadId(0, THREAD_ID).isPresent());
-        Assert.assertFalse(traceState.getUnfinishedThreadId(1, THREAD_ID_2).isPresent());
+        List<ReadonlyEventInterface> e1;
 
-        OptionalLong maybeSignalNumber = traceState.getSignalNumberForThreadAtWindowStart(threadId.getAsInt());
-        Assert.assertTrue(maybeSignalNumber.isPresent());
-        Assert.assertEquals( SIGNAL_NUMBER_1, maybeSignalNumber.getAsLong());
+        RawTrace rawTrace = tu.createRawTrace(
+                tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, NO_ENABLED_SIGNAL_MASK),
+                e1 = tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, NO_ENABLED_SIGNAL_MASK)
+        );
 
-        traceState.exitSignal(1, THREAD_ID);
-        Assert.assertFalse(traceState.getUnfinishedThreadId(1, THREAD_ID).isPresent());
+        traceState.fastProcess(rawTrace);
+        traceState.preStartWindow();
+        Assert.assertEquals(
+                extractEventByType(e1, EventType.ESTABLISH_SIGNAL),
+                TestUtils.fromOptional(traceState.getPreviousWindowEstablishEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1)));
     }
 
     @Test
-    public void remembersPreviousWindowEstablishEvents() {
+    public void processesEnterExitSignalEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        when(mockEvent1.getType()).thenReturn(EventType.ESTABLISH_SIGNAL);
-        when(mockEvent1.getSignalNumber()).thenReturn(10L);
-        when(mockEvent1.getSignalHandlerAddress()).thenReturn(11L);
-        traceState.onSignalEvent(mockEvent1);
-        Assert.assertEquals(
-                mockEvent1, traceState.getSignalNumberToHandlerToPreviousWindowEstablishEvent().get(10L).get(11L));
+        tu.setTraceState(traceState);
+
+        RawTrace rawTrace = tu.createRawTrace(
+                tu.switchThread(THREAD_ID, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION),
+                tu.exitSignal());
+        traceState.fastProcess(rawTrace);
+
+        Assert.assertThat(traceState.getThreadsForCurrentWindow(), hasSize(1));
+        int ttid = traceState.getThreadsForCurrentWindow().iterator().next();
+        Assert.assertTrue(traceState.getThreadStartsInTheCurrentWindow(ttid));
+        Assert.assertTrue(traceState.getThreadEndsInTheCurrentWindow(ttid));
     }
 
     @Test
-    public void remembersTheLastPreviousWindowEstablishEvent() {
+    public void processesStartJoinThreadEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        when(mockEvent1.getType()).thenReturn(EventType.ESTABLISH_SIGNAL);
-        when(mockEvent1.getSignalNumber()).thenReturn(SIGNAL_NUMBER_1);
-        when(mockEvent1.getSignalHandlerAddress()).thenReturn(SIGNAL_HANDLER_1);
+        tu.setTraceState(traceState);
 
-        when(mockEvent2.getType()).thenReturn(EventType.ESTABLISH_SIGNAL);
-        when(mockEvent2.getSignalNumber()).thenReturn(SIGNAL_NUMBER_1);
-        when(mockEvent2.getSignalHandlerAddress()).thenReturn(SIGNAL_HANDLER_1);
+        RawTrace rawTrace = tu.createRawTrace(
+                tu.threadStart(THREAD_ID_2),
+                tu.threadJoin(THREAD_ID_2));
+        traceState.fastProcess(rawTrace);
 
-        traceState.onSignalEvent(mockEvent1);
-        Assert.assertEquals(
-                mockEvent1,
-                traceState.getSignalNumberToHandlerToPreviousWindowEstablishEvent()
-                        .get(SIGNAL_NUMBER_1).get(SIGNAL_HANDLER_1));
-
-        traceState.onSignalEvent(mockEvent2);
-        Assert.assertEquals(
-                mockEvent2,
-                traceState.getSignalNumberToHandlerToPreviousWindowEstablishEvent()
-                        .get(SIGNAL_NUMBER_1).get(SIGNAL_HANDLER_1));
-
-        traceState.onSignalEvent(mockEvent1);
-        Assert.assertEquals(
-                mockEvent2,
-                traceState.getSignalNumberToHandlerToPreviousWindowEstablishEvent()
-                        .get(SIGNAL_NUMBER_1).get(SIGNAL_HANDLER_1));
+        Assert.assertThat(traceState.getThreadsForCurrentWindow(), hasSize(2));
+        OptionalInt ttid = traceState.getThreadInfos().getTtidFromOtid(THREAD_ID_2);
+        Assert.assertTrue(ttid.isPresent());
+        Assert.assertTrue(traceState.getThreadStartsInTheCurrentWindow(ttid.getAsInt()));
+        Assert.assertTrue(traceState.getThreadEndsInTheCurrentWindow(ttid.getAsInt()));
     }
 
     @Test
-    public void remembersTheLastPreviousWindowEstablishEventWhenFastProcessing() {
+    public void createsThreadInfo() {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        when(mockEvent1.getType()).thenReturn(EventType.ESTABLISH_SIGNAL);
-        when(mockEvent1.getSignalNumber()).thenReturn(SIGNAL_NUMBER_1);
-        when(mockEvent1.getSignalHandlerAddress()).thenReturn(SIGNAL_HANDLER_1);
-        when(mockEvent1.isSignalEvent()).thenReturn(true);
+        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID);
 
-        when(mockEvent2.getType()).thenReturn(EventType.ESTABLISH_SIGNAL);
-        when(mockEvent2.getSignalNumber()).thenReturn(SIGNAL_NUMBER_1);
-        when(mockEvent2.getSignalHandlerAddress()).thenReturn(SIGNAL_HANDLER_1);
-        when(mockEvent2.isSignalEvent()).thenReturn(true);
+        Assert.assertEquals(THREAD_ID, threadInfo.getOriginalThreadId());
+        Assert.assertEquals(0, threadInfo.getSignalDepth());
+        Assert.assertEquals(ThreadType.THREAD, threadInfo.getThreadType());
+        Assert.assertFalse(threadInfo.getSignalNumber().isPresent());
+        Assert.assertFalse(threadInfo.getSignalHandler().isPresent());
 
-        ReadonlyEventInterface[] events = new ReadonlyEventInterface[] {
-                mockEvent1, mockEvent2, null, null};
-        traceState.fastProcess(new RawTrace(
-                0, 2, events,
-                0, 1, true, false,
-                OptionalLong.empty()));
-        Assert.assertEquals(
-                mockEvent2,
-                traceState.getSignalNumberToHandlerToPreviousWindowEstablishEvent()
-                        .get(SIGNAL_NUMBER_1).get(SIGNAL_HANDLER_1));
+        Assert.assertTrue(traceState.getThreadStartsInTheCurrentWindow(threadInfo.getId()));
+        Assert.assertFalse(traceState.getThreadEndsInTheCurrentWindow(threadInfo.getId()));
+
+        Assert.assertNotNull(traceState.getThreadInfos().getThreadInfo(threadInfo.getId()));
+    }
+
+    @Test
+    public void createsSignalInfo() {
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        ThreadInfo threadInfo = traceState.createAndRegisterSignalInfo(
+                THREAD_ID, SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ONE_SIGNAL);
+
+        Assert.assertEquals(THREAD_ID, threadInfo.getOriginalThreadId());
+        Assert.assertEquals(ONE_SIGNAL, threadInfo.getSignalDepth());
+        Assert.assertEquals(ThreadType.SIGNAL, threadInfo.getThreadType());
+        OptionalLong signalNumber = threadInfo.getSignalNumber();
+        Assert.assertTrue(signalNumber.isPresent());
+        Assert.assertEquals(SIGNAL_NUMBER_1, signalNumber.getAsLong());
+        OptionalLong signalHandler = threadInfo.getSignalHandler();
+        Assert.assertTrue(signalHandler.isPresent());
+        Assert.assertEquals(SIGNAL_HANDLER_1, signalHandler.getAsLong());
+
+        Assert.assertTrue(traceState.getThreadStartsInTheCurrentWindow(threadInfo.getId()));
+        Assert.assertFalse(traceState.getThreadEndsInTheCurrentWindow(threadInfo.getId()));
+
+        Assert.assertNotNull(traceState.getThreadInfos().getThreadInfo(threadInfo.getId()));
+    }
+
+    @Test
+    public void retrievesTtidsActiveAtWindowStart() throws InvalidTraceDataException {
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID);
+
+        Assert.assertFalse(traceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, NO_SIGNAL).isPresent());
+
+        traceState.preStartWindow();
+
+        OptionalInt maybeTtid = traceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, NO_SIGNAL);
+        Assert.assertTrue(maybeTtid.isPresent());
+        Assert.assertEquals(threadInfo.getId(), maybeTtid.getAsInt());
+
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        RawTrace rawTrace = tu.createRawTrace(
+                tu.threadJoin(THREAD_ID));
+        traceState.fastProcess(rawTrace);
+
+        Assert.assertTrue(traceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, NO_SIGNAL).isPresent());
+
+        traceState.preStartWindow();
+
+        Assert.assertFalse(traceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, NO_SIGNAL).isPresent());
+    }
+
+    @Test
+    public void threadStartPlaces() throws InvalidTraceDataException {
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID);
+
+        Assert.assertTrue(traceState.getThreadStartsInTheCurrentWindow(threadInfo.getId()));
+        Assert.assertFalse(traceState.getThreadEndsInTheCurrentWindow(threadInfo.getId()));
+
+        traceState.preStartWindow();
+
+        Assert.assertFalse(traceState.getThreadStartsInTheCurrentWindow(threadInfo.getId()));
+        Assert.assertFalse(traceState.getThreadEndsInTheCurrentWindow(threadInfo.getId()));
+
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        RawTrace rawTrace = tu.createRawTrace(
+                tu.threadJoin(THREAD_ID));
+        traceState.fastProcess(rawTrace);
+
+        Assert.assertFalse(traceState.getThreadStartsInTheCurrentWindow(threadInfo.getId()));
+        Assert.assertTrue(traceState.getThreadEndsInTheCurrentWindow(threadInfo.getId()));
+
+        traceState.preStartWindow();
+
+        Assert.assertFalse(traceState.getThreadStartsInTheCurrentWindow(threadInfo.getId()));
+        Assert.assertFalse(traceState.getThreadEndsInTheCurrentWindow(threadInfo.getId()));
     }
 }

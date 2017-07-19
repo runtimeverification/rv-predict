@@ -33,6 +33,9 @@ public class IntraThreadOrdering implements ConstraintSourceWithHappensBefore {
     @Override
     public void addToMhbClosure(TransitiveClosure.Builder mhbClosureBuilder) {
         eventsByThread.forEach((tid, events) -> {
+            if (events.isEmpty()) {
+                return;
+            }
             mhbClosureBuilder.createNewGroup(events.get(0));
             for (int i = 1; i < events.size(); i++) {
                 ReadonlyEventInterface e1 = events.get(i - 1);

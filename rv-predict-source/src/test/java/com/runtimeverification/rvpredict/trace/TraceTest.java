@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
@@ -27,18 +28,18 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 
+import static com.runtimeverification.rvpredict.testutils.MoreAsserts.containsExactly;
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TraceTest {
     private static final int NO_SIGNAL = 0;
     private static final int ONE_SIGNAL = 1;
+    private static final int TWO_SIGNALS = 2;
     private static final long SIGNAL_NUMBER_1 = 10;
     private static final long SIGNAL_NUMBER_2 = 11;
     private static final long SIGNAL_1_ENABLED = ~(1 << SIGNAL_NUMBER_1);
@@ -68,13 +69,41 @@ public class TraceTest {
     private static final long CANONICAL_FRAME_ADDRESS_3 = 1002;
     private static final OptionalLong CALL_SITE_ADDRESS_1 = OptionalLong.of(1100);
 
-    @Mock private TraceState mockTraceState;
-    @Mock private Context mockContext;
-    @Mock private Configuration mockConfiguration;
+    private static final ThreadInfo TTID_1_OTID_1_THREAD = new ThreadInfo(
+            ThreadType.THREAD, 1, THREAD_ID_1, OptionalLong.empty(), OptionalLong.empty(), 0);
+    private static final ThreadInfo TTID_2_OTID_2_THREAD = new ThreadInfo(
+            ThreadType.THREAD, 2, THREAD_ID_2, OptionalLong.empty(), OptionalLong.empty(), 0);
+    private static final ThreadInfo TTID_3_OTID_2_THREAD = new ThreadInfo(
+            ThreadType.THREAD, 3, THREAD_ID_2, OptionalLong.empty(), OptionalLong.empty(), 0);
+    private static final ThreadInfo TTID_3_OTID_3_THREAD = new ThreadInfo(
+            ThreadType.THREAD, 3, THREAD_ID_3, OptionalLong.empty(), OptionalLong.empty(), 0);
+    private static final ThreadInfo TTID_4_OTID_4_THREAD = new ThreadInfo(
+            ThreadType.THREAD, 4, THREAD_ID_4, OptionalLong.empty(), OptionalLong.empty(), 0);
+
+    private static final ThreadInfo TTID_2_OTID_2_SIGNAL_1_HANDLER_1 = new ThreadInfo(
+            ThreadType.SIGNAL, 2, THREAD_ID_2,
+            OptionalLong.of(SIGNAL_NUMBER_1), OptionalLong.of(SIGNAL_HANDLER_1), 1);
+    private static final ThreadInfo TTID_2_OTID_1_SIGNAL_1_HANDLER_1 = new ThreadInfo(
+            ThreadType.SIGNAL, 2, THREAD_ID_1,
+            OptionalLong.of(SIGNAL_NUMBER_1), OptionalLong.of(SIGNAL_HANDLER_1), 1);
+    private static final ThreadInfo TTID_3_OTID_1_SIGNAL_1_HANDLER_1 = new ThreadInfo(
+            ThreadType.SIGNAL, 3, THREAD_ID_1,
+            OptionalLong.of(SIGNAL_NUMBER_1), OptionalLong.of(SIGNAL_HANDLER_1), 1);
+    private static final ThreadInfo TTID_4_OTID_1_SIGNAL_2_HANDLER_1_DEPTH_2 = new ThreadInfo(
+            ThreadType.SIGNAL, 4, THREAD_ID_1,
+            OptionalLong.of(SIGNAL_NUMBER_2), OptionalLong.of(SIGNAL_HANDLER_1), 2);
+
+    @Mock
+    private TraceState mockTraceState;
+    @Mock
+    private Context mockContext;
+    @Mock
+    private Configuration mockConfiguration;
+    @Mock
+    private ThreadInfos mockThreadInfos;
 
     private long nextIdDelta;
     private Map<Long, Integer> eventIdToTtid;
-    private Map<Integer, ThreadInfo> ttidToThreadInfo;
     private Map<Integer, List<ReadonlyEventInterface>> tidToEvents;
     private Map<Integer, List<MemoryAccessBlock>> tidToMemoryAccessBlocks;
     private Map<Integer, ThreadState> tidToThreadState;
@@ -95,7 +124,6 @@ public class TraceTest {
     @Before
     public void setUp() {
         eventIdToTtid = new HashMap<>();
-        ttidToThreadInfo = new HashMap<>();
         tidToEvents = new HashMap<>();
         tidToMemoryAccessBlocks = new HashMap<>();
         tidToThreadState = new HashMap<>();
@@ -124,6 +152,9 @@ public class TraceTest {
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         when(mockTraceState.config()).thenReturn(mockConfiguration);
         when(mockTraceState.getThreadStateSnapshot(anyInt())).thenReturn(new ThreadState());
+        when(mockTraceState.getThreadInfos()).thenReturn(mockThreadInfos);
+        when(mockTraceState.getTtidForThreadOngoingAtWindowStart(anyLong(), anyInt()))
+                .thenReturn(OptionalInt.empty());
     }
 
     @Test
@@ -145,9 +176,8 @@ public class TraceTest {
                         tu.switchThread(THREAD_ID_2, NO_SIGNAL),
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
+
         Trace trace = createTrace(rawTraces);
 
         Assert.assertEquals(2, trace.eventsByThreadID().size());
@@ -160,7 +190,6 @@ public class TraceTest {
         events = trace.getEvents(2);
         Assert.assertEquals(1, events.size());
     }
-
 
     @Test
     public void testPatternsWithDifferentPcAreNotRecurrent() throws InvalidTraceDataException {
@@ -178,9 +207,7 @@ public class TraceTest {
                         tu.switchThread(THREAD_ID_2, NO_SIGNAL),
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
         Trace trace = createTrace(rawTraces);
 
         Assert.assertEquals(2, trace.eventsByThreadID().size());
@@ -214,9 +241,7 @@ public class TraceTest {
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.nonAtomicStore(ADDRESS_2, VALUE_1)));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
         Trace trace = createTrace(rawTraces);
 
         Assert.assertEquals(2, trace.eventsByThreadID().size());
@@ -251,9 +276,7 @@ public class TraceTest {
                         tu.nonAtomicStore(ADDRESS_2, VALUE_1),
                         tu.nonAtomicStore(ADDRESS_3, VALUE_1)));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
         Trace trace = createTrace(rawTraces);
 
         Assert.assertEquals(2, trace.eventsByThreadID().size());
@@ -287,9 +310,7 @@ public class TraceTest {
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.nonAtomicStore(ADDRESS_2, VALUE_1)));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
         Trace trace = createTrace(rawTraces);
 
         Assert.assertEquals(2, trace.eventsByThreadID().size());
@@ -323,13 +344,10 @@ public class TraceTest {
                 tu.createRawTrace(
                         tu.switchThread(THREAD_ID_4, NO_SIGNAL),
                         tu.nonAtomicLoad(ADDRESS_1, VALUE_1))
-                );
+        );
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
-        when(mockTraceState.getNewThreadId(THREAD_ID_3)).thenReturn(3);
-        when(mockTraceState.getNewThreadId(THREAD_ID_4)).thenReturn(4);
+        addThreadInfoToMocks(
+                TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_3_THREAD, TTID_4_OTID_4_THREAD);
         Trace trace = createTrace(rawTraces);
 
         Assert.assertFalse(trace.getStartEventForTtid(1).isPresent());
@@ -365,9 +383,7 @@ public class TraceTest {
                 tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -400,9 +416,7 @@ public class TraceTest {
                 tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -436,9 +450,7 @@ public class TraceTest {
                 tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -448,7 +460,128 @@ public class TraceTest {
     }
 
     @Test
-    public void recursivelyPropagatesSignalEnablingInferrence()
+    public void infersSignalEnablingFromEmptyThreadInterruption() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+
+                tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID_1, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                tu.nonAtomicLoad(ADDRESS_1, VALUE_1)
+        );
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, THREAD_ID_1, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL));
+
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
+        when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertTrue(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(1));
+        Assert.assertFalse(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(2));
+    }
+
+    @Test
+    public void infersSignalEnablingFromInterruptionAfterLastThreadEvent() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID_1, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                tu.nonAtomicLoad(ADDRESS_1, VALUE_1)
+        );
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, THREAD_ID_1, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL));
+
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
+        when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertTrue(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(1));
+        Assert.assertFalse(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(2));
+    }
+
+    @Test
+    public void infersSignalEnablingFromInterruptionBeforeTheFirstThreadEvent() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.switchThread(THREAD_ID_1, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID_1, NO_SIGNAL),
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1)
+        );
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, THREAD_ID_1, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL));
+
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
+        when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertTrue(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(1));
+        Assert.assertFalse(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(2));
+    }
+
+    @Test
+    public void infersSignalEnablingFromEmptySignalInterruption() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID_1, TWO_SIGNALS),
+                tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, GENERATION_1),
+                tu.nonAtomicLoad(ADDRESS_1, VALUE_1)
+        );
+
+        tu.setNextThreadNumber(3);
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_ID_1, TWO_SIGNALS));
+
+        addThreadInfoToMocks(
+                TTID_1_OTID_1_THREAD, TTID_2_OTID_1_SIGNAL_1_HANDLER_1, TTID_3_OTID_2_THREAD,
+                TTID_4_OTID_1_SIGNAL_2_HANDLER_1_DEPTH_2);
+        when(mockTraceState.getUnfinishedTtidsAtWindowStart()).thenReturn(
+                ImmutableList.of(TTID_1_OTID_1_THREAD.getId(), TTID_2_OTID_1_SIGNAL_1_HANDLER_1.getId()));
+        when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
+                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertThat(
+                trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_2),
+                containsExactly(TTID_2_OTID_1_SIGNAL_1_HANDLER_1.getId()));
+    }
+
+    @Test
+    public void recursivelyPropagatesSignalEnablingInference()
             throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
 
@@ -472,9 +605,7 @@ public class TraceTest {
                 tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_2, ONE_SIGNAL));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -484,7 +615,7 @@ public class TraceTest {
     }
 
     @Test
-    public void usesTheFirstInterruptionForEnableInferrenceIfSignalInterruptsMultipleTimes()
+    public void usesTheFirstInterruptionForEnableInferenceIfSignalInterruptsMultipleTimes()
             throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
 
@@ -516,9 +647,7 @@ public class TraceTest {
                 tu.extractRawTrace(firstSignalEvents, THREAD_ID_1, ONE_SIGNAL),
                 tu.extractRawTrace(secondSignalEvents, THREAD_ID_1, ONE_SIGNAL));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_1_SIGNAL_1_HANDLER_1, TTID_3_OTID_1_SIGNAL_1_HANDLER_1);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -540,11 +669,9 @@ public class TraceTest {
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1)
                 ));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
-        when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
-                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        addThreadInfoToMocks(
+                TTID_1_OTID_1_THREAD, TTID_2_OTID_2_SIGNAL_1_HANDLER_1, TTID_3_OTID_2_THREAD);
+
         Trace trace = createTrace(rawTraces);
 
         Assert.assertTrue(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(1));
@@ -564,9 +691,7 @@ public class TraceTest {
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1)
                 ));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_SIGNAL_1_HANDLER_1, TTID_3_OTID_2_THREAD);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -589,9 +714,7 @@ public class TraceTest {
                 ));
 
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_SIGNAL_1_HANDLER_1, TTID_3_OTID_2_THREAD);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -612,9 +735,7 @@ public class TraceTest {
                 ));
 
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -642,12 +763,7 @@ public class TraceTest {
                         tu.switchThread(THREAD_ID_4, NO_SIGNAL),
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
-        when(mockTraceState.getNewThreadId(THREAD_ID_3)).thenReturn(3);
-        when(mockTraceState.getNewThreadId(THREAD_ID_4)).thenReturn(4);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_3_THREAD, TTID_4_OTID_4_THREAD);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -678,7 +794,7 @@ public class TraceTest {
                 tu.switchThread(THREAD_ID_1, NO_SIGNAL),
                 tu.nonAtomicStore(ADDRESS_1, VALUE_1),
 
-                tu.switchThread(THREAD_ID_3, NO_SIGNAL),
+                tu.switchThread(THREAD_ID_4, NO_SIGNAL),
                 tu.enableSignal(SIGNAL_NUMBER_1)
         );
 
@@ -686,9 +802,11 @@ public class TraceTest {
                 tu.extractRawTrace(events, THREAD_ID_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL),
-                tu.extractRawTrace(events, THREAD_ID_3, NO_SIGNAL));
+                tu.extractRawTrace(events, THREAD_ID_4, NO_SIGNAL));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
+        addThreadInfoToMocks(
+                TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1,
+                TTID_4_OTID_4_THREAD);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -716,7 +834,7 @@ public class TraceTest {
                 tu.switchThread(THREAD_ID_1, NO_SIGNAL),
                 tu.nonAtomicStore(ADDRESS_1, VALUE_1),
 
-                tu.switchThread(THREAD_ID_3, NO_SIGNAL),
+                tu.switchThread(THREAD_ID_4, NO_SIGNAL),
                 tu.enableSignal(SIGNAL_NUMBER_1)
         );
 
@@ -724,9 +842,10 @@ public class TraceTest {
                 tu.extractRawTrace(events, THREAD_ID_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_2, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_ID_1, ONE_SIGNAL),
-                tu.extractRawTrace(events, THREAD_ID_3, NO_SIGNAL));
+                tu.extractRawTrace(events, THREAD_ID_4, NO_SIGNAL));
 
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_1_SIGNAL_1_HANDLER_1,
+                TTID_4_OTID_4_THREAD);
         when(mockTraceState.updateLockLocToUserLoc(any(), anyInt()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         Trace trace = createTrace(rawTraces);
@@ -756,9 +875,8 @@ public class TraceTest {
                         tu.nonAtomicStore(ADDRESS_1, VALUE_1),
                         tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_MASK_5),
                         tu.nonAtomicStore(ADDRESS_2, VALUE_1)));
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyInt())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID_1)).thenReturn(1);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(2);
+
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
         Trace trace = createTrace(rawTraces);
 
         Assert.assertEquals(3, trace.getEstablishSignalEvents(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1).size());
@@ -790,6 +908,7 @@ public class TraceTest {
                 ));
 
         when(mockConfiguration.stacks()).thenReturn(true);
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
 
         Trace trace = createTrace(rawTraces);
 
@@ -816,32 +935,6 @@ public class TraceTest {
         Assert.assertEquals(CANONICAL_FRAME_ADDRESS_2, event2Stack.get(2).getCanonicalFrameAddress());
         Assert.assertEquals(EventType.INVOKE_METHOD, event2Stack.get(3).getType());
         Assert.assertEquals(CANONICAL_FRAME_ADDRESS_1, event2Stack.get(3).getCanonicalFrameAddress());
-    }
-
-    @Test
-    public void passesSignalEventsToState() throws InvalidTraceDataException {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
-
-        List<RawTrace> rawTraces = Arrays.asList(
-                tu.createRawTrace(
-                        tu.setPc(PC_BASE),
-                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_MASK_1),
-                        tu.enableSignal(SIGNAL_NUMBER_1),
-                        tu.atomicStore(ADDRESS_1, VALUE_1)
-                ),
-                tu.createRawTrace(
-                        tu.switchThread(THREAD_ID_2, ONE_SIGNAL),
-                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
-                        tu.atomicStore(ADDRESS_1, VALUE_1)
-                ));
-
-        when(mockConfiguration.stacks()).thenReturn(true);
-
-        verify(mockTraceState, never()).onSignalEvent(any());
-
-        createTrace(rawTraces);
-
-        verify(mockTraceState, times(3)).onSignalEvent(any());
     }
 
     @Test
@@ -877,8 +970,7 @@ public class TraceTest {
 
         when(mockConfiguration.stacks()).thenReturn(true);
 
-        when(mockTraceState.getTtidFromOtidAndSignalDepthAtStart(THREAD_ID_1, 0)).thenReturn(1);
-        when(mockTraceState.getUnfinishedSignalTtidsAtWindowStart()).thenReturn(ImmutableList.of(2));
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_1_SIGNAL_1_HANDLER_1);
 
         Trace trace = createTrace(rawTraces);
 
@@ -888,10 +980,69 @@ public class TraceTest {
         Assert.assertTrue(trace.getTtidsWhereSignalIsEnabledAtStart(SIGNAL_NUMBER_1).contains(1));
     }
 
+    @Test
+    public void doesNotCrashWithoutSharedVariables() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setPc(PC_BASE),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                        tu.nonAtomicStore(ADDRESS_2, VALUE_1)));
+
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD);
+
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertEquals(2, trace.eventsByThreadID().size());
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(1));
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(2));
+
+        Assert.assertTrue(trace.eventsByThreadID().get(1).isEmpty());
+        Assert.assertTrue(trace.eventsByThreadID().get(2).isEmpty());
+    }
+
+    @Test
+    public void addsOngoingThreadsWithoutEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setPc(PC_BASE),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        addThreadInfoToMocks(TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_3_THREAD);
+
+        when(mockTraceState.getThreadsForCurrentWindow()).thenReturn(ImmutableSet.of(
+                TTID_1_OTID_1_THREAD.getId(),
+                TTID_2_OTID_2_THREAD.getId(),
+                TTID_3_OTID_3_THREAD.getId()));
+
+        Trace trace = createTrace(rawTraces);
+
+        Assert.assertEquals(3, trace.eventsByThreadID().size());
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(1));
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(2));
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(3));
+
+        Assert.assertFalse(trace.eventsByThreadID().get(1).isEmpty());
+        Assert.assertFalse(trace.eventsByThreadID().get(2).isEmpty());
+        Assert.assertTrue(trace.eventsByThreadID().get(3).isEmpty());
+    }
+
+    private void addThreadInfoToMocks(ThreadInfo... threadInfos) {
+        TraceUtils.addThreadInfoToMocks(mockThreadInfos, mockTraceState, threadInfos);
+    }
+
     private Trace createTrace(List<RawTrace> rawTraces) {
         return new Trace(
                 mockTraceState, rawTraces,
-                eventIdToTtid, ttidToThreadInfo, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
+                eventIdToTtid, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
                 addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents,
                 ttidToStartEvent, ttidToJoinEvent, signalToTtidWhereEnabledAtStart, signalToTtidWhereDisabledAtStart,
                 ttidsThatCanOverlap,

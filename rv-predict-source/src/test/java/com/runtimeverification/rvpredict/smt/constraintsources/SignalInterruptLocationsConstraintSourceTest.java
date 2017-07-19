@@ -36,14 +36,17 @@ import static org.mockito.Mockito.when;
 public class SignalInterruptLocationsConstraintSourceTest {
     private static final long SIGNAL_NUMBER_1 = 5;
     private static final long SIGNAL_NUMBER_2 = 6;
+    private static final long SIGNAL_NUMBER_3 = 7;
     private static final long MASK_WITH_SIGNAL_1 = (1 << SIGNAL_NUMBER_1);
     private static final long MASK_WITH_SIGNAL_2 = (1 << SIGNAL_NUMBER_2);
     private static final int TTID_1 = 100;
     private static final int TTID_2 = 101;
     private static final int SIGNAL_TTID_3 = 102;
     private static final int SIGNAL_TTID_4 = 103;
+    private static final int SIGNAL_TTID_5 = 104;
     private static final long SIGNAL_HANDLER_1 = 200;
     private static final long SIGNAL_HANDLER_2 = 201;
+    private static final long SIGNAL_HANDLER_3 = 202;
     private static final Collection<ConstraintType> ALL_CONSTRAINT_TYPES =
             Arrays.asList(ConstraintType.SOUND, ConstraintType.UNSOUND_BUT_FAST);
 
@@ -77,6 +80,7 @@ public class SignalInterruptLocationsConstraintSourceTest {
         when(mockTtidToThreadType.apply(TTID_2)).thenReturn(ThreadType.THREAD);
         when(mockTtidToThreadType.apply(SIGNAL_TTID_3)).thenReturn(ThreadType.SIGNAL);
         when(mockTtidToThreadType.apply(SIGNAL_TTID_4)).thenReturn(ThreadType.SIGNAL);
+        when(mockTtidToThreadType.apply(SIGNAL_TTID_5)).thenReturn(ThreadType.SIGNAL);
 
         when(mockTtidToSignalNumber.apply(any())).thenReturn(Constants.INVALID_SIGNAL);
         when(mockTtidToSignalHandler.apply(any())).thenReturn(Constants.INVALID_ADDRESS);
@@ -864,6 +868,133 @@ public class SignalInterruptLocationsConstraintSourceTest {
                                 ModelConstraintUtils.mockVariableSource(
                                         "o2", "10", "o3", "20", "o6", "30", "o8", "40", "o4", "50",
                                         "citv102", Integer.toString(TTID_1)))));
+    }
+
+    @Test
+    public void signalInterruptsEmptyThread() {
+        Map<Integer, List<ReadonlyEventInterface>> eventsByThreadId =
+                new ImmutableMap.Builder<Integer, List<ReadonlyEventInterface>>()
+                        .put(TTID_1, Collections.emptyList())
+                        .put(SIGNAL_TTID_3, ImmutableList.of(mockEvent6, mockEvent8))
+                        .build();
+
+        when(mockTtidToSignalNumber.apply(SIGNAL_TTID_3)).thenReturn(SIGNAL_NUMBER_1);
+        when(mockTtidToSignalHandler.apply(SIGNAL_TTID_3)).thenReturn(SIGNAL_HANDLER_1);
+
+        when(mockSignalNumberToTtidsWhereEnabledAtStart.apply(SIGNAL_NUMBER_1)).thenReturn(ImmutableSet.of(TTID_1));
+
+        ConstraintSource constraintSource = new SignalInterruptLocationsConstraintSource(
+                eventsByThreadId,
+                mockTtidToThreadType,
+                mockTtidToSignalNumber,
+                mockTtidToStartEvent,
+                mockTtidToJoinEvent,
+                mockSignalNumberToTtidsWhereEnabledAtStart,
+                mockSignalNumberToTtidsWhereDisabledAtStart,
+                true);  // detectInterruptedThreadRace,
+
+        runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
+            Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1))));
+            Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_2))));
+        });
+    }
+
+    @Test
+    public void signalInterruptsEmptySignalWhichInterruptsThread() {
+        Map<Integer, List<ReadonlyEventInterface>> eventsByThreadId =
+                new ImmutableMap.Builder<Integer, List<ReadonlyEventInterface>>()
+                        .put(TTID_1, Collections.emptyList())
+                        .put(SIGNAL_TTID_3, Collections.emptyList())
+                        .put(SIGNAL_TTID_4, ImmutableList.of(mockEvent6, mockEvent8))
+                        .build();
+
+        when(mockTtidToSignalNumber.apply(SIGNAL_TTID_3)).thenReturn(SIGNAL_NUMBER_1);
+        when(mockTtidToSignalHandler.apply(SIGNAL_TTID_3)).thenReturn(SIGNAL_HANDLER_1);
+        when(mockTtidToSignalNumber.apply(SIGNAL_TTID_4)).thenReturn(SIGNAL_NUMBER_2);
+        when(mockTtidToSignalHandler.apply(SIGNAL_TTID_4)).thenReturn(SIGNAL_HANDLER_2);
+
+        when(mockSignalNumberToTtidsWhereEnabledAtStart.apply(SIGNAL_NUMBER_1)).thenReturn(ImmutableSet.of(TTID_1));
+
+        ConstraintSource constraintSource = new SignalInterruptLocationsConstraintSource(
+                eventsByThreadId,
+                mockTtidToThreadType,
+                mockTtidToSignalNumber,
+                mockTtidToStartEvent,
+                mockTtidToJoinEvent,
+                mockSignalNumberToTtidsWhereEnabledAtStart,
+                mockSignalNumberToTtidsWhereDisabledAtStart,
+                true);  // detectInterruptedThreadRace,
+
+        runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
+            Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "sm_102_6", "1", "sm_103_6", "0")));
+            Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "sm_102_6", "1", "sm_103_6", "1")));
+            Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "sm_102_6", "0", "sm_103_6", "0")));
+            Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "sm_102_6", "0", "sm_103_6", "1")));
+        });
+    }
+
+    @Test
+    public void signalInterruptsEmptySignalWhichInterruptsEmptySignalWhichInterruptsThread() {
+        Map<Integer, List<ReadonlyEventInterface>> eventsByThreadId =
+                new ImmutableMap.Builder<Integer, List<ReadonlyEventInterface>>()
+                        .put(TTID_1, Collections.emptyList())
+                        .put(SIGNAL_TTID_3, Collections.emptyList())
+                        .put(SIGNAL_TTID_4, Collections.emptyList())
+                        .put(SIGNAL_TTID_5, ImmutableList.of(mockEvent6, mockEvent8))
+                        .build();
+
+        when(mockTtidToSignalNumber.apply(SIGNAL_TTID_3)).thenReturn(SIGNAL_NUMBER_1);
+        when(mockTtidToSignalHandler.apply(SIGNAL_TTID_3)).thenReturn(SIGNAL_HANDLER_1);
+        when(mockTtidToSignalNumber.apply(SIGNAL_TTID_4)).thenReturn(SIGNAL_NUMBER_2);
+        when(mockTtidToSignalHandler.apply(SIGNAL_TTID_4)).thenReturn(SIGNAL_HANDLER_2);
+        when(mockTtidToSignalNumber.apply(SIGNAL_TTID_5)).thenReturn(SIGNAL_NUMBER_3);
+        when(mockTtidToSignalHandler.apply(SIGNAL_TTID_5)).thenReturn(SIGNAL_HANDLER_3);
+
+        when(mockSignalNumberToTtidsWhereEnabledAtStart.apply(SIGNAL_NUMBER_1)).thenReturn(ImmutableSet.of(TTID_1));
+
+        ConstraintSource constraintSource = new SignalInterruptLocationsConstraintSource(
+                eventsByThreadId,
+                mockTtidToThreadType,
+                mockTtidToSignalNumber,
+                mockTtidToStartEvent,
+                mockTtidToJoinEvent,
+                mockSignalNumberToTtidsWhereEnabledAtStart,
+                mockSignalNumberToTtidsWhereDisabledAtStart,
+                true);  // detectInterruptedThreadRace,
+
+        runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
+            Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "citv104", Integer.toString(SIGNAL_TTID_4),
+                    "sm_102_6", "1", "sm_103_7", "1")));
+            Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "citv104", Integer.toString(SIGNAL_TTID_4),
+                    "sm_102_6", "0", "sm_103_7", "1")));
+            Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                    "o6", "20", "o8", "30",
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "citv104", Integer.toString(SIGNAL_TTID_4),
+                    "sm_102_6", "1", "sm_103_7", "0")));
+        });
     }
 
     private void runTestForConstraintTypes(

@@ -28,22 +28,22 @@
  ******************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.concurrent.locks.LockSupport;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.trace.RawTrace;
+import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Logging engine that processes events and then send them over for online
@@ -193,20 +193,13 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         }
 
         try {
+            crntState.preStartWindow();
             List<RawTrace> rawTraces = new ArrayList<>();
             for (Buffer b : activeBuffers) {
                 if (!b.isEmpty()) {
                     Event oneEvent = b.events[b.start];
                     long otid = oneEvent.getOriginalThreadId();
-                    OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(0, otid);
-                    int threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
-                    boolean threadStartsInTheCurrentWindow = maybeThreadId.isPresent();
-                    config.logger().debug(otid + " -> " + threadId);
-
-                    rawTraces.add(new RawTrace(
-                            b.start, b.cursor, b.events, 0, threadId,
-                            threadStartsInTheCurrentWindow, false,
-                            OptionalLong.empty()));
+                    rawTraces.add(TraceCache.tidSpanToRawTrace(b.events, b.start, b.end, 0, otid, crntState));
                 }
             }
             if (rawTraces.size() == 1) {
@@ -246,7 +239,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
      * However, the race detection thread only reads {@code cursor} after
      * blocking the GID counter and all on-going {@code finalizeEvents()}
      * finish, while the logging thread only writes to {@code cursor} after
-     * successfully acquiring GIDs and before incrementing the {@link finalized}
+     * successfully acquiring GIDs and before incrementing the {@link VolatileLoggingEngine#finalized}
      * counter. Therefore, it is impossible for the two threads to access
      * {@code cursor} concurrently.
      *

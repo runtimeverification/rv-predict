@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.OptionalLong;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -171,7 +170,6 @@ public class TraceCache {
 
     private void splitTracesIntoThreads(
             List<RawTrace> rawTraces, ArrayList<ReadonlyEventInterface> events, int eventCount) {
-        int tidStart = 0;
         events.sort((l, r) -> {
             long lt = l.getOriginalThreadId(), rt = r.getOriginalThreadId();
             if (lt < rt)
@@ -192,91 +190,102 @@ public class TraceCache {
         });
         long prevOTID = events.get(0).getOriginalThreadId();
         int prevSignalDepth = events.get(0).getSignalDepth();
+        int start = 0;
 
         for (int i = 0; i < eventCount; i++) {
             ReadonlyEventInterface event = events.get(i);
-            if (event.getOriginalThreadId() == prevOTID
-                    && event.getSignalDepth() == prevSignalDepth
-                    && event.getType() != EventType.EXIT_SIGNAL) {
-                continue;
+            if (event.getOriginalThreadId() != prevOTID
+                    || event.getSignalDepth() != prevSignalDepth) {
+                splitTracesIntoThreadsForSameOtidAndDepth(rawTraces, events, start, i);
+                start = i;
+                prevOTID = event.getOriginalThreadId();
+                prevSignalDepth = event.getSignalDepth();
             }
-
-            if (event.getType() == EventType.EXIT_SIGNAL) {
-                i++;
-                if (i < eventCount) {
-                    event = events.get(i);
-                }
-            }
-
-            if (tidStart < i) {
-                rawTraces.add(tidSpanToRawTrace(events, tidStart, i, prevSignalDepth, prevOTID));
-            }
-            prevOTID = event.getOriginalThreadId();
-            prevSignalDepth = event.getSignalDepth();
-            tidStart = i;
         }
-
-        if (tidStart < eventCount) {
-            rawTraces.add(tidSpanToRawTrace(events, tidStart, eventCount, prevSignalDepth, prevOTID));
+        if (start < eventCount) {
+            splitTracesIntoThreadsForSameOtidAndDepth(rawTraces, events, start, eventCount);
         }
     }
 
-    private RawTrace tidSpanToRawTrace(List<ReadonlyEventInterface> events,
-            int tidStart, int tidEnd, int signalDepth, long otid) {
-        boolean threadStartsInTheCurrentWindow;
-        boolean signalEndsInTheCurrentWindow = false;
+    private void splitTracesIntoThreadsForSameOtidAndDepth(
+            List<RawTrace> rawTraces, ArrayList<ReadonlyEventInterface> events, int start, int end) {
+        int threadStart = start;
+        for (int i = start; i < end; i++) {
+            ReadonlyEventInterface event = events.get(i);
+            if (event.getType() != EventType.EXIT_SIGNAL) {
+                continue;
+            }
+            rawTraces.add(tidSpanToRawTrace(
+                    events, threadStart, i + 1,
+                    event.getSignalDepth(), event.getOriginalThreadId(),
+                    crntState));
+            threadStart = i + 1;
+        }
+        if (threadStart < end) {
+            ReadonlyEventInterface event = events.get(threadStart);
+            rawTraces.add(tidSpanToRawTrace(
+                    events, threadStart, end,
+                    event.getSignalDepth(), event.getOriginalThreadId(),
+                    crntState));
+        }
+    }
+
+    private static RawTrace tidSpanToRawTrace(
+            List<ReadonlyEventInterface> events,
+            int tidStart, int tidEnd, int signalDepth, long otid,
+            TraceState traceState) {
         List<ReadonlyEventInterface> tidEvents = events.subList(tidStart, tidEnd);
         int n = tidEvents.size(), length = getNextPowerOfTwo(n);
         tidEvents.sort(ReadonlyEventInterface::compareTo);
-        int threadId;
-        OptionalLong previousWindowSignalNumber = OptionalLong.empty();
+        return tidSpanToRawTrace(
+                tidEvents.toArray(new ReadonlyEventInterface[length]), 0, n, signalDepth, otid, traceState);
+    }
+
+    public static RawTrace tidSpanToRawTrace(
+            ReadonlyEventInterface[] events,
+            int start, int end, int signalDepth, long otid,
+            TraceState traceState) {
+        ThreadInfo threadInfo;
         if (signalDepth == 0) {
-            OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
-            threadId = maybeThreadId.orElseGet(() -> crntState.getNewThreadId(otid));
-            threadStartsInTheCurrentWindow = !maybeThreadId.isPresent();
+            OptionalInt ttid = traceState.getThreadInfos().getTtidFromOtid(otid);
+            if (ttid.isPresent()) {
+                threadInfo = traceState.getThreadInfos().getThreadInfo(ttid.getAsInt());
+            } else {
+                threadInfo = traceState.createAndRegisterThreadInfo(otid);
+            }
         } else {
-            signalEndsInTheCurrentWindow = signalEndsNow(tidEvents);
-            if (!signalStartsNow(tidEvents)) {
-                threadStartsInTheCurrentWindow = false;
-                OptionalInt maybeThreadId = crntState.getUnfinishedThreadId(signalDepth, otid);
-                if (!maybeThreadId.isPresent()) {
+            Optional<ReadonlyEventInterface> startEvent = getSignalStartEvent(events, start, end);
+            if (!startEvent.isPresent()) {
+                OptionalInt ttid = traceState.getTtidForThreadOngoingAtWindowStart(otid, signalDepth);
+                if (!ttid.isPresent()) {
                     throw new IllegalStateException("No thread id for existing signal.");
                 }
-                threadId = maybeThreadId.getAsInt();
-                previousWindowSignalNumber = crntState.getSignalNumberForThreadAtWindowStart(threadId);
-                if (signalEndsInTheCurrentWindow) {
-                    crntState.exitSignal(signalDepth, otid);
-                }
-            } else if (!signalEndsInTheCurrentWindow) {
-                threadStartsInTheCurrentWindow = true;
-                Optional<ReadonlyEventInterface> signalStartEvent = getSignalStartEvent(events);
-                assert signalStartEvent.isPresent();
-                threadId = crntState.enterSignal(signalDepth, otid, signalStartEvent.get().getSignalNumber());
+                threadInfo = traceState.getThreadInfos().getThreadInfo(ttid.getAsInt());
             } else {
-                threadStartsInTheCurrentWindow = true;
-                threadId = crntState.getNewThreadId();
+                threadInfo = traceState.createAndRegisterSignalInfo(
+                        startEvent.get().getOriginalThreadId(),
+                        startEvent.get().getSignalNumber(),
+                        startEvent.get().getSignalHandlerAddress(),
+                        startEvent.get().getSignalDepth());
             }
         }
-        return new RawTrace(
-                0, n, tidEvents.toArray(new ReadonlyEventInterface[length]),
-                signalDepth, threadId, threadStartsInTheCurrentWindow, signalEndsInTheCurrentWindow,
-                previousWindowSignalNumber);
+
+        return new RawTrace(start, end, events, threadInfo);
     }
 
-    private Optional<ReadonlyEventInterface> getSignalStartEvent(List<ReadonlyEventInterface> events) {
-        return events.stream().filter(event -> event.getType() == EventType.ENTER_SIGNAL).findAny();
-    }
-
-    private boolean signalStartsNow(List<ReadonlyEventInterface> events) {
-        return getSignalStartEvent(events).isPresent();
-    }
-
-    private boolean signalEndsNow(List<ReadonlyEventInterface> events) {
-        return events.stream().anyMatch(event -> event.getType() == EventType.EXIT_SIGNAL);
+    private static Optional<ReadonlyEventInterface> getSignalStartEvent(
+            ReadonlyEventInterface[] events, int start, int end) {
+        for (int i = start; i < end; i++) {
+            if (events[i].getType() == EventType.ENTER_SIGNAL) {
+                return Optional.of(events[i]);
+            }
+        }
+        return Optional.empty();
     }
 
     public Trace getTraceWindow() throws IOException {
-        crntState.startWindow();
+        crntState.preStartWindow();
+
         List<RawTrace> rawTraces = readEventWindow();
 
         /* finish reading events and create the Trace object */

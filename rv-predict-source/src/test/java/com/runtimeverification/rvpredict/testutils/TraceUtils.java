@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.testutils;
 
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
@@ -21,7 +22,7 @@ import static org.mockito.Mockito.when;
 public class TraceUtils {
     private final Context mockContext;
     private final CompactEventFactory compactEventFactory;
-    private final Map<Long, Map<Integer, Integer>> threadIdToSignalDepthToTtid;
+    private final Map<Long, Map<Integer, ThreadData>> threadIdToSignalDepthToThreadData;
 
     private long nextPc;
     private long threadId;
@@ -35,7 +36,7 @@ public class TraceUtils {
         this.signalDepth = initialSignalDepth;
         this.nextPc = nextPc;
         this.nextThreadNumber = 1;
-        this.threadIdToSignalDepthToTtid = new HashMap<>();
+        this.threadIdToSignalDepthToThreadData = new HashMap<>();
     }
 
     public List<ReadonlyEventInterface> switchThread(long threadId, int signalDepth) {
@@ -225,8 +226,12 @@ public class TraceUtils {
         }
         ReadonlyEventInterface[] paddedEvents = new ReadonlyEventInterface[paddedSize];
         int pos = 0;
+        OptionalLong signalNumber = OptionalLong.empty();
         for (List<ReadonlyEventInterface> eventList : events) {
             for (ReadonlyEventInterface event : eventList) {
+                if (event.getType() == EventType.ENTER_SIGNAL) {
+                    signalNumber = OptionalLong.of(event.getSignalNumber());
+                }
                 paddedEvents[pos] = event;
                 pos++;
             }
@@ -234,18 +239,21 @@ public class TraceUtils {
         int currentThreadNumber;
         if (threadStartsInTheCurrentWindow) {
             currentThreadNumber = this.nextThreadNumber;
-            threadIdToSignalDepthToTtid
+            threadIdToSignalDepthToThreadData
                     .computeIfAbsent(paddedEvents[0].getOriginalThreadId(), k -> new HashMap<>())
-                    .put(paddedEvents[0].getSignalDepth(), currentThreadNumber);
+                    .put(paddedEvents[0].getSignalDepth(), new ThreadData(currentThreadNumber, signalNumber));
             this.nextThreadNumber++;
         } else {
-            currentThreadNumber = threadIdToSignalDepthToTtid
+            ThreadData threadData = threadIdToSignalDepthToThreadData
                     .computeIfAbsent(paddedEvents[0].getOriginalThreadId(), k -> new HashMap<>())
                     .get(paddedEvents[0].getSignalDepth());
+            currentThreadNumber = threadData.getTtid();
+            signalNumber = threadData.getSignalNumber();
         }
         return new RawTrace(
                 0, pos, paddedEvents, paddedEvents[0].getSignalDepth(),
-                currentThreadNumber, threadStartsInTheCurrentWindow, true);
+                currentThreadNumber, threadStartsInTheCurrentWindow, true,
+                signalNumber);
     }
 
     @SafeVarargs
@@ -255,5 +263,23 @@ public class TraceUtils {
             flattened.addAll(eventList);
         }
         return flattened;
+    }
+
+    private static class ThreadData {
+        private final int ttid;
+        private final OptionalLong signalNumber;
+
+        private ThreadData(int ttid, OptionalLong signalNumber) {
+            this.ttid = ttid;
+            this.signalNumber = signalNumber;
+        }
+
+        private int getTtid() {
+            return ttid;
+        }
+
+        private OptionalLong getSignalNumber() {
+            return signalNumber;
+        }
     }
 }

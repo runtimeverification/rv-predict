@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -273,6 +274,11 @@ public class TraceCacheTest {
         when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
 
+        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID))
+                .thenReturn(OptionalLong.empty());
+        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
+                .thenReturn(OptionalLong.empty());
+
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
 
@@ -308,7 +314,7 @@ public class TraceCacheTest {
         when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.empty());
         when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
-        when(mockTraceState.enterSignal(ONE_SIGNAL, THREAD_ID)).thenReturn(NEW_THREAD_ID);
+        when(mockTraceState.enterSignal(ONE_SIGNAL, THREAD_ID, SIGNAL_NUMBER)).thenReturn(NEW_THREAD_ID);
 
         List<ReadonlyEventInterface> beginSignal = beginSignal(
                 SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
@@ -335,7 +341,7 @@ public class TraceCacheTest {
     }
 
     @Test
-    public void usesPreviousThreadIdForContinuingSignal() throws IOException {
+    public void usesPreviousThreadIdAndSignalNumberForContinuingSignal() throws IOException {
         mockConfiguration.windowSize = 100;
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
@@ -345,6 +351,11 @@ public class TraceCacheTest {
         when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
         when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
+
+        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID))
+                .thenReturn(OptionalLong.of(SIGNAL_NUMBER));
+        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
+                .thenReturn(OptionalLong.empty());
 
         List<ReadonlyEventInterface> readData = readData(THREAD_ID, ONE_SIGNAL);
 
@@ -367,6 +378,7 @@ public class TraceCacheTest {
         Assert.assertEquals(ONE_SIGNAL, rawTraces.get(0).getSignalDepth());
         Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
         Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
+        Assert.assertEquals(SIGNAL_NUMBER, rawTraces.get(0).getThreadInfo().getSignalNumber());
     }
 
     @Test
@@ -380,6 +392,11 @@ public class TraceCacheTest {
         when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
         when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
+
+        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID))
+                .thenReturn(OptionalLong.of(SIGNAL_NUMBER));
+        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
+                .thenReturn(OptionalLong.empty());
 
         List<ReadonlyEventInterface> readData = readData(THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> endSignal = endSignal(THREAD_ID, ONE_SIGNAL);
@@ -456,8 +473,11 @@ public class TraceCacheTest {
         when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
 
         when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID_2));
-        when(mockTraceState.enterSignal(ONE_SIGNAL, THREAD_ID)).thenReturn(NEW_THREAD_ID);
+        when(mockTraceState.enterSignal(ONE_SIGNAL, THREAD_ID, SIGNAL_NUMBER)).thenReturn(NEW_THREAD_ID);
         when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_3);
+
+        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
+                .thenReturn(OptionalLong.of(SIGNAL_NUMBER));
 
         List<ReadonlyEventInterface> endSignal1 = endSignal(THREAD_ID, ONE_SIGNAL);
         List<ReadonlyEventInterface> beginSignal2 = beginSignal(

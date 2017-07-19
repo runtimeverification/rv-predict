@@ -12,6 +12,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 
 public class TraceState {
@@ -51,6 +53,9 @@ public class TraceState {
 
     private final Map<Long, Map<Long, ReadonlyEventInterface>> t_signalNumberToHandlerToLastWindowEstablishEvents =
             new HashMap<>();
+
+    private final StateAtWindowBorder stateAtCurrentWindowStart = new StateAtWindowBorder();
+    private final StateAtWindowBorder stateAtCurrentWindowEnd = new StateAtWindowBorder();
 
     private final Configuration config;
 
@@ -84,8 +89,6 @@ public class TraceState {
 
     private final Map<Long, Set<Integer>> t_signalToTtidWhereDisabledAtStart;
 
-    private final Map<SignalThreadId, Integer> t_unfinishedThreads;
-
     private final Map<Integer, Set<Integer>> t_ttidsThatCanOverlap;
 
     private final Map<Long, Map<Integer, Boolean>> t_signalIsEnabledForThreadCache;
@@ -99,6 +102,7 @@ public class TraceState {
     public TraceState(Configuration config, MetadataInterface metadata) {
         this.config = config;
         this.metadata = metadata;
+
         this.t_eventIdToTtid           = new LinkedHashMap<>();
         this.t_ttidToThreadInfo        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_originalTidToTraceTid   = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -117,7 +121,6 @@ public class TraceState {
         this.t_ttidsThatCanOverlap = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_signalIsEnabledForThreadCache = new HashMap<>();
         this.t_atLeastOneSigsetAllowsSignalCache = new HashMap<>();
-        this.t_unfinishedThreads       = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
         this.t_threadId                = 1;
     }
@@ -322,21 +325,25 @@ public class TraceState {
     }
 
     public OptionalInt getUnfinishedThreadId(int signalDepth, long otid) {
-        Integer id = t_unfinishedThreads.get(new SignalThreadId(signalDepth, otid));
+        Integer id = stateAtCurrentWindowEnd.unfinishedThreads.get(new SignalThreadId(signalDepth, otid));
         if (id == null) {
             return OptionalInt.empty();
         }
         return OptionalInt.of(id);
     }
 
-    int enterSignal(int signalDepth, long otid) {
+    int enterSignal(int signalDepth, long otid, long signalNumber) {
         int id = getNewThreadId();
-        t_unfinishedThreads.put(new SignalThreadId(signalDepth, otid), id);
+        stateAtCurrentWindowEnd.unfinishedThreads.put(new SignalThreadId(signalDepth, otid), id);
+        stateAtCurrentWindowEnd.ttidToSignalNumber.put(id, signalNumber);
         return id;
     }
 
     void exitSignal(int signalDepth, long otid) {
-        t_unfinishedThreads.remove(new SignalThreadId(signalDepth, otid));
+        SignalThreadId key = new SignalThreadId(signalDepth, otid);
+        int id = stateAtCurrentWindowEnd.unfinishedThreads.get(key);
+        stateAtCurrentWindowEnd.unfinishedThreads.remove(key);
+        stateAtCurrentWindowEnd.ttidToSignalNumber.remove(id);
     }
 
     int getNewThreadId() {
@@ -345,7 +352,7 @@ public class TraceState {
 
     public int getNewThreadId(long otid) {
         int id = getNewThreadId();
-        t_unfinishedThreads.put(new SignalThreadId(0, otid), id);
+        stateAtCurrentWindowEnd.unfinishedThreads.put(new SignalThreadId(0, otid), id);
         return id;
     }
 
@@ -358,6 +365,35 @@ public class TraceState {
 
     Map<Long, Map<Long, ReadonlyEventInterface>> getSignalNumberToHandlerToPreviousWindowEstablishEvent() {
         return t_signalNumberToHandlerToLastWindowEstablishEvents;
+    }
+
+    OptionalLong getSignalNumberForThreadAtWindowStart(int threadId) {
+        Long signalNumber = stateAtCurrentWindowStart.ttidToSignalNumber.get(threadId);
+        return signalNumber == null ? OptionalLong.empty() : OptionalLong.of(signalNumber);
+    }
+
+    Collection<Integer> getUnfinishedSignalTtidsAtWindowStart() {
+        return stateAtCurrentWindowStart.ttidToSignalNumber.keySet();
+    }
+
+    Integer getTtidFromOtidAndSignalDepthAtStart(long otid, int signalDepth) {
+        return stateAtCurrentWindowStart.unfinishedThreads.get(new SignalThreadId(signalDepth, otid));
+    }
+
+    void startWindow() {
+        stateAtCurrentWindowStart.copyFrom(stateAtCurrentWindowEnd);
+    }
+
+    private static class StateAtWindowBorder {
+        private final Map<Integer, Long> ttidToSignalNumber = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        private final Map<SignalThreadId, Integer> unfinishedThreads = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+
+        private void copyFrom(StateAtWindowBorder other) {
+            ttidToSignalNumber.clear();
+            ttidToSignalNumber.putAll(other.ttidToSignalNumber);
+            unfinishedThreads.clear();
+            unfinishedThreads.putAll(other.unfinishedThreads);
+        }
     }
 
     private class SignalThreadId {

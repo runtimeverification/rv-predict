@@ -4,6 +4,8 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import static org.mockito.Mockito.when;
 
@@ -56,12 +59,24 @@ public class TraceStateTest {
     @Test
     public void remembersSignalsWhenGeneratingThreadIds() {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        Assert.assertEquals(1, traceState.enterSignal(1, THREAD_ID));
+        Assert.assertEquals(1, traceState.enterSignal(1, THREAD_ID, SIGNAL_NUMBER_1));
         OptionalInt threadId = traceState.getUnfinishedThreadId(1, THREAD_ID);
         Assert.assertTrue(threadId.isPresent());
         Assert.assertEquals(1, threadId.getAsInt());
         Assert.assertFalse(traceState.getUnfinishedThreadId(0, THREAD_ID).isPresent());
         Assert.assertFalse(traceState.getUnfinishedThreadId(1, THREAD_ID_2).isPresent());
+        Assert.assertFalse(traceState.getSignalNumberForThreadAtWindowStart(threadId.getAsInt()).isPresent());
+
+        traceState.startWindow();
+        threadId = traceState.getUnfinishedThreadId(1, THREAD_ID);
+        Assert.assertTrue(threadId.isPresent());
+        Assert.assertEquals(1, threadId.getAsInt());
+        Assert.assertFalse(traceState.getUnfinishedThreadId(0, THREAD_ID).isPresent());
+        Assert.assertFalse(traceState.getUnfinishedThreadId(1, THREAD_ID_2).isPresent());
+
+        OptionalLong maybeSignalNumber = traceState.getSignalNumberForThreadAtWindowStart(threadId.getAsInt());
+        Assert.assertTrue(maybeSignalNumber.isPresent());
+        Assert.assertEquals( SIGNAL_NUMBER_1, maybeSignalNumber.getAsLong());
 
         traceState.exitSignal(1, THREAD_ID);
         Assert.assertFalse(traceState.getUnfinishedThreadId(1, THREAD_ID).isPresent());
@@ -125,7 +140,8 @@ public class TraceStateTest {
                 mockEvent1, mockEvent2, null, null};
         traceState.fastProcess(new RawTrace(
                 0, 2, events,
-                0, 1, true, false ));
+                0, 1, true, false,
+                OptionalLong.empty()));
         Assert.assertEquals(
                 mockEvent2,
                 traceState.getSignalNumberToHandlerToPreviousWindowEstablishEvent()

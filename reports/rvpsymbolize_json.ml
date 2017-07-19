@@ -81,16 +81,16 @@ let symbolize_frame raw : frame =
 let (symbol, loc) = rvsyms_frame raw.address in
 {symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks; elided=false}
 
-let symbolize_trace_component (raw : raw_trace_component) : trace_component =
+let symbolize_trace_component (raw : raw_stack_trace_component) : stack_trace_component =
 {description=Some (symbolize_format_str raw.description_format raw.description_fields); frames=List.map symbolize_frame raw.frames}
 
-let symbolize_trace (raw : raw_trace) : trace =
+let symbolize_trace (raw : raw_stack_trace) : stack_trace =
 {components=List.map symbolize_trace_component raw.components; thread_id=raw.thread_id; thread_created_by=raw.thread_created_by; thread_created_at=(match raw.thread_created_at with None -> None | Some f -> Some (symbolize_frame f))}
 let symbolize_format_str fmt fields =
 let strs = List.map symbolize_field fields in
 format_description fmt strs
 let symbolize raw = 
-{description=symbolize_format_str raw.description_format raw.description_fields; traces=List.map symbolize_trace raw.traces; category=raw.category; error_id=raw.error_id; citations=[]; friendly_cat=None; long_desc=None}
+{description=symbolize_format_str raw.description_format raw.description_fields; stack_traces=List.map symbolize_trace raw.stack_traces; category=raw.category; error_id=raw.error_id; citations=[]; friendly_cat=None; long_desc=None}
 
 let magic = "[RV-Predict]"
 let magic_len = String.length magic

@@ -44,8 +44,8 @@ import com.runtimeverification.error.data.RawField;
 import com.runtimeverification.error.data.RawFrame;
 import com.runtimeverification.error.data.RawLock;
 import com.runtimeverification.error.data.RawStackError;
-import com.runtimeverification.error.data.RawTrace;
-import com.runtimeverification.error.data.RawTraceComponent;
+import com.runtimeverification.error.data.RawStackTrace;
+import com.runtimeverification.error.data.RawStackTraceComponent;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -131,11 +131,14 @@ public class Race {
     public String generateRaceReport() {
         if (config.isJsonReport()) {
             signatureProcessor.reset();
-            RawStackError error = new RawStackError();
-            boolean reportableRace = generateErrorJson(error, trace.metadata());
-            StringBuilder sb = new StringBuilder();
-            error.toJsonBuffer(sb);
-            return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
+            Optional<RawStackError> errorData = generateErrorData(trace.metadata());
+            if (errorData.isPresent()) {
+                StringBuilder sb = new StringBuilder();
+                errorData.get().toJsonBuffer(sb);
+                return signatureProcessor.simplify(sb.toString());
+            } else {
+                return "";
+            }
         } else {
             signatureProcessor.reset();
             String locSig = trace.metadata().getRaceDataSig(e1, e2, trace, config);
@@ -159,28 +162,29 @@ public class Race {
         }
     }
 
-    public boolean generateErrorJson(RawStackError error, MetadataInterface metadata) {
+    public Optional<RawStackError> generateErrorData(MetadataInterface metadata) {
+        RawStackError error = new RawStackError();
         error.description_format = "Data race on %s";
         RawField f = new RawField();
         f.address = metadata.getRaceDataSig(e1, e2, trace, config);
         error.description_fields = new ArrayList<>();
         error.description_fields.add(f);
-        RawTrace t1 = new RawTrace();
-        RawTrace t2 = new RawTrace();
-        boolean reportableRace = generateTraceJson(t1, metadata, e1, getFirstSignalStack());
-        reportableRace |= generateTraceJson(t2, metadata, e2, getSecondSignalStack());
-        error.traces = new ArrayList<>();
+        RawStackTrace t1 = new RawStackTrace();
+        RawStackTrace t2 = new RawStackTrace();
+        boolean reportableRace = fillStackTraceData(t1, metadata, e1, getFirstSignalStack());
+        reportableRace |= fillStackTraceData(t2, metadata, e2, getSecondSignalStack());
+        error.stack_traces = new ArrayList<>();
         if (trace.metadata().getLocationSig(e1.getLocationId())
                 .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
-            error.traces.add(t1);
-            error.traces.add(t2);
+            error.stack_traces.add(t1);
+            error.stack_traces.add(t2);
         } else {
-            error.traces.add(t2);
-            error.traces.add(t1);
+            error.stack_traces.add(t2);
+            error.stack_traces.add(t1);
         }
         error.category = getCategory();
         error.error_id = getErrorId();
-        return reportableRace;
+        return reportableRace ? Optional.of(error) : Optional.empty();
     }
 
     public List<SignalStackEvent> getFirstSignalStack() {
@@ -258,59 +262,16 @@ public class Race {
         }
     }
 
-    private boolean generateTraceJson(
-            RawTrace t, MetadataInterface metadata, ReadonlyEventInterface e, List<SignalStackEvent> signalStackEvents) {
+    private boolean fillStackTraceData(
+            RawStackTrace t, MetadataInterface metadata, ReadonlyEventInterface e, List<SignalStackEvent> signalStackEvents) {
         long otid = e.getOriginalThreadId();
-        long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
-        List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
-        RawTraceComponent c = new RawTraceComponent();
         t.components = new ArrayList<>();
-        t.components.add(c);
-        String accessType = e.isWrite() ? "Write" : "Read";
-        boolean isSignal = e.getSignalDepth() != 0;
-        String locksHeldDescription = getHeldLocksDescription(heldLocks);
-        c.description_fields = new ArrayList<>();
-        if (isSignal) {
-            c.description_format = accessType + " in signal %s" + locksHeldDescription;
-            RawComponentField field = new RawComponentField();
-            field.setSignal((int)sid);
-            c.description_fields.add(field);
-        } else {
-            c.description_format = accessType + " in thread " + otid + locksHeldDescription;
-        }
-        for (ReadonlyEventInterface lock : heldLocks) {
-            c.description_fields.add(generateLockFieldJson(lock, metadata));
-        }
-        boolean atLeastOneKnownElementInTheTrace = generateComponentJson(c, metadata, e, heldLocks);
+        RawStackTraceComponent primaryComponent = generatePrimaryComponentData(metadata, e, otid);
+        t.components.add(primaryComponent);
         for (int stackIndex = 1; stackIndex < signalStackEvents.size(); stackIndex++) {
             SignalStackEvent stackEvent = signalStackEvents.get(stackIndex);
-            RawTraceComponent interrupting = new RawTraceComponent();
-            interrupting.description_fields = new ArrayList<>();
+            RawStackTraceComponent interrupting = generateInterruptingComponentData(metadata, stackEvent);
             t.components.add(interrupting);
-            int ttid = stackEvent.getTtid();
-            Optional<ReadonlyEventInterface> maybeEvent = stackEvent.getEvent();
-            String descriptionSuffix;
-            if (!maybeEvent.isPresent()) {
-                descriptionSuffix = " before any event";
-                heldLocks = Collections.emptyList();
-            } else {
-                heldLocks = trace.getHeldLocksAt(maybeEvent.get());
-                descriptionSuffix = getHeldLocksDescription(heldLocks);
-            }
-            if (trace.getThreadType(ttid) == ThreadType.THREAD) {
-                interrupting.description_format = "Interrupting thread " + trace.getOriginalThreadIdForTraceThreadId(ttid) + descriptionSuffix;
-            } else {
-                interrupting.description_format = "Interrupting signal %s" + descriptionSuffix;
-                RawComponentField field = new RawComponentField();
-                field.setSignal((int)trace.getSignalNumber(ttid));
-                interrupting.description_fields.add(field);
-            }
-            for (ReadonlyEventInterface lock : heldLocks) {
-                interrupting.description_fields.add(generateLockFieldJson(lock, metadata));
-            }
-            if (maybeEvent.isPresent()) {
-                generateComponentJson(interrupting, metadata, maybeEvent.get(), heldLocks);
-            }
         }
         long parentOTID = trace.metadata().getParentOTID(otid);
         t.thread_id = Long.toString(otid);
@@ -318,12 +279,63 @@ public class Race {
             t.thread_created_by = Long.toString(parentOTID);
             long locId = trace.metadata().getOriginalThreadCreationLocId(otid);
             if (locId >= 0) {
-                RawFrame created_at = new RawFrame();
-                generateFrameJson(created_at, metadata, locId);
-                t.thread_created_at = created_at;
+                t.thread_created_at = generateFrameData(metadata, locId).orElse(null);
             }
         }
-        return atLeastOneKnownElementInTheTrace;
+        return primaryComponent.frames.size() > 0;
+    }
+
+    private RawStackTraceComponent generatePrimaryComponentData(
+            MetadataInterface metadata, ReadonlyEventInterface e, long otid) {
+        List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
+        String accessType = e.isWrite() ? "Write" : "Read";
+        boolean isSignal = e.getSignalDepth() != 0;
+        String locksHeldDescription = getHeldLocksDescription(heldLocks);
+        RawStackTraceComponent primaryComponent = generateComponentData(metadata, e, heldLocks);
+        if (isSignal) {
+            primaryComponent.description_format = accessType + " in signal %s" + locksHeldDescription;
+            RawComponentField field = new RawComponentField();
+            long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
+            field.setSignal((int)sid);
+            primaryComponent.description_fields.add(field);
+        } else {
+            primaryComponent.description_format = accessType + " in thread " + otid + locksHeldDescription;
+        }
+        for (ReadonlyEventInterface lock : heldLocks) {
+            primaryComponent.description_fields.add(generateLockFieldData(lock, metadata));
+        }        
+        return primaryComponent;
+    }
+
+    private RawStackTraceComponent generateInterruptingComponentData(
+            MetadataInterface metadata, SignalStackEvent stackEvent) {
+        int ttid = stackEvent.getTtid();
+        Optional<ReadonlyEventInterface> maybeEvent = stackEvent.getEvent();
+        String descriptionSuffix;
+        List<ReadonlyEventInterface> heldLocks;
+        RawStackTraceComponent interrupting;
+        if (maybeEvent.isPresent()) {
+            heldLocks = trace.getHeldLocksAt(maybeEvent.get());
+            descriptionSuffix = getHeldLocksDescription(heldLocks);
+            interrupting = generateComponentData(metadata, maybeEvent.get(), heldLocks);
+        } else {
+            descriptionSuffix = " before any event";
+            heldLocks = Collections.emptyList();
+            interrupting = new RawStackTraceComponent();
+            interrupting.description_fields = new ArrayList<>();
+        }
+        if (trace.getThreadType(ttid) == ThreadType.THREAD) {
+            interrupting.description_format = "Interrupting thread " + trace.getOriginalThreadIdForTraceThreadId(ttid) + descriptionSuffix;
+        } else {
+            interrupting.description_format = "Interrupting signal %s" + descriptionSuffix;
+            RawComponentField field = new RawComponentField();
+            field.setSignal((int)trace.getSignalNumber(ttid));
+            interrupting.description_fields.add(field);
+        }
+        for (ReadonlyEventInterface lock : heldLocks) {
+            interrupting.description_fields.add(generateLockFieldData(lock, metadata));
+        }
+        return interrupting;
     }
 
     private boolean generateMemAccReport(
@@ -368,39 +380,40 @@ public class Race {
         return atLeastOneKnownElementInTheTrace;
     }
 
-    private boolean generateComponentJson(
-            RawTraceComponent c,
+    private RawStackTraceComponent generateComponentData(
             MetadataInterface metadata,
             ReadonlyEventInterface e,
             List<ReadonlyEventInterface> heldLocks) {
+        RawStackTraceComponent c = new RawStackTraceComponent();
+        c.description_fields = new ArrayList<>();
         long otid = e.getOriginalThreadId();
-        int stackSize = 0;
         List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         stacktrace.sort((e1, e2) -> -e1.compareTo(e2));
-        RawFrame last = null;
+        RawFrame lastFrame = null;
         c.frames = new ArrayList<>();
         for (int i = 0; i < stacktrace.size(); i++) {
             ReadonlyEventInterface elem = stacktrace.get(i);
 
-            OptionalLong locId = findEventLocation(stacktrace, i, elem);
-            if (!locId.isPresent()) {
-                continue;
-            }
+            long locId = findEventLocation(stacktrace, i, elem);
             if (elem.isLock()) {
-                if (!generateLockJson(last, metadata, elem, locId.getAsLong())) {
+                Optional<RawLock> lock = generateLockData(metadata, elem, locId);
+                if (lock.isPresent()) {
+                    lastFrame.locks.add(lock.get());
+                } else {
                     continue;
                 } 
             } else {
-                last = new RawFrame();
-                if (!generateFrameJson(last, metadata, locId.getAsLong())) {
+                Optional<RawFrame> frame = generateFrameData(metadata, locId);
+                if (frame.isPresent()) {
+                    lastFrame = frame.get();
+                    c.frames.add(lastFrame);
+                } else {
                     continue;
                 }
-                c.frames.add(last);
             }
-            stackSize++;
         }
-        return stackSize > 0;
+        return c;
     }
 
 
@@ -418,11 +431,8 @@ public class Race {
         for (int i = 0; i < stacktrace.size(); i++) {
             ReadonlyEventInterface elem = stacktrace.get(i);
 
-            OptionalLong locId = findEventLocation(stacktrace, i, elem);
-            if (!locId.isPresent()) {
-                continue;
-            }
-            if (!displayOneStackLocation(sb, metadata, isTopmostStack, elem, locId.getAsLong())) {
+            long locId = findEventLocation(stacktrace, i, elem);
+            if (!displayOneStackLocation(sb, metadata, isTopmostStack, elem, locId)) {
                 continue;
             }
             stackSize++;
@@ -452,41 +462,45 @@ public class Race {
         return stackSize>0;
     }
 
-    private OptionalLong findEventLocation(
+    private long findEventLocation(
             List<ReadonlyEventInterface> stacktrace, int eventIndex, ReadonlyEventInterface event) {
         OptionalLong locId;
         if (!event.isInvokeMethod() || !config.isCompactTrace()) {
-            return OptionalLong.of(event.getLocationId());
+            return event.getLocationId();
         }
         locId = event.getCallSiteAddress();
         if (!locId.isPresent()) {
             for (int j = eventIndex + 1; j < stacktrace.size(); j++) {
                 ReadonlyEventInterface callingFunction = stacktrace.get(j);
                 if (callingFunction.isInvokeMethod()) {
-                    return OptionalLong.of(callingFunction.getLocationId());
+                    return callingFunction.getLocationId();
                 }
             }
         }
-        return locId;
+        if (!locId.isPresent()) {
+            return event.getLocationId();
+        }
+        return locId.getAsLong();
     }
 
-    private boolean generateFrameJson(
-            RawFrame f, MetadataInterface metadata, long locId) {
+    private Optional<RawFrame> generateFrameData(
+            MetadataInterface metadata, long locId) {
+        RawFrame f = new RawFrame();
         f.locks = new ArrayList<>();
         String locSig = locId >= 0 ? trace.metadata().getLocationSig(locId)
                 : "... not available ...";
         f.address = locSig;
         if (config.isExcludedLibrary(locSig)) {
-            return false;
+            return Optional.empty();
         }
         if (locId >= 0) {
             signatureProcessor.process(locSig);
         }
-        return true;
+        return Optional.of(f);
     }
 
-    private boolean generateLockJson(
-            RawFrame f, MetadataInterface metadata,
+    private Optional<RawLock> generateLockData(
+            MetadataInterface metadata,
             ReadonlyEventInterface event, long locId) {
         String locSig = locId >= 0 ? metadata.getLocationSig(locId)
                 : "... not available ...";
@@ -496,13 +510,12 @@ public class Race {
         l.id = field;
         l.locked_at = metadata.getLocationSig(locId);
         if (config.isExcludedLibrary(locSig)) {
-            return false;
+            return Optional.empty();
         }
         if (locId > 0) {
             signatureProcessor.process(locSig);
         }
-        f.locks.add(l);
-        return true;
+        return Optional.of(l);
     }
 
     private boolean displayOneStackLocation(
@@ -548,7 +561,7 @@ public class Race {
           sb.toString());
     }
 
-    private RawComponentField generateLockFieldJson(ReadonlyEventInterface lock, MetadataInterface metadata) {
+    private RawComponentField generateLockFieldData(ReadonlyEventInterface lock, MetadataInterface metadata) {
         RawComponentField cf = new RawComponentField();
         RawField f = new RawField();
         f.address = metadata.getLockSig(lock, trace);

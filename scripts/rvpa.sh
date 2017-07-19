@@ -15,6 +15,7 @@ rvpredict()
 
 	min_major="1"
 	min_minor="8"
+	min_version=${min_major}.${min_minor}
 
 	if which java >/dev/null; then
 		# found java executable in PATH

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2016 Runtime Verification, Inc.
- * All rights reserved.
+ * Copyright (c) 2016, 2017 Runtime Verification, Inc.  All rights reserved.
  */
 /*
  * Copyright (c) 2009, David Anderson.
@@ -29,14 +28,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  */
-/* simplereader.c
- * This is an example of code reading dwarf .debug_info.
- * It is kept as simple as possible to expose essential features.
+/* rvsyms.c
+ *
+ * rvsyms converts instruction and data addresses to symbols using
+ * an ELF binary's DWARF information.
+ *
  * It does not do all possible error reporting or error handling.
-
- * To use, try
- *     make
- *     ./simplereader simplereader
+ *
+ * rvsyms makes a best effort to convert a data address to a variable name.
+ * If a data address is in an aggregate, rvsyms tries to produce a
+ * dot-separated "path" to the most specific member that contains the
+ * address.  For a data address inside of an array, rvsyms tries to produce
+ * indices in square brackets.
+ *
+ * As of this writing, rvsyms assumes that every address indicates a
+ * char-sized memory cell.
  */
 #include <assert.h>
 #include <err.h>
@@ -60,7 +66,7 @@ typedef bool (*dwarf_walk_predicate_t)(Dwarf_Debug, Dwarf_Die);
 typedef struct _dwarf_walk_params {
 	Dwarf_Debug dbg;
 	dwarf_walk_predicate_t predicate;
-	bool print_address, print_regex,
+	bool print_address, print_comp_dir, print_regex,
 	    have_dataptr, have_frameptr, have_insnptr;
 	uint64_t dataptr, frameptr, insnptr;
 } dwarf_walk_params_t;
@@ -78,7 +84,7 @@ typedef struct _dwarf_walk_ctx {
 	Dwarf_Signed ncies;
 	Dwarf_Fde *fde_list;
 	Dwarf_Signed nfdes;
-	bool print_address, print_regex;
+	bool print_address, print_comp_dir, print_regex;
 	bool have_dataptr, have_frameptr, have_insnptr;
 	strstack_t symstk;
 	uint64_t residue;
@@ -129,6 +135,7 @@ dwarf_walk_first(dwarf_walk_t *walk, const dwarf_walk_params_t *params)
 	walk->predicate = params->predicate;
 	walk->ctx.print_address = params->print_address;
 	walk->ctx.print_regex = params->print_regex;
+	walk->ctx.print_comp_dir = params->print_comp_dir;
 	walk->ctx.have_dataptr = params->have_dataptr;
 	walk->ctx.have_frameptr = params->have_frameptr;
 	walk->ctx.have_insnptr = params->have_insnptr;
@@ -1005,6 +1012,7 @@ next:
 static void
 print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 {
+	const char *comp_dir = NULL;	// compilation directory
 	char *name;
 	Dwarf_Error error;
 	Dwarf_Half lopc_form, hipc_form, tag = 0;
@@ -1053,10 +1061,24 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	}
 
 	if (tag == DW_TAG_compile_unit) {
-
+		res = dwarf_attrval_string(die, DW_AT_comp_dir, &comp_dir,
+		    &error);
+		switch (res) {
+		case DW_DLV_OK:
+			break;
+		case DW_DLV_NO_ENTRY:
+			comp_dir = NULL;
+			break;
+		default:
+			warnx( "\n%s: dwarf_attrval_string: %s", __func__,
+			    dwarf_errmsg(error));
+		}
 		if (!ctx->have_insnptr || ctx->have_dataptr ||
-		    ctx->have_frameptr)
+		    ctx->have_frameptr) {
+			if (ctx->print_comp_dir && comp_dir != NULL)
+				strstack_pushf(ss, "%s;", comp_dir);
 			strstack_pushf(ss, "%s", name);
+		}
 	} else if (tag == DW_TAG_subprogram) {
 		Dwarf_Attribute loc_attr;
 		Dwarf_Locdesc *ld;
@@ -1177,17 +1199,23 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 			ctx->rstate.lopc = inner.lopc;
 			ctx->rstate.hipc = inner.hipc;
 		}
+	} else {
+		inner.lopc = 1;
+		inner.hipc = 0;
 	}
 
 	if (tag == DW_TAG_compile_unit &&
 	    ctx->have_insnptr && !ctx->have_dataptr &&
 	    !ctx->have_frameptr && check_line(dbg, die, ctx, &filename, &line,
 	        &column)) {
+		if (ctx->print_comp_dir && comp_dir != NULL)
+			strstack_pushf(ss, "%s;", comp_dir);
 		strstack_pushf(ss, "%s:%d", filename, line);
 		if (column != -1)
 			strstack_pushf(ss, ":%d", column);
 	} else if (tag == DW_TAG_subprogram && ctx->have_insnptr &&
-	    !ctx->have_dataptr && !ctx->have_frameptr) {
+	    !ctx->have_dataptr && !ctx->have_frameptr &&
+	    inner.lopc < inner.hipc) {
 		if (inner.lopc <= ctx->insnptr && ctx->insnptr <= inner.hipc) {
 			if (ctx->print_regex) {
 				strstack_pushf(ss, ";;{0x0*%" PRIx64 "}",
@@ -1249,7 +1277,7 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 static void __dead
 usage(const char *progname)
 {
-	fprintf(stderr, "usage: %s [-a | -r] "
+	fprintf(stderr, "usage: %s [-a | -r] [-p]"
 	    "[-d data address] "
 	    "[-f DWARF Canonical Frame Address (CFA) ] "
 	    "[-i instruction pointer] object-file\n", progname);
@@ -1270,11 +1298,15 @@ main(int argc, char **argv)
 		, .have_frameptr = false
 		, .have_insnptr = false
 		, .print_address = false
+		, .print_comp_dir = false
 		, .print_regex = false
 		, .predicate = NULL};
 
-	while ((ch = getopt(argc, argv, "ad:f:i:r")) != -1) {
+	while ((ch = getopt(argc, argv, "ad:f:i:pr")) != -1) {
 		switch (ch) {
+		case 'p':
+			clparams.print_comp_dir = true;
+			break;
 		case 'r':
 			clparams.print_regex = true;
 			break;

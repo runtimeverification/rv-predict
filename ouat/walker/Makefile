@@ -1,6 +1,6 @@
 NOMAN=
 MKINSTALL=no
-.include "../compat.mk"
+.include "../../compat.mk"
 
 CC=clang
 PROG=walker

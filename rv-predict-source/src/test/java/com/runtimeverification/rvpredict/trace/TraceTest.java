@@ -891,7 +891,7 @@ public class TraceTest {
     private Trace createTrace(List<RawTrace> rawTraces) {
         return new Trace(
                 mockTraceState, rawTraces,
-                eventIdToTtid, ttidToThreadInfo, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
+                eventIdToTtid, tidToEvents, tidToMemoryAccessBlocks, tidToThreadState,
                 addrToState, tidToAddrToEvents, lockIdToLockRegions, clinitEvents,
                 ttidToStartEvent, ttidToJoinEvent, signalToTtidWhereEnabledAtStart, signalToTtidWhereDisabledAtStart,
                 ttidsThatCanOverlap,

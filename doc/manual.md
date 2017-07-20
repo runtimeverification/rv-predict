@@ -317,15 +317,15 @@ This will be fixed in the 2.1 release.
 
 The following papers best describe the technology in RV-Predict/C:
 
-    Jeff Huang, Patrick O'Neil Meredith, and Grigore Rosu. 2014.
-    "Maximal sound predictive race detection with control flow abstraction."
-    In Proceedings of the 35th ACM SIGPLAN Conference on
-    Programming Language Design and Implementation (PLDI '14).
-    ACM, New York, NY, USA, 337-348.
+> Jeff Huang, Patrick O'Neil Meredith, and Grigore Rosu. 2014.
+> [ "Maximal sound predictive race detection with control flow abstraction." ][msp]
+> In Proceedings of the 35th ACM SIGPLAN Conference on Programming Language
+> Design and Implementation (PLDI '14).  ACM, New York, NY, USA, 337-348.
+> 
+> Traian-Florin Serbanuta, Feng Chen, and Grigore Rosu. 2012.
+> [ "Maximal Causal Models for Sequentially Consistent Systems." ][mcm]
+> In Proceedings of the 3rd International Conference on Runtime Verification
+> (RV '12).  LNCS Volume 7687, 2013, pp. 136-150
 
-    Traian-Florin Serbanuta, Feng Chen, and Grigore Rosu. 2012.
-    "Maximal Causal Models for Sequentially Consistent Systems."
-    In Proceedings of the 3rd International Conference on
-    Runtime Verification (RV '12).
-    LNCS Volume 7687, 2013, pp. 136-150
-
+[msp]: http://dx.doi.org/10.1145/2594291.2594315
+[mcm]: http://dx.doi.org/10.1007/978-3-642-35632-2_16

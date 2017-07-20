@@ -1,3 +1,5 @@
+MANDIR=${PREFIX}/share/man
+
 .if defined(FAKEROOT_FIFO) && defined(INSTALL)
 .if !exists($(FAKEROOT_FIFO))
 .error "FAKEROOT_FIFO=$(FAKEROOT_FIFO) is defined but missing."
@@ -9,4 +11,8 @@ FILESOWN=root
 FILESGRP=root
 LIBOWN=root
 LIBGRP=root
+MANOWN=root
+MANGRP=root
+
+MANZ=yes	# required for Debian binary packages
 .endif

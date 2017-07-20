@@ -57,6 +57,7 @@ umask 022
 #
 mkcmake FAKEROOT_FIFO=${rootfifo} RELEASE=yes DESTDIR=${destdir} PREFIX=/usr install
 fakeroot -s ${rootfifo} cp -rp DEBIAN ${destdir}/.
+fakeroot -s ${rootfifo} chmod 0755 ${destdir}/DEBIAN/*
 cat > ${tmpdir}/control <<END_OF_CONTROL
 Package: rv-predict-c
 Version: ${version}-1

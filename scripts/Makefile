@@ -14,5 +14,6 @@ FILESNAME_rvpc.sh=rvpc
 FILESNAME_rvpsymbolize.sh=rvpsymbolize
 FILESNAME_rvpx.sh=rvpx
 LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
+MLINKS=rvpc.1 rvpc++.1
 
 .include <mkc.files.mk>

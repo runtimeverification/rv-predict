@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -u
+set -e
+
+which -a chown | {
+
+read rest
+read CHOWN rest
+
+if [ ${CHOWN:-}x = x ]
+then
+	echo "$(basename $0): could not find system chown" 1>&2
+	exit 1
+fi
+
+if [ ${FAKEROOT_FIFO:-}x = x ]
+then
+	${CHOWN} "$@"
+else
+	fakeroot -s ${FAKEROOT_FIFO} ${CHOWN} "$@"
+fi
+}

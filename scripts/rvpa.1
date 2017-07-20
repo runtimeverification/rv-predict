@@ -1,0 +1,221 @@
+.Dd July 20, 2017
+.Dt RVPA 1
+.Os
+.Sh NAME
+.Nm rvpa
+.Nd analyze a trace file produced by a program compiled with
+.Tn RV-Predict/C
+instrumentation using
+.Xr rvpc 1
+.Sh SYNOPSIS
+.Nm 
+.Op Fl Fl prompt-for-license
+.Op Fl Fl window Ar size
+.Op Fl Fl no-shorten
+.Op Fl Fl no-signal
+.Op Fl Fl no-symbol
+.Op Fl Fl no-system
+.Op Fl Fl no-trim
+.Op Fl -
+.Ar program
+.Sh DESCRIPTION
+.Nm
+analyzes a trace file,
+.Pa rvpredict.trace ,
+left in the current directory by
+.Ar program Ap s
+.Tn RV-Predict/C
+instrumentation.
+.Nm
+reports any data races that it predicts on stderr.
+.Pp
+.Ar program
+is used as a source for the DWARF debugging information
+that
+.Nm
+needs to convert data & instruction addresses to names in its reports.
+.Pp
+Command-line options modify the behavior of
+.Nm :
+.Bl -tag -width "mmprompt-for-license"
+.It Fl Fl prompt-for-license
+if this option is on the command line, and
+.Tn RV-Predict/C
+cannot find a valid license key, then it will ask for the user's email
+address and password and try to download a new key.
+Otherwise, if there is not a valid license key,
+.Nm
+aborts the analysis.
+.It Fl Fl window Ar size
+.Tn RV-Predict/C
+segments
+.Ar program Ap s
+event trace into "windows" and analyzes one window at a time.
+Windows are measured in the number of events they contain.
+This option sets the number of events per window to
+.Ar size ;
+the default is 2000.
+.Pp
+There is a trade-off between prediction power and computation
+time:
+short windows take less time to analyze than long windows, however,
+.Tn RV-Predict/C
+may predict fewer data races using short windows than using long
+windows on the same trace.
+.It Fl Fl no-shorten
+in reports,
+long paths to source files are not shortened by replacing the first 
+path components with an ellipsis, "...".
+.It Fl Fl no-signal
+disables symbolization of signal numbers: e.g., S1 is not converted to
+.Dv SIGHUP .
+.It Fl Fl no-symbol
+disables symbolization altogether: instruction & data addresses
+are not converted to file names, line and column numbers.
+Signal numbers are not converted to symbols such as
+.Dv SIGINT
+and
+.Dv SIGSEGV .
+When
+.Fl Fl no-symbol
+is passed, options
+.Fl Fl no-shorten ,
+.Fl Fl no-signal ,
+.Fl Fl no-system ,
+and
+.Fl Fl no-trim
+have no effect.
+.It Fl Fl no-system
+stack frames in system libraries or header files are not elided. 
+See
+.Sx BUGS .
+.It Fl Fl no-trim
+stops
+.Tn RV-Predict/C 
+from eliding all stack frames under
+.Fn main ,
+all frames under a thread's
+.Fn start_routine ,
+and all frames under a signal handler.
+.It Fl -
+indicates the last option
+for
+.Nm .
+Subsequent command-line words are treated
+like the executable that
+.Nm
+should analyze.
+.Fl -
+is useful for analyzing an executable whose name
+begins with
+.Fl - .
+.El
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.Sh ENVIRONMENT
+.Nm
+ignores the setting of
+.Ev RVP_TRACE_FILE
+in the user's environment.
+.Sh FILES
+.Bl -tag -width "/usr/share/examples/rv-predict-c/"
+.It Pa rvpredict.trace
+.Nm
+looks in the directory where it is run for a trace file by this
+name.
+.It Pa /usr/share/doc/rv-predict-c/USERS-MANUAL.md
+.Tn RV-Predict/C
+Users Manual
+.It Pa /usr/share/rv-predict-c/rv-predict.jar
+the Java program implementing
+.Tn RV-Predict/C
+data-race prediction
+.El
+.Sh EXAMPLES
+Build the demonstration program
+called
+.Nm lpcq
+in
+.Pa /usr/share/examples/rv-predict-c/c11
+with
+.Tn RV-Predict/C
+instrumentation:
+.Bd -literal
+$ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
+.Ed
+.Pp
+Run it, and look for the trace file:
+.Bd -literal
+$ ./lpcq
+read item 0
+read item 1
+read item 2
+read item 3
+read item 4
+$ ls -l rvpredict.trace 
+-rw------- 1 johndoe johndoe 6164 Jul 19 17:27 rvpredict.trace
+.Ed
+.Pp
+Finally, analyze the trace:
+.Bd -literal
+$ rvpa ./lpcq
+Data race on q.tailp at lpcq_main.c;main:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:26:19
+        in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+        in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:48
+        in produce at .../c11/lpcq_main.c:164
+        in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+
+
+Data race on [0x0000000000612080]:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:34:2
+        in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+        in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:49
+        in produce at .../c11/lpcq_main.c:164
+        in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+.Ed
+.Pp
+Several example programs are in
+.Pa /usr/share/examples/rv-predict-c/ .
+
+.Sh EXIT STATUS
+If
+.Nm
+cannot parse its arguments, it returns 1.
+If
+.Nm
+cannot find a
+.Tn Java 
+runtime, it returns 2.
+.Nm
+returns 3 if it finds
+.Tn Java ,
+but the version is not late enough.
+.Sh SEE ALSO
+.Xr rvpc 1 ,
+.Xr rvpx 1
+.Sh HISTORY
+.Tn RV-Predict/C
+2.0 was released in July 2017.
+.Sh AUTHORS
+.\" .An "Yilong Li"
+.\" .An "Traian Serbanuta"
+.\" .An "Virgil Serbanuta"
+.\" .An "David Young" Aq david.young@runtimeverification.com
+.An "Runtime Verification, Inc." Aq support@runtimeverification.com
+.Sh BUGS
+In this release, stack frames in system libraries and header files are
+always symbolized, so the option
+.Fl Fl no-system
+has no effect.

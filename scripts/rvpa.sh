@@ -83,10 +83,20 @@ symbolize()
 {
 	if [ ${filter_symbol:-yes} = yes -a ${filter_trim:-yes} = yes ]
 	then
-		rvpsymbolize-json "$@" | rvptrimframe | rvperror
-	elif [ ${filter_symbol:-yes} = yes ]
+		if [ "${RVP_OLD_REPORT_FMT+yes}" = yes ]
+		then
+			rvpsymbolize "$@" | trim_stack
+		else
+			rvpsymbolize-json "$@" | rvptrimframe | rvperror
+		fi
+	elif [ "${filter_symbol:-yes}" = yes ]
 	then
-		rvpsymbolize-json "$@" | rvperror
+		if [ ${RVP_OLD_REPORT_FMT+yes} = yes ]
+		then
+			rvpsymbolize "$@"
+		else
+			rvpsymbolize-json "$@" | rvperror
+		fi
 	else
 		cat
 	fi
@@ -131,6 +141,13 @@ else
 	progpath=$(pwd)/${progname}
 fi
 
-rvpredict --offline ${prompt:-} ${window:---window 2000} --detect-interrupted-thread-race \
+if [ "${RVP_OLD_REPORT_FMT+yes}" = yes ]
+then
+	new_report_fmt=
+else
+	new_report_fmt=--json-report
+fi
+
+rvpredict --offline ${prompt:-} ${window:---window 2000} ${new_report_fmt} --detect-interrupted-thread-race \
     --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
     symbolize ${symbolize_passthrough} $progpath 1>&2

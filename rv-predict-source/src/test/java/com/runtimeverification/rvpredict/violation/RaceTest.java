@@ -153,24 +153,24 @@ public class RaceTest {
         MoreAsserts.assertSubstring("<call site address 1>", report);
         MoreAsserts.assertSubstring("<call site address 2>", report);
 
-	Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
-	Assert.assertTrue(reportData.isPresent());
-	Assert.assertEquals(2, reportData.get().stack_traces.size());
-	RawStackTrace t1 = reportData.get().stack_traces.get(0);
-	RawStackTrace t2 = reportData.get().stack_traces.get(1);
-	assertStackTrace(t1, "1", 3, "Read in thread 1", "", "<call site address 2>", "<call site address 1>");
-	assertStackTrace(t2, "2", 1, "Write in thread 2");
+        Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
+        Assert.assertTrue(reportData.isPresent());
+        Assert.assertEquals(2, reportData.get().stack_traces.size());
+        RawStackTrace t1 = reportData.get().stack_traces.get(0);
+        RawStackTrace t2 = reportData.get().stack_traces.get(1);
+        assertStackTrace(t1, "1", 3, "Read in thread 1", "", "<call site address 2>", "<call site address 1>");
+        assertStackTrace(t2, "2", 1, "Write in thread 2");
     }
 
     private void assertStackTrace(RawStackTrace t, String id, int numFrames, String description_format, String... addresses) {
-	    Assert.assertEquals(1, t.components.size());
-	    Assert.assertEquals(id, t.thread_id);
-	    RawStackTraceComponent c = t.components.get(0);
-	    Assert.assertEquals(numFrames, c.frames.size());
-            Assert.assertEquals(description_format, c.description_format);
-	    for (int i = 0; i < addresses.length; i++) {
-		    Assert.assertEquals(addresses[i], c.frames.get(i).address);
-	    }
+        Assert.assertEquals(1, t.components.size());
+        Assert.assertEquals(id, t.thread_id);
+        RawStackTraceComponent c = t.components.get(0);
+        Assert.assertEquals(numFrames, c.frames.size());
+        Assert.assertEquals(description_format, c.description_format);
+        for (int i = 0; i < addresses.length; i++) {
+            Assert.assertEquals(addresses[i], c.frames.get(i).address);
+        }
     }
     
 
@@ -221,14 +221,13 @@ public class RaceTest {
         MoreAsserts.assertNotSubstring("<method 2 start>", report);
         MoreAsserts.assertNotSubstring("<method 3 start>", report);
 
-	Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
-	Assert.assertTrue(reportData.isPresent());
-	Assert.assertEquals(2, reportData.get().stack_traces.size());
-	RawStackTrace t1 = reportData.get().stack_traces.get(0);
-	RawStackTrace t2 = reportData.get().stack_traces.get(1);
-	assertStackTrace(t2, "1", 4, "Read in thread 1", "<instruction 4 in method 3>", "<method 3 call site in method 2>", "<method 1 start>", "<method 1 call site somewhere>");
-	assertStackTrace(t1, "2", 1, "Write in thread 2");
-
+        Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
+        Assert.assertTrue(reportData.isPresent());
+        Assert.assertEquals(2, reportData.get().stack_traces.size());
+        RawStackTrace t1 = reportData.get().stack_traces.get(0);
+        RawStackTrace t2 = reportData.get().stack_traces.get(1);
+        assertStackTrace(t2, "1", 4, "Read in thread 1", "<instruction 4 in method 3>", "<method 3 call site in method 2>", "<method 1 start>", "<method 1 call site somewhere>");
+        assertStackTrace(t1, "2", 1, "Write in thread 2");
     }
 
     @Test

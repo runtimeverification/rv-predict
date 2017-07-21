@@ -162,7 +162,7 @@ public class RaceTest {
 	assertStackTrace(t2, "2", 1, "Write in thread 2");
     }
 
-    public void assertStackTrace(RawStackTrace t, String id, int numFrames, String description_format, String... addresses) {
+    private void assertStackTrace(RawStackTrace t, String id, int numFrames, String description_format, String... addresses) {
 	    Assert.assertEquals(1, t.components.size());
 	    Assert.assertEquals(id, t.thread_id);
 	    RawStackTraceComponent c = t.components.get(0);

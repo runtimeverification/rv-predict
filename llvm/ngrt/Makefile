@@ -8,6 +8,7 @@
 
 LIB?=rvprt
 
+STRIPFLAG=
 INCS=intr_exports.h
 CC=clang
 CFLAGS+=-std=c11

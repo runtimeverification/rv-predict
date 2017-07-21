@@ -146,6 +146,9 @@ public class RaceTest {
 
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<call site address 1>");
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_2)).thenReturn("<call site address 2>");
+        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_1)).thenReturn("<thread 2 creation address>");
+        when(mockMetadata.getParentOTID(THREAD_2)).thenReturn(THREAD_1);
+        when(mockMetadata.getOriginalThreadCreationLocId(THREAD_2)).thenReturn(PROGRAM_COUNTER_1);
 
         Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
         race.setFirstSignalStack(Collections.emptyList());
@@ -162,6 +165,10 @@ public class RaceTest {
         RawStackTrace t2 = reportData.get().stack_traces.get(1);
         assertStackTrace(t1, "1", 3, "Read in thread 1", "", "<call site address 2>", "<call site address 1>");
         assertStackTrace(t2, "2", 1, "Write in thread 2");
+        Assert.assertNull(t1.thread_created_by);
+        Assert.assertNull(t1.thread_created_at);
+        Assert.assertEquals("1", t2.thread_created_by);
+        Assert.assertEquals("<thread 2 creation address>", t2.thread_created_at.address);
     }
 
     private void assertStackTrace(RawStackTrace t, String id, int numFrames, String description_format, String... addresses) {
@@ -249,6 +256,7 @@ public class RaceTest {
         List<RawTrace> rawTraces = Arrays.asList(
                 tu.createRawTrace(
                         tu.enterFunction(ADDRESS_1 - 1, OptionalLong.of(CALL_SITE_ADDRESS_1)),  // method 1
+                        tu.setPc(PROGRAM_COUNTER_1),
                         e3 = tu.lock(10),
                         e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)
                 ),
@@ -262,6 +270,7 @@ public class RaceTest {
         when(mockMetadata.getLockSig(extractSingleEvent(e3), trace))
                 .thenReturn("<mock lock representation>");
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<call site address 1>");
+        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_1)).thenReturn("<lock acquire address>");
 
         Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
         race.setFirstSignalStack(Collections.emptyList());
@@ -298,6 +307,7 @@ public class RaceTest {
         RawFrame f1 = t1.components.get(0).frames.get(0);
         Assert.assertEquals(1, f1.locks.size());
         Assert.assertEquals("<mock lock representation>", f1.locks.get(0).id.address);
+        Assert.assertEquals("<lock acquire address>", f1.locks.get(0).locked_at);
     }
 
     private static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {

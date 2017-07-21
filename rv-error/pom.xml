@@ -119,7 +119,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.7</version>
+        <version>3.0.0</version>
         <executions>
           <execution>
             <id>register-sources</id>
@@ -131,6 +131,23 @@
               <sources>
                 <source>${project.build.directory}/generated-sources</source>
               </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>attach-artifacts</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${project.basedir}/../c-semantics-plugin/src/main/ocaml/common/error.atd</file>
+                  <type>atd</type>
+                  <classifier>atd-spec</classifier>
+                </artifact>
+                ...
+              </artifacts>
             </configuration>
           </execution>
         </executions>

@@ -27,12 +27,12 @@ public class CSVRenderer extends Renderer {
         String[] strings = getCommonFields(error.error_id, error.description, error.category, error.citations);
 
         StringBuilder reason = new StringBuilder();
-        error.traces.subList(1, error.traces.size()).forEach(t -> getConsole().renderTrace(reason, t));
+        error.stack_traces.subList(1, error.stack_traces.size()).forEach(t -> getConsole().renderTrace(reason, t));
         strings[4] = reason.toString();
 
         StringBuilder trace = new StringBuilder();
-        if (error.traces.size() > 0) {
-            getConsole().renderTrace(trace, error.traces.get(0));
+        if (error.stack_traces.size() > 0) {
+            getConsole().renderTrace(trace, error.stack_traces.get(0));
         }
         strings[5] = trace.toString();
 

@@ -5,6 +5,7 @@ div.pre { line-height: 125%; }
 a.hll { color: #000000 }
 body .hll { background-color: #ffcccc }
 body .hll2 { background-color: #ffffcc }
+body .hll3 { background-color: #ffeecc }
 body  { background: #f8f8f8; font-family: sans-serif}
 body .c { color: #408080; font-style: italic } /* Comment */
 body .err { border: 1px solid #FF0000 } /* Error */
@@ -77,28 +78,30 @@ a:link span.lineno { text-decoration: none }
 /********************/
 /* EXPANDABLE LIST  */
 /********************/
-#listContainer{
-  margin-top:15px;
+ul.expList {
+    margin-top: 0;
+    padding-left: 60px;
 }
-
-#expList ul, li {
-    list-style: none;
-    margin:0;
-    padding:0;
+.expList ul, .expList li {
     cursor: pointer;
+    padding-left: 0;
 }
 
-#explist li * {
+.expList li * {
     cursor: auto;
 }
-#expList p {
+.expList p {
     margin:0;
     display:block;
 }
-#expList p:hover {
+.expList p:hover {
     background-color:#121212;
 }
-#expList li {
+
+.expList li li {
+    list-style: none;
+}
+.expList li {
     line-height:140%;
     text-indent:0px;
     background-position: 1px 8px;
@@ -107,15 +110,20 @@ a:link span.lineno { text-decoration: none }
 }
 
 /* Collapsed state for list element */
-#expList .collapsed {
-    background-image: url(static/collapsed.png);
+.expList {
+   list-style-type: "►";
 }
 /* Expanded state for list element
 /* NOTE: This class must be located UNDER the collapsed one */
-#expList .expanded {
-    background-image: url(static/expanded.png);
+.expList .expanded {
+    list-style-type: "▼";
 }
-#expList {
+
+.expList .dead,
+.expList .expanded.dead {
+    list-style: none;
+}
+.expList {
     clear: both;
 }
 
@@ -141,8 +149,12 @@ div.stackContainer {
   width: 100%;
 }
 
-div.memory {
+div.memory, div.locks {
     display: inline-block;
+}
+
+div.locks li {
+  list-style-type: decimal;
 }
 
 .memory .value {
@@ -154,7 +166,7 @@ div.clear {
     clear: both;
 }
 
-div.highlight {
+.snippet {
     float: left;
     margin-right: 5%;
 }
@@ -191,6 +203,15 @@ h2 {
     font-size: 1.25em;
 }
 
+h3 {
+    font-size: 1em;
+}
+
+h3.component {
+    margin-bottom: 0;
+    margin-left: 40px;
+}
+
 .dataTables_filter {
   float: right;
   margin-top: 1em;
@@ -208,16 +229,13 @@ a {
   text-decoration: none;
 }
 
-div.stack-frame {
-  cursor: auto;
-}
-
 div.stack-frame pre{
   margin: 0;
 }
 
 .expand span.lineno {
   text-align: right;
+  cursor: pointer;
 }
 
 span.mono {
@@ -225,7 +243,7 @@ span.mono {
   font-family: monospace;
 }
 
-#expList li.expand {
+.expList li.expand {
   line-height: 100%;
 }
 
@@ -281,4 +299,18 @@ img.home-icon, img.breadcrumb {
   height: 1.5em;
   width: auto;
   vertical-align: text-bottom;
+}
+
+div.skip {
+  margin-top: 3em;
+}
+
+sup {
+  vertical-align: baseline;
+  position: relative;
+  top: -0.4em;
+}
+
+.line.lock {
+  background-color: #ccccff;
 }

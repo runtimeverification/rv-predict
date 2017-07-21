@@ -6,9 +6,11 @@ import com.runtimeverification.error.data.ErrorCategory;
 import com.runtimeverification.error.data.Frame;
 import com.runtimeverification.error.data.Location;
 import com.runtimeverification.error.data.LocationError;
+import com.runtimeverification.error.data.Lock;
 import com.runtimeverification.error.data.Metadata;
 import com.runtimeverification.error.data.StackError;
-import com.runtimeverification.error.data.Trace;
+import com.runtimeverification.error.data.StackTrace;
+import com.runtimeverification.error.data.StackTraceComponent;
 
 import java.io.PrintStream;
 import java.net.URI;
@@ -28,31 +30,73 @@ public class ConsoleRenderer extends Renderer {
         sb.append(" ");
         sb.append(error.description);
         newline(sb);
-        error.traces.forEach(t -> renderTrace(sb, t));
+        error.stack_traces.forEach(t -> renderTrace(sb, t));
         renderIdAndCategory(error.category, error.error_id, sb);
         error.citations.forEach(c -> renderCitation(sb, c));
         out.print(sb.toString());
     }
 
-    void renderTrace(StringBuilder sb, Trace trace) {
-        if (trace.components.get(0).description != null) {
-            sb.append("  ");
-            sb.append(trace.components.get(0).description);
+    void renderTrace(StringBuilder sb, StackTrace trace) {
+        trace.components.forEach(c -> renderComponent(sb, c));
+        if (trace.thread_id != null) {
+            if (trace.thread_created_by != null) {
+                sb.append("  Thread ").append(trace.thread_id).append(" created by thread ").append(trace.thread_created_by);
+                newline(sb);
+                renderFrame(sb, "at", trace.thread_created_at, 0);
+            } else {
+                sb.append("  Thread ").append(trace.thread_id).append(" is the main thread");
+                newline(sb);
+            }
             newline(sb);
-        }
-        if (trace.components.get(0).frames.size() > 0) {
-            renderFrame(sb, "at", trace.components.get(0).frames.get(0));
-            trace.components.get(0).frames.subList(1, trace.components.get(0).frames.size()).forEach(f -> renderFrame(sb, "by", f));
         }
     }
 
-    private void renderFrame(StringBuilder sb, String start, Frame frame) {
+    private void renderComponent(StringBuilder sb, StackTraceComponent component) {
+        if (component.description != null) {
+            sb.append("  ");
+            sb.append(component.description);
+            newline(sb);
+        }
+        if (component.frames.size() > 0) {
+            int numElided = 0;
+            numElided = renderFrame(sb, "at", component.frames.get(0), numElided);
+            for (Frame f : component.frames.subList(1, component.frames.size())) {
+                numElided = renderFrame(sb, "by", f, numElided);
+            }
+            if (numElided > 0) {
+                renderElided(sb, numElided);
+            }
+        }
+    }
+
+    private int renderFrame(StringBuilder sb, String start, Frame frame, int numElided) {
+        if (frame.elided) {
+            return numElided+1;
+        } else if (numElided > 0) {
+            renderElided(sb, numElided);
+        }
         sb.append("   ");
         sb.append(start);
         sb.append(" ");
         sb.append(frame.symbol);
         sb.append("(");
         renderLoc(sb, frame.loc);
+        sb.append(")");
+        newline(sb);
+        frame.locks.forEach(l -> renderLock(sb, l));
+        return 0;
+    }
+
+    private void renderElided(StringBuilder sb, int numElided) {
+        sb.append("   ... ").append(numElided).append(" library frame");
+        if (numElided > 1)
+            sb.append("s");
+        newline(sb);
+    }
+
+    private void renderLock(StringBuilder sb, Lock lock) {
+        sb.append("   - locked ").append(lock.id).append(" at ").append(lock.locked_at.symbol).append("(");
+        renderLoc(sb, lock.locked_at.loc);
         sb.append(")");
         newline(sb);
     }

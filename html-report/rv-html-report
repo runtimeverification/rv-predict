@@ -26,35 +26,37 @@ class LinkedHtmlFormatter(HtmlFormatter):
     def _wrap_code(self, source):
         yield 0, '<div class="' + self.fileid + ' pre">'
         lineno = 0
+
         for (i, txt) in source:
-            if i == 1:
-                lineno += 1
-                if lineno in self.hl_lines:
-                    yield 0, '<div class="line-with-errors">'
-                    if len(self.hl_links[lineno]) == 1:
-                        err = self.hl_links[lineno][0]
-                        ix = err[u'index']
-                        tgt = '%s/error-%d.html' % (self.output_dir, ix)
-                        yield 0, '<a class="hll" href="%s">' % tgt
-                        yield i, txt
-                        yield 0, '</a>'
-                    else:
-                        yield i, txt
-                    yield 0, '<div class="errors">'
-                    for err in self.hl_links[lineno]:
-                        yield 0, '<span class="lineno">   </span>'
-                        msg = '%s (%s)' % (err[u'description'], err[u'error_id'])
-                        ix = err[u'index']
-                        tgt = '%s/error-%d.html' % (self.output_dir, ix)
-                        line = '<a href="%s"> %s Error #%d</a>\n' % (tgt, msg, ix)
-                        yield 0, line
-                    yield 0, '</div></div>'
-                else:
-                    yield 0, '<span class="line-%d line">' % lineno
-                    yield i, txt
-                    yield 0, '</span>'
-            else:
+            if i != 1:
                 yield i, txt
+                continue
+            lineno += 1
+            if not (lineno in self.hl_lines):
+                yield 0, '<span class="line-%d line">' % lineno
+                yield i, txt[:-1]
+                yield 0, '<sup class="after"></sup>\n'
+                yield 0, '</span>'
+                continue
+            yield 0, '<div class="line-with-errors">'
+            if len(self.hl_links[lineno]) == 1:
+                err = self.hl_links[lineno][0]
+                ix = err[u'index']
+                tgt = '%s/error-%d.html' % (self.output_dir, ix)
+                yield 0, '<a class="hll" href="%s">' % tgt
+                yield i, txt
+                yield 0, '</a>'
+            else:
+                    yield i, txt
+            yield 0, '<div class="errors">'
+            for err in self.hl_links[lineno]:
+                yield 0, '<span class="lineno">   </span>'
+                msg = '%s (%s)' % (err[u'description'], err[u'error_id'])
+                ix = err[u'index']
+                tgt = '%s/error-%d.html' % (self.output_dir, ix)
+                line = '<a href="%s"> %s Error #%d</a>\n' % (tgt, msg, ix)
+                yield 0, line
+            yield 0, '</div></div>'
         yield 0, '</div>'
 
 
@@ -71,7 +73,7 @@ def load_json(filename):
             try:
                 yield json.loads(line)
             except json.JSONDecodeError:
-                print('error reading: ' + line)
+                print 'error reading: ' + line
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
@@ -80,10 +82,10 @@ parser.add_argument("-o", "--output", help="Directory to output html report to")
 parser.add_argument("--encoding", help="Encoding used by source files in your project")
 args = parser.parse_args()
 if not args.output:
-  args.output = "output"
+    args.output = "output"
 errors = []
 for i in args.input:
-  errors.extend(load_json(i))
+    errors.extend(load_json(i))
 files = {}
 datafiles = []
 global_data = {item: load_json(item + '.json')
@@ -118,22 +120,28 @@ for ix, err in enumerate(errors):
         traces = err[u'traces']
         if traces:
             for trace in traces:
-              frames = trace[u'components'][0][u'frames']
-              if frames:
-                primary_component = trace[u'components'][0]
-                break
-            if not frames:
-                frames.append(null_frame())
+                frames = None
+                for component in trace[u'components']:
+                    frames = component[u'frames']
+                    if frames:
+                        primary_component = component
+                        break
+                if not frames:
+                    frames.append(null_frame())
         else:
             err[u'traces'] = [{u'frames': [null_frame()]}]
         frame = primary_component[u'frames'][0]
         for tr in traces:
-            for fr in tr[u'components'][0][u'frames']:
-                if (u'loc' in fr):
-                    loc = fr[u'loc']
-                    loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
-                    if loc[u'rel_file'] != "<unknown>":
-                        files[loc[u'abs_file']] = loc[u'rel_file']
+            for cp in tr[u'components']:
+              for fr in cp[u'frames']:
+                  if (u'loc' in fr):
+                      loc = fr[u'loc']
+                      loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
+                      if loc[u'rel_file'] != "<unknown>":
+                          files[loc[u'abs_file']] = loc[u'rel_file']
+                  else:
+                      loc = null_loc()
+                      fr[u'loc'] = loc
     else:
         frame = err[u'loc']
         primary_component = {u'frames': [frame]}
@@ -163,17 +171,17 @@ def render_code(rel, abs, path, errors):
     filename = abs
     directory = os.path.dirname(path)
     if not os.path.exists(args.output + '/' + directory):
-      os.makedirs(args.output + '/' + directory)
+        os.makedirs(args.output + '/' + directory)
     if not os.path.exists(filename):
-      return
+        return
     with open(filename, 'r') as f, open(args.output + '/' + path + '.html', 'w') as target:
         code = f.read()
         if args.encoding:
           try:
-            code = code.decode(args.encoding)
+              code = code.decode(args.encoding)
           except UnicodeDecodeError:
-            print("Error in " + abs)
-            raise
+              print "Error in " + abs
+              raise
         template = env.get_template('sourcefile.html')
         if errors:
             errorlines = errorsByFile[rel]
@@ -212,7 +220,7 @@ env.globals[u'errors'] = errors
 fileids = {}
 
 if os.path.exists(args.output + '/static/'):
-  shutil.rmtree(args.output + '/static/')
+    shutil.rmtree(args.output + '/static/')
 shutil.copytree(dirname + '/static/', args.output + '/static/')
 for template in ['index.html', 'error-descriptions.html']:
     render_template(template)

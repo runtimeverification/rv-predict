@@ -1,84 +1,64 @@
 \documentclass{article}
 \usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{xspace}
+\usepackage[utf8]{inputenc}
+\usepackage[citations,hybrid,underscores=false]{markdown}
+\bibliographystyle{plainnat}
+
+\newcommand{\instanceId}{{\it instanceId}\xspace}
+\newcommand{\instanceCounter}{{\it instanceCounter}\xspace}
+\newcommand{\type}{{\it type}\xspace}
+\newcommand{\handlerId}{{\it handlerId}\xspace}
+\newcommand{\location}{{\it location}\xspace}
+\newcommand{\val}{{\it value}\xspace}
+\newcommand{\isAtomic}{{\it isAtomic}\xspace}
+\newcommand{\lockId}{{\it lockId}\xspace}
+\newcommand{\resourceId}{{\it resourceId}\xspace}
+\newcommand{\mask}{{\it mask}\xspace}
+\newcommand{\signalNumber}{{\it signalNumber}\xspace}
+\newcommand{\defaultMask}{{\it defaultMask}\xspace}
+\newcommand{\threadInstanceId}{{\it threadInstanceId}\xspace}
+\newcommand{\nextT}{{\it nextT}\xspace}
+\newcommand{\precT}{{\it precT}\xspace}
+\newcommand{\precE}{{\it precE}\xspace}
+\newcommand{\event}{{\it event}\xspace}
+\newcommand{\iStart}{{\it start}\xspace}
+\newcommand{\iEnd}{{\it end}\xspace}
+\newcommand{\spawnedBy}{{\it spawnedBy}\xspace}
+\newcommand{\interrupts}{{\it interrupts}\xspace}
+\newcommand{\intr}{{\it interrupt}\xspace}
+\newcommand{\less}{{\it less}\xspace}
+\newcommand{\eMax}[1]{{\it max}_{#1}}
+\newcommand{\thread}{{\it thread}\xspace}
+\newcommand{\currentMask}{{\it currentMask}\xspace}
+\newcommand{\establishedBy}{{\it establishedBy}\xspace}
+\newcommand{\allEnabled}{{\it allEnabled}\xspace}
+\newcommand{\implies}{\longrightarrow}
+\newcommand{\e}{e_}
+\newcommand{\ord}{\prec}
+\newcommand{\pOrd}[1]{\ord_{#1}}
 
 \begin{document}
 
-\section{Events. Traces}
+\markdownInput[hybrid]{signals-model.md}
 
-\subsection{Events}
+\bibliography{doc}
 
-A mask is a map from signal\_numbers to enabledness values.
+\appendix
+\section{Formal definitions}
+Given an unary predicate $P[x]$ and a set $S$, let $P[S]$ be the subset of 
+the elements of $S$ for which $P$ holds.
 
-An event is caracterized by the following attributes:
-
+Given a trace ordering $\prec$ on a set of events {\it Trace} and an event $e$, let $\less_e$ and $\max$ be
+the following predicates
 \begin{itemize}
-\item instance\_id --- identifying the current thread/signal instance  
-\item pc --- program counter capturing the execution order within source
-\item type of event: 
-\begin{itemize}
-\item START --- event starting a thread/signal
-\item END 
-\item WRITE
-\item READ
-\item ATOMIC\_WRITE
-\item ATOMIC\_READ
-\item LOCK
-\item UNLOCK
-\item WRITE\_MASK
-\item READ\_MASK
-\item ESTABLISH\_SIGNAL signal\_number, source\_id, DEFAULT\_MASK 
-\end{itemize}
-\item extra attribute for START
-\begin{itemize}
-  \item handler\_id --- identifier for the handler treating this signal
-\end{itemize}
-\item extra attributes for WRITE/READ/ATOMIC\_WRITE/ATOMIC\_READ
-\begin{itemize}
-\item location --- location being accessed
-\item value --- value written/read
-\end{itemize}
-\item extra attribute for LOCK/UNLOCK
-\begin{itemize}
-\item lock\_id --- identifier for the resource being locked/unlocked
-\end{itemize}
-\item extra attribute for WRITE\_MASK/READ\_MASK
-\begin{itemize}
-\item mask --- the mask being read / written
-\end{itemize}
-\item extra attribute for ESTABLISH\_SIGNAL
-\begin{itemize}
-  \item signal\_number 
-  \item handler\_id --- identifier for the handler treating this signal
-  \item default\_mask --- the default mask to start this signal with
-\end{itemize}
+\item $\less_e[x] = x \prec e$ defining events preceding $e$
+\item $\max[x] = \neg\exists y. x \prec y$ defining maximal elements of a set
 \end{itemize}
 
-\section{Concurrent object, serial specification}
-
-We adopt the definition of concurrent objects and serial specifications proposed
-by Herlihy and Wing \cite{herlihy-wing-1990}.
-
-A concurrent object is behaviorally defined through a set of atomic operations,
-which any thread can perform on it, and a serial specification of its legal
-behavior in isolation.
-
-The serial specification describes the valid sequences of operations which can
-be performed on the object.
-
-
-\subsection{Sequential execution order}
-
-Is defined for any piece of code which is supposed to be executed sequentially 
-(the fact that it can be interrupted will be modelled elsewhere).
-
-Given two events $e_1$ and $e_2$, we say that $e_1\prec e_2$
-
-\begin{thebibliography}{00}
-
-\bibitem{herlihy-wing-1990} Maurice P. Herlihy and Jeannette M. Wing. 1990.
-Linearizability: a correctness condition for concurrent objects.
-ACM Trans. Program. Lang. Syst. 12, 3 (July 1990), 463-492.
-DOI=\href{http://dx.doi.org/10.1145/78969.78972}{10.1145/78969.78972}
-\end{thebibliography}
+Given an unary predicate $P[x]$, let $\eMax{\prec e}[P]$ be the set
+defined by 
+$$\eMax{\prec e}[P] = \max[P[\less_e[{\it Trace}]]]$$.
 
 \end{document}

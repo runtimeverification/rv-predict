@@ -28,7 +28,7 @@ CPPFLAGS+=-std=c++11
 
 .if $(MKBIN:Uno) == "yes"
 PROGS=	BrokenSpinningLoop DoubleCheckedLocking RaceOnArrayList SimpleRace
-PROGS=	double-checked-locking local-variable-race
+PROGS+=	double-checked-locking local-variable-race
 PROGS+= simple-state-machine spinning-loop stack
 PROGS+=	unsafe-vector
 .endif

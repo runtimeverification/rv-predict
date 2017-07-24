@@ -12,7 +12,9 @@ usage()
 cleanup()
 {
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
+	kill $bgpid
 	rm -rf ${destdir} ${tmpdir}
+	wait $bgpid
 }
 
 [ $# -eq 1 ] || usage
@@ -23,12 +25,6 @@ destdir=$(mktemp -d -t $(basename $0).destdir.XXXXXX)
 tmpdir=$(mktemp -d -t $(basename $0).XXXXX)
 rootfifo=${tmpdir}/rootfifo
 rootsave=${tmpdir}/rootsave
-
-trap cleanup EXIT ALRM HUP INT PIPE QUIT TERM
-rm -f rv-predict-c.deb
-if ! type mkcmake > /dev/null 2>&1; then
-	export PATH=${HOME}/pkg/bin:${PATH}
-fi
 
 # I do not want to run this script as root, but the files in a Debian
 # binary package need to have the proper ownership, root:root.  In
@@ -46,6 +42,14 @@ fi
 # 
 mkfifo ${rootfifo}
 tail -f ${rootfifo} > ${rootsave} &
+bgpid=$!
+
+trap cleanup EXIT ALRM HUP INT PIPE QUIT TERM
+rm -f rv-predict-c.deb
+if ! type mkcmake > /dev/null 2>&1; then
+	export PATH=${HOME}/pkg/bin:${PATH}
+fi
+
 
 # avoid creating files & directories with permissions 0775 
 umask 022

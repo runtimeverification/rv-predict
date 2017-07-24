@@ -1,0 +1,75 @@
+.Dd July 20, 2017
+.Dt RVPDUMP 1
+.Os
+.Sh NAME
+.Nm rvpdump
+.Nd renders an
+.Tn RV-Predict/C
+trace file in human-readable form.
+.Sh SYNOPSIS
+.Nm 
+.Op Fl g
+.Op Fl t Ar plain
+.Op Fl t Ar symbol-friendly
+.Op Ar trace-file
+.Sh DESCRIPTION
+.Nm
+reads a trace file from
+.Ar trace-file
+or, if no
+.Ar trace-file
+is given, from stdin.
+It writes the trace in human-readable format to stdout, one event
+per line.
+.Pp
+.Nm
+can be used in conjunction with
+.Xr rvpsymbolize 1
+to render a trace file with line number information and symbols for
+data & instruction addresses.
+.Pp
+Command-line options modify the behavior of
+.Nm :
+.Bl -tag -width "... symbol-friendly"
+.It Fl g
+Print every event with a generation number.
+.It Fl t Ar plain
+write "plain" output.  This is the default output format.
+.It Fl t Ar symbol-friendly
+Mark addresses in the output so that
+.Xr rvpsymbolize 1
+can symbolize them.
+.El
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.Sh FILES
+.Bl -tag -width "/usr/share/examples/rv-predict-c/"
+.It Pa /usr/share/doc/rv-predict-c/USERS-MANUAL.md
+.Tn RV-Predict/C
+Users Manual
+.El
+.Sh EXAMPLES
+Page through a trace produced by
+the example program in
+.Pa /usr/share/examples/rv-predict-c/c11/ ,
+.Nm lpcq ,
+with addresses symbolized:
+.Bd -literal
+$ rvpdump -t symbol-friendly rvpredict.trace | rvpsymbolize ./lpcq | less
+.Ed
+.Sh EXIT STATUS
+.Nm
+returns 0 on success, 1 on failure.
+.Sh SEE ALSO
+.Xr rvpa 1 ,
+.Xr rvpc 1 ,
+.Xr rvpsymbolize 1 ,
+.Xr rvpx 1
+.Sh HISTORY
+.Tn RV-Predict/C
+2.0 was released in July 2017.
+.Sh AUTHORS
+.\" .An "Yilong Li"
+.\" .An "Traian Serbanuta"
+.\" .An "Virgil Serbanuta"
+.\" .An "David Young" Aq david.young@runtimeverification.com
+.An "Runtime Verification, Inc." Aq support@runtimeverification.com

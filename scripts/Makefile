@@ -1,4 +1,3 @@
-NOMAN=
 #
 # This makefile uses mk-configure macro files
 # (https://github.com/cheusov/mk-configure) with BSD make.  On a
@@ -7,6 +6,7 @@ NOMAN=
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
+MAN=rvpa.1 rvpc.1 rvpsymbolize.1 rvpx.1
 FILESMODE=0755
 FILES=rvpa.sh rvpc.sh rvpsymbolize.sh rvpx.sh
 FILESNAME_rvpa.sh=rvpa
@@ -14,5 +14,6 @@ FILESNAME_rvpc.sh=rvpc
 FILESNAME_rvpsymbolize.sh=rvpsymbolize
 FILESNAME_rvpx.sh=rvpx
 LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
+MLINKS=rvpc.1 rvpc++.1
 
 .include <mkc.files.mk>

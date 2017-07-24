@@ -5,7 +5,7 @@ set -u
 
 usage()
 {
-	echo "usage: $(basename $0) [--window size] [--no-shorten|--no-symbol|--no-system|--no-trim] [--] program [ arg1 ... ]" 1>&2
+	echo "usage: $(basename $0) [--prompt-for-license] [--window size] [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--] program [ arg1 ... ]" 1>&2
 	exit 1
 }
 

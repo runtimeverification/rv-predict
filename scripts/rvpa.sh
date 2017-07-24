@@ -5,7 +5,7 @@ set -u
 
 usage()
 {
-	echo "usage: $(basename $0) [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--] program" 1>&2
+	echo "usage: $(basename $0) [--prompt-for-license] [--window size] [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--] program" 1>&2
 	exit 1
 }
 
@@ -27,7 +27,7 @@ rvpredict()
 RV Predict requires Java ${min_version} to run but Java was not detected.
 Please either add it to PATH or set the JAVA_HOME environment variable.
 EOF
-		exit 1
+		exit 2
 	fi
 
 	version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
@@ -41,7 +41,7 @@ RV-Predict/C requires Java $min_version to run but the detected version
 is $version.  Please either add Java $min_version bin directory to the PATH
 or set the JAVA_HOME environment variable accordingly.
 EOF
-		exit 2
+		exit 3
 	fi
 
 	${_java} -ea -jar ${sharedir}/rv-predict.jar "$@"

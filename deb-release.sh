@@ -55,8 +55,11 @@ umask 022
 # captured.  When FAKEROOT_FIFO is set, Makefile.common sets INSTALL to
 # fakeroot $(INSTALL) -s $(FAKEROOT_FIFO).
 #
+export CHOWNPROG=$(which chown)
+export PATH=$(pwd)/bin:${PATH}
 mkcmake FAKEROOT_FIFO=${rootfifo} RELEASE=yes DESTDIR=${destdir} PREFIX=/usr install
 fakeroot -s ${rootfifo} cp -rp DEBIAN ${destdir}/.
+fakeroot -s ${rootfifo} chmod 0755 ${destdir}/DEBIAN/*
 cat > ${tmpdir}/control <<END_OF_CONTROL
 Package: rv-predict-c
 Version: ${version}-1

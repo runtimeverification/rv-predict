@@ -1,0 +1,204 @@
+.\"     $NetBSD: mdoc.template,v 1.7 2002/07/10 11:57:12 yamt Exp $
+.\"
+.\" Copyright (c) 2017 Runtime Verification, Inc.
+.\"
+.\" The uncommented requests are required for all man pages.
+.\" The commented requests should be uncommented and used where appropriate.
+.Dd July 19, 2017
+.Dt rvpc 1
+.Os
+.Sh NAME
+.Nm rvpc
+.Nd instrumenting compiler for
+.Tn RV-Predict/C ,
+the data-race predictor
+.Sh SYNOPSIS
+.Nm
+.Op Xr clang 1 options
+.Op Fl o Ar program
+.Nm rvpc++
+.Op Xr clang 1 options
+.Op Fl o Ar program
+.\" Don't break words
+.Bk
+.Op Ar infile ...
+.Ek
+.Sh DESCRIPTION
+.Nm
+compiles a C or C++ program with instrumentation that produces a trace
+of the program's run-time behavior.
+The trace records events including memory loads and stores,
+lock acquisition and release, thread creation and destruction.
+The trace can be analyzed by
+.Tn RV-Predict/C ,
+which searches feasible schedules of the trace events for schedules
+that involve
+.Em data races .
+.Pp
+.Nm
+can be used as a drop-in replacement for
+.Xr clang 1 .
+It
+forwards its command-line arguments to
+.Xr clang 1 ,
+adding arguments to insert
+.Tn RV-Predict/C
+instrumentation into the object files that
+.Xr clang 1
+emits, and to link
+.Ar program
+with the
+.Tn RV-Predict/C
+runtime and its dependencies.
+.Pp
+When
+.Ar program
+is run, it records a trace of its dynamic behavior to a file in the
+current working directory called
+.Pa rvpredict.trace .
+.Pp
+A separate program,
+.Xr rvpa 1 ,
+analyzes the trace, producing a report of data races that
+.Tn RV-Predict/C
+predicts.
+.Sh EXIT STATUS
+See
+.Xr clang 1
+for exit status.
+.Sh ENVIRONMENT
+.Bl -tag -width "RVP_TRACE_FILE"
+.It Ev RVP_TRACE_FILE
+a program built by
+.Nm
+writes its trace file to the custom path given by
+.Ev RVP_TRACE_FILE
+if the variable is present.
+Otherwise, the program writes its trace file to
+the default location.
+.Ev RVP_TRACE_FILE
+must name a file, not a directory.
+.El
+.Sh FILES
+.Bl -tag -width "/usr/share/examples/rv-predict-c/"
+.It Pa /usr/share/doc/rv-predict-c/USERS-MANUAL.md
+.Tn RV-Predict/C
+Users Manual
+.It Pa /usr/share/examples/rv-predict-c/
+demonstration programs in C and C++
+.It Pa /usr/lib/rvpinstrument.so
+a compiler pass that adds
+.Tn RV-Predict/C
+instrumentation to your program.
+The pass is run on
+.Nm Ap s
+behalf by
+.Xr clang 1 .
+.It Pa /usr/lib/librvprt.a
+the
+.Tn RV-Predict/C
+runtime library.
+.Nm
+links
+.Pa librvprt.a
+with every executable it creates.
+.El
+.Sh EXAMPLES
+Build the demonstration program
+called
+.Nm lpcq
+in
+.Pa /usr/share/examples/rv-predict-c/c11
+with
+.Tn RV-Predict/C
+instrumentation:
+.Bd -literal
+$ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
+.Ed
+.Pp
+Run it, and look for the trace file:
+.Bd -literal
+$ ./lpcq
+read item 0
+read item 1
+read item 2
+read item 3
+read item 4
+$ ls -l rvpredict.trace 
+-rw------- 1 johndoe johndoe 6164 Jul 19 17:27 rvpredict.trace
+.Ed
+.Pp
+Finally, analyze the trace:
+.Bd -literal
+$ rvpa ./lpcq
+Data race on q.tailp at lpcq_main.c;main:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:26:19
+        in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+        in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:48
+        in produce at .../c11/lpcq_main.c:164
+        in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+
+
+Data race on [0x0000000000612080]:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:34:2
+        in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+        in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:49
+        in produce at .../c11/lpcq_main.c:164
+        in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+.Ed
+.Pp
+Several example programs are in
+.Pa /usr/share/examples/rv-predict-c/ .
+.\" This next request is for sections 1, 6, 7 & 8 only
+.\"     (command return values (to shell) and fprintf/stderr type diagnostics).
+.\" .Sh DIAGNOSTICS
+.\" The next request is for sections 2 and 3 error and signal handling only.
+.\" .Sh ERRORS
+.Sh SEE ALSO
+.\" Cross-references should be ordered by section (low to high), then in
+.\"     alphabetical order.
+.Xr clang 1 ,
+.Xr rvpa 1 ,
+.Xr rvpx 1
+.Sh STANDARDS
+.Nm
+respects the definition of data races between threads given in the
+C11 standard.
+.Sh HISTORY
+.Tn RV-Predict/C
+2.0 was released in July 2017.
+.Sh AUTHORS
+.\" .An "Yilong Li"
+.\" .An "Traian Serbanuta"
+.\" .An "Virgil Serbanuta"
+.\" .An "David Young" Aq david.young@runtimeverification.com
+.An "Runtime Verification, Inc." Aq support@runtimeverification.com
+.\" .Sh CAVEATS
+.\" .Sh BUGS
+.Sh SECURITY CONSIDERATIONS
+A program compiled with
+.Nm
+writes a trace file either to
+.Ev RVP_TRACE_FILE
+or to the current working directory.
+A trace file contains a record of memory loads and stores
+(addresses
+.Em and
+values), as well as control flow information, for the lifetime
+of the program.
+Thus a trace file may capture private information such as passwords and
+account numbers.
+Users should treat a trace file with at least as much caution
+as a core file.

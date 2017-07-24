@@ -1,0 +1,96 @@
+.Dd July 20, 2017
+.Dt RVPSYMBOLIZE 1
+.Os
+.Sh NAME
+.Nm rvpsymbolize
+.Nd convert marked-up data & instruction addresses to symbol names
+and source locations
+.Sh SYNOPSIS
+.Nm 
+.Op Fl Fl no-shorten
+.Op Fl Fl no-signal
+.Op Fl Fl no-system
+.Op Fl -
+.Ar program
+.Sh DESCRIPTION
+.Nm
+copies its stdin to its stdout, converting data & instruction addresses to
+corresponding symbols in
+.Ar program .
+Each data address given by a hexadecimal number in square brackets,
+.Bq 0x89abcdef ,
+is changed to a symbol name and the source location for its definition.
+Each instruction pointer (aka "program counter") in curly braces,
+.Brq 0x456789ab ,
+is changed to the name of a corresponding function and source location.
+.Pp
+.Nm
+uses
+.Ar program
+as a source for the DWARF debugging information that it uses to symbolize
+addresses.
+.Pp
+.Xr rvpa 1
+and
+.Xr rvpx 1
+use
+.Nm
+to symbolize their data-race reports.
+.Nm
+can be used in conjunction with
+.Xr rvpdump 1
+to render a trace file with line number information and symbols for
+data & instruction addresses.
+.Pp
+Command-line options modify the behavior of
+.Nm :
+.Bl -tag -width "mmprompt-for-license"
+.It Fl Fl no-shorten
+in reports,
+long paths to source files are not shortened by replacing the first 
+path components with an ellipsis, "...".
+.It Fl Fl no-signal
+disables symbolization of signal numbers: e.g., S1 is not converted to
+.Dv SIGHUP .
+.It Fl Fl no-system
+stack frames in system libraries or header files are not elided. 
+See
+.Sx BUGS .
+.It Fl -
+indicates the last option
+for
+.Nm .
+The following command-line word is treated
+as
+.Ar program .
+.El
+.\" This next command is for sections 1, 6, 7 and 8 only.
+.Sh FILES
+.Bl -tag -width "/usr/share/examples/rv-predict-c/"
+.It Pa /usr/share/doc/rv-predict-c/USERS-MANUAL.md
+.Tn RV-Predict/C
+Users Manual
+.El
+.Sh EXIT STATUS
+If
+.Nm
+cannot parse its arguments, it returns 1.
+Otherwise, it returns 0.
+.Sh SEE ALSO
+.Xr rvpa 1 ,
+.Xr rvpc 1 ,
+.Xr rvpx 1
+.Sh HISTORY
+.Tn RV-Predict/C
+2.0 was released in July 2017.
+.Sh AUTHORS
+.\" .An "Yilong Li"
+.\" .An "Traian Serbanuta"
+.\" .An "Virgil Serbanuta"
+.\" .An "David Young" Aq david.young@runtimeverification.com
+.An "Runtime Verification, Inc." Aq support@runtimeverification.com
+.Sh BUGS
+In this release, stack frames in system libraries and header files are
+always symbolized, so the option
+.Fl Fl no-system
+has no effect.

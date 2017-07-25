@@ -9,6 +9,7 @@
 PROGS=rvpdump
 #PROGS+=metadatadump tracedump
 
+CPPFLAGS+=-D_POSIX_C_SOURCE=200809L	# for dprintf(3) and getopt(3)
 CC?=clang
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
 SRCS.rvpdump=main.c reader.c

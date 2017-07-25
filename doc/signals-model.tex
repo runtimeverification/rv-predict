@@ -3,7 +3,7 @@
 \usepackage{natbib}
 \usepackage{xspace}
 \usepackage[utf8]{inputenc}
-\usepackage[citations,hybrid,underscores=false]{markdown}
+\usepackage[citations,hybrid]{markdown}
 \bibliographystyle{plainnat}
 
 \newcommand{\instanceId}{{\it instanceId}\xspace}
@@ -47,7 +47,7 @@
 
 \appendix
 \section{Formal definitions}
-Given an unary predicate $P[x]$ and a set $S$, let $P[S]$ be the subset of 
+Given an unary predicate $P[x]$ and a set $S$, let $P[S]$ be the subset of
 the elements of $S$ for which $P$ holds.
 
 Given a trace ordering $\prec$ on a set of events {\it Trace} and an event $e$, let $\less_e$ and $\max$ be
@@ -58,7 +58,7 @@ the following predicates
 \end{itemize}
 
 Given an unary predicate $P[x]$, let $\eMax{\prec e}[P]$ be the set
-defined by 
+defined by
 $$\eMax{\prec e}[P] = \max[P[\less_e[{\it Trace}]]]$$.
 
 \end{document}

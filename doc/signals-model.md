@@ -1,14 +1,13 @@
 
 ## Events
 
-An event is characterized by the following attributes:
+All events must have the following attributes:
 
 * \instanceId – identifying the current thread/signal instance
 * \instanceCounter – capturing the execution order within an instance
 * \type of event:
-    - START – a thread/signal instance start.
-      For threads, instance-id is of the initiating thread
-    - END – a thread/signal instance end. instance-id is that of itself
+    - START – a thread/signal instance start
+    - END – a thread/signal instance end
     - WRITE – the write of a memory location
     - READ – the read of a memory location
     - LOCK – acquiring a resource
@@ -23,8 +22,9 @@ An event is characterized by the following attributes:
       signal
     - CURRENT-SIGNAL – identifying the currently executing signal
     - SPAWN – spawning a new thread
+    - JOIN – waiting for a thread to finish
 
-The above attributes are common for all events.   Additionally, each type of event might require extra attributes, as follows:
+Additionally, each type of event might require extra attributes, as follows:
 
 * START
     - \handlerId – identifier for the handler treating this signal
@@ -40,46 +40,54 @@ The above attributes are common for all events.   Additionally, each type of eve
     - \signalNumber  – the signal to be handled
     - \handlerId – identifier for the handler
     - \defaultMask – the default mask for this signal. This will be or-ed
-      with the existing mask of the thread/signal being interrupted.
+        with the existing mask of the thread/signal being interrupted.
 * CURRENT-SIGNAL
     - \signalNumber  – the signal currently being executed
 * ENABLE-SIGNAL/DISABLE-SIGNAL
     - \signalNumber – the signal to be enabled/disabled
-* SPAWN
-    - \threadInstanceId – the instance identifying the newly created thread
+* SPAWN/JOIN
+    - \threadInstanceId – the instance identifying the thread being
+        created/joined
 
 A *mask* tells for each signal whether it is enabled or not. We abstract it as
-a map from signal-number to {*true*, *false*}.
+a map from signal numbers to $\{T, F\}$.  Let \allEnabled be the mask mapping
+all signal numbers to *T*.
+Given a mask *m*, the mask obtained from *m* by updating a signal number *n* to
+flag $b\in \{T, F\}$ will be denoted as $m[n\mapsto b]$
 
 ## Traces
 
-A trace (prefix) is a collection of events satisfying the following properties.
+A trace (prefix) is a collection of events satisfying the following properties:
 
 1. Different instances of threads/signals have distinct \instanceId.
    Therefore, we identify an instance of a thread/signal in a trace as all
    events sharing the same \instanceId.
-   Let *Instances* be the set of all instanceIds.
+   Let *Instances* be the set of values of all \instanceId attributes.
 
 2. Each thread/signal instance has an unique START and at most one END event.
    Let \iStart and \iEnd be functions defined on *Instances* mapping an
    instance to its corresponding START or END event.  Note that $\iStart$ is a
-   total function while $\iEnd$ is partial.
+   total function while $\iEnd$ can be partial.
 
 3. The set of \instanceCounter attributes within the same thread/signal
-   constitutes a continuous, non-repeating, sequence of natural numbers
+   constitutes a sequence of consecutive natural numbers
    starting with 0 for its START event and reaching maximum at its END event
    (if the END event exists).
 
 4. The main thread within a trace has \instanceId 0.  There exists no SPAWN
    event whose \threadInstanceId is 0
 
-5. For each thread with \instanceId *t*, different from 0, there exists a
-   *unique* SPAWN event with the \threadInstanceId attribute equal to *t*.
-   Let \spawnedBy by the function mapping each thread \instanceId (except 0)
-   to its corresponding SPAWN event.
+5. Each thread (except for the main) is started by a unique SPAWN instance.
+   More formally, the \threadInstanceId of a SPAWN event is different from
+   its \instanceId, and there are no two SPAWN events with the same
+   \threadInstanceId.
 
-Let *Threads* be the set of \instanceId attributes corresponding to threads
-(including 0).
+   Let *Threads* be the set of values of \threadInstanceId attributes,
+   to which 0 is added.
+   It must be that \threadInstanceId attributes of JOIN events are in *Threads*
+   Let \spawnedBy be the function mapping each of the *Threads* (except for k0)
+   to their corresponding SPAWN events.
+
 
 Let *Signals* be the set of \instanceId attributes *not* corresponding to
 threads.
@@ -107,13 +115,15 @@ $\eMax{\ord e}[P]$ be the set of the maximal elements preceding *e*
 ### Thread/Signal instance ordering
 
 Let $\pOrd{n}$ be the total order relation on elements sharing the
-\instanceId *n* defined by $\e1 \pOrd{n} \e2$ iff $\instanceId(\e1) = \instanceId(\e2) = n$
+\instanceId *n* defined by $\e1 \pOrd{n} \e2$ iff
+$\instanceId(\e1) = \instanceId(\e2) = n$
 and $\instanceCounter(\e1) < \instanceCounter(\e2)$.
 
 A trace ordering $\ord$ is consistent with the thread/signal instance
 ordering if it includes $\pOrd{n}$ for all $n \in *Instances*$
 
-Let \nextT be the partial mapping from events to events yielding the next event within the same thread/signal instance, defined by
+Let \nextT be the partial mapping from events to events yielding the next event
+within the same thread/signal instance, defined by
 $$\nextT(e) = \event(\instanceId(e), \instanceCounter(e)+1)$$
 Note that *\nextT* is defined for all events of a trace except those final
 for their \instanceId.
@@ -124,6 +134,16 @@ $$\precT(e) = \event(\instanceId(e), \instanceCounter(e)-1)$$
 Note that *\precT* is defined for all events of a trace except those of type
 START.
 
+### SPAWN/JOIN consistency
+
+A trace ordering $\prec$ is SPAWN/JOIN consistent if SPAWN executes before the
+corresponding START and JOIN executes after the corresponding END.  Formally,
+
+$$\type(e) = *SPAWN* \implies e \prec \iStart(\threadInstanceId(e))$$
+
+and
+$$\type(e) = *JOIN* \implies \iEnd(\threadInstanceId(e)) \prec e$$
+
 ### Interruption mapping and ordering
 
 An interruption mapping is a function \interrupts mapping *Signals* to
@@ -131,16 +151,18 @@ the events they interrupt.
 
 An interruption mapping \interrupts is well-defined if:
 
-* a signal cannot interrupt (after) the END event.  Formally, for all $s\in*Signals*$, $\type(\interrupts(s)) \neq *END*$
-* If the interrupted instance continues then the interrupting signal must
-end.  Formally, if $\nextT(\interrupts(s))$ is defined, then $\iEnd(s)$ is
-also defined.
+* a signal cannot interrupt (after) the END event.  Formally, for all
+    $s\in*Signals*$, $\type(\interrupts(s)) \neq *END*$
+* If the interrupted instance continues then the interrupting signal must end.
+    Formally, if $\nextT(\interrupts(s))$ is defined, then $\iEnd(s)$ is also
+    defined.
 
-An well-defined interruption mapping \interrupts defines an interruption
+A well-defined interruption mapping \interrupts defines an interruption
 ordering $\pOrd{\intr}$ such that for all $s\in *Signals*$
 
 * $\interrupts(s) \pOrd{\intr} \iStart(s)$
-* If $\nextT(\interrupts(s))$ is defined, then $\iEnd(s) \pOrd{\intr} \nextT(\interrupts(s))$
+* If $\nextT(\interrupts(s))$ is defined, then
+    $\iEnd(s) \pOrd{\intr} \nextT(\interrupts(s))$
 
 A trace ordering is compatible with a well-defined interruption mapping if
 it includes the corresponding interruption ordering.
@@ -165,28 +187,43 @@ we have that $\handlerId(e') = \handlerId(e)$ and $\mask(e') = \mask(e)$.
 
 ### Resource consistency
 
-A trace ordering $\prec$ is resource-consistent if each LOCK operation acquires a previously free resource, and each UNLOCK operation releases a resource previously acquired by the same thread.  Formally, given an event *e* such that $\type(e) = *LOCK*$, if $P = \eMax{\prec e}[\resourceId(x) = \resourceId(e)]$, then
+A trace ordering $\prec$ is resource-consistent if each LOCK operation acquires
+a previously free resource, and each UNLOCK operation releases a resource
+previously acquired by the same thread.  Formally, given an event *e* such that
+$\type(e) = *LOCK*$, if $P = \eMax{\prec e}[\resourceId(x) = \resourceId(e)]$,
+then
 
-$$ P\neq \emptyset \implies P = \{e'\} \wedge \type(e') = *LOCK* $$
+$$ P\neq \emptyset \implies P = \{e'\} \wedge \type(e') = *UNLOCK* $$
 
 Similarly, if $\type(e) = *UNLOCK*$, then
 
-$$ \eMax{\prec e}[\resourceId(x) = \resourceId(e)] = \{e'\} \wedge \resourceId(e') = \resourceId(e) \wedge \type(e') = *LOCK* $$
+$$ \eMax{\prec e}[\resourceId(x) = \resourceId(e)] = \{e'\}
+    \wedge \resourceId(e') = \resourceId(e) \wedge \type(e') = *LOCK* $$
 
 ### Signal handler mapping and consistency
 
-A signal handler mapping \establishedBy is a mapping from *Signals* to events (of type ESTABLISH-SIGNAL) whose purpose is to map each signal to its corresponding establishing operation.
+A signal handler mapping \establishedBy is a mapping from *Signals* to events
+(of type ESTABLISH-SIGNAL) whose purpose is to map each signal to its
+corresponding establishing operation.
 
-A signal handler mapping \establishedBy is well-defined if it maps all signals to ESTABLISH-SIGNAL events whose \handlerId is the same as the \handlerId for the START event of the signal, and if CURRENT-SIGNAL events correspond to the signal being established.  Formally, for all $s\in *Signals*$,
+A signal handler mapping \establishedBy is well-defined if it maps all signals
+to ESTABLISH-SIGNAL events whose \handlerId is the same as the \handlerId for
+the START event of the signal, and if CURRENT-SIGNAL events correspond to the
+signal being established.  Formally, for all $s\in *Signals*$,
 
 $$\handlerId(\establishedBy(s)) = \handlerId(\iStart(s))$$
-and, for all events $e$ such that $\instanceId(e) = s$ and $\type(e) = *CURRENT-SIGNAL*$,
+and, for all events $e$ such that $\instanceId(e) = s$ and
+$\type(e) = *CURRENT-SIGNAL*$,
 
 $$\signalNumber(e) = \signalNumber(\establishedBy(s))$$
 
-A trace ordering $\prec$ is compatible with a well-defined signal-handler mapping \establishedBy if for any signal *s*, $\establishedBy(s)$ is the immediately preceding ESTABLISH-SIGNAL event for signal *s* for $\iStart(s)$.  Formally, for all $s\in *Signals*$, if $e = \establishedBy(s)$, then
+A trace ordering $\prec$ is compatible with a well-defined signal-handler
+mapping \establishedBy if for any signal *s*, $\establishedBy(s)$ is the
+immediately preceding ESTABLISH-SIGNAL event for signal *s* for $\iStart(s)$.
+Formally, for all $s\in *Signals*$, if $e = \establishedBy(s)$, then
 
-$$\eMax{\prec \iStart(s)}[\signalNumber(x) = \signalNumber(e) \wedge \type(x) = *ESTABLISH-SIGNAL*] = e$$
+$$\eMax{\prec \iStart(s)}[\signalNumber(x) = \signalNumber(e)
+   \wedge \type(x) = *ESTABLISH-SIGNAL*] = e$$
 
 
 ### Current mask and mask consistency
@@ -238,7 +275,9 @@ $(*Trace*, \interrupts, \establishedBy, \prec),$ such that:
 * \interrupts is a well-defined interruption mapping for *Trace*
 * \establishedBy is a well-defined signal-handler mapping for *Trace*
 * $\prec$ is a trace ordering on *Trace* compatible with \interrupts and
-    \establishedBy, consistent with the thread/signal instance ordering, mask consistent, memory-consistent, and resource consistent.
+    \establishedBy, consistent with the thread/signal instance ordering,
+    SPAWN/JOIN consistent, mask consistent, memory-consistent, and
+    resource consistent.
 
 Given a trace *Trace*, a feasible subtrace of *Trace* is a feasible
 trace whose first component is a subtrace of *Trace*
@@ -246,7 +285,8 @@ trace whose first component is a subtrace of *Trace*
 
 ## Causal race
 
-A causal race is a *race candidate* for which there exists a feasible *race witness*.
+A causal race is a *race candidate* for which there exists a feasible *race
+witness*.
 
 ### Race candidate
 
@@ -306,8 +346,9 @@ A signal-race witness on trace *Trace* for a race candidate $(\e1, \e2)$,
 where $\isAtomic(\e1) = \{*false*\}$ is a feasible subtrace *Subtrace* of
 *Trace* such that:
 
-* $\e2$ belongs to a signal interrupting $\e1$ and is enabled.
-    Let $\e2' = \precT^{*Trace*}(\e2)$. Then $\e1, \e2'\in *SubTrace*$,
-    $\thread(\e1) = \thread(\e2')$, but $\nextT^{*SubTrace*}(\e2')$ and $\nextT^{*SubTrace*}(\e1)$ are undefined
+* $\e2$ belongs to a signal (transitively) interrupting $\e1$ and is enabled.
+    Let $\e2' = \precT^{*Trace*}(\e2)$. Then
+    $\e1, \e2'\in *SubTrace*$ and $\thread(\e1) = \thread(\e2')$, but
+    $\nextT^{*SubTrace*}(\e2')$ and $\nextT^{*SubTrace*}(\e1)$ are undefined
 * $\e1$ immediately precedes $\e2'$ as access on its location
     $\eMax{\prec \e2'}[\location(x) = \location(\e1)] = \{\e1\}$

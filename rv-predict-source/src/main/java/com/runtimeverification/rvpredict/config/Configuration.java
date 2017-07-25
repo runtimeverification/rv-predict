@@ -361,6 +361,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_compact_trace, description = "Whether to use the compact trace format.", hidden = true, descriptionKey = "1700")
     private boolean compactTrace;
 
+    public final static String opt_json_report = "--json-report";
+    @Parameter(names = opt_json_report, description = "Whether to use the json output format.", hidden = true, descriptionKey = "1750")
+    private boolean jsonReport;
+
     public final static String opt_without_generation = "--without-generation";
     @Parameter(names = opt_without_generation, description = "Whether the trace contains generations.", hidden = true, descriptionKey = "1800")
     private boolean withoutGeneration = false;
@@ -774,6 +778,10 @@ public class Configuration implements Constants {
 
     public boolean isCompactTrace() {
         return compactTrace;
+    }
+
+    public boolean isJsonReport() {
+        return jsonReport;
     }
 
     public boolean noPrediction() {

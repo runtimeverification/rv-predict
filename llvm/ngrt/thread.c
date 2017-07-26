@@ -281,6 +281,7 @@ void
 __rvpredict_init(void)
 {
 	(void)pthread_once(&rvp_init_once, rvp_init);
+	rvp_static_intrs_reinit();
 }
 
 static void

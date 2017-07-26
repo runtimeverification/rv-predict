@@ -644,7 +644,8 @@ RVPredictInstrument::runOnFunction(Function &F)
 
 	InterruptAnnotation &analysis = getAnalysis<InterruptAnnotation>();
 	uint8_t prio;
-	if (analysis.getISRPrioLevel(F, prio)) {
+	auto priorities = analysis.getISRPrioLevels(F);
+	for (auto prio : priorities) {
 		IRBuilder<> builder(ctorfn->getEntryBlock().getFirstNonPHI());
 		auto void_type = builder.getVoidTy();
 		auto int32_type = builder.getInt32Ty();

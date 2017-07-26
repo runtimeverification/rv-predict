@@ -3,6 +3,10 @@
 #ifndef _RVP_GATHERANNOTATION_H_
 #define _RVP_GATHERANNOTATION_H_
 
+#include "llvm/ADT/StringRef.h"
+#include <utility>
+#include <unordered_map>
+
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
@@ -36,14 +40,16 @@ class InterruptAnnotation : public ModulePass {
 
     /// This map stores the priority level of each interrupt
     /// service routine (ISR).
-    StringMap<uint8_t> ISRPrioMap;
+//    StringMap<uint8_t> ISRPrioMap;
+    StringMap<StringMap<uint8_t> > isrPriorityMap;
+//    std::unordered_map<StringRef, std::unordered_map<StringRef, uint8_t> > isrPriorityMap;
 
   public:
     InterruptAnnotation()
         : ModulePass(ID)
         , DisableIRQFnMap()
         , EnableIRQFnMap()
-        , ISRPrioMap()
+        , isrPriorityMap()
     {}
 
   private:
@@ -52,7 +58,7 @@ class InterruptAnnotation : public ModulePass {
   public:
     bool getDisableIRQPrioLevel(Function &F, uint8_t &prio) const;
     bool getEnableIRQPrioLevel(Function &F, uint8_t &prio) const;
-    bool getISRPrioLevel(Function &F, uint8_t &prio) const;
+    std::vector<uint8_t> getISRPrioLevels(Function &F) const;
     virtual void getAnalysisUsage(AnalysisUsage &AU) const;
     virtual bool runOnModule(Module &M);
 };

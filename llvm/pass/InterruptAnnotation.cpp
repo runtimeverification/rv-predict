@@ -1,7 +1,6 @@
 // Copyright (c) 2016 Runtime Verification, Inc. (RV-Predict team). All Rights Reserved.
 /* vim: set tabstop=4 shiftwidth=4 : */
 
-#include <set>
 #include "InterruptAnnotation.h"
 
 #include "llvm/IR/Constants.h"
@@ -24,9 +23,10 @@ namespace RVPredict {
 void
 InterruptAnnotation::debugDump()
 {
-    for (auto it = ISRPrioMap.begin(); it != ISRPrioMap.end(); ++it) {
-        errs() << format("%s : isr@%u\n", it->first().data(),
-                         it->second);
+    for (auto it = isrPriorityMap.begin(); it != isrPriorityMap.end(); ++it) {
+		for (auto jt = it->second.begin(); jt != it->second.end(); ++jt) {
+			errs() << format("%s : isr@%u\n", it->first().data(), jt->second);
+		}
     }
     for (auto it = DisableIRQFnMap.begin(); it != DisableIRQFnMap.end(); ++it) {
         errs() << format("%s : disableIRQ@%u\n", it->first().data(),
@@ -93,15 +93,18 @@ InterruptAnnotation::getEnableIRQPrioLevel(Function &F, uint8_t &prio) const
  *      False if the given function is not annotated as an ISR
  *      function; otherwise, True.
  */
-bool
-InterruptAnnotation::getISRPrioLevel(Function &F, uint8_t &prio) const
+std::vector<uint8_t>
+InterruptAnnotation::getISRPrioLevels(Function &F) const
 {
-    auto it = ISRPrioMap.find(F.getName());
-    if (it == ISRPrioMap.end()) {
-        return  false;
+    std::vector<uint8_t> priorities;
+    auto sourcePrioMap = isrPriorityMap.find(F.getName());
+    if (sourcePrioMap == isrPriorityMap.end()) {
+        return priorities;
     }
-    prio = it->second;
-    return true;
+    for (auto it = sourcePrioMap->second.begin(); it != sourcePrioMap->second.end(); it++) {
+		priorities.push_back(it->second);
+	}
+    return priorities;
 }
 
 void
@@ -147,7 +150,8 @@ InterruptAnnotation::runOnModule(Module &M)
 		/* true on failure, ugh. */
 		if (!Pair.second.getAsInteger(10, prio))
 			;
-		else if (Pair.first.equals("isr") || Pair.first.equals("disableIRQ") ||
+		else if (Pair.first.startswith("isr-") ||
+			     Pair.first.equals("disableIRQ") ||
 		         Pair.first.equals("enableIRQ")) {
 			auto first_insn = f->getEntryBlock().getFirstNonPHI();
 #if 1
@@ -177,8 +181,9 @@ InterruptAnnotation::runOnModule(Module &M)
 			    "expected {isr|disableIRQ|enableIRQ}@{decimal digits}");
 		}
 		StringRef fname = f->getName();
-		if (Pair.first.equals("isr")) {
-			ISRPrioMap.insert(std::make_pair(fname, prio));
+		if (Pair.first.startswith("isr-")) {
+			std::pair<StringRef, StringRef> hyphenated = Pair.first.split('-');
+			isrPriorityMap[fname].insert(std::make_pair(hyphenated.second, prio));
 		} else if (Pair.first.equals("disableIRQ")) {
 			DisableIRQFnMap.insert(std::make_pair(fname, prio));
 		} else if (Pair.first.equals("enableIRQ")) {

@@ -152,7 +152,7 @@ rvp_static_intrs_reinit(void)
 }
 
 void
-rvp_static_intrs_init(void)
+rvp_static_intrs_reinit(void)
 {
 	int i, rc;
 	sigset_t original_mask;

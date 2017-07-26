@@ -30,6 +30,7 @@ public class EventsEnabledForSignalIterator {
     private boolean enabled;
     private boolean firstStep;
     private boolean reuseLastEvent;
+    private boolean inAtomicEvent;
 
     static EventsEnabledForSignalIterator createWithNoInterruptedThreadRaceDetectionStrictMode(
             Collection<ReadonlyEventInterface> events,
@@ -135,6 +136,12 @@ public class EventsEnabledForSignalIterator {
                 return false;
             }
         }
+        if (inAtomicEvent) {
+            if (!findNextEnabledEvent()) {
+                previousEvent = Optional.empty();
+                return false;
+            }
+        }
         if (reuseLastEvent) {
             previousEvent = currentAndPrecedentEvent.getPreviousEvent();
         } else {
@@ -153,7 +160,7 @@ public class EventsEnabledForSignalIterator {
             if (!advanceOneStep()) {
                 return false;
             }
-        } while (!enabled);
+        } while (!enabled || inAtomicEvent);
         return true;
     }
 
@@ -180,7 +187,7 @@ public class EventsEnabledForSignalIterator {
                     return;
                 }
             }
-        } while (enabled);
+        } while (enabled && !inAtomicEvent);
     }
 
     private boolean advanceOneStep() {
@@ -189,16 +196,31 @@ public class EventsEnabledForSignalIterator {
             return false;
         }
         ReadonlyEventInterface event = eventsIterator.next();
-        // TODO(virgil): I should also use atomic locks as enable/disable events. It's not that easy, though
-        // since an atomic unlock should just restore the previous state, it should not actually enable.
         if (stopAtFirstMaskChangeEvent && Signals.signalEnableChange(event, signalNumber).isPresent()) {
             enabled = false;
             currentAndPrecedentEvent.addEvent(Optional.of(event));
             return true;
         }
+        if (inAtomicEvent) {
+            if (isAtomicEventEnd(event)) {
+                inAtomicEvent = false;
+            }
+        } else {
+            if (isAtomicEventStart(event)) {
+                inAtomicEvent = true;
+            }
+        }
         enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, event);
         currentAndPrecedentEvent.addEvent(Optional.of(event));
         return true;
+    }
+
+    private boolean isAtomicEventStart(ReadonlyEventInterface event) {
+        return event.isLock() && event.isAtomic();
+    }
+
+    private boolean isAtomicEventEnd(ReadonlyEventInterface event) {
+        return event.isUnlock() && event.isAtomic();
     }
 
     private static Optional<ReadonlyEventInterface> eventWithDefault(

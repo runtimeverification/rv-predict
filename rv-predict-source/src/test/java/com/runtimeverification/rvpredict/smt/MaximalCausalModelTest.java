@@ -1844,12 +1844,64 @@ public class MaximalCausalModelTest {
         Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
     }
 
+    @Test
+    public void signalsDoNotInterruptAtomicEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.exitSignal()),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.atomicLoad(ADDRESS_1, VALUE_2),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
+    }
+
+    @Test
+    public void signalsDoNotInterruptEstablishEvents() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_2, SIGNAL_2_ENABLED_MASK),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.exitSignal()));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
     // reach a racing instruction.
     // TODO: Test for signals using the same lock as the interrupted thread.
-    // TODO: Test that atomic variables do not generate races.
     // TODO: Test that signals that read a certain mask value (implicitly or explicitly) must run after that mask is
     // set.
 

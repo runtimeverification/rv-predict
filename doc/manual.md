@@ -22,6 +22,20 @@ Make sure that the RV-Predict/C `bin` directory is in your PATH.
 Ordinarily, the RV-Predict/C programs will be in `/usr/bin/`, and
 `/usr/bin/` will be part of the system's default PATH.
 
+Before you use RV-Predict/C for the first time, you should sign up for
+a license key.  Follow the instructions at [https://runtimeverification.com/licensing](https://runtimeverification.com/licensing).
+Then run `rvplicense` to fetch a new key.
+
+```
+$ rvplicense
+This product has no license on file.
+Please sign up for a license at https://runtimeverification.com/licensing.
+
+Once you obtain a valid license, please login with your RV account:
+Enter your e-mail: john@doe.com
+Enter your RV password:
+```
+
 ### Compiling and running programs with RV-Predict/C
 
 The first step in using RV-Predict/C to detect data races is to compile

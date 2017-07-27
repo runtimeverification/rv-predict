@@ -57,13 +57,16 @@ public class TraceState {
     private final StateAtWindowBorder stateAtCurrentWindowStart = new StateAtWindowBorder();
     private final StateAtWindowBorder stateAtCurrentWindowEnd = new StateAtWindowBorder();
 
+    /**
+     * Map from a thread ID to the information about that thread.
+     */
+    private final Map<Integer, ThreadInfo> ttidToThreadInfo = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+
     private final Configuration config;
 
     private final MetadataInterface metadata;
 
     private final Map<Long, Integer> t_eventIdToTtid;
-
-    private final Map<Integer, ThreadInfo> t_ttidToThreadInfo;
 
     private final Map<Long, Integer> t_originalTidToTraceTid;
 
@@ -104,7 +107,6 @@ public class TraceState {
         this.metadata = metadata;
 
         this.t_eventIdToTtid           = new LinkedHashMap<>();
-        this.t_ttidToThreadInfo        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_originalTidToTraceTid   = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -133,9 +135,23 @@ public class TraceState {
         return metadata;
     }
 
+    private int tmp = 0;
+
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
+        tmp++;
+        if (tmp == 13) {
+            System.out.println("Lucky you!");
+        }
+        System.out.println("--- Window ---");
+        for (RawTrace rawTrace : rawTraces) {
+            for (int i = 0; i < rawTrace.size(); i++) {
+                ReadonlyEventInterface event = rawTrace.event(i);
+                if (event.isSignalEvent()) {
+                    System.out.println(event);
+                }
+            }
+        }
         t_eventIdToTtid.clear();
-        t_ttidToThreadInfo.clear();
         t_originalTidToTraceTid.clear();
         t_tidToEvents.clear();
         t_tidToMemoryAccessBlocks.clear();
@@ -155,7 +171,6 @@ public class TraceState {
         t_signalNumberToSignalHandlerToEstablishSignalEvents.clear();
         return new Trace(this, rawTraces,
                 t_eventIdToTtid,
-                t_ttidToThreadInfo,
                 t_tidToEvents,
                 t_tidToMemoryAccessBlocks,
                 t_tidToThreadState,
@@ -259,6 +274,7 @@ public class TraceState {
      */
     public void fastProcess(RawTrace rawTrace) {
         int ttid = rawTrace.getThreadInfo().getId();
+        setThreadInfo(ttid, rawTrace.getThreadInfo());
         for (int i = 0; i < rawTrace.size(); i++) {
             ReadonlyEventInterface event = rawTrace.event(i);
             if (event.isLock() && !event.isWaitAcq()) {
@@ -382,6 +398,14 @@ public class TraceState {
 
     void startWindow() {
         stateAtCurrentWindowStart.copyFrom(stateAtCurrentWindowEnd);
+    }
+
+    ThreadInfo getThreadInfo(int ttid) {
+        return ttidToThreadInfo.get(ttid);
+    }
+
+    void setThreadInfo(int ttid, ThreadInfo threadInfo) {
+        ttidToThreadInfo.put(ttid, threadInfo);
     }
 
     private static class StateAtWindowBorder {

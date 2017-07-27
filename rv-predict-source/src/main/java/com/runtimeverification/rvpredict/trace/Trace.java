@@ -53,8 +53,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Representation of the execution trace. Each event is created as a node with a
@@ -76,11 +80,6 @@ public class Trace {
      * Map from an event's ID to its thread information.
      */
     private final Map<Long, Integer> eventIdToTtid;
-
-    /**
-     * Map from a thread ID to the information about that thread.
-     */
-    private final Map<Integer, ThreadInfo> ttidToThreadInfo;
 
     /**
      * Map from a thread's ID to the internal id assigned when preparing the trace.
@@ -172,7 +171,6 @@ public class Trace {
 
     public Trace(TraceState state, List<RawTrace> rawTraces,
             Map<Long, Integer> eventIdToTtid,
-            Map<Integer, ThreadInfo> ttidToThreadInfo,
             Map<Integer, List<ReadonlyEventInterface>> tidToEvents,
             Map<Integer, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
             Map<Integer, ThreadState> tidToThreadState,
@@ -192,7 +190,6 @@ public class Trace {
         this.state = state;
         this.rawTraces = rawTraces;
         this.eventIdToTtid = eventIdToTtid;
-        this.ttidToThreadInfo = ttidToThreadInfo;
         this.tidToEvents = tidToEvents;
         this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
         this.tidToThreadState = tidToThreadState;
@@ -307,35 +304,37 @@ public class Trace {
     }
 
     public ThreadType getThreadType(ReadonlyEventInterface event) {
-        return ttidToThreadInfo.get(eventIdToTtid.get(event.getEventId())).getThreadType();
+        return state.getThreadInfo(eventIdToTtid.get(event.getEventId())).getThreadType();
     }
 
     public ThreadType getThreadType(Integer traceThreadId) {
-        return ttidToThreadInfo.get(traceThreadId).getThreadType();
+        return state.getThreadInfo(traceThreadId).getThreadType();
     }
 
     public int getSignalDepth(Integer traceThreadId) {
-        return ttidToThreadInfo.get(traceThreadId).getSignalDepth();
+        return state.getThreadInfo(traceThreadId).getSignalDepth();
     }
 
+    private static int i = 0;
+
     public long getSignalNumber(Integer traceThreadId) {
-        return ttidToThreadInfo.get(traceThreadId).getSignalNumber();
+        return state.getThreadInfo(traceThreadId).getSignalNumber();
     }
 
     public long getSignalHandler(Integer traceThreadId) {
-        return ttidToThreadInfo.get(traceThreadId).getSignalHandler();
+        return state.getThreadInfo(traceThreadId).getSignalHandler();
     }
 
     public long getOriginalThreadIdForTraceThreadId(Integer traceThreadId) {
-        return ttidToThreadInfo.get(traceThreadId).getOriginalThreadId();
+        return state.getThreadInfo(traceThreadId).getOriginalThreadId();
     }
 
     public Boolean getThreadStartsInTheCurrentWindow(Integer ttid) {
-        return ttidToThreadInfo.get(ttid).getThreadStartsInTheCurrentWindow();
+        return state.getThreadInfo(ttid).getThreadStartsInTheCurrentWindow();
     }
 
     public boolean getSignalEndsInTheCurrentWindow(Integer signalTtid) {
-        return ttidToThreadInfo.get(signalTtid).getSignalEndsInTheCurrentWindow();
+        return state.getThreadInfo(signalTtid).getSignalEndsInTheCurrentWindow();
     }
 
     public List<ReadonlyEventInterface> getInterThreadSyncEvents() {
@@ -370,7 +369,6 @@ public class Trace {
             Map<Integer, ReadonlyEventInterface> threadTtidToStartEvent,
             Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart,
             Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart) {
-        Map<Integer, Optional<ReadonlyEventInterface>> signalTtidToInterruptedEvent = new HashMap<>();
         state.getUnfinishedSignalTtidsAtWindowStart().forEach(ttid -> {
             signalToTtidWhereEnabledAtStart
                     .computeIfAbsent(getSignalNumber(ttid), k -> new HashSet<>())
@@ -378,80 +376,94 @@ public class Trace {
                             state.getTtidFromOtidAndSignalDepthAtStart(
                                     getOriginalThreadIdForTraceThreadId(ttid), getSignalDepth(ttid) - 1));
         });
+        Map<Long, Map<Integer, Long>> signalNumberToTtidToNextMinInterruptedEventId = new HashMap<>();
         tidToEvents.keySet().stream()
                 .filter(ttid -> getThreadType(ttid) == ThreadType.SIGNAL)
-                .forEach(ttid -> {
+                .forEach(signalTtid -> {
                     // This assumes that a signal's event list is never empty. This should be true when a
                     // signal is not split across multiple windows, but may not be true when splitting.
                     // TODO(virgil): make this work with empty signal lists.
-                    Optional<ReadonlyEventInterface> maybeFirstEvent = getFirstEvent(ttid);
-                    if (!maybeFirstEvent.isPresent()) {
+                    Optional<ReadonlyEventInterface> maybeFirstSignalEvent = getFirstEvent(signalTtid);
+                    if (!maybeFirstSignalEvent.isPresent()) {
                         return;
                     }
-                    ReadonlyEventInterface firstEvent = maybeFirstEvent.get();
-                    int signalDepth = getSignalDepth(ttid);
-                    long otid = getOriginalThreadIdForTraceThreadId(ttid);
-                    Optional<Map.Entry<Integer, List<ReadonlyEventInterface>>> maybeInterruptedThread =
-                            tidToEvents.entrySet().stream()
-                                    .filter(entry -> {
+                    ReadonlyEventInterface firstSignalEvent = maybeFirstSignalEvent.get();
+                    int signalDepth = getSignalDepth(signalTtid);
+                    long otid = getOriginalThreadIdForTraceThreadId(signalTtid);
+                    List<Integer> candidateThreads = tidToEvents.keySet().stream()
+                            .filter(candidateTtid ->
+                                    getOriginalThreadIdForTraceThreadId(candidateTtid) == otid
+                                            && getSignalDepth(candidateTtid) == signalDepth - 1)
+                            .collect(Collectors.toList());
+                    Optional<Integer> maybeInterruptedThread = candidateThreads.stream()
+                            .filter(candidateTtid -> {
                                         Optional<ReadonlyEventInterface> maybeFirstEntryEvent =
-                                                getFirstEvent(entry.getKey());
+                                                getFirstEvent(candidateTtid);
                                         if (!maybeFirstEntryEvent.isPresent()) {
-                                            // TODO(virgil): Allow signals to interrupt threads without events in the
-                                            // current window.
                                             return false;
                                         }
+                                        return maybeFirstEntryEvent.get().getEventId() <= firstSignalEvent.getEventId()
+                                                || signalDepth == 1
+                                                || getThreadStartsInTheCurrentWindow(candidateTtid);
+                                    })
+                                    .filter(candidateTtid -> {
                                         Optional<ReadonlyEventInterface> maybeLastEntryEvent =
-                                                getLastEvent(entry.getKey());
+                                                getLastEvent(candidateTtid);
                                         assert maybeLastEntryEvent.isPresent();
-                                        return getOriginalThreadIdForTraceThreadId(entry.getKey()) == otid
-                                                && getSignalDepth(entry.getKey()) == signalDepth - 1
-                                                // TODO(virgil): The case when a signal interrupts before the first
-                                                // event in the current window or after the last one is not handled
-                                                // correctly. Fix this.
-                                                && maybeFirstEntryEvent.get().getEventId() <= firstEvent.getEventId()
-                                                && maybeLastEntryEvent.get().getEventId() >= firstEvent.getEventId();
+                                        return maybeLastEntryEvent.get().getEventId() >= firstSignalEvent.getEventId()
+                                                || signalDepth == 1
+                                                || !getSignalEndsInTheCurrentWindow(candidateTtid);
                                     })
                                     .findAny();
-                    signalTtidToInterruptedEvent.put(ttid, Optional.empty());
                     if (!maybeInterruptedThread.isPresent()) {
+                        if (candidateThreads.isEmpty()) {
+                            signalToTtidWhereEnabledAtStart
+                                    .computeIfAbsent(getSignalNumber(signalTtid), k -> new HashSet<>())
+                                    .add(state.getTtidFromOtidAndSignalDepthAtStart(otid, signalDepth - 1));
+                        }
                         return;
                     }
-                    List<ReadonlyEventInterface> interruptedThreadEvents = maybeInterruptedThread.get().getValue();
+                    Optional<ReadonlyEventInterface> maybeInterruptedEvent = Optional.empty();
+                    int interruptedTtid = maybeInterruptedThread.get();
+                    List<ReadonlyEventInterface> interruptedThreadEvents = tidToEvents.get(interruptedTtid);
                     for (ReadonlyEventInterface event : Lists.reverse(interruptedThreadEvents)) {
-                        if (event.getEventId() <= firstEvent.getEventId()) {
-                            signalTtidToInterruptedEvent.put(ttid, Optional.of(event));
+                        if (event.getEventId() <= firstSignalEvent.getEventId()) {
+                            maybeInterruptedEvent = Optional.of(event);
                             break;
                         }
                     }
+                    Map<Integer, Long> ttidToNextMinEventId =
+                            signalNumberToTtidToNextMinInterruptedEventId
+                                    .computeIfAbsent(getSignalNumber(signalTtid), k -> new HashMap<>());
+                    if (!maybeInterruptedEvent.isPresent()
+                            && (!getThreadStartsInTheCurrentWindow(signalTtid) || signalDepth == 1)) {
+                        Optional<ReadonlyEventInterface> maybeFirstInterruptedThreadEvent =
+                                getFirstEvent(interruptedTtid);
+                        if (maybeFirstInterruptedThreadEvent.isPresent()) {
+                            ttidToNextMinEventId.put(
+                                    interruptedTtid, maybeFirstInterruptedThreadEvent.get().getEventId());
+                        }
+                    } else if (maybeInterruptedEvent.isPresent()) {
+                        ReadonlyEventInterface interruptedEvent = maybeInterruptedEvent.get();
+                        long nextInterruptedEventId = interruptedEvent.getEventId() + 1;
+                        ttidToNextMinEventId.compute(
+                                interruptedTtid,
+                                (k, v) -> v == null ? nextInterruptedEventId : Math.min(nextInterruptedEventId, v));
+                    }
                 });
-        Map<Long, Map<Integer, Long>> signalNumberToTtidToMinInterruptedEventId = new HashMap<>();
-        signalTtidToInterruptedEvent.forEach((signalTtid, maybeInterruptedEvent) -> {
-            Map<Integer, Long> ttidToMinEventId =
-                    signalNumberToTtidToMinInterruptedEventId
-                            .computeIfAbsent(getSignalNumber(signalTtid), k -> new HashMap<>());
-            if (!maybeInterruptedEvent.isPresent()) {
-                return;
-            }
-            ReadonlyEventInterface interruptedEvent = maybeInterruptedEvent.get();
-            long interruptedEventId = interruptedEvent.getEventId();
-            ttidToMinEventId.compute(
-                    getTraceThreadId(interruptedEvent),
-                    (k, v) -> v == null ? interruptedEventId : Math.min(v, interruptedEventId));
-        });
-        signalNumberToTtidToMinInterruptedEventId.forEach((signalNumber, ttidToMinEventId) -> {
+        signalNumberToTtidToNextMinInterruptedEventId.forEach((signalNumber, ttidToNextMinEventId) -> {
             Set<Integer> ttidWhereEnabledAtStart =
                     signalToTtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
-            ttidToMinEventId.forEach((ttid, minEventId) ->
+            ttidToNextMinEventId.forEach((ttid, nextMinEventId) ->
                     fillEnabledAtStartStatusFromEnabledStatusAtEventId(
-                            signalNumber, ttid, minEventId + 1,
+                            signalNumber, ttid, nextMinEventId,
                             ttidWhereEnabledAtStart, threadTtidToStartEvent));
         });
         tidToEvents.values().forEach(events -> events.stream()
                 .filter(ReadonlyEventInterface::isSignalMaskRead)
                 .forEach(event -> {
                     long mask = event.getFullReadSignalMask();
-                    signalNumberToTtidToMinInterruptedEventId.keySet().forEach(signalNumber -> {
+                    signalNumberToTtidToNextMinInterruptedEventId.keySet().forEach(signalNumber -> {
                         Set<Integer> ttidWhereEnabledAtStart =
                                 signalToTtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
                         if (Signals.signalIsEnabled(signalNumber, mask)) {
@@ -468,7 +480,7 @@ public class Trace {
                         }
                     });
                 }));
-        signalNumberToTtidToMinInterruptedEventId.keySet().forEach(signalNumber -> {
+        signalNumberToTtidToNextMinInterruptedEventId.keySet().forEach(signalNumber -> {
             Set<Integer> ttidWhereEnabledAtStart =
                     signalToTtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>());
             Set<Integer> ttidWhereDisabledAtStart =
@@ -691,7 +703,7 @@ public class Trace {
         for (RawTrace rawTrace : rawTraces) {
             ThreadInfo threadInfo = rawTrace.getThreadInfo();
             int ttid = threadInfo.getId();
-            ttidToThreadInfo.put(ttid, threadInfo);
+            state.setThreadInfo(ttid, threadInfo);
             if (threadInfo.getThreadType() == ThreadType.THREAD && rawTrace.size() > 0) {
                 ReadonlyEventInterface event = rawTrace.event(0);
                 originalTidToTraceTid.put(event.getOriginalThreadId(), ttid);
@@ -1041,8 +1053,8 @@ public class Trace {
     }
 
     private void computeThreadsWhichCanOverlap() {
-        ttidToThreadInfo.keySet().forEach(ttid1 ->
-                ttidToThreadInfo.keySet().stream().filter(ttid -> ttid > ttid1).forEach(ttid2 -> {
+        tidToEvents.keySet().forEach(ttid1 ->
+                tidToEvents.keySet().stream().filter(ttid -> ttid > ttid1).forEach(ttid2 -> {
                     if (getThreadType(ttid1) == ThreadType.THREAD && getThreadType(ttid2) == ThreadType.THREAD) {
                         if (!normalThreadsAreInHappensBeforeRelation(ttid1, ttid2)) {
                             ttidsThatCanOverlap.computeIfAbsent(ttid1, HashSet::new).add(ttid2);
@@ -1080,6 +1092,9 @@ public class Trace {
         List<Integer> threadsWhereSignal2IsEnabled = getThreadsWhereSignalIsEnabled(signalNumber2);
         if (threadsWhereSignal1IsEnabled.size() > 1 || threadsWhereSignal2IsEnabled.size() > 1) {
             return true;
+        }
+        if (threadsWhereSignal1IsEnabled.isEmpty()) {
+            assert false;
         }
         assert threadsWhereSignal1IsEnabled.size() > 0 : signalNumber1;
         assert threadsWhereSignal2IsEnabled.size() > 0 : signalNumber2;
@@ -1138,7 +1153,7 @@ public class Trace {
     }
 
     public Collection<Integer> getThreadIds() {
-        return ttidToThreadInfo.keySet();
+        return tidToEvents.keySet();
     }
 
     public Optional<ReadonlyEventInterface> getPreviousWindowEstablishEvent(long signalNumber, long signalHandler) {

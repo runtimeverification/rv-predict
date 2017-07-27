@@ -71,8 +71,8 @@ struct _rvp_pstate;
 typedef struct _rvp_pstate rvp_pstate_t;
 
 typedef struct _rvp_emitters {
-	void (*init)(const rvp_pstate_t *);
-	void (*emit_nop)(const rvp_pstate_t *);
+	void (*init)(const rvp_pstate_t *, const rvp_trace_header_t *);
+	void (*emit_nop)(const rvp_pstate_t *, const rvp_ubuf_t *);
 	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
 	    bool, int);
 	char *(*dataptr_to_string)(const rvp_pstate_t *, char *, size_t,
@@ -138,17 +138,23 @@ char *dataptr_to_simple_string(const rvp_pstate_t *, char *, size_t,
 char *dataptr_to_symbol_friendly_string(const rvp_pstate_t *, char *, size_t,
     rvp_addr_t);
 
-static void emit_no_nop(const rvp_pstate_t *);
+static void emit_no_nop(const rvp_pstate_t *, const rvp_ubuf_t *);
 static void emit_legacy_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
 static void emit_fork_metadata(uint64_t, uint64_t, uint32_t);
 
 static uint32_t get_next_thdfd(uintmax_t);
 
-static void legacy_init(const rvp_pstate_t *);
+static void legacy_init(const rvp_pstate_t *, const rvp_trace_header_t *);
 
-static void print_nop(const rvp_pstate_t *);
+static void print_nop(const rvp_pstate_t *, const rvp_ubuf_t *);
 static void print_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
+    bool, int);
+
+static void reemit_binary_init(const rvp_pstate_t *,
+    const rvp_trace_header_t *);
+static void reemit_binary_nop(const rvp_pstate_t *, const rvp_ubuf_t *);
+static void reemit_binary_op(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
     bool, int);
 
 static const op_info_t op_to_info[RVP_NOPS] = {
@@ -216,6 +222,14 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	    OP_INFO_INIT(rvp_sigmask_access_t, "block signals")
 	, [RVP_OP_SIGUNBLOCK] =
 	    OP_INFO_INIT(rvp_sigmask_access_t, "unblock signals")
+};
+
+static const rvp_emitters_t binary = {
+	  .init = reemit_binary_init
+	, .emit_nop = reemit_binary_nop
+	, .emit_op = reemit_binary_op
+	, .dataptr_to_string = NULL
+	, .insnptr_to_string = NULL
 };
 
 static const rvp_emitters_t plain_text = {
@@ -405,7 +419,8 @@ pc_is_not_deltop(rvp_pstate_t *ps, rvp_addr_t pc)
 }
 
 static void
-legacy_init(const rvp_pstate_t *ps __unused)
+legacy_init(const rvp_pstate_t *ps __unused,
+    const rvp_trace_header_t *th __unused)
 {
 	thdfd = open("thd_metadata.bin", O_WRONLY|O_CREAT|O_TRUNC, 0600);
 	if (thdfd == -1)
@@ -413,7 +428,7 @@ legacy_init(const rvp_pstate_t *ps __unused)
 }
 
 static void
-emit_no_nop(const rvp_pstate_t *ps __unused)
+emit_no_nop(const rvp_pstate_t *ps __unused, const rvp_ubuf_t *ub __unused)
 {
 	return;
 }
@@ -915,8 +930,39 @@ emit_legacy_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 }
 
 static void
-print_nop(const rvp_pstate_t *ps)
-{ 
+reemit_binary_init(const rvp_pstate_t *ps __unused,
+    const rvp_trace_header_t *th)
+{
+	const ssize_t nwritten = write(STDOUT_FILENO, th, sizeof(*th));
+
+	if (nwritten != sizeof(*th))
+		err(EXIT_FAILURE, "%s: write", __func__);
+}
+
+static void
+reemit_binary_nop(const rvp_pstate_t *ps __unused, const rvp_ubuf_t *ub)
+{
+	const ssize_t nwritten =
+	    write(STDOUT_FILENO, &ub->ub_pc, sizeof(ub->ub_pc));
+
+	if (nwritten != sizeof(ub->ub_pc))
+		err(EXIT_FAILURE, "%s: write", __func__);
+}
+
+static void
+reemit_binary_op(const rvp_pstate_t *ps __unused, const rvp_ubuf_t *ub,
+    rvp_op_t op, bool is_load __unused, int field_width __unused)
+{
+	const op_info_t *oi = &op_to_info[op];
+	const ssize_t nwritten = write(STDOUT_FILENO, ub, oi->oi_reclen);
+
+	if (nwritten != oi->oi_reclen)
+		err(EXIT_FAILURE, "%s: write", __func__);
+}
+
+static void
+print_nop(const rvp_pstate_t *ps, const rvp_ubuf_t *ub __unused)
+{
 	prebuf_t prebuf;
 
 	printf("%s nop\n", preamble_string(ps, prebuf, sizeof(prebuf)));
@@ -1241,7 +1287,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	if (pc_is_not_deltop(ps, ub->ub_pc)) {
 		ps->ps_thread[ps->ps_curthread].ts_lastpc[ps->ps_idepth] =
 		    ub->ub_pc;
-		(*emitters->emit_nop)(ps);
+		(*emitters->emit_nop)(ps, ub);
 		advance(&ub->ub_bytes[0], nfullp, sizeof(ub->ub_pc));
 		return 0;
 	}
@@ -1394,6 +1440,9 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 	const rvp_emitters_t *emitters;
 
 	switch (op->op_type) {
+	case RVP_OUTPUT_BINARY:
+		emitters = &binary;
+		break;
 	case RVP_OUTPUT_SYMBOL_FRIENDLY:
 		emitters = &symbol_friendly;
 		break;
@@ -1444,10 +1493,11 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 	rvp_pstate_init(ps, emitters, op, pc0, tid, generation);
 
 	if (emitters->init != NULL)
-		(*emitters->init)(ps);
+		(*emitters->init)(ps, &th);
 
 	ub.ub_begin = (rvp_begin_t){.deltop = pc0, .tid = tid};
 
+	size_t nrecords = 0;
 	size_t nfull = sizeof(ub.ub_begin);
 	ssize_t nshort = 0;
 	for (;;) {
@@ -1469,9 +1519,12 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 			    __func__);
 		}
 		do {
+			if (nrecords == op->op_nrecords)
+				return;
 			nshort = consume_and_print_trace(ps, &ub, &nfull);
 			if (nshort != 0)
 				break;
+			++nrecords;
 		} while (nfull >= sizeof(ub.ub_pc));
 	}
 }

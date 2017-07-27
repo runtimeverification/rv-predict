@@ -372,7 +372,13 @@ public class Trace {
                 .forEach(ttid -> {
                     OptionalInt maybeTtid = state.getTtidForThreadOngoingAtWindowStart(
                             getOriginalThreadIdForTraceThreadId(ttid), getSignalDepth(ttid) - 1);
-                    assert maybeTtid.isPresent();
+                    if (!maybeTtid.isPresent()) {
+                        // TODO(virgil): Find a way to handle signals that are running at the beginning of the
+                        // current window, but the interrupted signal either ended in the previous window, or
+                        // will start in the current window.
+                        // assert false;
+                        return;
+                    }
                     signalToTtidWhereEnabledAtStart
                             .computeIfAbsent(getSignalNumber(ttid), k -> new HashSet<>())
                             .add(maybeTtid.getAsInt());
@@ -441,7 +447,10 @@ public class Trace {
                                     })
                                     .findAny();
                     if (!maybeInterruptedThread.isPresent()) {
-                        assert false;
+                        // TODO(virgil): Either delete this commented-out assert or add more complex code which,
+                        // if there is no signal that could have been interrupted, checks the interrupted signal's
+                        // parents.
+                        //assert false;
                         return;
                     }
                     Optional<ReadonlyEventInterface> maybeInterruptedEvent = Optional.empty();

@@ -283,7 +283,10 @@ public class TraceCache {
         return Optional.empty();
     }
 
+    private int windowCount = 0;
     public Trace getTraceWindow() throws IOException {
+        windowCount++;
+        System.out.println("-- Window " + windowCount + " --");
         crntState.preStartWindow();
 
         List<RawTrace> rawTraces = readEventWindow();

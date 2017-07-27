@@ -81,14 +81,16 @@ typedef struct _rvp_emitters {
 	    rvp_addr_t);
 } rvp_emitters_t;
 
+#define	RVP_SIGNAL_DEPTH	16
+
 /* parse state: per-thread */
 typedef struct _rvp_thread_pstate {
 	bool		ts_present;
-	rvp_callstack_t	ts_callstack[2];
-	rvp_addr_t	ts_lastpc[2];
-	uint64_t	ts_generation[2];
-	uint64_t	ts_nops[2];
-	uint64_t	ts_last_gid[2];
+	rvp_callstack_t	ts_callstack[RVP_SIGNAL_DEPTH];
+	rvp_addr_t	ts_lastpc[RVP_SIGNAL_DEPTH];
+	uint64_t	ts_generation[RVP_SIGNAL_DEPTH];
+	uint64_t	ts_nops[RVP_SIGNAL_DEPTH];
+	uint64_t	ts_last_gid[RVP_SIGNAL_DEPTH];
 	bool		ts_sigs_masked;
 } rvp_thread_pstate_t;
 

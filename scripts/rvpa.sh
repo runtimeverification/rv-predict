@@ -92,6 +92,7 @@ symbolize()
 }
 
 symbolize_passthrough=
+analyze_passthrough=
 
 while [ $# -gt 1 ]; do
 	case $1 in
@@ -108,8 +109,13 @@ while [ $# -gt 1 ]; do
 		window="--window $1"
 		shift
 		;;
+	--solver-timeout)
+		analyze_passthrough="${analyze_passthrough:-} $1 $2"
+		shift
+		shift
+		;;
 	--prompt-for-license)
-		prompt=$1
+		analyze_passthrough="${analyze_passthrough:-} $1"
 		shift
 		;;
 	--)
@@ -130,6 +136,7 @@ else
 	progpath=$(pwd)/${progname}
 fi
 
-rvpredict --offline ${prompt:-} ${window:---window 2000} --detect-interrupted-thread-race \
+rvpredict --offline ${analyze_passthrough:-} ${window:---window 2000} \
+    --detect-interrupted-thread-race \
     --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
     symbolize ${symbolize_passthrough} $progpath 1>&2

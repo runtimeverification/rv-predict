@@ -64,7 +64,7 @@ passthrough=
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--window)
+	--window|--solver-timeout)
 		passthrough="${passthrough:-} $1 $2"
 		shift
 		shift

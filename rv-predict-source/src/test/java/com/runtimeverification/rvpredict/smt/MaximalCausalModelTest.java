@@ -1870,7 +1870,7 @@ public class MaximalCausalModelTest {
 
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
-        Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
     }
 
     @Test
@@ -1894,7 +1894,7 @@ public class MaximalCausalModelTest {
 
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
-        Assert.assertFalse(hasRace(rawTraces, event1, event2, true));
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
     }
 
     // TODO: Tests with writes that enable certain reads, both with and without signals.

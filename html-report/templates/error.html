@@ -104,7 +104,7 @@
 {% macro created_by(trace) %}
 Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
 {% endmacro %}
-{% for trace in err.traces %}
+{% for trace in err.stack_traces %}
 {% if not loop.first %}
 <div class="skip"></div>
 {% endif %}

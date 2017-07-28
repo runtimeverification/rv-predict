@@ -116,8 +116,8 @@ errorsByFile = defaultdict(listdict)
 for ix, err in enumerate(errors):
     err[u'index'] = ix
     err[u'errdesc'] = '%s (%s)' % (err[u'description'], err[u'error_id'])
-    if (u'traces' in err):
-        traces = err[u'traces']
+    if (u'stack_traces' in err):
+        traces = err[u'stack_traces']
         if traces:
             for trace in traces:
                 frames = None
@@ -129,7 +129,7 @@ for ix, err in enumerate(errors):
                 if not frames:
                     frames.append(null_frame())
         else:
-            err[u'traces'] = [{u'frames': [null_frame()]}]
+            err[u'stack_traces'] = [{u'frames': [null_frame()]}]
         frame = primary_component[u'frames'][0]
         for tr in traces:
             for cp in tr[u'components']:
@@ -145,7 +145,7 @@ for ix, err in enumerate(errors):
     else:
         frame = err[u'loc']
         primary_component = {u'frames': [frame]}
-        err[u'traces']={u'components': [primary_component]}
+        err[u'stack_traces']={u'components': [primary_component]}
         if (u'loc' in frame):
             loc = frame[u'loc']
             if loc[u'rel_file'] != "<unknown>":

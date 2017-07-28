@@ -485,6 +485,79 @@ public class EventsEnabledForSignalIteratorTest {
                 e1 = tu.enableSignal(SIGNAL_NUMBER),
                 e2 = tu.nonAtomicStore(ADDRESS, VALUE_1),
                 e3 = tu.nonAtomicStore(ADDRESS, VALUE_2),
+                e4 = tu.lock(ADDRESS),
+                e5 = tu.nonAtomicStore(ADDRESS, VALUE_4),
+                e6 = tu.disableSignal(SIGNAL_NUMBER)
+        );
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(first(e4), first(e5)),
+                stop(first(e5), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(first(e4), first(e5)),
+                stop(first(e5), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), first(e4)),
+                stop(first(e4), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), first(e4)),
+                stop(first(e4), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e4)),
+                stop(first(e4), first(e6)));
+    }
+
+    @Test
+    public void iterationSkipsAtomicEvents()
+            throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+        List<ReadonlyEventInterface> e3;
+        List<ReadonlyEventInterface> e4;
+        List<ReadonlyEventInterface> e5;
+        List<ReadonlyEventInterface> e6;
+        List<ReadonlyEventInterface> events = tu.flatten(
+                e1 = tu.enableSignal(SIGNAL_NUMBER),
+                e2 = tu.nonAtomicStore(ADDRESS, VALUE_1),
+                e3 = tu.nonAtomicStore(ADDRESS, VALUE_2),
                 e4 = tu.atomicStore(ADDRESS, VALUE_3),
                 e5 = tu.nonAtomicStore(ADDRESS, VALUE_4),
                 e6 = tu.disableSignal(SIGNAL_NUMBER)
@@ -499,8 +572,6 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
                 stop(first(e3), first(e4)),
-                stop(first(e4), second(e4)),
-                stop(second(e4), last(e4)),
                 stop(last(e4), first(e5)),
                 stop(first(e5), first(e6)));
 
@@ -513,8 +584,7 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
                 stop(first(e3), first(e4)),
-                stop(first(e4), second(e4)),
-                stop(second(e4), first(e5)),
+                stop(last(e4), first(e5)),
                 stop(first(e5), first(e6)));
 
         assertIteratorStops(
@@ -525,7 +595,6 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(first(e1), first(e3)),
                 stop(first(e2), first(e4)),
-                stop(first(e4), last(e4)),
                 stop(last(e4), first(e6)));
 
         assertIteratorStops(
@@ -536,7 +605,6 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(first(e1), first(e3)),
                 stop(first(e2), first(e4)),
-                stop(first(e4), first(e5)),
                 stop(last(e4), first(e6)));
 
         assertIteratorStops(
@@ -546,7 +614,7 @@ public class EventsEnabledForSignalIteratorTest {
                         false  // stopAtFirstMaskChangeEvent
                 ),
                 stop(first(e1), first(e4)),
-                stop(first(e4), first(e6)));
+                stop(last(e4), first(e6)));
     }
 
     @Test
@@ -576,8 +644,6 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(Optional.empty(), first(e1)),
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
-                stop(first(e3), second(e3)),
-                stop(second(e3), last(e3)),
                 stop(last(e3), first(e4)),
                 stop(first(e4), first(e5)));
 
@@ -590,8 +656,7 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(Optional.empty(), first(e1)),
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
-                stop(first(e3), second(e3)),
-                stop(second(e3), first(e4)),
+                stop(last(e3), first(e4)),
                 stop(first(e4), first(e5)));
 
         assertIteratorStops(
@@ -602,7 +667,6 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(Optional.empty(), first(e2)),
                 stop(first(e1), first(e3)),
-                stop(first(e3), last(e3)),
                 stop(last(e3), first(e5)));
 
         assertIteratorStops(
@@ -613,7 +677,6 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(Optional.empty(), first(e2)),
                 stop(first(e1), first(e3)),
-                stop(first(e3), last(e3)),
                 stop(last(e3), first(e5)));
 
         assertIteratorStops(
@@ -624,7 +687,6 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(Optional.empty(), first(e2)),
                 stop(first(e1), first(e3)),
-                stop(first(e3), first(e4)),
                 stop(last(e3), first(e5)));
 
         assertIteratorStops(
@@ -634,7 +696,7 @@ public class EventsEnabledForSignalIteratorTest {
                         true  // stopAtFirstMaskChangeEvent
                 ),
                 stop(Optional.empty(), first(e3)),
-                stop(first(e3), first(e5)));
+                stop(last(e3), first(e5)));
     }
 
     @Test
@@ -665,8 +727,6 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(Optional.empty(), first(e1)),
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
-                stop(first(e3), second(e3)),
-                stop(second(e3), last(e3)),
                 stop(last(e3), first(e4)),
                 stop(first(e4), first(e5)));
 
@@ -679,8 +739,7 @@ public class EventsEnabledForSignalIteratorTest {
                 stop(Optional.empty(), first(e1)),
                 stop(first(e1), first(e2)),
                 stop(first(e2), first(e3)),
-                stop(first(e3), second(e3)),
-                stop(second(e3), first(e4)),
+                stop(last(e3), first(e4)),
                 stop(first(e4), first(e5)));
 
         assertIteratorStops(
@@ -691,7 +750,6 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(Optional.empty(), first(e2)),
                 stop(first(e1), first(e3)),
-                stop(first(e3), last(e3)),
                 stop(last(e3), first(e5)));
 
         assertIteratorStops(
@@ -702,7 +760,6 @@ public class EventsEnabledForSignalIteratorTest {
                 ),
                 stop(Optional.empty(), first(e2)),
                 stop(first(e1), first(e3)),
-                stop(first(e3), first(e4)),
                 stop(last(e3), first(e5)));
 
         assertIteratorStops(
@@ -712,7 +769,7 @@ public class EventsEnabledForSignalIteratorTest {
                         true  // stopAtFirstMaskChangeEvent
                 ),
                 stop(Optional.empty(), first(e3)),
-                stop(first(e3), first(e5)));
+                stop(last(e3), first(e5)));
     }
 
     @Test
@@ -832,11 +889,6 @@ public class EventsEnabledForSignalIteratorTest {
     private Optional<ReadonlyEventInterface> first(List<ReadonlyEventInterface> events) {
         assert !events.isEmpty();
         return Optional.of(events.get(0));
-    }
-
-    private Optional<ReadonlyEventInterface> second(List<ReadonlyEventInterface> events) {
-        assert 1 < events.size();
-        return Optional.of(events.get(1));
     }
 
     private Optional<ReadonlyEventInterface> last(List<ReadonlyEventInterface> events) {

@@ -199,7 +199,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 if (!b.isEmpty()) {
                     Event oneEvent = b.events[b.start];
                     long otid = oneEvent.getOriginalThreadId();
-                    rawTraces.add(TraceCache.tidSpanToRawTrace(b.events, b.start, b.end, 0, otid, crntState));
+                    rawTraces.add(TraceCache.tidSpanToRawTrace(b.events, b.start, b.cursor, 0, otid, crntState));
                 }
             }
             if (rawTraces.size() == 1) {

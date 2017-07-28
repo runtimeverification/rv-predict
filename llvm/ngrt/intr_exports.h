@@ -3,6 +3,7 @@
 
 void __rvpredict_intr_enable(void);
 void __rvpredict_intr_disable(void);
+void __rvpredict_isr_fire(void (*)(void));
 
 #define	__annotate(__ann)	__attribute__((annotate(__ann)))
 

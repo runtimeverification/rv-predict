@@ -1,7 +1,10 @@
 #include <sys/types.h>	/* for open(2) */
 #include <sys/stat.h>	/* for open(2) */
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>	/* for open(2) */
+#include <inttypes.h>	/* for intmax_t */
+#include <limits.h>	/* for SIZE_MAX */
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>	/* for EXIT_* */
@@ -16,7 +19,8 @@ usage(const char *progname)
 {
 	fprintf(stderr,
 	    "usage: %s [-g] "
-	    "[-t <plain|legacy|symbol-friendly>] [<trace file>]\n", progname);
+	    "[-t <binary|plain|legacy|symbol-friendly>] [-n #traces]\n"
+	    "[<trace file>]\n", progname);
 	exit(EXIT_FAILURE);
 }
 
@@ -29,15 +33,39 @@ main(int argc, char **argv)
 	rvp_output_params_t op = {
 	  .op_type = RVP_OUTPUT_PLAIN_TEXT
 	, .op_emit_generation = false
+	, .op_nrecords = SIZE_MAX
 	};
+	intmax_t tmpn;
+	char *end;
 
-	while ((ch = getopt(argc, argv, "gt:")) != -1) {
+	while ((ch = getopt(argc, argv, "gn:t:")) != -1) {
 		switch (ch) {
+		case 'n':
+			errno = 0;
+			tmpn = strtoimax(optarg, &end, 10);
+			if (errno != 0) {
+				err(EXIT_FAILURE, "could not parse -n %s",
+				    optarg);
+			}
+			if (end == optarg) {
+				errx(EXIT_FAILURE, "no numeric characters"
+				    "in -n %s", optarg);
+			}
+			if (*end != '\0') {
+				errx(EXIT_FAILURE, "extraneous characters "
+				    "after -n %jd", tmpn);
+			}
+			if (tmpn < 0 || SIZE_MAX < tmpn)
+				errx(EXIT_FAILURE, "-n %jd: out range", tmpn);
+			op.op_nrecords = tmpn;
+			break;
 		case 'g':
 			op.op_emit_generation = true;
 			break;
 		case 't':
-			if (strcmp(optarg, "legacy") == 0)
+			if (strcmp(optarg, "binary") == 0)
+				op.op_type = RVP_OUTPUT_BINARY;
+			else if (strcmp(optarg, "legacy") == 0)
 				op.op_type = RVP_OUTPUT_LEGACY_BINARY;
 			else if (strcmp(optarg, "plain") == 0)
 				op.op_type = RVP_OUTPUT_PLAIN_TEXT;

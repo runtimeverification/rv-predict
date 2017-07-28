@@ -1,32 +1,26 @@
 package com.runtimeverification.rvpredict.trace;
 
-class ThreadInfo {
+import java.util.OptionalLong;
+
+public class ThreadInfo {
     private final ThreadType threadType;
     private final int id;
     private final long originalThreadId;
-    private final long signalNumber;
-    private final long signalHandler;
+    private final OptionalLong signalNumber;
+    private final OptionalLong signalHandler;
     private final int signalDepth;
-    // TODO(virgil): This is not the right place for these bits, they are not thread-specific, they are
-    // thread-and-window-specific.
-    private final boolean threadStartsInTheCurrentWindow;
-    private final boolean signalEndsInTheCurrentWindow;
 
-    ThreadInfo(
+    public ThreadInfo(
             ThreadType threadType,
             int id,
             long originalThreadId,
-            long signalNumber, long signalHandler, int signalDepth,
-            boolean threadStartsInTheCurrentWindow,
-            boolean signalEndsInTheCurrentWindow) {
+            OptionalLong signalNumber, OptionalLong signalHandler, int signalDepth) {
         this.threadType = threadType;
         this.id = id;
         this.originalThreadId = originalThreadId;
         this.signalNumber = signalNumber;
         this.signalHandler = signalHandler;
         this.signalDepth = signalDepth;
-        this.threadStartsInTheCurrentWindow = threadStartsInTheCurrentWindow;
-        this.signalEndsInTheCurrentWindow = signalEndsInTheCurrentWindow;
     }
 
     public int getId() {
@@ -37,11 +31,11 @@ class ThreadInfo {
         return threadType;
     }
 
-    public long getSignalNumber() {
+    public OptionalLong getSignalNumber() {
         return signalNumber;
     }
 
-    long getSignalHandler() {
+    OptionalLong getSignalHandler() {
         return signalHandler;
     }
 
@@ -51,13 +45,5 @@ class ThreadInfo {
 
     public int getSignalDepth() {
         return signalDepth;
-    }
-
-    boolean getThreadStartsInTheCurrentWindow() {
-        return threadStartsInTheCurrentWindow;
-    }
-
-    boolean getSignalEndsInTheCurrentWindow() {
-        return signalEndsInTheCurrentWindow;
     }
 }

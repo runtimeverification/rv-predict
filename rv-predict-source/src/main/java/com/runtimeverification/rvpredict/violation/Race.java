@@ -1,4 +1,4 @@
-/*******************************************************************************
+/* ******************************************************************************
  * Copyright (c) 2013 University of Illinois
  *
  * All rights reserved.
@@ -25,7 +25,7 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- ******************************************************************************/
+ * *****************************************************************************/
 package com.runtimeverification.rvpredict.violation;
 
 import com.google.common.base.StandardSystemProperty;
@@ -140,11 +140,11 @@ public class Race {
         return reportableRace ? signatureProcessor.simplify(sb.toString()) : "";
     }
 
-    public List<SignalStackEvent> getFirstSignalStack() {
+    private List<SignalStackEvent> getFirstSignalStack() {
         return firstSignalStack;
     }
 
-    public List<SignalStackEvent> getSecondSignalStack() {
+    private List<SignalStackEvent> getSecondSignalStack() {
         return secondSignalStack;
     }
 
@@ -186,7 +186,6 @@ public class Race {
             ReadonlyEventInterface e, List<SignalStackEvent> signalStackEvents,
             MetadataInterface metadata, StringBuilder sb) {
         long otid = e.getOriginalThreadId();
-        long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
         List<ReadonlyEventInterface> heldLocks = trace.getHeldLocksAt(e);
         if (e.getSignalDepth() == 0) {
             sb.append(String.format("    %s in thread %s%s%n",
@@ -194,6 +193,7 @@ public class Race {
                     otid,
                     getHeldLocksReport(heldLocks, metadata)));
         } else {
+            long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
             sb.append(String.format("    %s in signal S%s%s%n",
                     e.isWrite() ? "Write" : "Read",
                     sid,

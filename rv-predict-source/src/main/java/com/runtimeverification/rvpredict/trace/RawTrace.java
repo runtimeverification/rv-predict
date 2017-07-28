@@ -1,11 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.util.Constants;
-
-import java.util.OptionalLong;
 
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array
@@ -25,40 +21,12 @@ public class RawTrace {
 
     private final ReadonlyEventInterface[] events;
 
-    public RawTrace(int start, int end, ReadonlyEventInterface[] events, int signalDepth, int threadId,
-            boolean threadStartsInTheCurrentWindow, boolean signalEndsInTheCurrentWindow,
-            OptionalLong previousWindowSignalNumber) {
-        long signalNumber =
-                previousWindowSignalNumber.orElse(com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL);
-        long signalHandler = Constants.INVALID_ADDRESS;
-        if (signalDepth != 0) {
-            for (int i = start; i < end; i++) {
-                ReadonlyEventInterface event = events[i];
-                if (event.getType() == EventType.ENTER_SIGNAL) {
-                    signalNumber = event.getSignalNumber();
-                    signalHandler = event.getSignalHandlerAddress();
-                    break;
-                }
-            }
-        }
-        assert (signalNumber == com.runtimeverification.rvpredict.util.Constants.INVALID_SIGNAL)
-                == (signalDepth == 0);
-        long originalThreadId = Constants.INVALID_THREAD_ID;
-        if (start < end) {
-            originalThreadId = events[start].getOriginalThreadId();
-        }
+    public RawTrace(int start, int end, ReadonlyEventInterface[] events, ThreadInfo threadInfo) {
+        this.threadInfo = threadInfo;
         for (int i = start; i < end; i++) {
-            assert events[i].getOriginalThreadId() == originalThreadId;
+            assert events[i].getOriginalThreadId() == threadInfo.getOriginalThreadId();
+            assert events[i].getSignalDepth() == threadInfo.getSignalDepth();
         }
-        this.threadInfo = new ThreadInfo(
-                signalDepth == 0 ? ThreadType.THREAD : ThreadType.SIGNAL,
-                threadId,
-                originalThreadId,
-                signalNumber,
-                signalHandler,
-                signalDepth,
-                threadStartsInTheCurrentWindow,
-                signalEndsInTheCurrentWindow);
         this.start = start;
         this.mask = events.length - 1;
         this.size = (end - start + events.length) & mask;
@@ -94,7 +62,7 @@ public class RawTrace {
         return events[getIndex(n)];
     }
 
-    ThreadInfo getThreadInfo() {
+    public ThreadInfo getThreadInfo() {
         return threadInfo;
     }
 }

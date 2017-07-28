@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.violation;
 
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -41,7 +40,7 @@ public class RaceTest {
     private static final long CALL_SITE_ADDRESS_1 = 500;
     private static final long CALL_SITE_ADDRESS_2 = 501;
     private static final long THREAD_1 = 1;
-    private static final long THREAD_2 = 1;
+    private static final long THREAD_2 = 2;
     private static final int NO_SIGNAL = 0;
 
     private int nextIdDelta = 0;
@@ -66,6 +65,10 @@ public class RaceTest {
     public void raceDescriptionGeneratedByMetadata() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
+        mockConfiguration.windowSize = WINDOW_SIZE;
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        tu.setTraceState(traceState);
+
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
 
@@ -80,8 +83,6 @@ public class RaceTest {
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
 
-        mockConfiguration.windowSize = WINDOW_SIZE;
-        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
         when(mockMetadata.getRaceDataSig(
@@ -110,6 +111,10 @@ public class RaceTest {
     public void raceDescriptionContainsCallSiteAddress() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
+        mockConfiguration.windowSize = WINDOW_SIZE;
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        tu.setTraceState(traceState);
+
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
 
@@ -123,9 +128,6 @@ public class RaceTest {
                         tu.switchThread(THREAD_2, NO_SIGNAL),
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
-
-        mockConfiguration.windowSize = WINDOW_SIZE;
-        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<call site address 1>");
@@ -143,6 +145,10 @@ public class RaceTest {
     @Test
     public void raceDescriptionContainsMethodStartWhenCallSiteAddressIsMissing() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        mockConfiguration.windowSize = WINDOW_SIZE;
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        tu.setTraceState(traceState);
 
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
@@ -163,8 +169,6 @@ public class RaceTest {
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
 
-        mockConfiguration.windowSize = WINDOW_SIZE;
-        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<method 1 call site somewhere>");
@@ -192,6 +196,10 @@ public class RaceTest {
     public void raceDescriptionContainsLocksFormattedByMetadata() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
+        mockConfiguration.windowSize = WINDOW_SIZE;
+        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+        tu.setTraceState(traceState);
+
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
         List<ReadonlyEventInterface> e3;
@@ -206,8 +214,6 @@ public class RaceTest {
                         e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
 
 
-        mockConfiguration.windowSize = WINDOW_SIZE;
-        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
         when(mockMetadata.getLockSig(extractSingleEvent(e3), trace))

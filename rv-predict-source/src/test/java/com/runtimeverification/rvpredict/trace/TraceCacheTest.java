@@ -29,9 +29,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,17 +45,30 @@ public class TraceCacheTest {
     private static final int NEW_THREAD_ID = 500;
     private static final int NEW_THREAD_ID_2 = 501;
     private static final int NEW_THREAD_ID_3 = 502;
+    private static final int NEW_THREAD_ID_4 = 503;
     private static final long SIGNAL_HANDLER_ADDRESS = 600;
     private static final long PC_BASE = 700;
     private static final long DATA_ADDRESS_1 = 800;
     private static final long VALUE_1 = 900;
     private static final long GENERATION = 1000;
 
+    private static final ThreadInfo TTID_1_OTID_1_THREAD = new ThreadInfo(
+            ThreadType.THREAD, NEW_THREAD_ID, THREAD_ID, OptionalLong.empty(), OptionalLong.empty(), 0);
+    private static final ThreadInfo TTID_2_OTID_2_THREAD = new ThreadInfo(
+            ThreadType.THREAD, NEW_THREAD_ID_2, THREAD_ID_2, OptionalLong.empty(), OptionalLong.empty(), 0);
+    private static final ThreadInfo TTID_3_OTID_1_SIGNAL = new ThreadInfo(
+            ThreadType.SIGNAL, NEW_THREAD_ID_3, THREAD_ID, OptionalLong.of(SIGNAL_NUMBER), OptionalLong.of(SIGNAL_HANDLER_ADDRESS),
+            1);
+    private static final ThreadInfo TTID_4_OTID_1_SIGNAL = new ThreadInfo(
+            ThreadType.SIGNAL, NEW_THREAD_ID_4, THREAD_ID, OptionalLong.of(SIGNAL_NUMBER), OptionalLong.of(SIGNAL_HANDLER_ADDRESS),
+            1);
+
     @Mock private Context mockContext;
     @Mock private Configuration mockConfiguration;
     @Mock private TraceState mockTraceState;
     @Mock private LockGraph mockLockGraph;
     @Mock private Trace mockTrace;
+    @Mock private ThreadInfos mockThreadInfos;
 
     @Captor private ArgumentCaptor<List<RawTrace>> rawTraceArgumentCaptor;
 
@@ -68,6 +79,11 @@ public class TraceCacheTest {
     public void setUp() {
         eventId = FIRST_EVENT_ID;
         locationId = FIRST_LOCATION_ID;
+        when(mockTraceState.getThreadInfos()).thenReturn(mockThreadInfos);
+    }
+
+    @Test
+    public void nop() {
     }
 
     @Test
@@ -76,7 +92,9 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
+        when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID_2)).thenReturn(TTID_2_OTID_2_THREAD);
 
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
@@ -123,7 +141,10 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
+        when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockTraceState.createAndRegisterSignalInfo(THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, ONE_SIGNAL))
+                .thenReturn(TTID_3_OTID_1_SIGNAL);
 
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
@@ -168,7 +189,10 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
+        when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockTraceState.createAndRegisterSignalInfo(THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, ONE_SIGNAL))
+                .thenReturn(TTID_3_OTID_1_SIGNAL).thenReturn(TTID_4_OTID_1_SIGNAL);
 
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
@@ -228,56 +252,14 @@ public class TraceCacheTest {
     }
 
     @Test
-    public void usesNewIdForStartingThread() throws IOException {
-        mockConfiguration.windowSize = 100;
-        when(mockConfiguration.stacks()).thenReturn(false);
-        when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
-        when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
-
-        when(mockTraceState.getUnfinishedThreadId(NO_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID);
-
-        List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
-        List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
-
-        ListEventReader eventReader =
-                new ListEventReader(Arrays.asList(beginThread1, readData1Thread1));
-
-        TraceCache traceCache =
-                TraceCache.createForTesting(
-                        mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
-
-        Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
-
-        verify(mockTraceState).initNextTraceWindow(rawTraceArgumentCaptor.capture());
-
-        List<RawTrace> rawTraces = rawTraceArgumentCaptor.getValue();
-        MoreAsserts.assertNotNull(rawTraces);
-
-        Assert.assertEquals(1, rawTraces.size());
-
-        Assert.assertEquals(NO_SIGNAL, rawTraces.get(0).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
-        Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
-    }
-
-    @Test
     public void usesPreviousThreadIdForContinuingThread() throws IOException {
         mockConfiguration.windowSize = 100;
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
-
-        when(mockTraceState.getUnfinishedThreadId(NO_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
-        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
-        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
-
-        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID))
-                .thenReturn(OptionalLong.empty());
-        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
-                .thenReturn(OptionalLong.empty());
+        when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
+        when(mockThreadInfos.getTtidFromOtid(THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
+        when(mockThreadInfos.getThreadInfo(NEW_THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
 
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
@@ -299,43 +281,6 @@ public class TraceCacheTest {
         Assert.assertEquals(1, rawTraces.size());
 
         Assert.assertEquals(NO_SIGNAL, rawTraces.get(0).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
-        Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
-    }
-
-    @Test
-    public void usesNewIdForStartingSignal() throws IOException {
-        mockConfiguration.windowSize = 100;
-        when(mockConfiguration.stacks()).thenReturn(false);
-        when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
-        when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
-
-        when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
-        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
-        when(mockTraceState.enterSignal(ONE_SIGNAL, THREAD_ID, SIGNAL_NUMBER)).thenReturn(NEW_THREAD_ID);
-
-        List<ReadonlyEventInterface> beginSignal = beginSignal(
-                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
-
-        ListEventReader eventReader =
-                new ListEventReader(Collections.singletonList(beginSignal));
-
-        TraceCache traceCache =
-                TraceCache.createForTesting(
-                        mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
-
-        Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
-
-        verify(mockTraceState).initNextTraceWindow(rawTraceArgumentCaptor.capture());
-
-        List<RawTrace> rawTraces = rawTraceArgumentCaptor.getValue();
-        MoreAsserts.assertNotNull(rawTraces);
-
-        Assert.assertEquals(1, rawTraces.size());
-
-        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(0).getSignalDepth());
         Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
         Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
     }
@@ -346,16 +291,10 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
 
-        when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
-        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
-        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
-
-        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID))
-                .thenReturn(OptionalLong.of(SIGNAL_NUMBER));
-        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
-                .thenReturn(OptionalLong.empty());
+        when(mockTraceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, ONE_SIGNAL))
+                .thenReturn(OptionalInt.of(NEW_THREAD_ID_3));
+        when(mockThreadInfos.getThreadInfo(NEW_THREAD_ID_3)).thenReturn(TTID_3_OTID_1_SIGNAL);
 
         List<ReadonlyEventInterface> readData = readData(THREAD_ID, ONE_SIGNAL);
 
@@ -376,138 +315,12 @@ public class TraceCacheTest {
         Assert.assertEquals(1, rawTraces.size());
 
         Assert.assertEquals(ONE_SIGNAL, rawTraces.get(0).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
+        Assert.assertEquals(NEW_THREAD_ID_3, rawTraces.get(0).getThreadInfo().getId());
         Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
-        Assert.assertEquals(SIGNAL_NUMBER, rawTraces.get(0).getThreadInfo().getSignalNumber());
+        OptionalLong maybeSignalNumber = rawTraces.get(0).getThreadInfo().getSignalNumber();
+        Assert.assertTrue(maybeSignalNumber.isPresent());
+        Assert.assertEquals(SIGNAL_NUMBER, maybeSignalNumber.getAsLong());
     }
-
-    @Test
-    public void clearsThreadIdForEndingSignal() throws IOException {
-        mockConfiguration.windowSize = 100;
-        when(mockConfiguration.stacks()).thenReturn(false);
-        when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
-        when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
-
-        when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
-        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
-        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
-
-        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID))
-                .thenReturn(OptionalLong.of(SIGNAL_NUMBER));
-        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
-                .thenReturn(OptionalLong.empty());
-
-        List<ReadonlyEventInterface> readData = readData(THREAD_ID, ONE_SIGNAL);
-        List<ReadonlyEventInterface> endSignal = endSignal(THREAD_ID, ONE_SIGNAL);
-
-        ListEventReader eventReader =
-                new ListEventReader(Arrays.asList(readData, endSignal));
-
-        TraceCache traceCache =
-                TraceCache.createForTesting(
-                        mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
-
-        Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
-
-        verify(mockTraceState).initNextTraceWindow(rawTraceArgumentCaptor.capture());
-
-        List<RawTrace> rawTraces = rawTraceArgumentCaptor.getValue();
-        MoreAsserts.assertNotNull(rawTraces);
-
-        Assert.assertEquals(1, rawTraces.size());
-
-        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(0).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
-        Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
-
-        verify(mockTraceState).exitSignal(ONE_SIGNAL, THREAD_ID);
-    }
-
-    @Test
-    public void clearsThreadIdAndGetsNonReusableIdForEndingSignalContainedWithinWindow() throws IOException {
-        mockConfiguration.windowSize = 100;
-        when(mockConfiguration.stacks()).thenReturn(false);
-        when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
-        when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
-
-        when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID_2);
-        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID);
-
-        List<ReadonlyEventInterface> beginSignal = beginSignal(
-                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
-        List<ReadonlyEventInterface> readData = readData(THREAD_ID, ONE_SIGNAL);
-        List<ReadonlyEventInterface> endSignal = endSignal(THREAD_ID, ONE_SIGNAL);
-
-        ListEventReader eventReader =
-                new ListEventReader(Arrays.asList(beginSignal, readData, endSignal));
-
-        TraceCache traceCache =
-                TraceCache.createForTesting(
-                        mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
-
-        Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
-
-        verify(mockTraceState).initNextTraceWindow(rawTraceArgumentCaptor.capture());
-
-        List<RawTrace> rawTraces = rawTraceArgumentCaptor.getValue();
-        MoreAsserts.assertNotNull(rawTraces);
-
-        Assert.assertEquals(1, rawTraces.size());
-
-        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(0).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
-        Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
-
-        verify(mockTraceState, never()).exitSignal(ONE_SIGNAL, THREAD_ID);
-    }
-
-    @Test
-    public void savesNewIdForContinuingSignalEvenIfPreviousSignalStops() throws IOException {
-        mockConfiguration.windowSize = 100;
-        when(mockConfiguration.stacks()).thenReturn(false);
-        when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
-        when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
-
-        when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID_2));
-        when(mockTraceState.enterSignal(ONE_SIGNAL, THREAD_ID, SIGNAL_NUMBER)).thenReturn(NEW_THREAD_ID);
-        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_3);
-
-        when(mockTraceState.getSignalNumberForThreadAtWindowStart(NEW_THREAD_ID_2))
-                .thenReturn(OptionalLong.of(SIGNAL_NUMBER));
-
-        List<ReadonlyEventInterface> endSignal1 = endSignal(THREAD_ID, ONE_SIGNAL);
-        List<ReadonlyEventInterface> beginSignal2 = beginSignal(
-                SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, THREAD_ID, ONE_SIGNAL);
-
-        ListEventReader eventReader =
-                new ListEventReader(Arrays.asList(endSignal1, beginSignal2));
-
-        TraceCache traceCache =
-                TraceCache.createForTesting(
-                        mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
-
-        Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
-
-        verify(mockTraceState).initNextTraceWindow(rawTraceArgumentCaptor.capture());
-
-        List<RawTrace> rawTraces = rawTraceArgumentCaptor.getValue();
-        MoreAsserts.assertNotNull(rawTraces);
-
-        Assert.assertEquals(2, rawTraces.size());
-
-        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(0).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID_2, rawTraces.get(0).getThreadInfo().getId());
-        Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
-
-        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(1).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(1).getThreadInfo().getId());
-        Assert.assertEquals(THREAD_ID, rawTraces.get(1).getThreadInfo().getOriginalThreadId());
-    }
-
 
     @Test
     public void canProcessThreadWithIdLargerThanAThreadWithSignals() throws IOException, InvalidTraceDataException {
@@ -516,12 +329,13 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
-        when(mockTraceState.getUnfinishedThreadId(anyInt(), anyLong())).thenReturn(OptionalInt.empty());
 
-        when(mockTraceState.getUnfinishedThreadId(ONE_SIGNAL, THREAD_ID)).thenReturn(OptionalInt.empty());
-        when(mockTraceState.getNewThreadId(THREAD_ID)).thenReturn(NEW_THREAD_ID);
-        when(mockTraceState.getNewThreadId(THREAD_ID_2)).thenReturn(NEW_THREAD_ID_3);
-        when(mockTraceState.getNewThreadId()).thenReturn(NEW_THREAD_ID_2);
+        when(mockTraceState.createAndRegisterSignalInfo(THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, ONE_SIGNAL))
+                .thenReturn(TTID_3_OTID_1_SIGNAL);
+        when(mockThreadInfos.getTtidFromOtid(THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
+        when(mockThreadInfos.getThreadInfo(NEW_THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockThreadInfos.getTtidFromOtid(THREAD_ID_2)).thenReturn(OptionalInt.of(NEW_THREAD_ID_2));
+        when(mockThreadInfos.getThreadInfo(NEW_THREAD_ID_2)).thenReturn(TTID_2_OTID_2_THREAD);
 
         List<List<ReadonlyEventInterface>> events = Arrays.asList(
                 tu.nonAtomicLoad(DATA_ADDRESS_1, VALUE_1),
@@ -555,14 +369,68 @@ public class TraceCacheTest {
         Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
 
         Assert.assertEquals(ONE_SIGNAL, rawTraces.get(1).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID_2, rawTraces.get(1).getThreadInfo().getId());
+        Assert.assertEquals(NEW_THREAD_ID_3, rawTraces.get(1).getThreadInfo().getId());
         Assert.assertEquals(THREAD_ID, rawTraces.get(1).getThreadInfo().getOriginalThreadId());
 
         Assert.assertEquals(NO_SIGNAL, rawTraces.get(2).getSignalDepth());
-        Assert.assertEquals(NEW_THREAD_ID_3, rawTraces.get(2).getThreadInfo().getId());
+        Assert.assertEquals(NEW_THREAD_ID_2, rawTraces.get(2).getThreadInfo().getId());
         Assert.assertEquals(THREAD_ID_2, rawTraces.get(2).getThreadInfo().getOriginalThreadId());
+    }
 
-        verify(mockTraceState, never()).exitSignal(ONE_SIGNAL, THREAD_ID);
+    @Test
+    public void canProcessSingleSignalExitEvent() throws IOException, InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        mockConfiguration.windowSize = 100;
+        when(mockConfiguration.stacks()).thenReturn(false);
+        when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
+        when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
+
+        when(mockTraceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, ONE_SIGNAL))
+                .thenReturn(OptionalInt.of(NEW_THREAD_ID_3));
+        when(mockThreadInfos.getThreadInfo(NEW_THREAD_ID_3)).thenReturn(TTID_3_OTID_1_SIGNAL);
+        when(mockTraceState.createAndRegisterSignalInfo(THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, ONE_SIGNAL))
+                .thenReturn(TTID_4_OTID_1_SIGNAL);
+        when(mockThreadInfos.getTtidFromOtid(THREAD_ID)).thenReturn(OptionalInt.of(NEW_THREAD_ID));
+        when(mockThreadInfos.getThreadInfo(NEW_THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.nonAtomicLoad(DATA_ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_ID, ONE_SIGNAL),
+                tu.exitSignal(),
+                tu.enterSignal(SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, GENERATION),
+                tu.nonAtomicLoad(DATA_ADDRESS_1, VALUE_1),
+                tu.exitSignal());
+
+        ListEventReader eventReader = new ListEventReader(events);
+
+        TraceCache traceCache =
+                TraceCache.createForTesting(
+                        mockConfiguration, mockTraceState, mockLockGraph, Collections.singletonList(eventReader));
+
+        Assert.assertEquals(mockTrace, traceCache.getTraceWindow());
+
+        verify(mockTraceState).initNextTraceWindow(rawTraceArgumentCaptor.capture());
+
+        List<RawTrace> rawTraces = rawTraceArgumentCaptor.getValue();
+        MoreAsserts.assertNotNull(rawTraces);
+
+        Assert.assertEquals(3, rawTraces.size());
+
+        Assert.assertEquals(NO_SIGNAL, rawTraces.get(0).getSignalDepth());
+        Assert.assertEquals(NEW_THREAD_ID, rawTraces.get(0).getThreadInfo().getId());
+        Assert.assertEquals(THREAD_ID, rawTraces.get(0).getThreadInfo().getOriginalThreadId());
+        Assert.assertEquals(1, rawTraces.get(0).size());
+
+        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(1).getSignalDepth());
+        Assert.assertEquals(NEW_THREAD_ID_3, rawTraces.get(1).getThreadInfo().getId());
+        Assert.assertEquals(THREAD_ID, rawTraces.get(1).getThreadInfo().getOriginalThreadId());
+        Assert.assertEquals(1, rawTraces.get(1).size());
+
+        Assert.assertEquals(ONE_SIGNAL, rawTraces.get(2).getSignalDepth());
+        Assert.assertEquals(NEW_THREAD_ID_4, rawTraces.get(2).getThreadInfo().getId());
+        Assert.assertEquals(THREAD_ID, rawTraces.get(2).getThreadInfo().getOriginalThreadId());
+        Assert.assertEquals(6, rawTraces.get(2).size());
     }
 
     private List<ReadonlyEventInterface> endSignal(long threadId, int signalDepth) {

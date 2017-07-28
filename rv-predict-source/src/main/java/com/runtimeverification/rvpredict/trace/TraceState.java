@@ -51,19 +51,18 @@ public class TraceState {
     private final Table<Integer, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
-    private final Map<Long, Map<Long, ReadonlyEventInterface>> t_signalNumberToHandlerToLastWindowEstablishEvents =
-            new HashMap<>();
-
     private final StateAtWindowBorder stateAtCurrentWindowStart = new StateAtWindowBorder();
     private final StateAtWindowBorder stateAtCurrentWindowEnd = new StateAtWindowBorder();
+
+    private final ThreadInfos threadInfos = new ThreadInfos();
+
+    private final Map<Long, Map<Integer, Integer>> otidToSignalDepthToTtidAtWindowStartCache = new HashMap<>();
 
     private final Configuration config;
 
     private final MetadataInterface metadata;
 
     private final Map<Long, Integer> t_eventIdToTtid;
-
-    private final Map<Integer, ThreadInfo> t_ttidToThreadInfo;
 
     private final Map<Long, Integer> t_originalTidToTraceTid;
 
@@ -104,7 +103,6 @@ public class TraceState {
         this.metadata = metadata;
 
         this.t_eventIdToTtid           = new LinkedHashMap<>();
-        this.t_ttidToThreadInfo        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_originalTidToTraceTid   = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -134,8 +132,9 @@ public class TraceState {
     }
 
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
+        processWindow(rawTraces);
+
         t_eventIdToTtid.clear();
-        t_ttidToThreadInfo.clear();
         t_originalTidToTraceTid.clear();
         t_tidToEvents.clear();
         t_tidToMemoryAccessBlocks.clear();
@@ -155,7 +154,6 @@ public class TraceState {
         t_signalNumberToSignalHandlerToEstablishSignalEvents.clear();
         return new Trace(this, rawTraces,
                 t_eventIdToTtid,
-                t_ttidToThreadInfo,
                 t_tidToEvents,
                 t_tidToMemoryAccessBlocks,
                 t_tidToThreadState,
@@ -218,15 +216,13 @@ public class TraceState {
         }
     }
 
-    public void onSignalEvent(ReadonlyEventInterface event) {
+    private void onSignalEvent(ReadonlyEventInterface event, int ttid) {
         if (event.getType() == EventType.ESTABLISH_SIGNAL) {
-            Optional<ReadonlyEventInterface> previousEvent =
-                    getPreviousEstablishEvent(event.getSignalNumber(), event.getSignalHandlerAddress());
-            if (!previousEvent.isPresent() || previousEvent.get().getEventId() < event.getEventId()) {
-                t_signalNumberToHandlerToLastWindowEstablishEvents
-                        .computeIfAbsent(event.getSignalNumber(), k -> new HashMap<>())
-                        .put(event.getSignalHandlerAddress(), event);
-            }
+            stateAtCurrentWindowEnd.establishSignal(event);
+        } else if (event.getType() == EventType.ENTER_SIGNAL) {
+            stateAtCurrentWindowEnd.startThread(ttid);
+        } else if (event.getType() == EventType.EXIT_SIGNAL) {
+            stateAtCurrentWindowEnd.joinThread(ttid);
         }
     }
 
@@ -258,6 +254,7 @@ public class TraceState {
      * @param rawTrace
      */
     public void fastProcess(RawTrace rawTrace) {
+        processWindow(Collections.singletonList(rawTrace));
         int ttid = rawTrace.getThreadInfo().getId();
         for (int i = 0; i < rawTrace.size(); i++) {
             ReadonlyEventInterface event = rawTrace.event(i);
@@ -270,10 +267,28 @@ public class TraceState {
                 onMetaEvent(event, ttid);
             } else if (event.isStart()) {
                 updateThreadLocToUserLoc(event, ttid);
-            } else if (event.isSignalEvent()) {
-                onSignalEvent(event);
             }
         }
+    }
+
+    private void processWindow(Collection<RawTrace> traces) {
+        traces.forEach(rawTrace -> {
+            int ttid = rawTrace.getThreadInfo().getId();
+            if (rawTrace.size() > 0) {
+                stateAtCurrentWindowEnd.threadEvent(ttid);
+            }
+            for (int i = 0; i < rawTrace.size(); i++) {
+                ReadonlyEventInterface event = rawTrace.event(i);
+                stateAtCurrentWindowEnd.processEvent(event.getEventId());
+                if (event.isStart()) {
+                    onStartThread(event.getSyncedThreadId());
+                } else if (event.isJoin()) {
+                    onJoinThread(event.getSyncedThreadId());
+                } else if (event.isSignalEvent()) {
+                    onSignalEvent(event, rawTrace.getThreadInfo().getId());
+                }
+            }
+        });
     }
 
     /**
@@ -324,99 +339,107 @@ public class TraceState {
         return -1;
     }
 
-    public OptionalInt getUnfinishedThreadId(int signalDepth, long otid) {
-        Integer id = stateAtCurrentWindowEnd.unfinishedThreads.get(new SignalThreadId(signalDepth, otid));
-        if (id == null) {
+    public ThreadInfo createAndRegisterThreadInfo(long originalThreadId) {
+        ThreadInfo info = new ThreadInfo(
+                ThreadType.THREAD,
+                t_threadId++,
+                originalThreadId,
+                OptionalLong.empty(),
+                OptionalLong.empty(),
+                0);
+        threadInfos.registerThreadInfo(info);
+        stateAtCurrentWindowEnd.registerThread(info.getId());
+        return info;
+    }
+
+    public ThreadInfo createAndRegisterSignalInfo(
+            long originalThreadId, long signalNumber, long signalHandler, int signalDepth) {
+        ThreadInfo info = new ThreadInfo(
+                ThreadType.SIGNAL,
+                t_threadId++,
+                originalThreadId,
+                OptionalLong.of(signalNumber),
+                OptionalLong.of(signalHandler),
+                signalDepth);
+        threadInfos.registerThreadInfo(info);
+        stateAtCurrentWindowEnd.registerSignal(info.getId());
+        return info;
+    }
+
+    private void onStartThread(long otid) {
+        OptionalInt maybeTtid = threadInfos.getTtidFromOtid(otid);
+        int ttid;
+        if (!maybeTtid.isPresent()) {
+            ttid = createAndRegisterThreadInfo(otid).getId();
+        } else {
+            ttid = maybeTtid.getAsInt();
+        }
+        stateAtCurrentWindowEnd.startThread(ttid);
+    }
+
+    private void onJoinThread(long otid) {
+        OptionalInt maybeTtid = threadInfos.getTtidFromOtid(otid);
+        int ttid;
+        if (!maybeTtid.isPresent()) {
+            ttid = createAndRegisterThreadInfo(otid).getId();
+        } else {
+            ttid = maybeTtid.getAsInt();
+        }
+        stateAtCurrentWindowEnd.joinThread(ttid);
+    }
+
+    Collection<Integer> getUnfinishedTtidsAtWindowStart() {
+        return stateAtCurrentWindowStart.getUnfinishedTtids();
+    }
+
+    public void preStartWindow() {
+        stateAtCurrentWindowStart.copyFrom(stateAtCurrentWindowEnd);
+        stateAtCurrentWindowEnd.initializeForNextWindow();
+
+        otidToSignalDepthToTtidAtWindowStartCache.clear();
+        for (int ttid : stateAtCurrentWindowStart.getUnfinishedTtids()) {
+            ThreadInfo info = threadInfos.getThreadInfo(ttid);
+            otidToSignalDepthToTtidAtWindowStartCache
+                    .computeIfAbsent(info.getOriginalThreadId(), k -> new HashMap<>())
+                    .put(info.getSignalDepth(), ttid);
+        }
+    }
+
+    public ThreadInfos getThreadInfos() {
+        return threadInfos;
+    }
+
+    public OptionalInt getTtidForThreadOngoingAtWindowStart(long otid, int signalDepth) {
+        Integer ttid = otidToSignalDepthToTtidAtWindowStartCache
+                .getOrDefault(otid, Collections.emptyMap())
+                .get(signalDepth);
+        if (ttid == null) {
             return OptionalInt.empty();
         }
-        return OptionalInt.of(id);
+        return OptionalInt.of(ttid);
     }
 
-    int enterSignal(int signalDepth, long otid, long signalNumber) {
-        int id = getNewThreadId();
-        stateAtCurrentWindowEnd.unfinishedThreads.put(new SignalThreadId(signalDepth, otid), id);
-        stateAtCurrentWindowEnd.ttidToSignalNumber.put(id, signalNumber);
-        return id;
+    boolean getThreadStartsInTheCurrentWindow(Integer ttid) {
+        return !stateAtCurrentWindowStart.threadWasStarted(ttid) && stateAtCurrentWindowEnd.threadWasStarted(ttid);
     }
 
-    void exitSignal(int signalDepth, long otid) {
-        SignalThreadId key = new SignalThreadId(signalDepth, otid);
-        int id = stateAtCurrentWindowEnd.unfinishedThreads.get(key);
-        stateAtCurrentWindowEnd.unfinishedThreads.remove(key);
-        stateAtCurrentWindowEnd.ttidToSignalNumber.remove(id);
+    boolean getThreadEndsInTheCurrentWindow(Integer ttid) {
+        return !stateAtCurrentWindowStart.threadEnded(ttid) && stateAtCurrentWindowEnd.threadEnded(ttid);
     }
 
-    int getNewThreadId() {
-        return t_threadId++;
-    }
-
-    public int getNewThreadId(long otid) {
-        int id = getNewThreadId();
-        stateAtCurrentWindowEnd.unfinishedThreads.put(new SignalThreadId(0, otid), id);
-        return id;
-    }
-
-    private Optional<ReadonlyEventInterface> getPreviousEstablishEvent(long signalNumber, long signalHandler) {
-        return Optional.ofNullable(
-                t_signalNumberToHandlerToLastWindowEstablishEvents
-                        .getOrDefault(signalNumber, Collections.emptyMap())
-                        .get(signalHandler));
-    }
-
-    Map<Long, Map<Long, ReadonlyEventInterface>> getSignalNumberToHandlerToPreviousWindowEstablishEvent() {
-        return t_signalNumberToHandlerToLastWindowEstablishEvents;
-    }
-
-    OptionalLong getSignalNumberForThreadAtWindowStart(int threadId) {
-        Long signalNumber = stateAtCurrentWindowStart.ttidToSignalNumber.get(threadId);
-        return signalNumber == null ? OptionalLong.empty() : OptionalLong.of(signalNumber);
-    }
-
-    Collection<Integer> getUnfinishedSignalTtidsAtWindowStart() {
-        return stateAtCurrentWindowStart.ttidToSignalNumber.keySet();
-    }
-
-    Integer getTtidFromOtidAndSignalDepthAtStart(long otid, int signalDepth) {
-        return stateAtCurrentWindowStart.unfinishedThreads.get(new SignalThreadId(signalDepth, otid));
-    }
-
-    void startWindow() {
-        stateAtCurrentWindowStart.copyFrom(stateAtCurrentWindowEnd);
-    }
-
-    private static class StateAtWindowBorder {
-        private final Map<Integer, Long> ttidToSignalNumber = new HashMap<>(DEFAULT_NUM_OF_THREADS);
-        private final Map<SignalThreadId, Integer> unfinishedThreads = new HashMap<>(DEFAULT_NUM_OF_THREADS);
-
-        private void copyFrom(StateAtWindowBorder other) {
-            ttidToSignalNumber.clear();
-            ttidToSignalNumber.putAll(other.ttidToSignalNumber);
-            unfinishedThreads.clear();
-            unfinishedThreads.putAll(other.unfinishedThreads);
+    Optional<ReadonlyEventInterface> getPreviousWindowEstablishEvents(long signalNumber, long signalHandler) {
+        Optional<ReadonlyEventInterface> maybeEvent = stateAtCurrentWindowStart.getLastEstablishEvent(signalNumber);
+        if (maybeEvent.isPresent() && maybeEvent.get().getSignalHandlerAddress() == signalHandler) {
+            return maybeEvent;
         }
+        return Optional.empty();
     }
 
-    private class SignalThreadId {
-        private final int signalDepth;
-        private final long otid;
-
-        private SignalThreadId(int signalDepth, long otid) {
-            this.signalDepth = signalDepth;
-            this.otid = otid;
-        }
-
-        @Override
-        public int hashCode() {
-            return Integer.hashCode(signalDepth) ^ Long.hashCode(otid);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof SignalThreadId)) {
-                return false;
-            }
-            SignalThreadId sti = (SignalThreadId)obj;
-            return signalDepth == sti.signalDepth && otid == sti.otid;
-        }
+    public Collection<Integer> getThreadsForCurrentWindow() {
+        return stateAtCurrentWindowEnd.getThreadsForCurrentWindow();
     }
- }
+
+    long getMinEventIdForWindow() {
+        return stateAtCurrentWindowEnd.getMinEventIdForWindow();
+    }
+}

@@ -1,4 +1,4 @@
-/*******************************************************************************
+/* ******************************************************************************
  * Copyright (c) 2013 University of Illinois
  *
  * All rights reserved.
@@ -25,7 +25,7 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- ******************************************************************************/
+ * *****************************************************************************/
 package com.runtimeverification.rvpredict.smt;
 
 import com.google.common.collect.ImmutableList;
@@ -151,7 +151,7 @@ public class MaximalCausalModel {
 
         trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> lockRegions.forEach(locksetEngine::add));
 
-        List<Integer> allSignalTtids = trace.getThreadIds().stream()
+        List<Integer> allSignalTtids = trace.getThreadsForCurrentWindow().stream()
                 .filter(ttid -> trace.getThreadType(ttid) == ThreadType.SIGNAL)
                 .collect(Collectors.toList());
 
@@ -484,7 +484,8 @@ public class MaximalCausalModel {
 
         while (trace.getThreadType(ttid) != ThreadType.THREAD) {
             int parentTtid = signalParents.get(ttid);
-            List<EventWithOrder> parentThreadEvents = threadToExecution.get(parentTtid);
+            List<EventWithOrder> parentThreadEvents =
+                    threadToExecution.getOrDefault(parentTtid, Collections.emptyList());
             EventWithOrder parentEvent = null;
             for (EventWithOrder maybeParentEvent : parentThreadEvents) {
                 if (maybeParentEvent.getOrderId() > currentEventOrder) {
@@ -529,78 +530,6 @@ public class MaximalCausalModel {
         threadToExecution.values().forEach(events ->
                 events.sort(Comparator.comparingLong(EventWithOrder::getOrderId)));
         return threadToExecution;
-    }
-
-    private void dumpOrdering(
-            Map<Integer, List<EventWithOrder>> threadToExecution,
-            ReadonlyEventInterface firstRaceEvent, ReadonlyEventInterface secondRaceEvent,
-            Map<Integer, Integer> signalParents) {
-        System.out.println("Possible ordering of events ..........");
-        Map<Integer, Integer> lastIndexPerThread = new HashMap<>();
-        threadToExecution.keySet().forEach(threadId -> lastIndexPerThread.put(threadId, 0));
-
-        long lastThread = ((long) Integer.MAX_VALUE) + 1;
-        boolean hasData;
-        do {
-            hasData = false;
-            long minOrder = Integer.MAX_VALUE;
-            int minIndex = Integer.MAX_VALUE;
-            int minThread = Integer.MAX_VALUE;
-            for (Map.Entry<Integer, Integer> indexEntry : lastIndexPerThread.entrySet()) {
-                Integer threadId = indexEntry.getKey();
-                Integer index = indexEntry.getValue();
-                List<EventWithOrder> execution = threadToExecution.get(threadId);
-                if (index >= execution.size()) {
-                    continue;
-                }
-                EventWithOrder currentEvent = execution.get(index);
-                if (minOrder > currentEvent.getOrderId()
-                        || (minOrder == currentEvent.getOrderId() && minThread == threadId)) {
-                    minOrder = currentEvent.getOrderId();
-                    minIndex = index;
-                    minThread = threadId;
-                    hasData = true;
-                }
-            }
-            if (hasData) {
-                boolean foundRace = false;
-                EventWithOrder event = threadToExecution.get(minThread).get(minIndex);
-                lastIndexPerThread.put(minThread, minIndex + 1);
-                if (isRaceEvent(event, firstRaceEvent, secondRaceEvent)) {
-                    for (Map.Entry<Integer, Integer> indexEntry : lastIndexPerThread.entrySet()) {
-                        Integer threadId = indexEntry.getKey();
-                        Integer index = indexEntry.getValue();
-                        List<EventWithOrder> execution = threadToExecution.get(threadId);
-                        if (index >= execution.size()) {
-                            continue;
-                        }
-                        EventWithOrder currentEvent = execution.get(index);
-                        if (currentEvent.getEvent().getEventId() != event.getEvent().getEventId()
-                                && isRaceEvent(currentEvent, firstRaceEvent, secondRaceEvent)) {
-                            foundRace = true;
-                            lastIndexPerThread.put(threadId, index + 1);
-                            System.out.println("-- Found race for threads "
-                                    + threadDescription(minThread, event, signalParents) + " and "
-                                    + threadDescription(threadId, currentEvent, signalParents) + " --");
-                            lastThread = Integer.MAX_VALUE;
-                            System.out.println(prettyPrint(event.getEvent()));
-                            System.out.println(" -- vs");
-                            System.out.println(prettyPrint(currentEvent.getEvent()));
-                            break;
-                        }
-                    }
-                    assert foundRace;
-                }
-                if (!foundRace) {
-                    if (lastThread != minThread) {
-                        System.out.println(
-                                "-- Switching to thread " + threadDescription(minThread, event, signalParents) + " --");
-                        lastThread = minThread;
-                    }
-                    System.out.println(prettyPrint(event.getEvent()));
-                }
-            }
-        } while (hasData);
     }
 
     private void dumpOrderingWithLessThreadSwitches(
@@ -875,14 +804,6 @@ public class MaximalCausalModel {
 
     private String prettyPrint(ReadonlyEventInterface event) {
         return event.getType().getPrinter().print(event);
-    }
-
-    private boolean isRaceEvent(
-            EventWithOrder event,
-            ReadonlyEventInterface firstRaceEvent,
-            ReadonlyEventInterface secondRaceEvent) {
-        return (firstRaceEvent != null && firstRaceEvent.getEventId() == event.getEvent().getEventId())
-                || (secondRaceEvent != null && secondRaceEvent.getEventId() == event.getEvent().getEventId());
     }
 
     private String threadDescription(int threadId, EventWithOrder event, Map<Integer, Integer> signalParents) {

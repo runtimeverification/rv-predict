@@ -114,7 +114,7 @@ while [ $# -gt 1 ]; do
 		shift
 		shift
 		;;
-	--prompt-for-license)
+	--prompt-for-license|--debug)
 		analyze_passthrough="${analyze_passthrough:-} $1"
 		shift
 		;;

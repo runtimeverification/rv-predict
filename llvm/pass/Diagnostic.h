@@ -44,6 +44,18 @@ namespace RVPredict {
 			return true;
 		}
 	};
+	class DiagnosticInfoRemark : public DiagnosticInfoOptimizationBase {
+	public:
+		DiagnosticInfoRemark(
+		    const Function &Fn, const DebugLoc &DLoc,
+		    const Twine &Msg) :
+		DiagnosticInfoOptimizationBase(DK_OptimizationRemark, DS_Remark,
+		    getPassName(), Fn, DLoc, Msg) {
+		}
+		virtual bool isEnabled(void) const {
+			return true;
+		}
+	};
 
 }
 

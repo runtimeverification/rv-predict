@@ -9,9 +9,11 @@ void __rvpredict_isr_fire(void (*)(void));
 
 #define	__rv_interrupt_handler_arg_resolved(__resolved_source,	\
     __resolved_priority)					\
-	__annotate("isr-" #__resolved_source "@" #__resolved_priority)
+	__annotate("rvp-isr-" #__resolved_source "@" #__resolved_priority)
 
 #define	__rv_interrupt_handler(__source, __priority)	\
 	__rv_interrupt_handler_arg_resolved(__source, __priority)
+
+#define	__rv_register	__annotate("rvp-register")
 
 #endif /* _RV_INTR_EXPORTS_H_ */

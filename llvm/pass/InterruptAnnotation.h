@@ -3,6 +3,7 @@
 #ifndef _RVP_GATHERANNOTATION_H_
 #define _RVP_GATHERANNOTATION_H_
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringRef.h"
 #include <utility>
 #include <unordered_map>
@@ -15,13 +16,15 @@ using namespace llvm;
 namespace RVPredict {
 
 /**
- * Gather our interrupt-related function annotations.
+ * Gather our interrupt/device-related function and variable annotations.
  *
- * There are currently two types of annotations.
+ * There are currently three types of annotations.
  *
- * 1) ISR annotation:
- * \code __attribute__((annotate("isr@PrioLevel")) \endcode
- * 2) enable/disable_IRQ annotation:
+ * 1) Interrupt service routine (ISR) annotation:
+ * \code __attribute__((annotate("rvp-isr-<source>@<priority>")) \endcode
+ * 2) Device register annotation:
+ * \code __attribute__((annotate("rvp-register")) \endcode
+ * 3) Enable/disable IRQ annotation:
  * \code __attribute__((annotate("enableIRQ@PrioLevel")) \endcode
  * \code __attribute__((annotate("disableIRQ@PrioLevel")) \endcode
  */
@@ -33,6 +36,7 @@ class InterruptAnnotation : public ModulePass {
     /// This map stores the priority level each IRQ-disabling
     /// function disables.
     StringMap<uint8_t> DisableIRQFnMap;
+    StringSet<> registerSet;
 
     /// This map stores the priority level each IRQ-enabling
     /// function enables.
@@ -40,9 +44,7 @@ class InterruptAnnotation : public ModulePass {
 
     /// This map stores the priority level of each interrupt
     /// service routine (ISR).
-//    StringMap<uint8_t> ISRPrioMap;
     StringMap<StringMap<uint8_t> > isrPriorityMap;
-//    std::unordered_map<StringRef, std::unordered_map<StringRef, uint8_t> > isrPriorityMap;
 
   public:
     InterruptAnnotation()
@@ -50,12 +52,14 @@ class InterruptAnnotation : public ModulePass {
         , DisableIRQFnMap()
         , EnableIRQFnMap()
         , isrPriorityMap()
+        , registerSet()
     {}
 
   private:
     void debugDump();
 
   public:
+    bool isRegister(GlobalVariable &v) const;
     bool getDisableIRQPrioLevel(Function &F, uint8_t &prio) const;
     bool getEnableIRQPrioLevel(Function &F, uint8_t &prio) const;
     std::vector<uint8_t> getISRPrioLevels(Function &F) const;

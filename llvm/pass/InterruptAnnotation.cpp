@@ -36,6 +36,9 @@ InterruptAnnotation::debugDump()
         errs() << format("%s : enableIRQ@%u\n", it->first().data(),
                          it->second);
     }
+    for (auto it = registerSet.begin(); it != registerSet.end(); ++it) {
+        errs() << format("%s : register\n", it->first().data());
+    }
 }
 
 /**
@@ -83,6 +86,21 @@ InterruptAnnotation::getEnableIRQPrioLevel(Function &F, uint8_t &prio) const
 }
 
 /**
+ * Check whether or not the variable is annotated as a register.
+ *
+ * @param v
+ *      The variable.
+ * @return
+ *      False if the given variable is not annotated as a register;
+ *      otherwise, True.
+ */
+bool
+InterruptAnnotation::isRegister(GlobalVariable &v) const
+{
+    return registerSet.find(v.getName()) != registerSet.end();
+}
+
+/**
  * Get the priority level of an ISR.
  *
  * @param F
@@ -118,7 +136,7 @@ bool
 InterruptAnnotation::runOnModule(Module &M)
 {
     // Extract the Clang-level "annotate" attribute based on the trick below:
-    // http://homes.cs.washington.edu/~bholt/posts/llvm-quick-tricks.html
+    // http://bholt.org/posts/llvm-quick-tricks.html
     GlobalVariable *global_annotations =
             M.getNamedGlobal("llvm.global.annotations");
     if (global_annotations == NULL) {
@@ -150,7 +168,7 @@ InterruptAnnotation::runOnModule(Module &M)
 		/* true on failure, ugh. */
 		if (!Pair.second.getAsInteger(10, prio))
 			;
-		else if (Pair.first.startswith("isr-") ||
+		else if (Pair.first.startswith("rvp-isr-") ||
 			     Pair.first.equals("disableIRQ") ||
 		         Pair.first.equals("enableIRQ")) {
 			auto first_insn = f->getEntryBlock().getFirstNonPHI();
@@ -181,7 +199,7 @@ InterruptAnnotation::runOnModule(Module &M)
 			    "expected {isr|disableIRQ|enableIRQ}@{decimal digits}");
 		}
 		StringRef fname = f->getName();
-		if (Pair.first.startswith("isr-")) {
+		if (Pair.first.startswith("rvp-isr-")) {
 			std::pair<StringRef, StringRef> hyphenated = Pair.first.split('-');
 			isrPriorityMap[fname].insert(std::make_pair(hyphenated.second, prio));
 		} else if (Pair.first.equals("disableIRQ")) {
@@ -189,7 +207,31 @@ InterruptAnnotation::runOnModule(Module &M)
 		} else if (Pair.first.equals("enableIRQ")) {
 			EnableIRQFnMap.insert(std::make_pair(fname, prio));
 		}
+    }
+    for (auto it = ca->op_begin(); it != ca->op_end(); ++it) {
+		//
+		// object_annotation = { [ GlobalVariable variable, ... ],
+		//                       [ [ char[] annotation, ... ], ...], ... }
+		//
+        ConstantStruct *object_annotation = cast<ConstantStruct>(*it);
+		//
+		// anno_ctnr = [ annotation, ... ]
+		//
+		auto v = dyn_cast<GlobalVariable>(object_annotation->getOperand(0));
+		if (v == nullptr)
+			continue;
 
+		GlobalVariable *anno_ctnr = cast<GlobalVariable>(
+			object_annotation->getOperand(1)->getOperand(0));
+
+		StringRef annotation = cast<ConstantDataArray>(
+				cast<GlobalVariable>(anno_ctnr)->getOperand(0))
+				->getAsCString();
+		if (!annotation.equals("rvp-register"))
+			continue;
+
+		StringRef vname = v->getName();
+		registerSet.insert(vname);
     }
 
     debugDump();

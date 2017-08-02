@@ -119,7 +119,7 @@ public class RaceDetector implements Constants {
 
         Map<String, Race> result =
                 MaximalCausalModel.create(
-                        trace, z3filter, soundSolver, fastSolver, config.detectInterruptedThreadRace())
+                        trace, z3filter, fastSolver, soundSolver, config.detectInterruptedThreadRace())
                         .checkRaceSuspects(sigToRaceSuspects);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
@@ -129,7 +129,7 @@ public class RaceDetector implements Constants {
         });
     }
 
-    public static String getNativeLibraryPath() {
+    private static String getNativeLibraryPath() {
         String nativePath = "/native";
         Configuration.OS os = Configuration.OS.current();
         String property = System.getProperty("os.arch");
@@ -147,7 +147,7 @@ public class RaceDetector implements Constants {
         return nativePath;
     }
 
-    public static String getNativeLibraryName() {
+    private static String getNativeLibraryName() {
         Configuration.OS os = Configuration.OS.current();
         switch (os) {
         case OSX:

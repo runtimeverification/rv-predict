@@ -345,6 +345,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1300")
     private boolean profile;
 
+    private final static String opt_event_performance_profile = "--performance-profile";
+    @Parameter(names = opt_event_performance_profile, description = "Output performance profiling statistics", hidden = true, descriptionKey = "1350")
+    private boolean performanceProfile = false;
+
     public final static String opt_llvm_predict = "--llvm-predict";
     @Parameter(names = opt_llvm_predict, description = "Run prediction on llvm logs found in given directory", hidden = true, descriptionKey = "1400")
     public String llvm_predict = null;
@@ -751,6 +755,10 @@ public class Configuration implements Constants {
 
     public boolean isProfiling() {
         return profile;
+    }
+
+    public boolean isPerformanceProfiling() {
+        return performanceProfile;
     }
 
     /**

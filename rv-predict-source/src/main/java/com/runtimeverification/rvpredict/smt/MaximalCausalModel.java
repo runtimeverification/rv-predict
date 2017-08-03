@@ -35,6 +35,8 @@ import com.microsoft.z3.Solver;
 import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.performance.ProfilerToken;
+import com.runtimeverification.rvpredict.performance.Profiler;
 import com.runtimeverification.rvpredict.smt.constraintsources.SignalStartMask;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
@@ -373,7 +375,7 @@ public class MaximalCausalModel {
         }
 
         Map<String, Race> result = new HashMap<>();
-        try {
+        try (ProfilerToken ignored = Profiler.instance().start("All solver stuff")) {
             fastSolver.push();
             soundSolver.push();
             /* translate our formula into Z3 AST format */
@@ -387,31 +389,35 @@ public class MaximalCausalModel {
             boolean atLeastOneRace = false;
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
-                    fastSolver.push();
-                    fastSolver.add(z3filter.filter(suspectToAsst.get(race)));
-                    boolean isRace = fastSolver.check() == Status.SATISFIABLE;
-                    if (isRace) {
-                        soundSolver.push();
-                        soundSolver.add(z3filter.filter(suspectToAsst.get(race)));
-                        isRace = soundSolver.check() == Status.SATISFIABLE;
-                        atLeastOneRace |= isRace;
+                    try (ProfilerToken ignored1 = Profiler.instance().start("Main solver loop")) {
+                        fastSolver.push();
+                        fastSolver.add(z3filter.filter(suspectToAsst.get(race)));
+                        boolean isRace = fastSolver.check() == Status.SATISFIABLE;
                         if (isRace) {
-                            Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution(soundSolver);
-                            Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
-                            fillSignalStack(threadToExecution, signalParents, race);
-                            if (Configuration.debug) {
-                                dumpOrderingWithLessThreadSwitches(
-                                        threadToExecution,
-                                        Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
-                                        signalParents);
+                            try (ProfilerToken ignored2 = Profiler.instance().start("Secondary solver loop")) {
+                                soundSolver.push();
+                                soundSolver.add(z3filter.filter(suspectToAsst.get(race)));
+                                isRace = soundSolver.check() == Status.SATISFIABLE;
+                                atLeastOneRace |= isRace;
+                                if (isRace) {
+                                    Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution(soundSolver);
+                                    Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
+                                    fillSignalStack(threadToExecution, signalParents, race);
+                                    if (Configuration.debug) {
+                                        dumpOrderingWithLessThreadSwitches(
+                                                threadToExecution,
+                                                Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
+                                                signalParents);
+                                    }
+                                }
+                                soundSolver.pop();
                             }
                         }
-                        soundSolver.pop();
-                    }
-                    fastSolver.pop();
-                    if (isRace) {
-                        result.put(entry.getKey(), race);
-                        break;
+                        fastSolver.pop();
+                        if (isRace) {
+                            result.put(entry.getKey(), race);
+                            break;
+                        }
                     }
                 }
             }

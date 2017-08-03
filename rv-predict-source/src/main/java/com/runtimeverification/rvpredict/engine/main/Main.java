@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.instrument.Agent;
+import com.runtimeverification.rvpredict.performance.Profiler;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import com.runtimeverification.licensing.Licensing;
@@ -44,8 +45,12 @@ public class Main {
         } else {
             /* must be in only_predict or only_llvm_predict mode */
             assert config.isOfflinePrediction() || config.isLLVMPrediction();
+            if (config.isPerformanceProfiling()) {
+                Profiler.enableProfiler();
+            }
             new RVPredict(config).start();
         }
+        System.out.println(Profiler.instance().toString());
     }
 
     /**

@@ -55,6 +55,13 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      * Only meaningful when the method being transformed is a constructor.
      */
     private int numOfCtorCall = 0;
+    /**
+     * Specifies the number of self constructor calls already visited in
+     * {@link #visitMethodInsn}.
+     * <p>
+     * Only meaningful when the method being transformed is a constructor.
+     */
+    private int numOfSelfCtorCall = 0;
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
             String name, String desc, int access, ClassLoader loader, Logger logger,
@@ -255,10 +262,42 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         owner = replaceStandardLibraryClass(owner);
         desc = replaceStandardLibraryClass(desc);
 
-        boolean isSelfCtorCall = false;
+        boolean isSelfOrBaseCtorCall = false;
+        // We need to do some special instrumentation in two cases because of some bug in either ASM or the
+        // Java compiler which makes the jvm crash. Since this happens both with the Oracle jdk and the OpenJDK one
+        // (although there are some cases where the Oracle one does not crash and the OpenJDK one does), I would guess
+        // that it's an ASM bug.
+        //
+        // The special cases that we need to identify are:
+        // 1. Base class constructor call;
+        // 2. self constructor call.
+        //
+        // One may think that each of these is the first constructor call in the current constructor, but that's not
+        // true, i.e. consider the following:
+        // class Test : public A {
+        //   Test(String s) {
+        //     super(new String(s));
+        //   }
+        //   Test() {
+        //     self(new String());
+        //   }
+        // }
+        // In each of these constructors, the string constructor call will occur before the base/self constructor call,
+        // since we need to build the String in order to pass it to the constructor.
+        //
+        // One may guess that the first call to one of the current class constructor or the base class constructor is
+        // the one that matters, but that may not be true if we also have a Test(Test t) constructor and, in another
+        // constructor we call self(new Test()).
+        //
+        // For now, we will use the following heuristic: we identify the first constructor call and the first call to a
+        // constructor in the same class, and hope that they are the right ones. This seems to cover most cases.
         if ("<init>".equals(methodName) && "<init>".equals(name)) {
             numOfCtorCall++;
-            isSelfCtorCall = numOfCtorCall == 1;
+            isSelfOrBaseCtorCall = numOfCtorCall == 1;
+            if (owner.equals(className)) {
+                numOfSelfCtorCall++;
+                isSelfOrBaseCtorCall = isSelfOrBaseCtorCall || numOfSelfCtorCall == 1;
+            }
         }
 
         int idx = (name + desc).lastIndexOf(')');
@@ -281,7 +320,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[") || isSelfCtorCall || !strategy.logCallStackEvent()) {
+            if (owner.startsWith("[") || isSelfOrBaseCtorCall || !strategy.logCallStackEvent()) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             }

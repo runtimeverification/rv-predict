@@ -346,7 +346,7 @@ public class Configuration implements Constants {
     private boolean profile;
 
     private final static String opt_event_performance_profile = "--performance-profile";
-    @Parameter(names = opt_event_performance_profile, description = "Output performance profiling statistics", hidden = true, descriptionKey = "1300")
+    @Parameter(names = opt_event_performance_profile, description = "Output performance profiling statistics", hidden = true, descriptionKey = "1350")
     private boolean performanceProfile = false;
 
     public final static String opt_llvm_predict = "--llvm-predict";

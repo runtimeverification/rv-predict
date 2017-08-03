@@ -48,7 +48,7 @@ public class Main {
             new RVPredict(config).start();
         }
         if (config.isPerformanceProfiling()) {
-            System.out.println(Profiler.instance().toString());
+            config.logger().report(Profiler.instance().toString(), Logger.MSGTYPE.INFO);
         }
     }
 

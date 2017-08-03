@@ -1,7 +1,8 @@
 package com.runtimeverification.rvpredict.engine.main;
 
-import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
-import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.performance.Profiler;
+import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -9,13 +10,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.instrument.Agent;
-import com.runtimeverification.rvpredict.performance.Profiler;
-import com.runtimeverification.rvpredict.util.Logger;
 
-import com.runtimeverification.licensing.Licensing;
-import com.runtimeverification.licensing.RVLicenseCache;
+import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
+import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
 
 /**
  * @author TraianSF
@@ -50,7 +47,9 @@ public class Main {
             }
             new RVPredict(config).start();
         }
-        System.out.println(Profiler.instance().toString());
+        if (config.isPerformanceProfiling()) {
+            System.out.println(Profiler.instance().toString());
+        }
     }
 
     /**

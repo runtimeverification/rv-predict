@@ -1,15 +1,11 @@
 package com.runtimeverification.rvpredict.instrument.transformer;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import com.runtimeverification.rvpredict.instrument.InstrumentUtils;
 import com.runtimeverification.rvpredict.instrument.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import com.runtimeverification.rvpredict.util.Logger;
-
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -18,8 +14,25 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
 
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.*;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.*;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Optional;
+import java.util.Stack;
+
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.CLASS_TYPE;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.JL_DOUBLE_TYPE;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.JL_FLOAT_TYPE;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.JL_SYSTEM_TYPE;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.OBJECT_TYPE;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.RVPREDICT_RUNTIME_TYPE;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.needToInstrument;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_ARRAY_ACCESS;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_FIELD_ACCESS;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_FINISH_METHOD;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_INVOKE_METHOD;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_MONITOR_ENTER;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_MONITOR_EXIT;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.lookup;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
 
@@ -49,19 +62,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private int crntLineNum;
 
     /**
-     * Specifies the number of constructor calls already visited in
-     * {@link #visitMethodInsn}.
+     * Contains the type of each object which was allocated before the super/this constructor call, but whose
+     * constructor was not called yet.
      * <p>
-     * Only meaningful when the method being transformed is a constructor.
+     * Present only when the method being transformed is a constructor.
      */
-    private int numOfCtorCall = 0;
-    /**
-     * Specifies the number of self constructor calls already visited in
-     * {@link #visitMethodInsn}.
-     * <p>
-     * Only meaningful when the method being transformed is a constructor.
-     */
-    private int numOfSelfCtorCall = 0;
+    private Optional<Stack<String>> constructorHeaderNewStack = Optional.empty();
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
             String name, String desc, int access, ClassLoader loader, Logger logger,
@@ -79,6 +85,9 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.strategy = strategy;
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
+        if (name.equals("<init>")) {
+            constructorHeaderNewStack = Optional.of(new Stack<>());
+        }
     }
 
     @Override
@@ -140,6 +149,10 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
+        Optional<Stack<String>> localConstructorHeaderNewStack = constructorHeaderNewStack;
+        if (localConstructorHeaderNewStack.isPresent() && opcode == NEW) {
+            localConstructorHeaderNewStack.get().push(type);
+        }
         mv.visitTypeInsn(opcode, replaceStandardLibraryClass(type));
     }
 
@@ -186,7 +199,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         }
 
         /* fix issue: https://github.com/runtimeverification/rv-predict/issues/458 */
-        if ("<init>".equals(methodName) && opcode == PUTFIELD && numOfCtorCall == 0) {
+        if (opcode == PUTFIELD && constructorHeaderNewStack.isPresent()) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
@@ -263,17 +276,14 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         desc = replaceStandardLibraryClass(desc);
 
         boolean isSelfOrBaseCtorCall = false;
-        // We need to do some special instrumentation in two cases because of some bug in either ASM or the
-        // Java compiler which makes the jvm crash. Since this happens both with the Oracle jdk and the OpenJDK one
-        // (although there are some cases where the Oracle one does not crash and the OpenJDK one does), I would guess
-        // that it's an ASM bug.
+        // We need to do some special instrumentation in two cases which make the jvm crash when verifying the code:
+        // base/super constructor calls and this() constructor calls. This crash is actually reasonable, because
+        // the super/this call must be the first statement, which means that it can't have a try block around it.
+        // It is less obvious whether the other method calls before the super/this call can have a try block, but
+        // we'll assume that they can.
         //
-        // The special cases that we need to identify are:
-        // 1. Base class constructor call;
-        // 2. self constructor call.
-        //
-        // One may think that each of these is the first constructor call in the current constructor, but that's not
-        // true, i.e. consider the following:
+        // One may think that the super/this call is the first constructor call in the current constructor, but that's
+        // not true, i.e. consider the following:
         // class Test : public A {
         //   Test(String s) {
         //     super(new String(s));
@@ -289,14 +299,16 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         // the one that matters, but that may not be true if we also have a Test(Test t) constructor and, in another
         // constructor we call self(new Test()).
         //
-        // For now, we will use the following heuristic: we identify the first constructor call and the first call to a
-        // constructor in the same class, and hope that they are the right ones. This seems to cover most cases.
-        if ("<init>".equals(methodName) && "<init>".equals(name)) {
-            numOfCtorCall++;
-            isSelfOrBaseCtorCall = numOfCtorCall == 1;
-            if (owner.equals(className)) {
-                numOfSelfCtorCall++;
-                isSelfOrBaseCtorCall = isSelfOrBaseCtorCall || numOfSelfCtorCall == 1;
+        // To solve this, note that at the beginning of a constructor we may have a sequence of paired new and <init>
+        // operations, followed by an <init> without any new, which is the super or this constructor.
+        Optional<Stack<String>> localConstructorHeaderNewStack = constructorHeaderNewStack;
+        if (localConstructorHeaderNewStack.isPresent() && "<init>".equals(name)) {
+            if (localConstructorHeaderNewStack.get().isEmpty()) {
+                isSelfOrBaseCtorCall = true;
+                constructorHeaderNewStack = Optional.empty();
+            } else {
+                String allocatedClassName = localConstructorHeaderNewStack.get().pop();
+                assert allocatedClassName.equals(owner);
             }
         }
 

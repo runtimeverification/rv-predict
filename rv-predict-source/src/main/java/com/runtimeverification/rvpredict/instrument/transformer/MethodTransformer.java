@@ -282,11 +282,11 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         owner = replaceStandardLibraryClass(owner);
         desc = replaceStandardLibraryClass(desc);
 
-        boolean isSelfOrBaseCtorCall = false;
         // We need to do some special instrumentation in two cases which make the jvm crash when verifying the code:
-        // base/super constructor calls and this() constructor calls. This crash is actually reasonable, because
-        // the super/this call must be the first statement, which means that it can't have a try block around it.
-        // It is less obvious whether the other method calls before the super/this call can have a try block, but
+        // base/super constructor calls and this() constructor calls (in Java terms). This crash is actually reasonable,
+        // because in Java the super/this call must be the first statement in the method, which means that it can't
+        // have a try block around it, although the bytecode specification may allow try-catch blocks in some cases.
+        // Also, it is less obvious whether the other method calls before the super/this call can have a try block, but
         // we'll assume that they can.
         //
         // One may think that the super/this call is the first constructor call in the current constructor, but that's
@@ -296,7 +296,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         //     super(new String(s));
         //   }
         //   Test() {
-        //     self(new String());
+        //     this(new String());
         //   }
         // }
         // In each of these constructors, the string constructor call will occur before the base/self constructor call,
@@ -306,11 +306,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         // the one that matters, but that may not be true if we also have a Test(Test t) constructor and, in another
         // constructor we call self(new Test()).
         //
-        // To solve this, note that at the beginning of a constructor we may have a sequence of paired new and <init>
-        // operations, followed by an <init> without any new, which is the super or this constructor.
+        // To solve this, we should note that at the beginning of a constructor we may have a sequence of paired new
+        // and <init> operations, followed by an <init> without any new, which is the super or this constructor call.
+        boolean isThisOrBaseCtorCall = false;
         if (constructorHeaderNewStack.isPresent() && "<init>".equals(name)) {
             if (constructorHeaderNewStack.get().isEmpty()) {
-                isSelfOrBaseCtorCall = true;
+                isThisOrBaseCtorCall = true;
                 constructorHeaderNewStack = Optional.empty();
             } else {
                 String allocatedClassName = constructorHeaderNewStack.get().pop();
@@ -338,7 +339,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[") || isSelfOrBaseCtorCall || !strategy.logCallStackEvent()) {
+            if (owner.startsWith("[") || isThisOrBaseCtorCall || !strategy.logCallStackEvent()) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             }

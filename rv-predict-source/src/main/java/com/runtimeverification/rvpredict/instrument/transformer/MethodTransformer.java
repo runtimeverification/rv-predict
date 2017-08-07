@@ -199,6 +199,16 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         }
 
         /* fix issue: https://github.com/runtimeverification/rv-predict/issues/458 */
+        /*
+           From the Java bytecode specification, 2015-02-13, section 4.9.2, Structural Constraints:
+
+           Each instance initialization method, except for the instance initialization method
+           derived from the constructor of class Object, must call either another instance
+           initialization method of this or an instance initialization method of its direct
+           superclass super before its instance members are accessed.
+           However, instance fields of this that are declared in the current class may be
+           assigned before calling any instance initialization method.
+         */
         if (opcode == PUTFIELD && constructorHeaderNewStack.isPresent()) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;

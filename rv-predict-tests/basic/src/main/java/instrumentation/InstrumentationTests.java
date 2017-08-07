@@ -48,6 +48,7 @@ public class InstrumentationTests {
     public static void main(String[] args) throws InterruptedException {
         testStackFramesMap();
         testConstructors();
+        ScalaInstrumentationTests.main(args);
 
         Thread t1 = new Thread(() -> x++);
         Thread t2 = new Thread(() -> x++);

@@ -19,20 +19,8 @@ import java.util.Deque;
 import java.util.Optional;
 import java.util.Stack;
 
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.CLASS_TYPE;
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.JL_DOUBLE_TYPE;
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.JL_FLOAT_TYPE;
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.JL_SYSTEM_TYPE;
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.OBJECT_TYPE;
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.RVPREDICT_RUNTIME_TYPE;
-import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.needToInstrument;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_ARRAY_ACCESS;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_FIELD_ACCESS;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_FINISH_METHOD;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_INVOKE_METHOD;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_MONITOR_ENTER;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.LOG_MONITOR_EXIT;
-import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.lookup;
+import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.*;
+import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.*;
 
 public class MethodTransformer extends MethodVisitor implements Opcodes {
 
@@ -85,7 +73,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.strategy = strategy;
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
-        if (name.equals("<init>")) {
+        if ("<init>".equals(name)) {
             constructorHeaderNewStack = Optional.of(new Stack<>());
         }
     }
@@ -149,9 +137,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
-        Optional<Stack<String>> localConstructorHeaderNewStack = constructorHeaderNewStack;
-        if (localConstructorHeaderNewStack.isPresent() && opcode == NEW) {
-            localConstructorHeaderNewStack.get().push(type);
+        if (constructorHeaderNewStack.isPresent() && opcode == NEW) {
+            constructorHeaderNewStack.get().push(type);
         }
         mv.visitTypeInsn(opcode, replaceStandardLibraryClass(type));
     }
@@ -200,14 +187,24 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
         /* fix issue: https://github.com/runtimeverification/rv-predict/issues/458 */
         /*
+           Having a PUTFIELD before the super/this constructor call is valid.
            From the Java bytecode specification, 2015-02-13, section 4.9.2, Structural Constraints:
 
-           Each instance initialization method, except for the instance initialization method
+           "Each instance initialization method, except for the instance initialization method
            derived from the constructor of class Object, must call either another instance
            initialization method of this or an instance initialization method of its direct
            superclass super before its instance members are accessed.
            However, instance fields of this that are declared in the current class may be
-           assigned before calling any instance initialization method.
+           assigned before calling any instance initialization method."
+
+           However, it seems that passing an uninitialized (this) object to the invokeRtnMethod(LOG_FIELD_ACCESS) call,
+           which is actually a call to RVPredictRuntime.logFieldAcc, will crash the Java verifier because there is an
+           uninitialized object on the stack. Note that this will crash even if the logFieldAcc method has an empty
+           body, so the issue is the method call itself.
+
+           I (virgil.serbanuta) didn't find a reference in the bytecode specification about why this shouldn't work.
+           Properly fixing this issue will likely involve postponing all the putfield logging until after the
+           super/this constructor finished.
          */
         if (opcode == PUTFIELD && constructorHeaderNewStack.isPresent()) {
             mv.visitFieldInsn(opcode, owner, name, desc);
@@ -311,13 +308,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         //
         // To solve this, note that at the beginning of a constructor we may have a sequence of paired new and <init>
         // operations, followed by an <init> without any new, which is the super or this constructor.
-        Optional<Stack<String>> localConstructorHeaderNewStack = constructorHeaderNewStack;
-        if (localConstructorHeaderNewStack.isPresent() && "<init>".equals(name)) {
-            if (localConstructorHeaderNewStack.get().isEmpty()) {
+        if (constructorHeaderNewStack.isPresent() && "<init>".equals(name)) {
+            if (constructorHeaderNewStack.get().isEmpty()) {
                 isSelfOrBaseCtorCall = true;
                 constructorHeaderNewStack = Optional.empty();
             } else {
-                String allocatedClassName = localConstructorHeaderNewStack.get().pop();
+                String allocatedClassName = constructorHeaderNewStack.get().pop();
                 assert allocatedClassName.equals(owner);
             }
         }

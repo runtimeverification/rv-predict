@@ -55,7 +55,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
      * <p>
      * Present only when the method being transformed is a constructor.
      */
-    private Optional<Stack<String>> constructorHeaderNewStack = Optional.empty();
+    private Optional<Stack<String>> constructorHeaderUninitializedObjects = Optional.empty();
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
             String name, String desc, int access, ClassLoader loader, Logger logger,
@@ -74,7 +74,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
         if ("<init>".equals(name)) {
-            constructorHeaderNewStack = Optional.of(new Stack<>());
+            constructorHeaderUninitializedObjects = Optional.of(new Stack<>());
         }
     }
 
@@ -137,8 +137,8 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
-        if (constructorHeaderNewStack.isPresent() && opcode == NEW) {
-            constructorHeaderNewStack.get().push(type);
+        if (constructorHeaderUninitializedObjects.isPresent() && opcode == NEW) {
+            constructorHeaderUninitializedObjects.get().push(type);
         }
         mv.visitTypeInsn(opcode, replaceStandardLibraryClass(type));
     }
@@ -206,7 +206,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
            Properly fixing this issue will likely involve postponing all the putfield logging until after the
            super/this constructor finished.
          */
-        if (opcode == PUTFIELD && constructorHeaderNewStack.isPresent()) {
+        if (opcode == PUTFIELD && constructorHeaderUninitializedObjects.isPresent()) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
@@ -308,13 +308,13 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         //
         // To solve this, we should note that at the beginning of a constructor we may have a sequence of paired new
         // and <init> operations, followed by an <init> without any new, which is the super or this constructor call.
-        boolean isThisOrBaseCtorCall = false;
-        if (constructorHeaderNewStack.isPresent() && "<init>".equals(name)) {
-            if (constructorHeaderNewStack.get().isEmpty()) {
-                isThisOrBaseCtorCall = true;
-                constructorHeaderNewStack = Optional.empty();
+        boolean isThisOrSuperCtorCall = false;
+        if (constructorHeaderUninitializedObjects.isPresent() && "<init>".equals(name)) {
+            if (constructorHeaderUninitializedObjects.get().isEmpty()) {
+                isThisOrSuperCtorCall = true;
+                constructorHeaderUninitializedObjects = Optional.empty();
             } else {
-                String allocatedClassName = constructorHeaderNewStack.get().pop();
+                String allocatedClassName = constructorHeaderUninitializedObjects.get().pop();
                 assert allocatedClassName.equals(owner);
             }
         }
@@ -339,7 +339,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[") || isThisOrBaseCtorCall || !strategy.logCallStackEvent()) {
+            if (owner.startsWith("[") || isThisOrSuperCtorCall || !strategy.logCallStackEvent()) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             }

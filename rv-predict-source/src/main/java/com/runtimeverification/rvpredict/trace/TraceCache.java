@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.runtimeverification.rvpredict.algorithm.TopologicalSort;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.deadlock.LockGraph;
 import com.runtimeverification.rvpredict.log.EventReader;
@@ -18,8 +19,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.stream.Collectors;
 
 /**
  * Class adding a transparency layer between the prediction engine and the
@@ -188,6 +191,7 @@ public class TraceCache {
                 return 1;
             return 0;
         });
+        registerNewThreads(events);
         long prevOTID = events.get(0).getOriginalThreadId();
         int prevSignalDepth = events.get(0).getSignalDepth();
         int start = 0;
@@ -205,6 +209,38 @@ public class TraceCache {
         if (start < eventCount) {
             splitTracesIntoThreadsForSameOtidAndDepth(rawTraces, events, start, eventCount);
         }
+    }
+
+    private void registerNewThreads(ArrayList<ReadonlyEventInterface> events) {
+        Map<Long, List<Long>> otidToParent = events.stream()
+                .filter(ReadonlyEventInterface::isStart)
+                .collect(Collectors.toMap(
+                        ReadonlyEventInterface::getSyncedThreadId,
+                        event -> Collections.singletonList(event.getOriginalThreadId())));
+        events.forEach(
+                event -> otidToParent.computeIfAbsent(event.getOriginalThreadId(), k -> Collections.emptyList()));
+
+        List<Long> sortedOtids = new ArrayList<>();
+        try {
+            TopologicalSort.sortFromParentLists(otidToParent, sortedOtids);
+        } catch (TopologicalSort.TopologicalSortingException e) {
+            throw new RuntimeException(e);
+        }
+        sortedOtids.forEach(otid -> {
+            List<Long> parents = otidToParent.get(otid);
+            if (crntState.getThreadInfos().getTtidFromOtid(otid).isPresent()) {
+                return;
+            }
+
+            if (parents.isEmpty()) {
+                crntState.createAndRegisterThreadInfo(otid, OptionalInt.empty());
+                return;
+            }
+            assert parents.size() == 1;
+            OptionalInt parentTtid = crntState.getThreadInfos().getTtidFromOtid(parents.get(0));
+            assert parentTtid.isPresent();
+            crntState.createAndRegisterThreadInfo(otid, parentTtid);
+        });
     }
 
     private void splitTracesIntoThreadsForSameOtidAndDepth(
@@ -248,11 +284,9 @@ public class TraceCache {
         ThreadInfo threadInfo;
         if (signalDepth == 0) {
             OptionalInt ttid = traceState.getThreadInfos().getTtidFromOtid(otid);
-            if (ttid.isPresent()) {
-                threadInfo = traceState.getThreadInfos().getThreadInfo(ttid.getAsInt());
-            } else {
-                threadInfo = traceState.createAndRegisterThreadInfo(otid);
-            }
+            // Should be present because we should have already called registerNewThreads.
+            assert ttid.isPresent();
+            threadInfo = traceState.getThreadInfos().getThreadInfo(ttid.getAsInt());
         } else {
             Optional<ReadonlyEventInterface> startEvent = getSignalStartEvent(events, start, end);
             if (!startEvent.isPresent()) {

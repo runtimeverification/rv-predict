@@ -1,6 +1,9 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.signals.SignalMask;
+import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskForEvents;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -24,10 +27,12 @@ import java.util.Set;
  * Also note that a signal is treated as a normal thread most of the time.
  */
 class StateAtWindowBorder {
+    // TODO: Delete.
     private final Set<Integer> ongoingThreadsCache = new HashSet<>();
     private final Set<Integer> threadsForCurrentWindow = new HashSet<>();
     private final Set<Integer> threadsStarted = new HashSet<>();
     private final Set<Integer> threadsJoined = new HashSet<>();
+    private final Map<Integer, SignalMask> signalMasks = new HashMap<>();
     private final Map<Long, ReadonlyEventInterface> signalNumberToLastWindowEstablishEvents
             = new HashMap<>();
     private OptionalLong minEventIdForWindow = OptionalLong.empty();
@@ -43,24 +48,21 @@ class StateAtWindowBorder {
         signalNumberToLastWindowEstablishEvents.putAll(other.signalNumberToLastWindowEstablishEvents);
         threadsForCurrentWindow.clear();
         threadsForCurrentWindow.addAll(other.threadsForCurrentWindow);
+        signalMasks.clear();
+        signalMasks.putAll(other.signalMasks);
         minEventIdForWindow = other.minEventIdForWindow;
     }
 
     void initializeForNextWindow() {
         threadsForCurrentWindow.clear();
         threadsForCurrentWindow.addAll(ongoingThreadsCache);
+        threadsStarted.removeAll(threadsJoined);
+        threadsJoined.clear();
         minEventIdForWindow = OptionalLong.empty();
     }
 
     Collection<Integer> getUnfinishedTtids() {
         return ongoingThreadsCache;
-    }
-
-    void establishSignal(ReadonlyEventInterface event) {
-        Optional<ReadonlyEventInterface> previousEvent = getLastEstablishEvent(event.getSignalNumber());
-        if (!previousEvent.isPresent() || previousEvent.get().getEventId() < event.getEventId()) {
-            signalNumberToLastWindowEstablishEvents.put(event.getSignalNumber(), event);
-        }
     }
 
     Optional<ReadonlyEventInterface> getLastEstablishEvent(long signalNumber) {
@@ -73,14 +75,14 @@ class StateAtWindowBorder {
     }
 
     void registerSignal(int ttid) {
-        registerThread(ttid);
+        startThread(ttid);
     }
 
     void threadEvent(int ttid) {
         startThread(ttid);
     }
 
-    void startThread(int ttid) {
+    private void startThread(int ttid) {
         threadsStarted.add(ttid);
         threadsForCurrentWindow.add(ttid);
         if (!threadsJoined.contains(ttid)) {
@@ -93,11 +95,25 @@ class StateAtWindowBorder {
         ongoingThreadsCache.remove(ttid);
     }
 
-    void processEvent(long eventId) {
-        if (!minEventIdForWindow.isPresent()) {
-            minEventIdForWindow = OptionalLong.of(eventId);
+    void processEvent(ReadonlyEventInterface event, int ttid) {
+        if (event.isSignalEvent()) {
+            if (event.getType() == EventType.ESTABLISH_SIGNAL) {
+                establishSignal(event);
+            } else if (event.getType() == EventType.ENTER_SIGNAL) {
+                registerSignal(ttid);
+            } else if (event.getType() == EventType.EXIT_SIGNAL) {
+                joinThread(ttid);
+            }
         }
-        minEventIdForWindow = OptionalLong.of(Math.min(eventId, minEventIdForWindow.getAsLong()));
+        processEvent(event.getEventId());
+    }
+
+    void processSignalMasks(SignalMaskForEvents signalMasks) {
+        this.signalMasks.putAll(signalMasks.extractTtidToLastEventMap());
+    }
+
+    Optional<SignalMask> getSignalMaskForTtid(int ttid) {
+        return Optional.ofNullable(signalMasks.get(ttid));
     }
 
     boolean threadWasStarted(int ttid) {
@@ -116,5 +132,35 @@ class StateAtWindowBorder {
         OptionalLong localMinEventIdForWindow = minEventIdForWindow;
         assert localMinEventIdForWindow.isPresent();
         return localMinEventIdForWindow.getAsLong();
+    }
+
+    private void processEvent(long eventId) {
+        if (!minEventIdForWindow.isPresent()) {
+            minEventIdForWindow = OptionalLong.of(eventId);
+        }
+        minEventIdForWindow = OptionalLong.of(Math.min(eventId, minEventIdForWindow.getAsLong()));
+    }
+
+    private void establishSignal(ReadonlyEventInterface event) {
+        Optional<ReadonlyEventInterface> previousEvent = getLastEstablishEvent(event.getSignalNumber());
+        if (!previousEvent.isPresent() || previousEvent.get().getEventId() < event.getEventId()) {
+            signalNumberToLastWindowEstablishEvents.put(event.getSignalNumber(), event);
+        }
+    }
+
+    Optional<SignalMask> getLastMask(int ttid) {
+        return Optional.ofNullable(signalMasks.get(ttid));
+    }
+
+    public Map<Integer,SignalMask> getSignalMasks() {
+        return signalMasks;
+    }
+
+    public Set<Integer> getStartedThreads() {
+        return threadsStarted;
+    }
+
+    public Set<Integer> getFinishedThreads() {
+        return threadsJoined;
     }
 }

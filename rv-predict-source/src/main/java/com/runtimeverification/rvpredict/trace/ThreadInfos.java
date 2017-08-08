@@ -29,4 +29,8 @@ public class ThreadInfos {
     public ThreadInfo getThreadInfo(int ttid) {
         return ttidToThreadInfo.get(ttid);
     }
+
+    public Map<Long, Integer> getOtidToTtid() {
+        return otidToTtid;
+    }
 }

@@ -52,16 +52,14 @@ public class TraceCacheTest {
     private static final long VALUE_1 = 900;
     private static final long GENERATION = 1000;
 
-    private static final ThreadInfo TTID_1_OTID_1_THREAD = new ThreadInfo(
-            ThreadType.THREAD, NEW_THREAD_ID, THREAD_ID, OptionalLong.empty(), OptionalLong.empty(), 0);
-    private static final ThreadInfo TTID_2_OTID_2_THREAD = new ThreadInfo(
-            ThreadType.THREAD, NEW_THREAD_ID_2, THREAD_ID_2, OptionalLong.empty(), OptionalLong.empty(), 0);
-    private static final ThreadInfo TTID_3_OTID_1_SIGNAL = new ThreadInfo(
-            ThreadType.SIGNAL, NEW_THREAD_ID_3, THREAD_ID, OptionalLong.of(SIGNAL_NUMBER), OptionalLong.of(SIGNAL_HANDLER_ADDRESS),
-            1);
-    private static final ThreadInfo TTID_4_OTID_1_SIGNAL = new ThreadInfo(
-            ThreadType.SIGNAL, NEW_THREAD_ID_4, THREAD_ID, OptionalLong.of(SIGNAL_NUMBER), OptionalLong.of(SIGNAL_HANDLER_ADDRESS),
-            1);
+    private static final ThreadInfo TTID_1_OTID_1_THREAD = ThreadInfo.createThreadInfo(
+            NEW_THREAD_ID, THREAD_ID, OptionalInt.empty());
+    private static final ThreadInfo TTID_2_OTID_2_THREAD = ThreadInfo.createThreadInfo(
+            NEW_THREAD_ID_2, THREAD_ID_2, OptionalInt.empty());
+    private static final ThreadInfo TTID_3_OTID_1_SIGNAL = ThreadInfo.createSignalInfo(
+            NEW_THREAD_ID_3, THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, 1);
+    private static final ThreadInfo TTID_4_OTID_1_SIGNAL = ThreadInfo.createSignalInfo(
+            NEW_THREAD_ID_4, THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, 1);
 
     @Mock private Context mockContext;
     @Mock private Configuration mockConfiguration;
@@ -83,18 +81,22 @@ public class TraceCacheTest {
     }
 
     @Test
-    public void nop() {
-    }
-
-    @Test
     public void createsOneRawTracePerThread() throws IOException {
         mockConfiguration.windowSize = 10;
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
         when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
-        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID_2)).thenReturn(TTID_2_OTID_2_THREAD);
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID, OptionalInt.empty())).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID_2, OptionalInt.empty())).thenReturn(TTID_2_OTID_2_THREAD);
+
+        when(mockThreadInfos.getThreadInfo(TTID_1_OTID_1_THREAD.getId())).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockThreadInfos.getThreadInfo(TTID_2_OTID_2_THREAD.getId())).thenReturn(TTID_2_OTID_2_THREAD);
+
+        when(mockThreadInfos.getTtidFromOtid(TTID_1_OTID_1_THREAD.getOriginalThreadId()))
+                .thenReturn(OptionalInt.of(TTID_1_OTID_1_THREAD.getId()));
+        when(mockThreadInfos.getTtidFromOtid(TTID_2_OTID_2_THREAD.getOriginalThreadId()))
+                .thenReturn(OptionalInt.of(TTID_2_OTID_2_THREAD.getId()));
 
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
@@ -142,9 +144,15 @@ public class TraceCacheTest {
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
         when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID, OptionalInt.empty())).thenReturn(TTID_1_OTID_1_THREAD);
         when(mockTraceState.createAndRegisterSignalInfo(THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, ONE_SIGNAL))
                 .thenReturn(TTID_3_OTID_1_SIGNAL);
+
+        when(mockThreadInfos.getThreadInfo(TTID_1_OTID_1_THREAD.getId())).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockThreadInfos.getThreadInfo(TTID_3_OTID_1_SIGNAL.getId())).thenReturn(TTID_3_OTID_1_SIGNAL);
+
+        when(mockThreadInfos.getTtidFromOtid(TTID_1_OTID_1_THREAD.getOriginalThreadId()))
+                .thenReturn(OptionalInt.of(TTID_1_OTID_1_THREAD.getId()));
 
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
@@ -190,9 +198,16 @@ public class TraceCacheTest {
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
         when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
-        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID)).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockTraceState.createAndRegisterThreadInfo(THREAD_ID, OptionalInt.empty())).thenReturn(TTID_1_OTID_1_THREAD);
         when(mockTraceState.createAndRegisterSignalInfo(THREAD_ID, SIGNAL_NUMBER, SIGNAL_HANDLER_ADDRESS, ONE_SIGNAL))
                 .thenReturn(TTID_3_OTID_1_SIGNAL).thenReturn(TTID_4_OTID_1_SIGNAL);
+
+        when(mockThreadInfos.getThreadInfo(TTID_1_OTID_1_THREAD.getId())).thenReturn(TTID_1_OTID_1_THREAD);
+        when(mockThreadInfos.getThreadInfo(TTID_3_OTID_1_SIGNAL.getId())).thenReturn(TTID_3_OTID_1_SIGNAL);
+        when(mockThreadInfos.getThreadInfo(TTID_4_OTID_1_SIGNAL.getId())).thenReturn(TTID_4_OTID_1_SIGNAL);
+
+        when(mockThreadInfos.getTtidFromOtid(TTID_1_OTID_1_THREAD.getOriginalThreadId()))
+                .thenReturn(OptionalInt.of(TTID_1_OTID_1_THREAD.getId()));
 
         List<ReadonlyEventInterface> beginThread1 = beginThread(THREAD_ID);
         List<ReadonlyEventInterface> readData1Thread1 = readData(THREAD_ID, NO_SIGNAL);
@@ -291,6 +306,7 @@ public class TraceCacheTest {
         when(mockConfiguration.stacks()).thenReturn(false);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockTraceState.initNextTraceWindow(any())).thenReturn(mockTrace);
+        when(mockThreadInfos.getTtidFromOtid(anyLong())).thenReturn(OptionalInt.empty());
 
         when(mockTraceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, ONE_SIGNAL))
                 .thenReturn(OptionalInt.of(NEW_THREAD_ID_3));

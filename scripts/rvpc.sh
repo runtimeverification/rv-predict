@@ -62,9 +62,10 @@ fi
 
 # -ldl for dlsym()
 # -lrt for timer_create() et cetera, in hacks.c
+# -latomic for atomic_is_lock_free()
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -pthread -g"
+	runtime="-Wl,-T$HOME/ldscript -L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -latomic -pthread -g"
 fi
 
 $compiler ${pass:-} "$@" ${runtime:-}

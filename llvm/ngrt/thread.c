@@ -5,6 +5,7 @@
 #include <errno.h> /* for ESRCH */
 #include <inttypes.h> /* for PRIu32 */
 #include <signal.h> /* for pthread_sigmask */
+#include <stdatomic.h> /* for atomic_is_lock_free */
 #include <stdint.h> /* for uint32_t */
 #include <stdlib.h> /* for EXIT_FAILURE */
 #include <stdio.h> /* for fprintf(3) */
@@ -248,9 +249,39 @@ rvp_thread_init(void)
 	ESTABLISH_PTR_TO_REAL(void (*)(void *), pthread_exit);
 }
 
+#define	ASSERT_LOCK_FREENESS(_type)	do {			\
+	typedef _type x_t;					\
+	const volatile x_t x;					\
+	if (!atomic_is_lock_free(&x)) {				\
+		errx(EXIT_FAILURE,				\
+		    "Quitting: atomic operations on type "	\
+		    "`volatile " #_type "` are not lock free "	\
+		    "as RV-Predict/C requires.");		\
+	}							\
+} while (false)
+
+static void
+rvp_assert_atomicity(void)
+{
+	ASSERT_LOCK_FREENESS(bool);
+	ASSERT_LOCK_FREENESS(int);
+	ASSERT_LOCK_FREENESS(uint64_t);
+	ASSERT_LOCK_FREENESS(int64_t);
+	ASSERT_LOCK_FREENESS(uint32_t);
+	ASSERT_LOCK_FREENESS(int32_t);
+	ASSERT_LOCK_FREENESS(uint16_t);
+	ASSERT_LOCK_FREENESS(int16_t);
+	ASSERT_LOCK_FREENESS(uint8_t);
+	ASSERT_LOCK_FREENESS(int8_t);
+	ASSERT_LOCK_FREENESS(rvp_ring_t *);
+	ASSERT_LOCK_FREENESS(rvp_ring_state_t);
+	ASSERT_LOCK_FREENESS(rvp_signal_t *);
+}
+
 static void
 rvp_init(void)
 {
+	rvp_assert_atomicity();
 	rvp_lock_init();	// needed by rvp_signal_init()
 	rvp_signal_init();
 	rvp_thread_init();
@@ -416,9 +447,6 @@ rvp_pthread_to_thread(pthread_t pthread)
 	return t;
 }
 
-/* TBD For signal-safety, avoid using mutexes and condition variables.
- * Use pthread_kill(3) and an atomic?
- */
 void
 rvp_wake_transmitter(void)
 {

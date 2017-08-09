@@ -189,18 +189,6 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
 						 RVP_RING_S_INUSE)) {
 			r->r_tid = tid;
 			r->r_idepth = idepth;
-			/* XXX some other thread may have changed to
-			 * XXX a later generation already.  probably
-			 * XXX should log a _COG immediately before _ENTERSIG
-			 * XXX so that an interruption isn't processed in
-			 * XXX a window prior to events that happened
-			 * XXX before it.
-			 * XXX
-			 * XXX XXX This issue ought to be fixed, should delete
-			 * XXX XXX the comment and the following assignment
-			 * XXX XXX and test.
-			 */
-			r->r_lgen = 0;
 			break;
 		}
 	}

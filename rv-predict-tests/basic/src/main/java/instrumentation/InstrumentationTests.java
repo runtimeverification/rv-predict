@@ -38,8 +38,26 @@ public class InstrumentationTests {
         i.intValue();
     }
 
-    public static void main(String[] args) {
+    private static void testConstructors() {
+        new ConstructorInstrumentation(
+                new ConstructorInstrumentation(), new ConstructorInstrumentation(), new ConstructorInstrumentation());
+    }
+
+    static int x = 0;
+
+    public static void main(String[] args) throws InterruptedException {
         testStackFramesMap();
+        testConstructors();
+        // This should be enough for testing that issue 458 is still fixed.
+        // https://github.com/runtimeverification/rv-predict/issues/458
+        ScalaInstrumentationTests.main(args);
+
+        Thread t1 = new Thread(() -> x++);
+        Thread t2 = new Thread(() -> x++);
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
     }
 
 }

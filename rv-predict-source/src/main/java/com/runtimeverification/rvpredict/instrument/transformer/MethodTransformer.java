@@ -1,15 +1,11 @@
 package com.runtimeverification.rvpredict.instrument.transformer;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-
 import com.runtimeverification.rvpredict.instrument.InstrumentUtils;
 import com.runtimeverification.rvpredict.instrument.RVPredictInterceptor;
 import com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethod;
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.runtime.RVPredictRuntime;
 import com.runtimeverification.rvpredict.util.Logger;
-
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
@@ -17,6 +13,11 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Optional;
+import java.util.Stack;
 
 import static com.runtimeverification.rvpredict.instrument.InstrumentUtils.*;
 import static com.runtimeverification.rvpredict.instrument.RVPredictRuntimeMethods.*;
@@ -49,12 +50,12 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
     private int crntLineNum;
 
     /**
-     * Specifies the number of constructor calls already visited in
-     * {@link #visitMethodInsn}.
+     * Contains the type of each object which was allocated before the super/this constructor call, but whose
+     * constructor was not called yet.
      * <p>
-     * Only meaningful when the method being transformed is a constructor.
+     * Present only when the method being transformed is a constructor.
      */
-    private int numOfCtorCall = 0;
+    private Optional<Stack<String>> constructorHeaderUninitializedObjects = Optional.empty();
 
     public MethodTransformer(MethodVisitor mv, String source, String className, int version,
             String name, String desc, int access, ClassLoader loader, Logger logger,
@@ -72,6 +73,9 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         this.strategy = strategy;
         this.locIdPrefix = String.format("%s(%s:", className.replace("/", ".") + "." + name,
                 source == null ? "Unknown" : source);
+        if ("<init>".equals(name)) {
+            constructorHeaderUninitializedObjects = Optional.of(new Stack<>());
+        }
     }
 
     @Override
@@ -133,6 +137,9 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
+        if (constructorHeaderUninitializedObjects.isPresent() && opcode == NEW) {
+            constructorHeaderUninitializedObjects.get().push(type);
+        }
         mv.visitTypeInsn(opcode, replaceStandardLibraryClass(type));
     }
 
@@ -179,7 +186,27 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         }
 
         /* fix issue: https://github.com/runtimeverification/rv-predict/issues/458 */
-        if ("<init>".equals(methodName) && opcode == PUTFIELD && numOfCtorCall == 0) {
+        /*
+           Having a PUTFIELD before the super/this constructor call is valid.
+           From the Java bytecode specification, 2015-02-13, section 4.9.2, Structural Constraints:
+
+           "Each instance initialization method, except for the instance initialization method
+           derived from the constructor of class Object, must call either another instance
+           initialization method of this or an instance initialization method of its direct
+           superclass super before its instance members are accessed.
+           However, instance fields of this that are declared in the current class may be
+           assigned before calling any instance initialization method."
+
+           However, it seems that passing an uninitialized (this) object to the invokeRtnMethod(LOG_FIELD_ACCESS) call,
+           which is actually a call to RVPredictRuntime.logFieldAcc, will crash the Java verifier because there is an
+           uninitialized object on the stack. Note that this will crash even if the logFieldAcc method has an empty
+           body, so the issue is the method call itself.
+
+           I (virgil.serbanuta) didn't find a reference in the bytecode specification about why this shouldn't work.
+           Properly fixing this issue will likely involve postponing all the putfield logging until after the
+           super/this constructor finished.
+         */
+        if (opcode == PUTFIELD && constructorHeaderUninitializedObjects.isPresent()) {
             mv.visitFieldInsn(opcode, owner, name, desc);
             return;
         }
@@ -255,10 +282,41 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
         owner = replaceStandardLibraryClass(owner);
         desc = replaceStandardLibraryClass(desc);
 
-        boolean isSelfCtorCall = false;
-        if ("<init>".equals(methodName) && "<init>".equals(name)) {
-            numOfCtorCall++;
-            isSelfCtorCall = numOfCtorCall == 1;
+        // We need to do some special instrumentation in two cases which make the jvm crash when verifying the code:
+        // base/super constructor calls and this() constructor calls (in Java terms). This crash is actually reasonable,
+        // because in Java the super/this call must be the first statement in the method, which means that it can't
+        // have a try block around it, although the bytecode specification may allow try-catch blocks in some cases.
+        // Also, it is less obvious whether the other method calls before the super/this call can have a try block, but
+        // we'll assume that they can.
+        //
+        // One may think that the super/this call is the first constructor call in the current constructor, but that's
+        // not true, i.e. consider the following:
+        // class Test : public A {
+        //   Test(String s) {
+        //     super(new String(s));
+        //   }
+        //   Test() {
+        //     this(new String());
+        //   }
+        // }
+        // In each of these constructors, the string constructor call will occur before the base/self constructor call,
+        // since we need to build the String in order to pass it to the constructor.
+        //
+        // One may guess that the first call to one of the current class constructor or the base class constructor is
+        // the one that matters, but that may not be true if we also have a Test(Test t) constructor and, in another
+        // constructor we call self(new Test()).
+        //
+        // To solve this, we should note that at the beginning of a constructor we may have a sequence of paired new
+        // and <init> operations, followed by an <init> without any new, which is the super or this constructor call.
+        boolean isThisOrSuperCtorCall = false;
+        if (constructorHeaderUninitializedObjects.isPresent() && "<init>".equals(name)) {
+            if (constructorHeaderUninitializedObjects.get().isEmpty()) {
+                isThisOrSuperCtorCall = true;
+                constructorHeaderUninitializedObjects = Optional.empty();
+            } else {
+                String allocatedClassName = constructorHeaderUninitializedObjects.get().pop();
+                assert allocatedClassName.equals(owner);
+            }
         }
 
         int idx = (name + desc).lastIndexOf(')');
@@ -281,7 +339,7 @@ public class MethodTransformer extends MethodVisitor implements Opcodes {
                 }
             }
         } else {
-            if (owner.startsWith("[") || isSelfCtorCall || !strategy.logCallStackEvent()) {
+            if (owner.startsWith("[") || isThisOrSuperCtorCall || !strategy.logCallStackEvent()) {
                 mv.visitMethodInsn(opcode, owner, name, desc, itf);
                 return;
             }

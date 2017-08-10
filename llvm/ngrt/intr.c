@@ -1,4 +1,5 @@
 #include <err.h>
+#include <errno.h>
 #include <inttypes.h> /* for PRId32 */
 #include <signal.h>
 #include <stdbool.h>
@@ -110,15 +111,31 @@ rvp_static_intrs_reinit(void)
 		if (sigaction(signum, &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
 
-#ifdef RVP_PERIODIC
+		long nsec = 1000 * 1000;	// 1 millisecond
+		const char *ivalenv = getenv("RVP_INTR_INTERVAL");
+		if (ivalenv != NULL) {
+			char *end;
+			errno = 0;
+			nsec = strtol(ivalenv, &end, 10);
+			if (errno != 0) {
+				err(EXIT_FAILURE,
+				    "could not interpret "
+				    "RVP_INTR_INTERVAL (%s) "
+				    "as a decimal number", ivalenv);
+			} else if (*end != '\0') {
+				errx(EXIT_FAILURE,
+				    "garbage at end of RVP_INTR_INTERVAL (%s)",
+				    ivalenv);
+			}
+		}
 		const struct itimerspec it = {
 			  .it_value = {
 				  .tv_sec = 0
-				, .tv_nsec = 100 * 1000
+				, .tv_nsec = nsec
 			  }
 			, .it_interval = {
 				  .tv_sec = 0
-				, .tv_nsec = 100 * 1000
+				, .tv_nsec = nsec
 			  }
 		};
 
@@ -130,7 +147,6 @@ rvp_static_intrs_reinit(void)
 		if (timer_create(CLOCK_MONOTONIC, &sigev, &timerid) == -1)
 			err(EXIT_FAILURE, "%s: timer_create", __func__);
 		timer_settime(timerid, 0, &it, NULL);
-#endif
 	}
 	nassigned = rvp_static_nintrs;
 }

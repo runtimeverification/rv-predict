@@ -14,12 +14,17 @@
             </includes>
             <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
         </dependencySet>
+        <dependencySet>
+            <includes>
+                <include>com.runtimeverification.rvpredict:rv-predict-jar:*:assembly-with-dll:*</include>
+            </includes>
+        </dependencySet>
     </dependencySets>
     <moduleSets>
       <moduleSet>
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
-                <include>com.runtimeverification.rvpredict:rv-predict-jar</include>
+                <include>com.runtimeverification.rvpredict:rv-predict-jar:*:assembly-with-dll:*</include>
             </includes>
             <binaries>
                 <outputDirectory>/</outputDirectory>

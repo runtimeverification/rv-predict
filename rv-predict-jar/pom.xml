@@ -44,7 +44,7 @@
                         </goals>
                         <configuration>
                             <descriptor>src/main/assembly/assembly.xml</descriptor>
-                            <appendAssemblyId>false</appendAssemblyId>
+                            <!--appendAssemblyId>false</appendAssemblyId-->
                             <archive>
                                 <manifest>
                                     <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>
@@ -71,6 +71,9 @@
                             <goal>jarjar</goal>
                         </goals>
                         <configuration>
+                            <includes>
+                                <include>:rv-predict-jar::assembly-with-dll</include>
+                            </includes>
                             <excludes>
                                 <exclude>junit:junit</exclude>
                                 <exclude>org.hamcrest:*</exclude>

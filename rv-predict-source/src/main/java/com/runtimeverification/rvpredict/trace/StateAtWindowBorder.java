@@ -27,7 +27,6 @@ import java.util.Set;
  * Also note that a signal is treated as a normal thread most of the time.
  */
 class StateAtWindowBorder {
-    // TODO: Delete.
     private final Set<Integer> ongoingThreadsCache = new HashSet<>();
     private final Set<Integer> threadsForCurrentWindow = new HashSet<>();
     private final Set<Integer> threadsStarted = new HashSet<>();
@@ -112,10 +111,6 @@ class StateAtWindowBorder {
         this.signalMasks.putAll(signalMasks.extractTtidToLastEventMap());
     }
 
-    Optional<SignalMask> getSignalMaskForTtid(int ttid) {
-        return Optional.ofNullable(signalMasks.get(ttid));
-    }
-
     boolean threadWasStarted(int ttid) {
         return threadsStarted.contains(ttid);
     }
@@ -148,19 +143,15 @@ class StateAtWindowBorder {
         }
     }
 
-    Optional<SignalMask> getLastMask(int ttid) {
-        return Optional.ofNullable(signalMasks.get(ttid));
-    }
-
-    public Map<Integer,SignalMask> getSignalMasks() {
+    Map<Integer,SignalMask> getSignalMasks() {
         return signalMasks;
     }
 
-    public Set<Integer> getStartedThreads() {
+    Set<Integer> getStartedThreads() {
         return threadsStarted;
     }
 
-    public Set<Integer> getFinishedThreads() {
+    Set<Integer> getFinishedThreads() {
         return threadsJoined;
     }
 }

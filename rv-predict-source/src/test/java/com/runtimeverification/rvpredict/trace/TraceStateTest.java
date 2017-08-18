@@ -159,7 +159,6 @@ public class TraceStateTest {
 
     @Test
     public void processesStartJoinThreadEvents() throws InvalidTraceDataException {
-        /*
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         tu.setTraceState(traceState);
@@ -167,6 +166,7 @@ public class TraceStateTest {
         RawTrace rawTrace = tu.createRawTrace(
                 tu.threadStart(THREAD_ID_2),
                 tu.threadJoin(THREAD_ID_2));
+        traceState.createAndRegisterThreadInfo(THREAD_ID_2, OptionalInt.of(rawTrace.getThreadInfo().getId()));
         traceState.fastProcess(rawTrace);
 
         Assert.assertThat(traceState.getThreadsForCurrentWindow(), hasSize(2));
@@ -174,7 +174,6 @@ public class TraceStateTest {
         Assert.assertTrue(ttid.isPresent());
         Assert.assertTrue(traceState.getThreadStartsInTheCurrentWindow(ttid.getAsInt()));
         Assert.assertTrue(traceState.getThreadEndsInTheCurrentWindow(ttid.getAsInt()));
-        */
     }
 
     @Test

@@ -12,12 +12,10 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.util.Arrays;
 import java.util.Collections;
 
 import static com.runtimeverification.rvpredict.testutils.MoreAsserts.isAbsent;
 import static com.runtimeverification.rvpredict.testutils.MoreAsserts.isPresentWithValue;
-import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)

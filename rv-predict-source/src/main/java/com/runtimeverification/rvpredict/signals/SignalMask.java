@@ -10,22 +10,9 @@ public class SignalMask {
         DISABLED,
         UNKNOWN
     }
-    private static final long ALL_SIGNALS_DISABLED = ~(0L);
     public static final SignalMask UNKNOWN_MASK = new SignalMask();
 
     private final SignalMaskBit[] maskBits;
-
-    public static SignalMask fromBitMask(long mask) {
-        SignalMask signalMask = new SignalMask();
-        signalMask.setMask(mask);
-        return signalMask;
-    }
-
-    public static SignalMask newDisabledMask() {
-        SignalMask signalMask = new SignalMask();
-        signalMask.setMask(ALL_SIGNALS_DISABLED);
-        return signalMask;
-    }
 
     private SignalMask(SignalMask signalMask) {
         maskBits = Arrays.copyOf(signalMask.maskBits, signalMask.maskBits.length);
@@ -108,5 +95,66 @@ public class SignalMask {
         SignalMask enabled = new SignalMask(this);
         enabled.maskBits[signalNumber] = value;
         return enabled;
+    }
+
+    private String signalMaskBitToShortString(SignalMaskBit bit) {
+        switch (bit) {
+            case UNKNOWN:
+                return "u";
+            case ENABLED:
+                return "e";
+            case DISABLED:
+                return "d";
+            default:
+                throw new IllegalArgumentException("Unknown bit: " + bit);
+        }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (!(obj instanceof SignalMask)) {
+            return false;
+        }
+        SignalMask other = (SignalMask) obj;
+        return Arrays.equals(maskBits, other.maskBits);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        SignalMaskBit previousBit = maskBits[0];
+        int previousBitCount = 0;
+        boolean hadOneOutput = false;
+        for (SignalMaskBit bit : maskBits) {
+            if (bit == previousBit) {
+                previousBitCount++;
+                continue;
+            }
+            if (hadOneOutput) {
+                sb.append(",");
+            }
+            if (previousBitCount > 1) {
+                sb.append(previousBitCount);
+                sb.append("*");
+            }
+            sb.append(signalMaskBitToShortString(previousBit));
+            hadOneOutput = true;
+            previousBit = bit;
+            previousBitCount = 1;
+        }
+        if (previousBitCount > 0) {
+            if (hadOneOutput) {
+                sb.append(",");
+            }
+            sb.append(previousBitCount);
+            sb.append("*");
+            sb.append(signalMaskBitToShortString(previousBit));
+        }
+        sb.append("]");
+        return sb.toString();
     }
 }

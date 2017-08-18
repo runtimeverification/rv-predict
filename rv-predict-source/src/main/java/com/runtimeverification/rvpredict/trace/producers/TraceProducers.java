@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.trace.producers;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.LeafProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.ProducerModule;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
@@ -13,7 +14,7 @@ import com.runtimeverification.rvpredict.trace.producers.base.OtidToSignalDepthT
 import com.runtimeverification.rvpredict.trace.producers.base.RawTraces;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
-import com.runtimeverification.rvpredict.trace.producers.base.StartAndJoinEventsForWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetLeaf;
@@ -37,63 +38,65 @@ import java.util.Set;
 public class TraceProducers extends ProducerModule {
     public final LeafProducerWrapper<List<RawTrace>, RawTraces> rawTraces =
             new LeafProducerWrapper<>(new RawTraces(), this);
-    public final LeafProducerWrapper<Collection<Integer>, TtidsForCurrentWindow> ttidsForCurrentWindow =
+    private final LeafProducerWrapper<Collection<Integer>, TtidsForCurrentWindow> ttidsForCurrentWindow =
             new LeafProducerWrapper<>(new TtidsForCurrentWindow(), this);
     public final LeafProducerWrapper<ThreadInfos, ThreadInfosComponent> threadInfosComponent =
             new LeafProducerWrapper<>(new ThreadInfosComponent(), this);
-    public final LeafProducerWrapper<Map<Integer, SignalMask>,  SignalMaskAtWindowStartLeaf> signalMaskAtWindowStartLeaf =
+    private final LeafProducerWrapper<Map<Integer, SignalMask>,  SignalMaskAtWindowStartLeaf>
+            signalMaskAtWindowStartLeaf =
             new LeafProducerWrapper<>(new SignalMaskAtWindowStartLeaf(), this);
     public final LeafProducerWrapper<Map<Long, Integer>, OtidToMainTtid> otidToMainTtid =
             new LeafProducerWrapper<>(new OtidToMainTtid(), this);
-    public final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsStartedAtWindowStart =
+    private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsStartedAtWindowStart =
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
-    public final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsStartedAtWindowEnd =
+    private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsStartedAtWindowEnd =
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
-    public final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsFinishedAtWindowStart =
+    private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsFinishedAtWindowStart =
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
-    public final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsFinishedAtWindowEnd =
+    private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsFinishedAtWindowEnd =
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
 
     public final ComputingProducerWrapper<InterThreadSyncEvents> interThreadSyncEvents =
             new ComputingProducerWrapper<>(new InterThreadSyncEvents(rawTraces), this);
-    public final ComputingProducerWrapper<StartAndJoinEventsForWindow> startAndJoinEventsForWindow =
+    public final ComputingProducerWrapper<TtidToStartAndJoinEventsForWindow> startAndJoinEventsForWindow =
             new ComputingProducerWrapper<>(
-                    new StartAndJoinEventsForWindow(interThreadSyncEvents, otidToMainTtid), this);
-    public final ComputingProducerWrapper<TtidSetDifference> threadStartsInTheCurrentWindow =
-            new ComputingProducerWrapper<>(
-                    new TtidSetDifference(ttidsStartedAtWindowEnd, ttidsStartedAtWindowStart),
-                    this);
-    public final ComputingProducerWrapper<TtidSetDifference> threadEndsInTheCurrentWindow =
+                    new TtidToStartAndJoinEventsForWindow(interThreadSyncEvents, otidToMainTtid), this);
+    private final ComputingProducerWrapper<TtidSetDifference> threadStartsInTheCurrentWindow =
             new ComputingProducerWrapper<>(
                     new TtidSetDifference(ttidsStartedAtWindowEnd, ttidsStartedAtWindowStart),
                     this);
-    public final ComputingProducerWrapper<TtidSetDifference> unfinishedTtidsAtWindowStart =
+    private final ComputingProducerWrapper<TtidSetDifference> threadEndsInTheCurrentWindow =
+            new ComputingProducerWrapper<>(
+                    new TtidSetDifference(ttidsStartedAtWindowEnd, ttidsStartedAtWindowStart),
+                    this);
+    private final ComputingProducerWrapper<TtidSetDifference> unfinishedTtidsAtWindowStart =
             new ComputingProducerWrapper<>(
                     new TtidSetDifference(ttidsStartedAtWindowStart, ttidsFinishedAtWindowStart),
                     this);
-    public final ComputingProducerWrapper<OtidToSignalDepthToTtidAtWindowStart> otidToSignalDepthToTtidAtWindowStart =
+    private final ComputingProducerWrapper<OtidToSignalDepthToTtidAtWindowStart> otidToSignalDepthToTtidAtWindowStart =
             new ComputingProducerWrapper<>(
                     new OtidToSignalDepthToTtidAtWindowStart(unfinishedTtidsAtWindowStart, threadInfosComponent),
                     this);
-    public final ComputingProducerWrapper<SignalMaskAtWindowStart> signalMaskAtWindowStartWithoutInferrences =
+    private final ComputingProducerWrapper<SignalMaskAtWindowStart<? extends ProducerState>>
+            signalMaskAtWindowStartWithoutInferrences =
             new ComputingProducerWrapper<>(
                     new SignalMaskAtWindowStartWithoutInferrences(signalMaskAtWindowStartLeaf), this);
     public final ComputingProducerWrapper<MinEventIdForWindow> minEventIdForWindow =
             new ComputingProducerWrapper<>(new MinEventIdForWindow(rawTraces), this);
-    public final ComputingProducerWrapper<RawTracesByTtid> rawTracesByTtid =
+    private final ComputingProducerWrapper<RawTracesByTtid> rawTracesByTtid =
             new ComputingProducerWrapper<>(new RawTracesByTtid(rawTraces), this);
-    public final ComputingProducerWrapper<SortedTtidsWithParentFirst> sortedTtidsWithParentFirst =
+    private final ComputingProducerWrapper<SortedTtidsWithParentFirst> sortedTtidsWithParentFirst =
             new ComputingProducerWrapper<>(
                     new SortedTtidsWithParentFirst(ttidsForCurrentWindow, threadInfosComponent),
                     this);
-    public final ComputingProducerWrapper<InterruptedEvents > interruptedEvents =
+    private final ComputingProducerWrapper<InterruptedEvents > interruptedEvents =
             new ComputingProducerWrapper<>(
                     new InterruptedEvents(
                             rawTracesByTtid, ttidsForCurrentWindow, threadInfosComponent,
                             threadStartsInTheCurrentWindow, threadEndsInTheCurrentWindow,
                             minEventIdForWindow),
                     this);
-    public final ComputingProducerWrapper<SignalMaskForEvents> signalMaskForEventsWithoutInferrences =
+    private final ComputingProducerWrapper<SignalMaskForEvents> signalMaskForEventsWithoutInferrences =
             new ComputingProducerWrapper<>(
                     new SignalMaskForEvents(
                             rawTracesByTtid,
@@ -102,7 +105,7 @@ public class TraceProducers extends ProducerModule {
                             otidToMainTtid,
                             interruptedEvents, threadInfosComponent),
                     this);
-    public final ComputingProducerWrapper<SignalEnabledAtStartInferenceFromInterruptions>
+    private final ComputingProducerWrapper<SignalEnabledAtStartInferenceFromInterruptions>
             signalEnabledAtStartInferrenceFromInterruptions =
             new ComputingProducerWrapper<>(
                     new SignalEnabledAtStartInferenceFromInterruptions(
@@ -112,11 +115,12 @@ public class TraceProducers extends ProducerModule {
                             threadInfosComponent,
                             otidToSignalDepthToTtidAtWindowStart),
                     this);
-    public final ComputingProducerWrapper<SignalEnabledAtStartInferenceFromReads> signalEnabledAtStartInferenceFromReads =
+    private final ComputingProducerWrapper<SignalEnabledAtStartInferenceFromReads>
+            signalEnabledAtStartInferenceFromReads =
             new ComputingProducerWrapper<>(
                     new SignalEnabledAtStartInferenceFromReads(rawTraces, signalMaskForEventsWithoutInferrences),
                     this);
-    public final ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure>
+    private final ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure>
             signalEnabledAtStartInferenceTransitiveClosure =
             new ComputingProducerWrapper<>(
                     new SignalEnabledAtStartInferenceTransitiveClosure(
@@ -129,10 +133,13 @@ public class TraceProducers extends ProducerModule {
                             signalMaskAtWindowStartWithoutInferrences,
                             startAndJoinEventsForWindow),
                     this);
-    public final ComputingProducerWrapper<SignalMaskAtWindowOrThreadStartWithInferences> signalMaskAtWindowStartWithInferences =
+    private final ComputingProducerWrapper<SignalMaskAtWindowOrThreadStartWithInferences>
+            signalMaskAtWindowStartWithInferences =
             new ComputingProducerWrapper<>(
                     new SignalMaskAtWindowOrThreadStartWithInferences(
-                            signalMaskAtWindowStartWithoutInferrences, signalEnabledAtStartInferenceTransitiveClosure, ttidsForCurrentWindow),
+                            signalMaskAtWindowStartWithoutInferrences,
+                            signalEnabledAtStartInferenceTransitiveClosure,
+                            ttidsForCurrentWindow),
                     this);
     public final ComputingProducerWrapper<SignalMaskForEvents> signalMaskForEvents =
             new ComputingProducerWrapper<>(

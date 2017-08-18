@@ -433,7 +433,13 @@ public class MoreAsserts {
                 }
                 Map map = maybeMap.get();
                 if (!map.isEmpty()) {
-                    description.appendText("map had " + map.size() + "elements.");
+                    description.appendText("map had " + map.size() + " element");
+                    if (map.size() > 1) {
+                        description.appendText("s");
+                    }
+                    description.appendText(": ");
+                    appendMap(map, description);
+                    description.appendText(".");
                 }
             }
         };

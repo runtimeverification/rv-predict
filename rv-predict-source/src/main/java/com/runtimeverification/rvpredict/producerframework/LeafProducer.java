@@ -10,7 +10,9 @@ public abstract class LeafProducer<T> extends Producer {
     }
 
     protected T get() {
-        assert value.isPresent() : this.getClass();
+        if (!value.isPresent()) {
+            throw new IllegalStateException("Producer value needed, but not set in class " + this.getClass());
+        }
         return value.get();
     }
 
@@ -21,6 +23,8 @@ public abstract class LeafProducer<T> extends Producer {
 
     @Override
     protected void ensureComputed() {
-        assert value.isPresent() : this.getClass();
+        if (!value.isPresent()) {
+            throw new IllegalStateException("Producer value needed, but not set in class " + this.getClass());
+        }
     }
 }

@@ -38,7 +38,7 @@ import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToObjectMap;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
-import com.runtimeverification.rvpredict.trace.producers.base.StartAndJoinEventsForWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.util.ArrayDeque;
@@ -730,12 +730,12 @@ public class Trace {
     }
 
     private boolean normalThreadsAreInHappensBeforeRelation(int ttid1, int ttid2) {
-        StartAndJoinEventsForWindow startAndJoinEventsForWindow =
+        TtidToStartAndJoinEventsForWindow ttidToStartAndJoinEventsForWindow =
                 state.getTraceProducers().startAndJoinEventsForWindow.getComputed();
-        Optional<ReadonlyEventInterface> start1 = startAndJoinEventsForWindow.getStartEvent(ttid1);
-        Optional<ReadonlyEventInterface> join1 = startAndJoinEventsForWindow.getJoinEvent(ttid1);
-        Optional<ReadonlyEventInterface> start2 = startAndJoinEventsForWindow.getStartEvent(ttid2);
-        Optional<ReadonlyEventInterface> join2 = startAndJoinEventsForWindow.getJoinEvent(ttid2);
+        Optional<ReadonlyEventInterface> start1 = ttidToStartAndJoinEventsForWindow.getStartEvent(ttid1);
+        Optional<ReadonlyEventInterface> join1 = ttidToStartAndJoinEventsForWindow.getJoinEvent(ttid1);
+        Optional<ReadonlyEventInterface> start2 = ttidToStartAndJoinEventsForWindow.getStartEvent(ttid2);
+        Optional<ReadonlyEventInterface> join2 = ttidToStartAndJoinEventsForWindow.getJoinEvent(ttid2);
         return     (start1.isPresent() && join2.isPresent() && eventsAreInThreadOrder(join2.get(), start1.get()))
                 || (start2.isPresent() && join1.isPresent() && eventsAreInThreadOrder(join1.get(), start2.get()));
     }

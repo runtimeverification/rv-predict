@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace.producers.base;
 
 import com.runtimeverification.rvpredict.algorithm.TopologicalSort;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
@@ -17,23 +18,29 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SortedTtidsWithParentFirst extends ComputingProducer {
+public class SortedTtidsWithParentFirst extends ComputingProducer<SortedTtidsWithParentFirst.State> {
     private final TtidsForCurrentWindow ttidsForCurrentWindow;
     private final ThreadInfosComponent threadInfosComponent;
 
-    private final List<Integer> sortedTtidsWithParentFirst = new ArrayList<>();
+    protected static class State implements ProducerState {
+        private final List<Integer> sortedTtidsWithParentFirst = new ArrayList<>();
+
+        @Override
+        public void reset() {
+            sortedTtidsWithParentFirst.clear();
+        }
+    }
 
     public SortedTtidsWithParentFirst(
             ComputingProducerWrapper<TtidsForCurrentWindow> ttidsForCurrentWindow,
             ComputingProducerWrapper<ThreadInfosComponent> threadInfosComponent) {
+        super(new State());
         this.ttidsForCurrentWindow = ttidsForCurrentWindow.getAndRegister(this);
         this.threadInfosComponent = threadInfosComponent.getAndRegister(this);
     }
 
     @Override
     protected void compute() {
-        sortedTtidsWithParentFirst.clear();
-
         sortNormalThreads();
         addSignals();
     }
@@ -50,11 +57,11 @@ public class SortedTtidsWithParentFirst extends ComputingProducer {
         Set<Integer> relevantTtids = new HashSet<>(ttidToParent.keySet());
         relevantTtids.forEach(ttid -> fillMissingParents(ttid, ttidToParent));
         try {
-            TopologicalSort.sortFromParentLists(ttidToParent, sortedTtidsWithParentFirst);
+            TopologicalSort.sortFromParentLists(ttidToParent, getState().sortedTtidsWithParentFirst);
         } catch (TopologicalSort.TopologicalSortingException e) {
             throw new IllegalStateException(e);
         }
-        sortedTtidsWithParentFirst.removeIf(ttid -> !relevantTtids.contains(ttid));
+        getState().sortedTtidsWithParentFirst.removeIf(ttid -> !relevantTtids.contains(ttid));
     }
 
     private void fillMissingParents(Integer ttid, Map<Integer, List<Integer>> ttidToParent) {
@@ -86,11 +93,11 @@ public class SortedTtidsWithParentFirst extends ComputingProducer {
                 .collect(Collectors.toList());
         signals.sort(Comparator.comparingInt(ThreadInfo::getSignalDepth));
         for (ThreadInfo threadInfo : signals) {
-            sortedTtidsWithParentFirst.add(threadInfo.getId());
+            getState().sortedTtidsWithParentFirst.add(threadInfo.getId());
         }
     }
 
     public List<Integer> getTtids() {
-        return sortedTtidsWithParentFirst;
+        return getState().sortedTtidsWithParentFirst;
     }
 }

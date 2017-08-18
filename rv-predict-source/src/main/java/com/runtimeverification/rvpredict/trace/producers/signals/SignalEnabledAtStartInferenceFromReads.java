@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
@@ -13,25 +14,32 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class SignalEnabledAtStartInferenceFromReads extends ComputingProducer {
+public class SignalEnabledAtStartInferenceFromReads
+        extends ComputingProducer<SignalEnabledAtStartInferenceFromReads.State> {
     private final RawTraces rawTraces;
     private final SignalMaskForEvents signalMaskForEvents;
 
-    private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
-    private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+    protected static class State implements ProducerState {
+        private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+        private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+
+        @Override
+        public void reset() {
+            signalToTtidWhereEnabledAtStart.clear();
+            signalToTtidWhereDisabledAtStart.clear();
+        }
+    }
 
     public SignalEnabledAtStartInferenceFromReads(
             ComputingProducerWrapper<RawTraces> rawTraces,
             ComputingProducerWrapper<SignalMaskForEvents> signalMaskForEvents) {
+        super(new State());
         this.rawTraces = rawTraces.getAndRegister(this);
         this.signalMaskForEvents =  signalMaskForEvents.getAndRegister(this);
     }
 
     @Override
     protected void compute() {
-        signalToTtidWhereEnabledAtStart.clear();
-        signalToTtidWhereDisabledAtStart.clear();
-
         rawTraces.getTraces().forEach(rawTrace -> {
             for (int i = 0; i < rawTrace.size(); i++) {
                 ReadonlyEventInterface event = rawTrace.event(i);
@@ -52,12 +60,12 @@ public class SignalEnabledAtStartInferenceFromReads extends ComputingProducer {
                             break;
                         case UNKNOWN:
                             if (Signals.signalIsEnabled(signalNumber, mask)) {
-                                signalToTtidWhereEnabledAtStart
+                                getState().signalToTtidWhereEnabledAtStart
                                         .computeIfAbsent(signalNumber, k -> new HashSet<>())
                                         .add(ttid);
                             } else {
                                 assert Signals.signalIsDisabledInFullMask(signalNumber, mask);
-                                signalToTtidWhereDisabledAtStart
+                                getState().signalToTtidWhereDisabledAtStart
                                         .computeIfAbsent(signalNumber, k -> new HashSet<>())
                                         .add(ttid);
                             }
@@ -71,10 +79,10 @@ public class SignalEnabledAtStartInferenceFromReads extends ComputingProducer {
     }
 
     Map<Long, Set<Integer>> getSignalToTtidWhereEnabledAtStart() {
-        return signalToTtidWhereEnabledAtStart;
+        return getState().signalToTtidWhereEnabledAtStart;
     }
 
     Map<Long, Set<Integer>> getSignalToTtidWhereDisabledAtStart() {
-        return signalToTtidWhereDisabledAtStart;
+        return getState().signalToTtidWhereDisabledAtStart;
     }
 }

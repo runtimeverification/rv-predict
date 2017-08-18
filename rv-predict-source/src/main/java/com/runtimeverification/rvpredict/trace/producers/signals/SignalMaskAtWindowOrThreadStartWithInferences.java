@@ -1,22 +1,36 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class SignalMaskAtWindowOrThreadStartWithInferences extends SignalMaskAtWindowStart {
-    private final SignalMaskAtWindowStart signalMaskAtWindowStart;
+public class SignalMaskAtWindowOrThreadStartWithInferences
+        extends SignalMaskAtWindowStart<SignalMaskAtWindowOrThreadStartWithInferences.State> {
+    private final SignalMaskAtWindowStart<? extends ProducerState> signalMaskAtWindowStart;
     private final SignalEnabledAtStartInferenceTransitiveClosure signalEnabledAtStartInferenceTransitiveClosure;
     private final TtidsForCurrentWindow ttidsForCurrentWindow;
 
+    protected static class State implements ProducerState {
+        private final Map<Integer, SignalMask> signalMasks = new HashMap<>();
+
+        @Override
+        public void reset() {
+            signalMasks.clear();
+        }
+    }
+
     public SignalMaskAtWindowOrThreadStartWithInferences(
-            ComputingProducerWrapper<? extends SignalMaskAtWindowStart> signalMaskAtWindowStart,
+            ComputingProducerWrapper<? extends SignalMaskAtWindowStart<? extends ProducerState>>
+                    signalMaskAtWindowStart,
             ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure>
                     signalEnabledAtStartInferenceTransitiveClosure,
             ComputingProducerWrapper<TtidsForCurrentWindow> ttidsForCurrentWindow) {
+        super(new State());
         this.signalMaskAtWindowStart = signalMaskAtWindowStart.getAndRegister(this);
         this.signalEnabledAtStartInferenceTransitiveClosure =
                 signalEnabledAtStartInferenceTransitiveClosure.getAndRegister(this);
@@ -35,7 +49,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferences extends SignalMaskAtW
                     ttid, mask,
                     signalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart(),
                     false);
-            this.signalMasks.put(ttid, mask);
+            getState().signalMasks.put(ttid, mask);
         });
     }
 
@@ -54,5 +68,10 @@ public class SignalMaskAtWindowOrThreadStartWithInferences extends SignalMaskAtW
             assert maskBit == (enable ? SignalMask.SignalMaskBit.ENABLED : SignalMask.SignalMaskBit.DISABLED);
         }
         return mask;
+    }
+
+    @Override
+    public Map<Integer, SignalMask> getSignalMasks() {
+        return getState().signalMasks;
     }
 }

@@ -8,20 +8,17 @@ import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
-import com.runtimeverification.rvpredict.trace.ThreadInfos;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import org.junit.Assert;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.runtimeverification.rvpredict.log.compact.Constants.LONG_SIZE_IN_BYTES;
@@ -363,21 +360,6 @@ public class TraceUtils {
 
     public void setTraceState(TraceState traceState) {
         this.traceState = Optional.of(traceState);
-    }
-
-    public static void addThreadInfoToMocks(
-            ThreadInfos mockThreadInfos, TraceState mockTraceState, ThreadInfo... threadInfos) {
-        Set<Integer> ttids = new HashSet<>();
-        for (ThreadInfo threadInfo : threadInfos) {
-            Assert.assertFalse(ttids.contains(threadInfo.getId()));
-            ttids.add(threadInfo.getId());
-            when(mockThreadInfos.getThreadInfo(threadInfo.getId())).thenReturn(threadInfo);
-            when(
-                    mockTraceState.getTtidForThreadOngoingAtWindowStart(
-                            threadInfo.getOriginalThreadId(), threadInfo.getSignalDepth()))
-                    .thenReturn(OptionalInt.of(threadInfo.getId()));
-        }
-        when(mockTraceState.getThreadsForCurrentWindow()).thenReturn(ttids);
     }
 
     private static class ThreadData {

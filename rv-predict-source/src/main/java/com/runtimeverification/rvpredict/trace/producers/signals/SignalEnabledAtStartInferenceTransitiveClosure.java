@@ -4,10 +4,11 @@ import com.google.common.collect.Lists;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
-import com.runtimeverification.rvpredict.trace.producers.base.StartAndJoinEventsForWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 
 import java.util.HashMap;
@@ -18,28 +19,40 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 
-public class SignalEnabledAtStartInferenceTransitiveClosure extends ComputingProducer {
+public class SignalEnabledAtStartInferenceTransitiveClosure
+        extends ComputingProducer<SignalEnabledAtStartInferenceTransitiveClosure.State> {
     private final SignalEnabledAtStartInferenceFromReads signalEnabledAtStartInferenceFromReads;
     private final SignalEnabledAtStartInferenceFromInterruptions signalEnabledAtStartInferenceFromInterruptions;
     private final SortedTtidsWithParentFirst sortedTtidsWithParentFirst;
     private final ThreadInfosComponent threadInfosComponent;
     private final InterruptedEvents interruptedEvents;
     private final SignalMaskForEvents signalMaskForEvents;
-    private final SignalMaskAtWindowStart signalMaskAtWindowStart;
-    private final StartAndJoinEventsForWindow startAndJoinEventsForWindow;
+    private final SignalMaskAtWindowStart<? extends ProducerState> signalMaskAtWindowStart;
+    private final TtidToStartAndJoinEventsForWindow ttidToStartAndJoinEventsForWindow;
 
-    private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
-    private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+    protected static class State implements ProducerState {
+        private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+        private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+
+        @Override
+        public void reset() {
+            signalToTtidWhereEnabledAtStart.clear();
+            signalToTtidWhereDisabledAtStart.clear();
+        }
+    }
 
     public SignalEnabledAtStartInferenceTransitiveClosure(
             ComputingProducerWrapper<SignalEnabledAtStartInferenceFromReads> signalEnabledAtStartInferenceFromReads,
-            ComputingProducerWrapper<SignalEnabledAtStartInferenceFromInterruptions> signalEnabledAtStartInferenceFromInterruptions,
+            ComputingProducerWrapper<SignalEnabledAtStartInferenceFromInterruptions>
+                    signalEnabledAtStartInferenceFromInterruptions,
             ComputingProducerWrapper<SortedTtidsWithParentFirst> sortedTtidsWithParentFirst,
             ComputingProducerWrapper<ThreadInfosComponent> threadInfosComponent,
             ComputingProducerWrapper<InterruptedEvents> interruptedEvents,
             ComputingProducerWrapper<SignalMaskForEvents> signalMaskForEvents,
-            ComputingProducerWrapper<SignalMaskAtWindowStart> signalMaskAtWindowStart,
-            ComputingProducerWrapper<StartAndJoinEventsForWindow> startAndJoinEventsForWindow) {
+            ComputingProducerWrapper<? extends SignalMaskAtWindowStart<? extends ProducerState>>
+                    signalMaskAtWindowStart,
+            ComputingProducerWrapper<TtidToStartAndJoinEventsForWindow> startAndJoinEventsForWindow) {
+        super(new State());
         this.signalEnabledAtStartInferenceFromReads =
                 signalEnabledAtStartInferenceFromReads.getAndRegister(this);
         this.signalEnabledAtStartInferenceFromInterruptions =
@@ -49,25 +62,22 @@ public class SignalEnabledAtStartInferenceTransitiveClosure extends ComputingPro
         this.interruptedEvents = interruptedEvents.getAndRegister(this);
         this.signalMaskForEvents = signalMaskForEvents.getAndRegister(this);
         this.signalMaskAtWindowStart = signalMaskAtWindowStart.getAndRegister(this);
-        this.startAndJoinEventsForWindow = startAndJoinEventsForWindow.getAndRegister(this);
+        this.ttidToStartAndJoinEventsForWindow = startAndJoinEventsForWindow.getAndRegister(this);
     }
 
     @Override
     protected void compute() {
-        signalToTtidWhereEnabledAtStart.clear();
-        signalToTtidWhereDisabledAtStart.clear();
-
         mergeToFormer(
-                signalToTtidWhereEnabledAtStart,
+                getState().signalToTtidWhereEnabledAtStart,
                 signalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart());
         mergeToFormer(
-                signalToTtidWhereEnabledAtStart,
+                getState().signalToTtidWhereEnabledAtStart,
                 signalEnabledAtStartInferenceFromInterruptions.getSignalToTtidWhereEnabledAtStart());
         mergeToFormer(
-                signalToTtidWhereDisabledAtStart,
+                getState().signalToTtidWhereDisabledAtStart,
                 signalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart());
-        transitiveInferrences(signalToTtidWhereEnabledAtStart, SignalMask.SignalMaskBit.ENABLED);
-        transitiveInferrences(signalToTtidWhereDisabledAtStart, SignalMask.SignalMaskBit.DISABLED);
+        transitiveInferrences(getState().signalToTtidWhereEnabledAtStart, SignalMask.SignalMaskBit.ENABLED);
+        transitiveInferrences(getState().signalToTtidWhereDisabledAtStart, SignalMask.SignalMaskBit.DISABLED);
     }
 
     private void transitiveInferrences(
@@ -88,7 +98,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosure extends ComputingPro
                         }
                         parentTtid = maybeParentTtid.getAsInt();
                         Optional<ReadonlyEventInterface> maybeStartEvent =
-                                startAndJoinEventsForWindow.getStartEvent(ttid);
+                                ttidToStartAndJoinEventsForWindow.getStartEvent(ttid);
                         if (!maybeStartEvent.isPresent()) {
                             continue;
                         }
@@ -138,10 +148,10 @@ public class SignalEnabledAtStartInferenceTransitiveClosure extends ComputingPro
     }
 
     Map<Long, Set<Integer>> getSignalToTtidWhereEnabledAtStart() {
-        return signalToTtidWhereEnabledAtStart;
+        return getState().signalToTtidWhereEnabledAtStart;
     }
 
     Map<Long, Set<Integer>> getSignalToTtidWhereDisabledAtStart() {
-        return signalToTtidWhereDisabledAtStart;
+        return getState().signalToTtidWhereDisabledAtStart;
     }
 }

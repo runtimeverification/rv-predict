@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
@@ -10,31 +11,40 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class TtidsToSignalEnabling extends ComputingProducer {
-    private final SignalMaskAtWindowStart signalMaskAtWindowStart;
+public class TtidsToSignalEnabling extends ComputingProducer<TtidsToSignalEnabling.State> {
+    private final SignalMaskAtWindowStart<? extends ProducerState> signalMaskAtWindowStart;
 
-    private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
-    private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+    protected static class State implements ProducerState {
+        private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+        private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+
+        @Override
+        public void reset() {
+            signalToTtidWhereEnabledAtStart.clear();
+            signalToTtidWhereDisabledAtStart.clear();
+        }
+    }
 
     public TtidsToSignalEnabling(
-            ComputingProducerWrapper<? extends SignalMaskAtWindowStart> signalMaskAtWindowStart) {
+            ComputingProducerWrapper<? extends SignalMaskAtWindowStart<? extends ProducerState>>
+                    signalMaskAtWindowStart) {
+        super(new State());
         this.signalMaskAtWindowStart = signalMaskAtWindowStart.getAndRegister(this);
     }
 
     @Override
     protected void compute() {
-        signalToTtidWhereEnabledAtStart.clear();
-        signalToTtidWhereDisabledAtStart.clear();
-
         signalMaskAtWindowStart.getSignalMasks().forEach((ttid, signalMask) -> {
             for (long signalNumber = 0; signalNumber < Constants.SIGNAL_NUMBER_COUNT; signalNumber++) {
                 SignalMask.SignalMaskBit maskBit = signalMask.getMaskBit(signalNumber);
                 switch (maskBit) {
                     case ENABLED:
-                        signalToTtidWhereEnabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>()).add(ttid);
+                        getState().signalToTtidWhereEnabledAtStart
+                                .computeIfAbsent(signalNumber, k -> new HashSet<>()).add(ttid);
                         break;
                     case DISABLED:
-                        signalToTtidWhereDisabledAtStart.computeIfAbsent(signalNumber, k -> new HashSet<>()).add(ttid);
+                        getState().signalToTtidWhereDisabledAtStart
+                                .computeIfAbsent(signalNumber, k -> new HashSet<>()).add(ttid);
                         break;
                     case UNKNOWN:
                         break;
@@ -46,10 +56,10 @@ public class TtidsToSignalEnabling extends ComputingProducer {
     }
 
     public Map<Long, Set<Integer>> getSignalToTtidWhereEnabledAtStart() {
-        return signalToTtidWhereEnabledAtStart;
+        return getState().signalToTtidWhereEnabledAtStart;
     }
 
     public Map<Long, Set<Integer>> getSignalToTtidWhereDisabledAtStart() {
-        return signalToTtidWhereDisabledAtStart;
+        return getState().signalToTtidWhereDisabledAtStart;
     }
 }

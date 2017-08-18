@@ -27,8 +27,6 @@ public class StateAtWindowBorderTest {
     private static final long SIGNAL_HANDLER_2 = 102;
     private static final int THREAD_ID_1 = 201;
     private static final int THREAD_ID_2 = 202;
-    private static final long EVENT_ID_1 = 301;
-    private static final long EVENT_ID_2 = 302;
     private static final long PC_BASE = 400;
     private static final long BASE_ID = 500;
     private static final long ADDRESS_1 = 601;
@@ -244,7 +242,6 @@ public class StateAtWindowBorderTest {
 
     @Test
     public void initializeFromPreviousWindow() throws InvalidTraceDataException {
-        /*
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
 
         ReadonlyEventInterface e1 = TraceUtils.extractSingleEvent(
@@ -298,12 +295,13 @@ public class StateAtWindowBorderTest {
         Assert.assertTrue(lastEstablish.isPresent());
         Assert.assertEquals(SIGNAL_HANDLER_2, lastEstablish.get().getSignalHandlerAddress());
         Assert.assertThat(nextWindowState.getUnfinishedTtids(), containsExactly(THREAD_ID_2));
-        Assert.assertTrue(nextWindowState.threadWasStarted(THREAD_ID_1));
+        // Already joined in the previous window, so we forgot it.
+        Assert.assertFalse(nextWindowState.threadWasStarted(THREAD_ID_1));
         Assert.assertTrue(nextWindowState.threadWasStarted(THREAD_ID_2));
-        Assert.assertTrue(nextWindowState.threadEnded(THREAD_ID_1));
+        // Already joined in the previous window, so we forgot it.
+        Assert.assertFalse(nextWindowState.threadEnded(THREAD_ID_1));
         Assert.assertFalse(nextWindowState.threadEnded(THREAD_ID_2));
         Assert.assertThat(nextWindowState.getThreadsForCurrentWindow(), containsExactly(THREAD_ID_2));
         Assert.assertEquals(e2.getEventId(), nextWindowState.getMinEventIdForWindow());
-        */
     }
 }

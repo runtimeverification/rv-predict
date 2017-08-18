@@ -8,6 +8,7 @@ import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.ProducerModule;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.producerframework.TestProducerModule;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.testutils.InterruptedEventsUtils;
@@ -18,8 +19,8 @@ import com.runtimeverification.rvpredict.testutils.ThreadInfosComponentUtils;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
-import com.runtimeverification.rvpredict.trace.producers.base.StartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -78,8 +79,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
     @Mock private ThreadInfosComponent mockThreadInfosComponent;
     @Mock private InterruptedEvents mockInterruptedEvents;
     @Mock private SignalMaskForEvents mockSignalMaskForEvents;
-    @Mock private SignalMaskAtWindowStart mockSignalMaskAtWindowStart;
-    @Mock private StartAndJoinEventsForWindow mockStartAndJoinEventsForWindow;
+    @Mock private SignalMaskAtWindowStart<? extends ProducerState> mockSignalMaskAtWindowStart;
+    @Mock private TtidToStartAndJoinEventsForWindow mockTtidToStartAndJoinEventsForWindow;
 
     @Mock private Context mockContext;
 
@@ -104,7 +105,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockInterruptedEvents,
                         mockSignalMaskForEvents,
                         mockSignalMaskAtWindowStart,
-                        mockStartAndJoinEventsForWindow);
+                        mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(Collections.emptyMap());
@@ -117,7 +118,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         InterruptedEventsUtils.clearMockInterruptedEvents(mockInterruptedEvents);
         SignalMaskForEventsUtils.clearMockSignalMaskForEvents(mockSignalMaskForEvents);
         SignalMasksAtWindowStartUtils.clearMockSignalMasksAtWindowStart(mockSignalMaskAtWindowStart);
-        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockStartAndJoinEventsForWindow);
+        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockTtidToStartAndJoinEventsForWindow);
+        module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), isEmptyMap());
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), isEmptyMap());
@@ -135,7 +137,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockInterruptedEvents,
                         mockSignalMaskForEvents,
                         mockSignalMaskAtWindowStart,
-                        mockStartAndJoinEventsForWindow);
+                        mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_1)));
@@ -153,7 +155,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
                 ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK, TTID_2, SignalMask.UNKNOWN_MASK));
-        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockStartAndJoinEventsForWindow);
+        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockTtidToStartAndJoinEventsForWindow);
+        module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_1));
@@ -184,7 +187,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockInterruptedEvents,
                         mockSignalMaskForEvents,
                         mockSignalMaskAtWindowStart,
-                        mockStartAndJoinEventsForWindow);
+                        mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_4)));
@@ -220,7 +223,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         TTID_1, SignalMask.UNKNOWN_MASK,
                         TTID_2, SignalMask.UNKNOWN_MASK,
                         TTID_3, SignalMask.UNKNOWN_MASK));
-        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockStartAndJoinEventsForWindow);
+        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockTtidToStartAndJoinEventsForWindow);
+        module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
@@ -252,7 +256,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockInterruptedEvents,
                         mockSignalMaskForEvents,
                         mockSignalMaskAtWindowStart,
-                        mockStartAndJoinEventsForWindow);
+                        mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_4)));
@@ -288,7 +292,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         TTID_1, SignalMask.UNKNOWN_MASK,
                         TTID_2, SignalMask.UNKNOWN_MASK,
                         TTID_3, SignalMask.UNKNOWN_MASK));
-        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockStartAndJoinEventsForWindow);
+        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockTtidToStartAndJoinEventsForWindow);
+        module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
@@ -319,7 +324,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockInterruptedEvents,
                         mockSignalMaskForEvents,
                         mockSignalMaskAtWindowStart,
-                        mockStartAndJoinEventsForWindow);
+                        mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_4)));
@@ -347,7 +352,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         TTID_1, SignalMask.UNKNOWN_MASK,
                         TTID_2, SignalMask.UNKNOWN_MASK,
                         TTID_3, SignalMask.UNKNOWN_MASK));
-        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockStartAndJoinEventsForWindow);
+        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockTtidToStartAndJoinEventsForWindow);
+        module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
@@ -380,7 +386,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockInterruptedEvents,
                         mockSignalMaskForEvents,
                         mockSignalMaskAtWindowStart,
-                        mockStartAndJoinEventsForWindow);
+                        mockTtidToStartAndJoinEventsForWindow);
 
         tu.switchThread(THREAD_1, NO_SIGNAL);
         ReadonlyEventInterface start4 = TraceUtils.extractSingleEvent(tu.threadStart(THREAD_4));
@@ -407,9 +413,10 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         TTID_1, SignalMask.UNKNOWN_MASK,
                         TTID_7, SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_2).enable(SIGNAL_NUMBER_1)));
         StartAndJoinEventsForWindowUtils.fillMockStartAndJoinEventsForWindow(
-                mockStartAndJoinEventsForWindow,
+                mockTtidToStartAndJoinEventsForWindow,
                 ImmutableMap.of(TTID_7, start4),
                 Collections.emptyMap());
+        module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
@@ -425,6 +432,101 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                 containsExactly(TTID_1, TTID_7));
     }
 
+    @Test
+    public void resets() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, PC_BASE);
+        ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure> producer =
+                initProducer(
+                        module,
+                        mockSignalEnabledAtStartInferenceFromReads,
+                        mockSignalEnabledAtStartInferenceFromInterruptions,
+                        mockSortedTtidsWithParentFirst,
+                        mockThreadInfosComponent,
+                        mockInterruptedEvents,
+                        mockSignalMaskForEvents,
+                        mockSignalMaskAtWindowStart,
+                        mockTtidToStartAndJoinEventsForWindow);
+
+        tu.switchThread(THREAD_1, NO_SIGNAL);
+        ReadonlyEventInterface start4 = TraceUtils.extractSingleEvent(tu.threadStart(THREAD_4));
+
+        when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_7)));
+
+        when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_7)));
+
+        when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(
+                TTID_1, TTID_7));
+        ThreadInfosComponentUtils.fillMockThreadInfosComponentFromThreadInfos(
+                mockThreadInfosComponent,
+                THREAD_INFO_1, THREAD_INFO_7);
+        InterruptedEventsUtils.clearMockInterruptedEvents(mockInterruptedEvents);
+        SignalMaskForEventsUtils.fillMockSignalMaskForEvents(
+                mockSignalMaskForEvents,
+                Collections.emptyMap(),
+                ImmutableMap.of(TTID_1, ImmutableMap.of(start4.getEventId(), SignalMask.UNKNOWN_MASK)));
+        SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
+                mockSignalMaskAtWindowStart,
+                ImmutableMap.of(
+                        TTID_1, SignalMask.UNKNOWN_MASK,
+                        TTID_7, SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_2).enable(SIGNAL_NUMBER_1)));
+        StartAndJoinEventsForWindowUtils.fillMockStartAndJoinEventsForWindow(
+                mockTtidToStartAndJoinEventsForWindow,
+                ImmutableMap.of(TTID_7, start4),
+                Collections.emptyMap());
+        module.reset();
+
+        Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(1));
+        Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
+        Assert.assertThat(
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                containsExactly(TTID_1, TTID_7));
+
+        Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
+        Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
+        // TTID_1 is not in the set because we can't infer disable bits from signal interruptions.
+        Assert.assertThat(
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                containsExactly(TTID_1, TTID_7));
+
+        when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_1)));
+
+        when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_1)));
+        when(mockSignalEnabledAtStartInferenceFromInterruptions.getSignalToTtidWhereEnabledAtStart())
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_2)));
+
+        when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(TTID_1, TTID_2));
+        ThreadInfosComponentUtils.fillMockThreadInfosComponentFromThreadInfos(
+                mockThreadInfosComponent, THREAD_INFO_1, THREAD_INFO_2);
+        InterruptedEventsUtils.clearMockInterruptedEvents(mockInterruptedEvents);
+        SignalMaskForEventsUtils.clearMockSignalMaskForEvents(mockSignalMaskForEvents);
+        SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
+                mockSignalMaskAtWindowStart,
+                ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK, TTID_2, SignalMask.UNKNOWN_MASK));
+        StartAndJoinEventsForWindowUtils.clearMockStartAndJoinEventsForWindow(mockTtidToStartAndJoinEventsForWindow);
+        module.reset();
+
+        Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
+        Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_1));
+        Assert.assertThat(
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1),
+                containsExactly(TTID_2));
+        Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
+        Assert.assertThat(
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                containsExactly(TTID_1));
+
+        Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
+        Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
+        Assert.assertThat(
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                containsExactly(TTID_1));
+
+    }
+
     private ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure> initProducer(
             ProducerModule module,
             SignalEnabledAtStartInferenceFromReads mockSignalEnabledAtStartInferenceFromReads,
@@ -433,8 +535,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
             ThreadInfosComponent mockThreadInfosComponent,
             InterruptedEvents mockInterruptedEvents,
             SignalMaskForEvents mockSignalMaskForEvents,
-            SignalMaskAtWindowStart mockSignalMaskAtWindowStart,
-            StartAndJoinEventsForWindow mockStartAndJoinEventsForWindow) {
+            SignalMaskAtWindowStart<? extends ProducerState> mockSignalMaskAtWindowStart,
+            TtidToStartAndJoinEventsForWindow mockTtidToStartAndJoinEventsForWindow) {
         return new ComputingProducerWrapper<>(
                 new SignalEnabledAtStartInferenceTransitiveClosure(
                         new ComputingProducerWrapper<>(mockSignalEnabledAtStartInferenceFromReads, module),
@@ -444,7 +546,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         new ComputingProducerWrapper<>(mockInterruptedEvents, module),
                         new ComputingProducerWrapper<>(mockSignalMaskForEvents, module),
                         new ComputingProducerWrapper<>(mockSignalMaskAtWindowStart, module),
-                        new ComputingProducerWrapper<>(mockStartAndJoinEventsForWindow, module)),
+                        new ComputingProducerWrapper<>(mockTtidToStartAndJoinEventsForWindow, module)),
                 module);
     }
 }

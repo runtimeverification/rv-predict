@@ -1,9 +1,10 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
-import com.runtimeverification.rvpredict.signals.SignalMask;
-import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
+import com.runtimeverification.rvpredict.signals.SignalMask;
+import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.producers.base.OtidToSignalDepthToTtidAtWindowStart;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
@@ -15,14 +16,23 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
 
-public class SignalEnabledAtStartInferenceFromInterruptions extends ComputingProducer {
+public class SignalEnabledAtStartInferenceFromInterruptions extends
+        ComputingProducer<SignalEnabledAtStartInferenceFromInterruptions.State> {
     private final InterruptedEvents interruptedEvents;
     private final SignalMaskForEvents signalMaskForEvents;
     private final TtidSetDifference unfinishedTtidsAtWindowStart;
     private final ThreadInfosComponent threadInfosComponent;
     private final OtidToSignalDepthToTtidAtWindowStart otidToSignalDepthToTtidAtWindowStart;
 
-    private Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+    protected static class State implements ProducerState {
+        private Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+
+        @Override
+        public void reset() {
+            signalToTtidWhereEnabledAtStart.clear();
+        }
+
+    }
 
     public SignalEnabledAtStartInferenceFromInterruptions(
             ComputingProducerWrapper<InterruptedEvents> interruptedEvents,
@@ -31,6 +41,7 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends ComputingPro
             ComputingProducerWrapper<ThreadInfosComponent> threadInfosComponent,
             ComputingProducerWrapper<OtidToSignalDepthToTtidAtWindowStart>
                     otidToSignalDepthToTtidAtWindowStart) {
+        super(new State());
         this.interruptedEvents = interruptedEvents.getAndRegister(this);
         this.signalMaskForEvents = signalMaskForEvents.getAndRegister(this);
         this.unfinishedTtidsAtWindowStart = unfinishedTtidsAtWindowStart.getAndRegister(this);
@@ -41,8 +52,6 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends ComputingPro
 
     @Override
     protected void compute() {
-        signalToTtidWhereEnabledAtStart.clear();
-
         interruptedEvents.getSignalNumberToTtidToNextMinInterruptedEventId().forEach(
                 (signalNumber, ttidToNextMinInterruptedEventId) ->
                         ttidToNextMinInterruptedEventId.forEach((ttid, minInterruptedEventId) -> {
@@ -54,7 +63,7 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends ComputingPro
                                     // If we don't know the signal mask bit value at the interruption point then we
                                     // didn't know it when the thread/signal started. However, because of the
                                     // interruption, we can infer that it was enabled at the beginning.
-                                    signalToTtidWhereEnabledAtStart
+                                    getState().signalToTtidWhereEnabledAtStart
                                             .computeIfAbsent(signalNumber, k -> new HashSet<>())
                                             .add(ttid);
                                     break;
@@ -90,7 +99,7 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends ComputingPro
                     assert signalNumber.isPresent();
                     // TODO(virgil): Maybe it would be worth checking that it is not already enabled.
                     // The semantics would be cleaner, but it shouldn't make a difference in practice.
-                    signalToTtidWhereEnabledAtStart
+                    getState().signalToTtidWhereEnabledAtStart
                             .computeIfAbsent(signalNumber.getAsLong(), k -> new HashSet<>())
                             .add(parentTtid);
                 });
@@ -101,6 +110,6 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends ComputingPro
     }
 
     Map<Long, Set<Integer>> getSignalToTtidWhereEnabledAtStart() {
-        return signalToTtidWhereEnabledAtStart;
+        return getState().signalToTtidWhereEnabledAtStart;
     }
 }

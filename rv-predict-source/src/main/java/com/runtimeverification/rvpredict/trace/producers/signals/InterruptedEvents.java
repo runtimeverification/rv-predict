@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.ThreadType;
@@ -32,7 +33,7 @@ import java.util.stream.Collectors;
  * 2. Computes a map from threads to interrupted threads.
  * 3. Computes a map from threads to the event on the interrupted thread just before the interruption (if any).
  */
-public class InterruptedEvents extends ComputingProducer {
+public class InterruptedEvents extends ComputingProducer<InterruptedEvents.State> {
     private final RawTracesByTtid rawTracesByTtid;
     private final TtidsForCurrentWindow ttidsForCurrentWindow;
     private final ThreadInfosComponent threadInfosComponent;
@@ -40,9 +41,18 @@ public class InterruptedEvents extends ComputingProducer {
     private final TtidSetDifference threadEndsInTheCurrentWindow;
     private final MinEventIdForWindow minEventIdForWindow;
 
-    private final Map<Long, Map<Integer, Long>> signalNumberToTtidToNextMinInterruptedEventId = new HashMap<>();
-    private final Map<Integer, Long> ttidToInterruptedEventId = new HashMap<>();
-    private final Map<Integer, Integer> ttidToInterruptedTtid = new HashMap<>();
+    protected static class State implements ProducerState {
+        private final Map<Long, Map<Integer, Long>> signalNumberToTtidToNextMinInterruptedEventId = new HashMap<>();
+        private final Map<Integer, Long> ttidToInterruptedEventId = new HashMap<>();
+        private final Map<Integer, Integer> ttidToInterruptedTtid = new HashMap<>();
+
+        @Override
+        public void reset() {
+            signalNumberToTtidToNextMinInterruptedEventId.clear();
+            ttidToInterruptedEventId.clear();
+            ttidToInterruptedTtid.clear();
+        }
+    }
 
     public InterruptedEvents(
             ComputingProducerWrapper<RawTracesByTtid> rawTracesByTtid,
@@ -51,6 +61,7 @@ public class InterruptedEvents extends ComputingProducer {
             ComputingProducerWrapper<TtidSetDifference> threadStartsInTheCurrentWindow,
             ComputingProducerWrapper<TtidSetDifference> threadEndsInTheCurrentWindow,
             ComputingProducerWrapper<MinEventIdForWindow> minEventIdForWindow) {
+        super(new State());
         this.rawTracesByTtid = rawTracesByTtid.getAndRegister(this);
         this.ttidsForCurrentWindow = ttidsForCurrentWindow.getAndRegister(this);
         this.threadInfosComponent = threadInfosComponent.getAndRegister(this);
@@ -60,24 +71,20 @@ public class InterruptedEvents extends ComputingProducer {
     }
 
     public Map<Long, Map<Integer, Long>> getSignalNumberToTtidToNextMinInterruptedEventId() {
-        return signalNumberToTtidToNextMinInterruptedEventId;
+        return getState().signalNumberToTtidToNextMinInterruptedEventId;
     }
 
     public OptionalLong getInterruptedEventId(int interruptingTtid) {
-        Long interruptedEventId = ttidToInterruptedEventId.get(interruptingTtid);
+        Long interruptedEventId = getState().ttidToInterruptedEventId.get(interruptingTtid);
         return interruptedEventId == null ? OptionalLong.empty() : OptionalLong.of(interruptedEventId);
     }
 
     public int getInterruptedTtid(int interruptingTtid) {
-        return ttidToInterruptedTtid.get(interruptingTtid);
+        return getState().ttidToInterruptedTtid.get(interruptingTtid);
     }
 
     @Override
     protected void compute() {
-        signalNumberToTtidToNextMinInterruptedEventId.clear();
-        ttidToInterruptedEventId.clear();
-        ttidToInterruptedTtid.clear();
-
         ttidsForCurrentWindow.getTtids().stream()
                 .filter(ttid -> threadInfosComponent.getThreadType(ttid) == ThreadType.SIGNAL)
                 .forEach(ttid -> {
@@ -97,13 +104,13 @@ public class InterruptedEvents extends ComputingProducer {
                         return;
                     }
                     int interruptedTtid = maybeInterruptedThread.get();
-                    ttidToInterruptedTtid.put(threadInfo.getId(), interruptedTtid);
+                    getState().ttidToInterruptedTtid.put(threadInfo.getId(), interruptedTtid);
                     Optional<RawTrace> maybeInterruptedTrace = rawTracesByTtid.getRawTrace(interruptedTtid);
                     Optional<ReadonlyEventInterface> maybeInterruptedEvent =
                             findInterruptedEvent(firstSignalEvent, maybeInterruptedTrace);
                     assert threadInfo.getSignalNumber().isPresent();
                     Map<Integer, Long> ttidToNextMinEventId =
-                            signalNumberToTtidToNextMinInterruptedEventId
+                            getState().signalNumberToTtidToNextMinInterruptedEventId
                                     .computeIfAbsent(threadInfo.getSignalNumber().getAsLong(), k -> new HashMap<>());
                     if (!maybeInterruptedEvent.isPresent()) {
                         assert !threadStartsInTheCurrentWindow.contains(interruptedTtid) || signalDepth == 1;
@@ -119,7 +126,7 @@ public class InterruptedEvents extends ComputingProducer {
                         ttidToNextMinEventId.put(interruptedTtid, eventId);
                     } else {
                         ReadonlyEventInterface interruptedEvent = maybeInterruptedEvent.get();
-                        ttidToInterruptedEventId.put(threadInfo.getId(), interruptedEvent.getEventId());
+                        getState().ttidToInterruptedEventId.put(threadInfo.getId(), interruptedEvent.getEventId());
                         long nextInterruptedEventId = interruptedEvent.getEventId() + 1;
                         ttidToNextMinEventId.compute(
                                 interruptedTtid,
@@ -144,7 +151,8 @@ public class InterruptedEvents extends ComputingProducer {
         return maybeInterruptedEvent;
     }
 
-    private Optional<Integer> findInterruptedThread(Optional<ReadonlyEventInterface> firstSignalEvent, int signalDepth, long otid) {
+    private Optional<Integer> findInterruptedThread(
+            Optional<ReadonlyEventInterface> firstSignalEvent, int signalDepth, long otid) {
         List<Integer> candidateThreads = ttidsForCurrentWindow.getTtids().stream()
                 .filter(candidateTtid ->
                         threadInfosComponent.getOriginalThreadIdForTraceThreadId(candidateTtid) == otid

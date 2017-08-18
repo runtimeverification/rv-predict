@@ -1,4 +1,8 @@
 
+% Signals model
+% Traian Florin Șerbănuță
+%
+
 ## Events
 
 All events must have the following attributes:
@@ -6,48 +10,48 @@ All events must have the following attributes:
 * \instanceId – identifying the current thread/signal instance
 * \instanceCounter – capturing the execution order within an instance
 * \type of event:
-    - START – a thread/signal instance start
-    - END – a thread/signal instance end
-    - WRITE – the write of a memory location
-    - READ – the read of a memory location
-    - LOCK – acquiring a resource
-    - UNLOCK – releasing a resource
-    - WRITE-MASK – establishing a new mask for the current instance
-    - READ-MASK – reading the mask for the current instance
-    - DISABLE-SIGNAL – disabling a single signal
-    - ENABLE-SIGNAL – enabling a single signal
-    - ESTABLISH-SIGNAL – establishing a new handler and default mask for a
-      signal
-    - READ-SIGNAL – reading the current handler and default mask for a
-      signal
-    - CURRENT-SIGNAL – identifying the currently executing signal
-    - SPAWN – spawning a new thread
-    - JOIN – waiting for a thread to finish
+  * START – a thread/signal instance start
+  * END – a thread/signal instance end
+  * WRITE – the write of a memory location
+  * READ – the read of a memory location
+  * LOCK – acquiring a resource
+  * UNLOCK – releasing a resource
+  * WRITE-MASK – establishing a new mask for the current instance
+  * READ-MASK – reading the mask for the current instance
+  * DISABLE-SIGNAL – disabling a single signal
+  * ENABLE-SIGNAL – enabling a single signal
+  * ESTABLISH-SIGNAL – establishing a new handler and default mask for a
+    signal
+  * READ-SIGNAL – reading the current handler and default mask for a
+    signal
+  * CURRENT-SIGNAL – identifying the currently executing signal
+  * SPAWN – spawning a new thread
+  * JOIN – waiting for a thread to finish
 
 Additionally, each type of event might require extra attributes, as follows:
 
 * START
-    - \handlerId – identifier for the handler treating this signal
+  * \handlerId – identifier for the handler treating this signal
 * WRITE/READ
-    - \location – location being accessed
-    - \val – value written/read
-    - \isAtomic – whether the operation was performed atomically
+  * \location – location being accessed
+  * \val – value written/read
+  * \isAtomic – whether the operation was performed atomically
 * LOCK/UNLOCK
-    - \resourceId – identifier for the resource being locked/unlocked
+  * \resourceId – identifier for the resource being locked/unlocked
 * WRITE-MASK/READ-MASK
-    - \mask – the mask being read / written
+  * \mask – the mask being read / written
 * ESTABLISH-SIGNAL/READ-SIGNAL
-    - \signalNumber  – the signal to be handled
-    - \handlerId – identifier for the handler
-    - \defaultMask – the default mask for this signal. This will be or-ed
-        with the existing mask of the thread/signal being interrupted.
+  * \signalNumber  – the signal to be handled
+  * \handlerId – identifier for the handler
+  * \defaultMask – the default mask for this signal. This will be or-ed
+    with the existing mask of the thread/signal being interrupted.
 * CURRENT-SIGNAL
-    - \signalNumber  – the signal currently being executed
+  * \signalNumber  – the signal currently being executed
 * ENABLE-SIGNAL/DISABLE-SIGNAL
-    - \signalNumber – the signal to be enabled/disabled
+  * \signalNumber – the signal to be enabled/disabled
 * SPAWN/JOIN
-    - \threadInstanceId – the instance identifying the thread being
-        created/joined
+  * \threadInstanceId – the instance identifying the thread being
+    created/joined
 
 A *mask* tells for each signal whether it is enabled or not. We abstract it as
 a map from signal numbers to $\{T, F\}$.  Let \allEnabled be the mask mapping
@@ -64,20 +68,20 @@ A trace (prefix) is a collection of events satisfying the following properties:
    events sharing the same \instanceId.
    Let *Instances* be the set of values of all \instanceId attributes.
 
-2. Each thread/signal instance has an unique START and at most one END event.
+1. Each thread/signal instance has an unique START and at most one END event.
    Let \iStart and \iEnd be functions defined on *Instances* mapping an
    instance to its corresponding START or END event.  Note that $\iStart$ is a
    total function while $\iEnd$ can be partial.
 
-3. The set of \instanceCounter attributes within the same thread/signal
+1. The set of \instanceCounter attributes within the same thread/signal
    constitutes a sequence of consecutive natural numbers
    starting with 0 for its START event and reaching maximum at its END event
    (if the END event exists).
 
-4. The main thread within a trace has \instanceId 0.  There exists no SPAWN
+1. The main thread within a trace has \instanceId 0.  There exists no SPAWN
    event whose \threadInstanceId is 0
 
-5. Each thread (except for the main) is started by a unique SPAWN instance.
+1. Each thread (except for the main) is started by a unique SPAWN instance.
    More formally, the \threadInstanceId of a SPAWN event is different from
    its \instanceId, and there are no two SPAWN events with the same
    \threadInstanceId.
@@ -87,7 +91,6 @@ A trace (prefix) is a collection of events satisfying the following properties:
    It must be that \threadInstanceId attributes of JOIN events are in *Threads*
    Let \spawnedBy be the function mapping each of the *Threads* (except for k0)
    to their corresponding SPAWN events.
-
 
 Let *Signals* be the set of \instanceId attributes *not* corresponding to
 threads.
@@ -167,7 +170,6 @@ ordering $\pOrd{\intr}$ such that for all $s\in *Signals*$
 A trace ordering is compatible with a well-defined interruption mapping if
 it includes the corresponding interruption ordering.
 
-
 ### Memory consistency
 
 A trace ordering $\prec$ is memory consistent if for any READ/READ-SIGNAL
@@ -183,7 +185,6 @@ and, for any event $e$ such that $\type(e) = *READ-SIGNAL*$, and for all
 events $e'\in \eMax{\prec e}[\signalNumber(x) = \signalNumber(e)
                              \wedge \type(x) = *ESTABLISH-SIGNAL*]$,
 we have that $\handlerId(e') = \handlerId(e)$ and $\mask(e') = \mask(e)$.
-
 
 ### Resource consistency
 
@@ -224,7 +225,6 @@ Formally, for all $s\in *Signals*$, if $e = \establishedBy(s)$, then
 
 $$\eMax{\prec \iStart(s)}[\signalNumber(x) = \signalNumber(e)
    \wedge \type(x) = *ESTABLISH-SIGNAL*] = e$$
-
 
 ### Current mask and mask consistency
 
@@ -281,7 +281,6 @@ $(*Trace*, \interrupts, \establishedBy, \prec),$ such that:
 
 Given a trace *Trace*, a feasible subtrace of *Trace* is a feasible
 trace whose first component is a subtrace of *Trace*
-
 
 ## Causal race
 

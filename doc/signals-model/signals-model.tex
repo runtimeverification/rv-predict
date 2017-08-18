@@ -1,0 +1,64 @@
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{xspace}
+\usepackage[utf8]{inputenc}
+\usepackage[citations,hybrid]{markdown}
+\bibliographystyle{plainnat}
+
+\newcommand{\instanceId}{{\it instanceId}\xspace}
+\newcommand{\instanceCounter}{{\it instanceCounter}\xspace}
+\newcommand{\type}{{\it type}\xspace}
+\newcommand{\handlerId}{{\it handlerId}\xspace}
+\newcommand{\location}{{\it location}\xspace}
+\newcommand{\val}{{\it value}\xspace}
+\newcommand{\isAtomic}{{\it isAtomic}\xspace}
+\newcommand{\lockId}{{\it lockId}\xspace}
+\newcommand{\resourceId}{{\it resourceId}\xspace}
+\newcommand{\mask}{{\it mask}\xspace}
+\newcommand{\signalNumber}{{\it signalNumber}\xspace}
+\newcommand{\defaultMask}{{\it defaultMask}\xspace}
+\newcommand{\threadInstanceId}{{\it threadInstanceId}\xspace}
+\newcommand{\nextT}{{\it nextT}\xspace}
+\newcommand{\precT}{{\it precT}\xspace}
+\newcommand{\precE}{{\it precE}\xspace}
+\newcommand{\event}{{\it event}\xspace}
+\newcommand{\iStart}{{\it start}\xspace}
+\newcommand{\iEnd}{{\it end}\xspace}
+\newcommand{\spawnedBy}{{\it spawnedBy}\xspace}
+\newcommand{\interrupts}{{\it interrupts}\xspace}
+\newcommand{\intr}{{\it interrupt}\xspace}
+\newcommand{\less}{{\it less}\xspace}
+\newcommand{\eMax}[1]{{\it max}_{#1}}
+\newcommand{\thread}{{\it thread}\xspace}
+\newcommand{\currentMask}{{\it currentMask}\xspace}
+\newcommand{\establishedBy}{{\it establishedBy}\xspace}
+\newcommand{\allEnabled}{{\it allEnabled}\xspace}
+\newcommand{\implies}{\longrightarrow}
+\newcommand{\e}{e_}
+\newcommand{\ord}{\prec}
+\newcommand{\pOrd}[1]{\ord_{#1}}
+
+\begin{document}
+
+\markdownInput[hybrid]{signals-model.md}
+
+\bibliography{doc}
+
+\appendix
+\section{Formal definitions}
+Given an unary predicate $P[x]$ and a set $S$, let $P[S]$ be the subset of
+the elements of $S$ for which $P$ holds.
+
+Given a trace ordering $\prec$ on a set of events {\it Trace} and an event $e$, let $\less_e$ and $\max$ be
+the following predicates
+\begin{itemize}
+\item $\less_e[x] = x \prec e$ defining events preceding $e$
+\item $\max[x] = \neg\exists y. x \prec y$ defining maximal elements of a set
+\end{itemize}
+
+Given an unary predicate $P[x]$, let $\eMax{\prec e}[P]$ be the set
+defined by
+$$\eMax{\prec e}[P] = \max[P[\less_e[{\it Trace}]]]$$.
+
+\end{document}

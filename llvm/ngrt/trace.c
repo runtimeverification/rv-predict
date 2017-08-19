@@ -67,8 +67,8 @@ rvp_trace_open(void)
 bool
 rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 {
-	uint32_t *next_consumer;
 	ssize_t nwritten;
+	uint32_t idepth0, idepth1;
 	rvp_fork_join_switch_t threadswitch = {
 		  .deltop =
 		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
@@ -79,7 +79,7 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGDEPTH)
 		, .depth = r->r_idepth
 	};
-	struct iovec iov[4] = {
+	struct iovec iov[20] = {
 		  [0] = (struct iovec){
 			  .iov_base = &threadswitch
 			, .iov_len = sizeof(threadswitch)
@@ -94,7 +94,10 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	if (lc == NULL)
 		;
 	else if (lc->lc_tid != r->r_tid) {
-		iovp++; /* emit 'switch' to r->r_tid */
+		iovp++; /* emit 'switch' to r->r_tid; that will
+			 * reset the reader's interrupt depth to 0.
+			 */
+
 		if (r->r_idepth != 0) {
 			iovp++; /* emit 'sigdepth' to r->r_idepth */
 		}
@@ -102,22 +105,38 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		iov[0] = iov[1];
 		iovp++; /* emit 'sigdepth' to r->r_idepth */
 	}
+	const struct iovec *first_ring_iov, *iiov,
+	    *lastiov = &iov[__arraycount(iov)];
 
-	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
+	first_ring_iov = iovp;
+
+	idepth0 = (lc == NULL) ? 0 : lc->lc_idepth;
+	if (!rvp_ring_get_iovs(r, -1, -1, &iovp, lastiov, &idepth0))
 		return false;
 
 	nwritten = writev(fd, iov, iovp - &iov[0]);
-	do {
-		--iovp;
-		nwritten -= iovp->iov_len;
-	} while (iovp != &iov[0]);
+	if (nwritten == -1)
+		err(EXIT_FAILURE, "%s: writev", __func__);
 
-	assert(nwritten == 0);
-	r->r_consumer = next_consumer;
+	for (iiov = &iov[0]; iiov < first_ring_iov; iiov++)
+		nwritten -= iiov->iov_len;
+
+	assert(nwritten > 0);
+
+	idepth1 = (lc == NULL) ? 0 : lc->lc_idepth;
+
+	const ssize_t nleft = rvp_ring_discard_by_bytes(r, nwritten, &idepth1);
+
+	assert(idepth0 == idepth1);
+
+	assert(nleft <= 0);
+
 	if (lc != NULL) {
 		lc->lc_tid = r->r_tid;
-		lc->lc_idepth = r->r_idepth;
-	}
+		lc->lc_idepth = idepth0;
+	} else
+		assert(idepth0 == 0);
+
 	return true;
 }
 

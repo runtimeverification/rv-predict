@@ -195,8 +195,10 @@ serialize(void *arg __unused)
 				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
 				    fd, &serializer_lc);
 			}
+#if 0
 			any_emptied |= rvp_signal_rings_flush_to_fd(fd,
 			    &serializer_lc);
+#endif
 		} while (any_emptied);
 
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
@@ -414,6 +416,8 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 		errno = rc;
 		return NULL;
 	}
+
+	t->t_intr_ring = &t->t_ring;
 
 	rvp_thread_attach(t);
 

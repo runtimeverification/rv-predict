@@ -131,6 +131,7 @@ rvp_signal_lookup(int signum)
 	return atomic_load_explicit(&signal_tbl[signum], memory_order_acquire);
 }
 
+#if 0
 bool
 rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
 {
@@ -154,6 +155,7 @@ rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
 	}
 	return any_emptied;
 }
+#endif
 
 static rvp_ring_t *
 rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
@@ -239,12 +241,18 @@ rvp_signal_ring_get(rvp_thread_t *t, uint32_t idepth)
 	return r;
 }
 
+static inline bool
+rvp_ring_is_dirty(const rvp_ring_t *r)
+{
+	return rvp_ring_nfull(r) != 0 || rvp_iring_nfull(&r->r_iring) != 0;
+}
+
 void
 rvp_signal_ring_put(rvp_thread_t *t __unused, rvp_ring_t *r)
 {
 	rvp_ring_state_t inuse = RVP_RING_S_INUSE;
 
-	rvp_ring_state_t nstate = rvp_ring_nfull(r) != 0
+	rvp_ring_state_t nstate = rvp_ring_is_dirty(r)
 	    ? RVP_RING_S_DIRTY
 	    : RVP_RING_S_CLEAN;
 
@@ -269,7 +277,9 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	r->r_lgen = (oldr != NULL) ? oldr->r_lgen : t->t_ring.r_lgen;
+	const int sidx = r->r_producer - r->r_items;
+
+	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a
 	 * change of PC, a change of thread, and a change in outstanding
@@ -292,16 +302,27 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 
 	b = RVP_BUF_INITIALIZER;
 
-	if (oldr != NULL)
-		oldr->r_lgen = r->r_lgen;
-	else
-		t->t_ring.r_lgen = r->r_lgen;
+	/* I copy the local generation back so that the interrupted sequence
+	 * does not have to resynchronize with ggen.  It's ok to copy back
+	 * the local generation, here: this ring's local generation is not
+	 * going to increase any more in this signal, and oldr is not
+	 * visible until I copy it back to t_intr_ring. 
+	 */
+	oldr->r_lgen = r->r_lgen;
 
-	atomic_store(&t->t_intr_ring, oldr);
-	atomic_store_explicit(&t->t_idepth, idepth, memory_order_release);
+	atomic_store_explicit(&t->t_intr_ring, oldr, memory_order_release);
+	/* At this juncture, a new signal could start with parent
+	 * t_intr_ring and a greater idepth than this thread's, but
+	 * that's ok, it will just get a new ring.
+	 */
 	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
 	rvp_ring_put_buf(r, b);
+	rvp_ring_put_interruption(oldr, r, sidx, r->r_producer - r->r_items);
 	rvp_signal_ring_put(t, r);
+	/* I wait until after the ring is relinquished to restore the old
+	 * idepth so that the relinquished ring is available for reuse.
+	 */
+	atomic_store_explicit(&t->t_idepth, idepth, memory_order_release);
 }
 
 sigset_t *
@@ -485,6 +506,19 @@ rvp_thread_trace_getmask(rvp_thread_t *t __unused,
 	rvp_trace_mask(RVP_OP_SIGGETMASK, bs->bs_number, retaddr);
 }
 
+#if 0
+static inline void
+trace_sigmask_op(const void *retaddr, int how)
+{
+	rvp_ring_t *r = rvp_ring_for_curthr();
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
+	rvp_buf_put_voidptr(&b, mtx);
+
+	rvp_ring_put_buf(r, b);
+}
+#endif
+
 static int
 rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
     const sigset_t *set, sigset_t *oldset)
@@ -496,6 +530,14 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	/* TBD trace a read from `set` and, if `oldset` is not NULL,
 	 * a write to it.
 	 */
+#if 0
+	uint64_t gen;
+
+	if (how == SIG_BLOCK)
+		rvp_buf_trace_load_cog(&b, &r->r_lgen);
+	else
+		gen = rvp_ggen_before_store();
+#endif
 
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
@@ -534,6 +576,10 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	else
 		rvp_thread_trace_setmask(t, how, mask, retaddr);
 
+#if 0
+	if (how != SIG_BLOCK)
+		rvp_buf_trace_cog(&b, &r->r_lgen, gen);
+#endif
 	return 0;
 }
 

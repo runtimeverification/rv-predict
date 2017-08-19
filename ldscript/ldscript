@@ -1,0 +1,10 @@
+SECTIONS
+{
+	__data_registers_begin = . ;
+	.data.registers : 
+	{
+		*(.data.registers)
+	}
+	__data_registers_end = . ;
+}
+INSERT AFTER .data;

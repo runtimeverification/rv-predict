@@ -7,6 +7,7 @@
 set -e
 set -u
 
+ldscript_dir=$(dirname $0)/../share/rv-predict-c
 pass_dir=$(dirname $0)/../lib
 runtime_dir=$(dirname $0)/../lib
 
@@ -65,7 +66,7 @@ fi
 # -latomic for atomic_is_lock_free()
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-Wl,-T$HOME/ldscript -L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -latomic -pthread -g"
+	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -latomic -pthread -g"
 fi
 
 $compiler ${pass:-} "$@" ${runtime:-}

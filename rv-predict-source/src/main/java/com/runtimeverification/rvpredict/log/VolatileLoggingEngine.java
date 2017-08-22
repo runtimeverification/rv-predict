@@ -38,6 +38,7 @@ import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -195,6 +196,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         try {
             crntState.preStartWindow();
             List<RawTrace> rawTraces = new ArrayList<>();
+            for (Buffer b : activeBuffers) {
+                if (!b.isEmpty()) {
+                    TraceCache.registerNewThreads(Arrays.asList(b.events).subList(b.start, b.cursor), crntState);
+                }
+            }
             for (Buffer b : activeBuffers) {
                 if (!b.isEmpty()) {
                     Event oneEvent = b.events[b.start];

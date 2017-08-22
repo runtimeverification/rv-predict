@@ -191,7 +191,7 @@ public class TraceCache {
                 return 1;
             return 0;
         });
-        registerNewThreads(events);
+        registerNewThreads(events, crntState);
         long prevOTID = events.get(0).getOriginalThreadId();
         int prevSignalDepth = events.get(0).getSignalDepth();
         int start = 0;
@@ -211,7 +211,7 @@ public class TraceCache {
         }
     }
 
-    private void registerNewThreads(ArrayList<ReadonlyEventInterface> events) {
+    public static void registerNewThreads(List<? extends ReadonlyEventInterface> events, TraceState crntState) {
         Map<Long, List<Long>> otidToParent = events.stream()
                 .filter(ReadonlyEventInterface::isStart)
                 .collect(Collectors.toMap(

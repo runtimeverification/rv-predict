@@ -10,7 +10,8 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.when;
 
 public class StartAndJoinEventsForWindowUtils {
-    public static void clearMockStartAndJoinEventsForWindow(TtidToStartAndJoinEventsForWindow mockTtidToStartAndJoinEventsForWindow) {
+    public static void clearMockStartAndJoinEventsForWindow(
+            TtidToStartAndJoinEventsForWindow mockTtidToStartAndJoinEventsForWindow) {
         when(mockTtidToStartAndJoinEventsForWindow.getStartEvent(anyInt())).thenReturn(Optional.empty());
         when(mockTtidToStartAndJoinEventsForWindow.getJoinEvent(anyInt())).thenReturn(Optional.empty());
     }

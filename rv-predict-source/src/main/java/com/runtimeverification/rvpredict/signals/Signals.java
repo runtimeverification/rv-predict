@@ -37,7 +37,8 @@ public class Signals {
         return Signals.signalEnableChange(event, signalNumber).orElse(eventIsEnabled);
     }
 
-    public static Optional<SignalMask> changedSignalMaskAfterEvent(ReadonlyEventInterface event, SignalMask threadMask) {
+    public static Optional<SignalMask> changedSignalMaskAfterEvent(
+            ReadonlyEventInterface event, SignalMask threadMask) {
         if (event.getType() == EventType.UNBLOCK_SIGNALS) {
             return Optional.of(threadMask.unblock(event.getPartialSignalMask()));
         } else if (event.getType() == EventType.BLOCK_SIGNALS) {

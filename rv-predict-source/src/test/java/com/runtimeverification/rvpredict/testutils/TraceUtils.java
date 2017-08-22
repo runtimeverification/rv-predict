@@ -213,7 +213,9 @@ public class TraceUtils {
     }
 
     public RawTrace extractRawTrace(List<List<ReadonlyEventInterface>> events, long thread, int signalDepth) {
-        return extractRawTrace(true, events, thread, signalDepth, OptionalLong.empty(), OptionalLong.empty());
+        return extractRawTrace(
+                true, events, thread, signalDepth,
+                OptionalLong.empty(), OptionalLong.empty());
     }
 
     public RawTrace extractRawTrace(
@@ -317,7 +319,8 @@ public class TraceUtils {
         Optional<TraceState> localTraceState = traceState;
         if (localTraceState.isPresent()) {
             if (paddedEvents[0].getSignalDepth() == 0) {
-                threadInfo = localTraceState.get().createAndRegisterThreadInfo(paddedEvents[0].getOriginalThreadId(), OptionalInt.empty());
+                threadInfo = localTraceState.get().createAndRegisterThreadInfo(
+                        paddedEvents[0].getOriginalThreadId(), OptionalInt.empty());
             } else {
                 assert signalNumber.isPresent();
                 assert signalHandler.isPresent();

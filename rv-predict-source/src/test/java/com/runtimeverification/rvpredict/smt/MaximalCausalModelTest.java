@@ -1896,7 +1896,8 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
     }
-/*
+    // TODO(virgil): Uncomment these when signal mask reads become consistent.
+    /*
     @Test
     public void signalMaskReadsAreConsistentWithInterruptedThreadDisabling() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);

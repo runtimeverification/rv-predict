@@ -135,7 +135,8 @@ public class InterruptedEvents extends ComputingProducer<InterruptedEvents.State
                 });
     }
 
-    private Optional<ReadonlyEventInterface> findInterruptedEvent(Optional<ReadonlyEventInterface> firstSignalEvent, Optional<RawTrace> maybeInterruptedTrace) {
+    private Optional<ReadonlyEventInterface> findInterruptedEvent(
+            Optional<ReadonlyEventInterface> firstSignalEvent, Optional<RawTrace> maybeInterruptedTrace) {
         Optional<ReadonlyEventInterface> maybeInterruptedEvent = Optional.empty();
         if (maybeInterruptedTrace.isPresent()) {
             assert firstSignalEvent.isPresent();

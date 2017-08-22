@@ -38,7 +38,8 @@ public class SignalEnabledAtStartInferenceFromInterruptionsTest {
     private static final long SIGNAL_HANDLER_1 = 401L;
 
     private static final ThreadInfo THREAD_INFO_1 = ThreadInfo.createThreadInfo(TTID_1, THREAD_1, OptionalInt.empty());
-    private static final ThreadInfo SIGNAL_INFO_2 = ThreadInfo.createSignalInfo(TTID_2, THREAD_1, SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ONE_SIGNAL);
+    private static final ThreadInfo SIGNAL_INFO_2 =
+            ThreadInfo.createSignalInfo(TTID_2, THREAD_1, SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ONE_SIGNAL);
 
     @Mock private InterruptedEvents mockInterruptedEvents;
     @Mock private SignalMaskForEvents mockSignalMaskForEvents;

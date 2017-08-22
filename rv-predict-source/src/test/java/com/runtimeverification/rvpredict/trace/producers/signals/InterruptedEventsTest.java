@@ -120,7 +120,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -169,7 +170,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -216,7 +218,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -294,7 +297,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -383,7 +387,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -474,7 +479,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -565,7 +571,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -624,7 +631,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);
@@ -692,7 +700,8 @@ public class InterruptedEventsTest {
 
         module.reset();
 
-        Map<Long, Map<Integer, Long>> result = producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
+        Map<Long, Map<Integer, Long>> result =
+                producer.getComputed().getSignalNumberToTtidToNextMinInterruptedEventId();
         Assert.assertEquals(1, result.size());
         Map<Integer, Long> ttidToId = result.get(SIGNAL_NUMBER_1);
         Assert.assertNotNull(ttidToId);

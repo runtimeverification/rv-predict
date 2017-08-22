@@ -171,5 +171,4 @@ public class TraceProducers extends ProducerModule {
         this.ttidsFinishedAtWindowStart.set(ttidsFinishedAtWindowStart);
         this.ttidsFinishedAtWindowEnd.set(ttidsFinishedAtWindowEnd);
     }
-
 }

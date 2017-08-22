@@ -19,11 +19,16 @@ public abstract class Profiler {
     }
 
     public abstract ProfilerToken start(String tag);
+    public abstract void count(String tag);
 
-    private static class DisabledProfiler extends  Profiler {
+    private static class DisabledProfiler extends Profiler {
         @Override
         public ProfilerToken start(String tag) {
             return null;
+        }
+
+        @Override
+        public void count(String tag) {
         }
     }
 
@@ -36,6 +41,7 @@ public abstract class Profiler {
             this.items = new ArrayList<>();
         }
 
+        @Override
         public synchronized ProfilerToken start(String tag) {
             Integer indexObj = tagToIndex.get(tag);
             ItemData itemData;
@@ -48,6 +54,11 @@ public abstract class Profiler {
             }
             itemData.start();
             return new ProfilerToken(itemData);
+        }
+
+        @Override
+        public synchronized void count(String tag) {
+            start(tag).close();
         }
 
         @Override

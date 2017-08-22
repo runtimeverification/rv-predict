@@ -2,6 +2,7 @@ package com.runtimeverification.rvpredict.trace;
 
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.performance.Profiler;
 
 /**
  * Unprocessed trace of events, implemented as a thin wrapper around the array
@@ -26,6 +27,7 @@ public class RawTrace {
         for (int i = start; i < end; i++) {
             assert events[i].getOriginalThreadId() == threadInfo.getOriginalThreadId();
             assert events[i].getSignalDepth() == threadInfo.getSignalDepth();
+            Profiler.instance().count(events[i].getType().toString());
         }
         this.start = start;
         this.mask = events.length - 1;

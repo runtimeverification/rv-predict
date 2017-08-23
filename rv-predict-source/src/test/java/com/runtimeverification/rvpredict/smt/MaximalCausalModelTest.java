@@ -14,6 +14,7 @@ import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
+import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
 import org.junit.Assert;
 import org.junit.Before;
@@ -66,6 +67,7 @@ public class MaximalCausalModelTest {
     @Mock private Configuration mockConfiguration;
     @Mock private Context mockContext;
     @Mock private Metadata mockMetadata;
+    @Mock private Logger mockLogger;
 
     @Before
     public void setUp() {
@@ -2005,6 +2007,101 @@ public class MaximalCausalModelTest {
         Assert.assertTrue(hasRace(rawTraces, event1, event2, tu, true));
     }
 
+    @Test
+    public void detectsRaceWithReadWhichHappensBeforeItsWrite() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_2),
+                        tu.unlock(LOCK_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        e2 = tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
+                        tu.unlock(LOCK_1)));
+
+        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), tu));
+    }
+
+    @Test
+    public void detectsRaceWithWriteWhichHappensBeforeAReadOfTheDefaultValue() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
+                        e2 = tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_2)));
+
+        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), tu));
+    }
+
+    @Test
+    public void detectsRaceWithEventAfterAWriteWhichHappensBeforeAReadOfTheDefaultValue() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)
+                        ),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
+                        e2 = tu.nonAtomicLoad(ADDRESS_2, VALUE_2),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_2)));
+
+        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), tu));
+    }
+
+    @Test
+    public void deleteIfNotNeededForRegressionTests_noContradictingHappensBefore() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.switchThread(THREAD_1, NO_SIGNAL),
+                tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                tu.nonAtomicLoad(ADDRESS_2, VALUE_2),
+                tu.threadStart(THREAD_2),
+
+                tu.switchThread(THREAD_2, NO_SIGNAL),
+                tu.nonAtomicLoad(ADDRESS_2, VALUE_2),
+                tu.nonAtomicLoad(ADDRESS_2, VALUE_2),
+                e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+
+                tu.switchThread(THREAD_1, NO_SIGNAL),
+                e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                tu.threadJoin(THREAD_2),
+                tu.nonAtomicStore(ADDRESS_2, VALUE_2)
+
+        );
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, 1, 0),
+                tu.extractRawTrace(events, 2, 0)
+        );
+
+        Assert.assertTrue(hasRace(rawTraces, extractSingleEvent(e1), extractSingleEvent(e2), tu));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
@@ -2066,6 +2163,7 @@ public class MaximalCausalModelTest {
         params.add("timeout", TIMEOUT_MILLIS);
         soundSolver.setParameters(params);
 
+        when(mockConfiguration.logger()).thenReturn(mockLogger);
         mockConfiguration.windowSize = WINDOW_SIZE;
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         ThreadInfos threadInfos = traceState.getThreadInfos();

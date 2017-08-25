@@ -259,11 +259,12 @@ rvp_ring_discard_by_slots(rvp_ring_t *r, const int nslots,
 		rvp_debugf("%s.%d: r %p residue %d\n",
 		    __func__, __LINE__, (void *)r, residue);
 		residue = rvp_ring_discard_by_slots(it->it_interruptor, residue,
-		    it->it_interruptor_sidx, it->it_interruptor_eidx, idepthp);
+		    it->it_interruptor_sidx, rvp_interruption_get_end(it),
+		    idepthp);
 		rvp_debugf("%s.%d: r %p residue %d\n",
 		    __func__, __LINE__, (void *)r, residue);
 		/* If residue < 0, then rvp_ring_discard_by_slots() didn't
-		 * empty it->it_interruptor to it->it_interruptor_eidx,
+		 * empty it->it_interruptor to rvp_interruption_get_end(it),
 		 * however, it did run down residue to 0.  So leave `it` on
 		 * the interruption ring of `r` and return residue < 0 so that
 		 * this ring, too, is left on its parent's ring.
@@ -390,9 +391,8 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 	return true;
 }
 
-void
-rvp_ring_put_interruption(rvp_ring_t *r, rvp_ring_t *interruptor,
-    int sidx, int eidx)
+rvp_interruption_t *
+rvp_ring_put_interruption(rvp_ring_t *r, rvp_ring_t *interruptor, int sidx)
 {
 	rvp_iring_t *ir = &r->r_iring;
 	rvp_interruption_t *prev = ir->ir_producer;
@@ -405,8 +405,9 @@ rvp_ring_put_interruption(rvp_ring_t *r, rvp_ring_t *interruptor,
 	prev->it_interruptor = interruptor;
 	prev->it_interrupted_idx = r->r_producer - r->r_items;
 	prev->it_interruptor_sidx = sidx;
-	prev->it_interruptor_eidx = eidx;
+	prev->it_interruptor_eidx = -1;
 	atomic_store_explicit(&ir->ir_producer, next, memory_order_release);
+	return prev;
 }
 
 /* Fill iovecs with the ring content beginning at the consumer pointer.
@@ -471,8 +472,13 @@ rvp_ring_get_iovs(rvp_ring_t *r, int start, int end,
 		rvp_debugf("%s.%d: r %p #iovs %td\n",
 		    __func__, __LINE__, (void *)r, lastiov - *iovp);
 
+		// TBD the proper fix is to pass `it` or NULL both to
+		// rvp_ring_get_iovs() and to rvp_ring_discard_by_bytes().
+		// In rvp_ring_discard_by_bytes(), advance
+		// it->it_interruptor_sidx as well as the ring's consumer
+		// pointer.
 		if (!rvp_ring_get_iovs(it->it_interruptor,
-		    it->it_interruptor_sidx, it->it_interruptor_eidx,
+		    it->it_interruptor_sidx, rvp_interruption_get_end(it),
 		    iovp, lastiov, idepthp))
 			goto out;
 

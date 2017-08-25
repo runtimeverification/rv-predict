@@ -32,7 +32,7 @@ typedef struct _rvp_interruption {
 	rvp_ring_t *	it_interruptor;
 	int		it_interrupted_idx;
 	int		it_interruptor_sidx;
-	int		it_interruptor_eidx;
+	int _Atomic	it_interruptor_eidx;
 } rvp_interruption_t;
 
 /* interruptions ring */
@@ -316,12 +316,34 @@ rvp_ring_put_buf(rvp_ring_t *r, rvp_buf_t b)
 	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 }
 
+/* Where `it` is an interruption and `r` the ring for the interruptor,
+ * return the producer index if the interruption has not finished
+ * (it->it_interruptor_eidx < 0).  Otherwise, return the end index of
+ * the interruption.
+ */
+static inline int
+rvp_interruption_get_end(const rvp_interruption_t *it)
+{
+	const rvp_ring_t *r = it->it_interruptor;
+	const int pidx = r->r_producer - r->r_items;
+	atomic_thread_fence(memory_order_acquire);
+	const int eidx = it->it_interruptor_eidx;
+	return (eidx < 0) ? pidx : eidx;
+}
+
+static inline void
+rvp_interruption_close(rvp_interruption_t *it, int eidx)
+{
+	atomic_thread_fence(memory_order_release);
+	it->it_interruptor_eidx = eidx;
+}
+
 void rvp_rings_init(void);
 int rvp_ring_stdinit(rvp_ring_t *);
 bool rvp_ring_get_iovs(rvp_ring_t *, int, int, struct iovec **,
     const struct iovec *, uint32_t *);
 bool rvp_ring_flush_to_fd(rvp_ring_t *, int, rvp_lastctx_t *);
 ssize_t rvp_ring_discard_by_bytes(rvp_ring_t *, const ssize_t, uint32_t *);
-void rvp_ring_put_interruption(rvp_ring_t *, rvp_ring_t *, int, int);
+rvp_interruption_t *rvp_ring_put_interruption(rvp_ring_t *, rvp_ring_t *, int);
 
 #endif /* _RVP_RING_H_ */

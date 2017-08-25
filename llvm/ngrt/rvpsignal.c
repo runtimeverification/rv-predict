@@ -275,9 +275,9 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	    memory_order_acquire);
 	rvp_ring_t *r = rvp_signal_ring_get(t, idepth + 1);
 	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
+	rvp_interruption_t *it = rvp_ring_put_interruption(oldr, r,
+	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
-
-	const int sidx = r->r_producer - r->r_items;
 
 	r->r_lgen = oldr->r_lgen;
 
@@ -317,7 +317,7 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 */
 	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
 	rvp_ring_put_buf(r, b);
-	rvp_ring_put_interruption(oldr, r, sidx, r->r_producer - r->r_items);
+	rvp_interruption_close(it, r->r_producer - r->r_items);
 	rvp_signal_ring_put(t, r);
 	/* I wait until after the ring is relinquished to restore the old
 	 * idepth so that the relinquished ring is available for reuse.

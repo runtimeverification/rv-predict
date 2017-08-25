@@ -27,10 +27,10 @@ public class StateAtWindowBorderTest {
     private static final long SIGNAL_HANDLER_2 = 102;
     private static final int THREAD_ID_1 = 201;
     private static final int THREAD_ID_2 = 202;
-    private static final long EVENT_ID_1 = 301;
-    private static final long EVENT_ID_2 = 302;
     private static final long PC_BASE = 400;
     private static final long BASE_ID = 500;
+    private static final long ADDRESS_1 = 601;
+    private static final long VALUE_1 = 701;
 
     private long nextIdDelta = 0;
 
@@ -56,7 +56,7 @@ public class StateAtWindowBorderTest {
     @Test
     public void startThread() {
         StateAtWindowBorder state = new StateAtWindowBorder();
-        state.startThread(THREAD_ID_1);
+        state.registerThread(THREAD_ID_1);
 
         Assert.assertFalse(state.getLastEstablishEvent(SIGNAL_NUMBER_1).isPresent());
         Assert.assertThat(state.getUnfinishedTtids(), containsExactly(THREAD_ID_1));
@@ -80,7 +80,7 @@ public class StateAtWindowBorderTest {
     @Test
     public void startJoinThread() {
         StateAtWindowBorder state = new StateAtWindowBorder();
-        state.startThread(THREAD_ID_1);
+        state.registerThread(THREAD_ID_1);
         state.joinThread(THREAD_ID_1);
 
         Assert.assertFalse(state.getLastEstablishEvent(SIGNAL_NUMBER_1).isPresent());
@@ -94,7 +94,7 @@ public class StateAtWindowBorderTest {
     public void joinStartThread() {
         StateAtWindowBorder state = new StateAtWindowBorder();
         state.joinThread(THREAD_ID_1);
-        state.startThread(THREAD_ID_1);
+        state.registerThread(THREAD_ID_1);
 
         Assert.assertFalse(state.getLastEstablishEvent(SIGNAL_NUMBER_1).isPresent());
         Assert.assertTrue(state.getUnfinishedTtids().isEmpty());
@@ -142,22 +142,30 @@ public class StateAtWindowBorderTest {
     }
 
     @Test
-    public void processEvent() {
+    public void processEvent() throws InvalidTraceDataException {
         StateAtWindowBorder state = new StateAtWindowBorder();
-        state.processEvent(EVENT_ID_2);
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        ReadonlyEventInterface e1 = TraceUtils.extractSingleEvent(
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1));
+        ReadonlyEventInterface e2 = TraceUtils.extractSingleEvent(
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1));
+        Assert.assertTrue(e1.getEventId() < e2.getEventId());
+
+        state.processEvent(e2, THREAD_ID_1);
 
         Assert.assertFalse(state.getLastEstablishEvent(SIGNAL_NUMBER_1).isPresent());
         Assert.assertTrue(state.getUnfinishedTtids().isEmpty());
         Assert.assertFalse(state.threadWasStarted(THREAD_ID_1));
         Assert.assertFalse(state.threadEnded(THREAD_ID_1));
         Assert.assertTrue(state.getThreadsForCurrentWindow().isEmpty());
-        Assert.assertEquals(EVENT_ID_2, state.getMinEventIdForWindow());
+        Assert.assertEquals(e2.getEventId(), state.getMinEventIdForWindow());
 
-        state.processEvent(EVENT_ID_1);
-        Assert.assertEquals(EVENT_ID_1, state.getMinEventIdForWindow());
+        state.processEvent(e1, THREAD_ID_1);
+        Assert.assertEquals(e1.getEventId(), state.getMinEventIdForWindow());
 
-        state.processEvent(EVENT_ID_2);
-        Assert.assertEquals(EVENT_ID_1, state.getMinEventIdForWindow());
+        state.processEvent(e2, THREAD_ID_1);
+        Assert.assertEquals(e1.getEventId(), state.getMinEventIdForWindow());
     }
 
     @Test
@@ -191,9 +199,10 @@ public class StateAtWindowBorderTest {
 
         ReadonlyEventInterface e1;
 
-        state.establishSignal(e1 = TraceUtils.extractEventByType(
+        state.processEvent(e1 = TraceUtils.extractEventByType(
                 tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, NO_SIGNAL_ENABLED_MASK),
-                EventType.ESTABLISH_SIGNAL));
+                EventType.ESTABLISH_SIGNAL),
+                THREAD_ID_1);
 
         Optional<ReadonlyEventInterface> lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_1);
         Assert.assertTrue(lastEstablish.isPresent());
@@ -201,9 +210,9 @@ public class StateAtWindowBorderTest {
         lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_2);
         Assert.assertFalse(lastEstablish.isPresent());
 
-        state.establishSignal(TraceUtils.extractEventByType(
+        state.processEvent(TraceUtils.extractEventByType(
                 tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_2, NO_SIGNAL_ENABLED_MASK),
-                EventType.ESTABLISH_SIGNAL));
+                EventType.ESTABLISH_SIGNAL), THREAD_ID_1);
 
         lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_1);
         Assert.assertTrue(lastEstablish.isPresent());
@@ -211,7 +220,7 @@ public class StateAtWindowBorderTest {
         lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_2);
         Assert.assertFalse(lastEstablish.isPresent());
 
-        state.establishSignal(e1);
+        state.processEvent(e1, THREAD_ID_1);
 
         lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_1);
         Assert.assertTrue(lastEstablish.isPresent());
@@ -219,9 +228,9 @@ public class StateAtWindowBorderTest {
         lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_2);
         Assert.assertFalse(lastEstablish.isPresent());
 
-        state.establishSignal(TraceUtils.extractEventByType(
+        state.processEvent(TraceUtils.extractEventByType(
                 tu.setSignalHandler(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, NO_SIGNAL_ENABLED_MASK),
-                EventType.ESTABLISH_SIGNAL));
+                EventType.ESTABLISH_SIGNAL), THREAD_ID_1);
 
         lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_1);
         Assert.assertTrue(lastEstablish.isPresent());
@@ -235,14 +244,21 @@ public class StateAtWindowBorderTest {
     public void initializeFromPreviousWindow() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
 
+        ReadonlyEventInterface e1 = TraceUtils.extractSingleEvent(
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1));
+        ReadonlyEventInterface e2 = TraceUtils.extractSingleEvent(
+                tu.nonAtomicStore(ADDRESS_1, VALUE_1));
+        Assert.assertTrue(e1.getEventId() < e2.getEventId());
+
         StateAtWindowBorder state = new StateAtWindowBorder();
-        state.startThread(THREAD_ID_1);
-        state.startThread(THREAD_ID_2);
+        state.registerThread(THREAD_ID_1);
+        state.registerThread(THREAD_ID_2);
         state.joinThread(THREAD_ID_1);
-        state.establishSignal(TraceUtils.extractEventByType(
+        state.processEvent(TraceUtils.extractEventByType(
                 tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_2, NO_SIGNAL_ENABLED_MASK),
-                EventType.ESTABLISH_SIGNAL));
-        state.processEvent(EVENT_ID_1);
+                EventType.ESTABLISH_SIGNAL),
+                THREAD_ID_1);
+        state.processEvent(e1, THREAD_ID_1);
 
         Optional<ReadonlyEventInterface> lastEstablish = state.getLastEstablishEvent(SIGNAL_NUMBER_1);
         Assert.assertTrue(lastEstablish.isPresent());
@@ -253,7 +269,7 @@ public class StateAtWindowBorderTest {
         Assert.assertTrue(state.threadEnded(THREAD_ID_1));
         Assert.assertFalse(state.threadEnded(THREAD_ID_2));
         Assert.assertThat(state.getThreadsForCurrentWindow(), containsExactly(THREAD_ID_1, THREAD_ID_2));
-        Assert.assertEquals(EVENT_ID_1, state.getMinEventIdForWindow());
+        Assert.assertEquals(e1.getEventId(), state.getMinEventIdForWindow());
 
         StateAtWindowBorder nextWindowState = new StateAtWindowBorder();
         nextWindowState.copyFrom(state);
@@ -267,23 +283,25 @@ public class StateAtWindowBorderTest {
         Assert.assertTrue(nextWindowState.threadEnded(THREAD_ID_1));
         Assert.assertFalse(nextWindowState.threadEnded(THREAD_ID_2));
         Assert.assertThat(nextWindowState.getThreadsForCurrentWindow(), containsExactly(THREAD_ID_1, THREAD_ID_2));
-        Assert.assertEquals(EVENT_ID_1, nextWindowState.getMinEventIdForWindow());
+        Assert.assertEquals(e1.getEventId(), nextWindowState.getMinEventIdForWindow());
 
-        nextWindowState.processEvent(EVENT_ID_2);
-        Assert.assertEquals(EVENT_ID_1, nextWindowState.getMinEventIdForWindow());
+        nextWindowState.processEvent(e2, THREAD_ID_1);
+        Assert.assertEquals(e1.getEventId(), nextWindowState.getMinEventIdForWindow());
 
         nextWindowState.initializeForNextWindow();
-        nextWindowState.processEvent(EVENT_ID_2);
+        nextWindowState.processEvent(e2, THREAD_ID_1);
 
         lastEstablish = nextWindowState.getLastEstablishEvent(SIGNAL_NUMBER_1);
         Assert.assertTrue(lastEstablish.isPresent());
         Assert.assertEquals(SIGNAL_HANDLER_2, lastEstablish.get().getSignalHandlerAddress());
         Assert.assertThat(nextWindowState.getUnfinishedTtids(), containsExactly(THREAD_ID_2));
-        Assert.assertTrue(nextWindowState.threadWasStarted(THREAD_ID_1));
+        // Already joined in the previous window, so we forgot it.
+        Assert.assertFalse(nextWindowState.threadWasStarted(THREAD_ID_1));
         Assert.assertTrue(nextWindowState.threadWasStarted(THREAD_ID_2));
-        Assert.assertTrue(nextWindowState.threadEnded(THREAD_ID_1));
+        // Already joined in the previous window, so we forgot it.
+        Assert.assertFalse(nextWindowState.threadEnded(THREAD_ID_1));
         Assert.assertFalse(nextWindowState.threadEnded(THREAD_ID_2));
         Assert.assertThat(nextWindowState.getThreadsForCurrentWindow(), containsExactly(THREAD_ID_2));
-        Assert.assertEquals(EVENT_ID_2, nextWindowState.getMinEventIdForWindow());
+        Assert.assertEquals(e2.getEventId(), nextWindowState.getMinEventIdForWindow());
     }
 }

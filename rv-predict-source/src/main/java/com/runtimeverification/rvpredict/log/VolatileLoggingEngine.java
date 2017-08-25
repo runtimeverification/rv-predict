@@ -1,4 +1,4 @@
-/*******************************************************************************
+/* ******************************************************************************
  * Copyright (c) 2013 University of Illinois
  *
  * All rights reserved.
@@ -25,7 +25,7 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- ******************************************************************************/
+ * *****************************************************************************/
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
@@ -38,6 +38,7 @@ import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -96,6 +97,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             }
 
             Buffer buffer = new Buffer(owner, windowSize);
+
+
             activeBuffers.add(buffer);
             return buffer;
         }
@@ -191,11 +194,21 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         while (finalized.sum() < numOfEvents) {
             LockSupport.parkNanos(1);
         }
-
+        Buffer[] activeBuffersCopy = activeBuffers.toArray(new Buffer[0]);
         try {
             crntState.preStartWindow();
             List<RawTrace> rawTraces = new ArrayList<>();
-            for (Buffer b : activeBuffers) {
+            for (Buffer b : activeBuffersCopy) {
+                if (!b.isEmpty()) {
+                    if (b.start < b.cursor) {
+                        TraceCache.registerNewThreads(Arrays.asList(b.events).subList(b.start, b.cursor), crntState);
+                    } else {
+                        TraceCache.registerNewThreads(Arrays.asList(b.events).subList(b.start, b.length), crntState);
+                        TraceCache.registerNewThreads(Arrays.asList(b.events).subList(0, b.cursor), crntState);
+                    }
+                }
+            }
+            for (Buffer b : activeBuffersCopy) {
                 if (!b.isEmpty()) {
                     Event oneEvent = b.events[b.start];
                     long otid = oneEvent.getOriginalThreadId();

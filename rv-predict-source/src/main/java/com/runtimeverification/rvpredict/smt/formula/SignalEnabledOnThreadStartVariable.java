@@ -13,7 +13,7 @@ public class SignalEnabledOnThreadStartVariable extends SMTVariable implements I
     private final long signalNumber;
 
     public SignalEnabledOnThreadStartVariable(int ttid, long signalNumber) {
-        super(ttid * Constants.MAX_SIGNAL_NUMBER + signalNumber);
+        super(ttid * Constants.SIGNAL_NUMBER_COUNT + signalNumber);
         this.ttid = ttid;
         this.signalNumber = signalNumber;
     }

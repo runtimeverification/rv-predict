@@ -3,11 +3,11 @@ package com.runtimeverification.rvpredict.trace;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
+import com.runtimeverification.rvpredict.trace.producers.TraceProducers;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 import java.util.ArrayDeque;
@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.OptionalLong;
 import java.util.Set;
 
 public class TraceState {
@@ -51,6 +50,8 @@ public class TraceState {
     private final Table<Integer, Long, LockState> tidToLockIdToLockState = HashBasedTable.create(
             DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_LOCKS);
 
+    private final TraceProducers traceProducers = new TraceProducers();
+
     private final StateAtWindowBorder stateAtCurrentWindowStart = new StateAtWindowBorder();
     private final StateAtWindowBorder stateAtCurrentWindowEnd = new StateAtWindowBorder();
 
@@ -63,8 +64,6 @@ public class TraceState {
     private final MetadataInterface metadata;
 
     private final Map<Long, Integer> t_eventIdToTtid;
-
-    private final Map<Long, Integer> t_originalTidToTraceTid;
 
     private final Map<Integer, List<ReadonlyEventInterface>> t_tidToEvents;
 
@@ -79,14 +78,6 @@ public class TraceState {
     private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
 
     private final Set<ReadonlyEventInterface> t_clinitEvents;
-
-    private final Map<Integer, ReadonlyEventInterface> t_ttidToStartEvent;
-
-    private final Map<Integer, ReadonlyEventInterface> t_ttidToJoinEvent;
-
-    private final Map<Long, Set<Integer>> t_signalToTtidWhereEnabledAtStart;
-
-    private final Map<Long, Set<Integer>> t_signalToTtidWhereDisabledAtStart;
 
     private final Map<Integer, Set<Integer>> t_ttidsThatCanOverlap;
 
@@ -103,7 +94,6 @@ public class TraceState {
         this.metadata = metadata;
 
         this.t_eventIdToTtid           = new LinkedHashMap<>();
-        this.t_originalTidToTraceTid   = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -112,11 +102,7 @@ public class TraceState {
                                             DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
-        this.t_ttidToStartEvent        = new HashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_ttidToJoinEvent         = new HashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_signalToTtidWhereEnabledAtStart = new HashMap<>();
-        this.t_signalToTtidWhereDisabledAtStart = new HashMap<>();
-        this.t_ttidsThatCanOverlap = new HashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_ttidsThatCanOverlap     = new HashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_signalIsEnabledForThreadCache = new HashMap<>();
         this.t_atLeastOneSigsetAllowsSignalCache = new HashMap<>();
         this.t_signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
@@ -135,7 +121,6 @@ public class TraceState {
         processWindow(rawTraces);
 
         t_eventIdToTtid.clear();
-        t_originalTidToTraceTid.clear();
         t_tidToEvents.clear();
         t_tidToMemoryAccessBlocks.clear();
         t_tidToThreadState.clear();
@@ -143,14 +128,9 @@ public class TraceState {
         t_tidToAddrToEvents.clear();
         t_lockIdToLockRegions.clear();
         t_clinitEvents.clear();
-        t_ttidToStartEvent.clear();
-        t_ttidToJoinEvent.clear();
-        t_signalToTtidWhereEnabledAtStart.clear();
-        t_signalToTtidWhereDisabledAtStart.clear();
         t_ttidsThatCanOverlap.clear();
         t_signalIsEnabledForThreadCache.clear();
         t_atLeastOneSigsetAllowsSignalCache.clear();
-        t_originalTidToTraceTid.clear();
         t_signalNumberToSignalHandlerToEstablishSignalEvents.clear();
         return new Trace(this, rawTraces,
                 t_eventIdToTtid,
@@ -161,14 +141,9 @@ public class TraceState {
                 t_tidToAddrToEvents,
                 t_lockIdToLockRegions,
                 t_clinitEvents,
-                t_ttidToStartEvent,
-                t_ttidToJoinEvent,
-                t_signalToTtidWhereEnabledAtStart,
-                t_signalToTtidWhereDisabledAtStart,
                 t_ttidsThatCanOverlap,
                 t_signalIsEnabledForThreadCache,
                 t_atLeastOneSigsetAllowsSignalCache,
-                t_originalTidToTraceTid,
                 t_signalNumberToSignalHandlerToEstablishSignalEvents);
     }
 
@@ -213,16 +188,6 @@ public class TraceState {
             break;
         default:
             throw new IllegalArgumentException("Unexpected event type: " + event.getType());
-        }
-    }
-
-    private void onSignalEvent(ReadonlyEventInterface event, int ttid) {
-        if (event.getType() == EventType.ESTABLISH_SIGNAL) {
-            stateAtCurrentWindowEnd.establishSignal(event);
-        } else if (event.getType() == EventType.ENTER_SIGNAL) {
-            stateAtCurrentWindowEnd.startThread(ttid);
-        } else if (event.getType() == EventType.EXIT_SIGNAL) {
-            stateAtCurrentWindowEnd.joinThread(ttid);
         }
     }
 
@@ -271,7 +236,7 @@ public class TraceState {
         }
     }
 
-    private void processWindow(Collection<RawTrace> traces) {
+    private void processWindow(List<RawTrace> traces) {
         traces.forEach(rawTrace -> {
             int ttid = rawTrace.getThreadInfo().getId();
             if (rawTrace.size() > 0) {
@@ -279,16 +244,22 @@ public class TraceState {
             }
             for (int i = 0; i < rawTrace.size(); i++) {
                 ReadonlyEventInterface event = rawTrace.event(i);
-                stateAtCurrentWindowEnd.processEvent(event.getEventId());
+                stateAtCurrentWindowEnd.processEvent(event, ttid);
                 if (event.isStart()) {
                     onStartThread(event.getSyncedThreadId());
                 } else if (event.isJoin()) {
                     onJoinThread(event.getSyncedThreadId());
-                } else if (event.isSignalEvent()) {
-                    onSignalEvent(event, rawTrace.getThreadInfo().getId());
                 }
             }
         });
+        traceProducers.startWindow(
+                traces, stateAtCurrentWindowEnd.getThreadsForCurrentWindow(), threadInfos,
+                stateAtCurrentWindowStart.getSignalMasks(),
+                stateAtCurrentWindowStart.getStartedThreads(),
+                stateAtCurrentWindowEnd.getStartedThreads(),
+                stateAtCurrentWindowStart.getFinishedThreads(),
+                stateAtCurrentWindowEnd.getFinishedThreads());
+        stateAtCurrentWindowEnd.processSignalMasks(traceProducers.signalMaskForEvents.getComputed());
     }
 
     /**
@@ -339,14 +310,8 @@ public class TraceState {
         return -1;
     }
 
-    public ThreadInfo createAndRegisterThreadInfo(long originalThreadId) {
-        ThreadInfo info = new ThreadInfo(
-                ThreadType.THREAD,
-                t_threadId++,
-                originalThreadId,
-                OptionalLong.empty(),
-                OptionalLong.empty(),
-                0);
+    public ThreadInfo createAndRegisterThreadInfo(long originalThreadId, OptionalInt parentTtid) {
+        ThreadInfo info = ThreadInfo.createThreadInfo(t_threadId++, originalThreadId, parentTtid);
         threadInfos.registerThreadInfo(info);
         stateAtCurrentWindowEnd.registerThread(info.getId());
         return info;
@@ -354,12 +319,11 @@ public class TraceState {
 
     public ThreadInfo createAndRegisterSignalInfo(
             long originalThreadId, long signalNumber, long signalHandler, int signalDepth) {
-        ThreadInfo info = new ThreadInfo(
-                ThreadType.SIGNAL,
+        ThreadInfo info = ThreadInfo.createSignalInfo(
                 t_threadId++,
                 originalThreadId,
-                OptionalLong.of(signalNumber),
-                OptionalLong.of(signalHandler),
+                signalNumber,
+                signalHandler,
                 signalDepth);
         threadInfos.registerThreadInfo(info);
         stateAtCurrentWindowEnd.registerSignal(info.getId());
@@ -368,28 +332,17 @@ public class TraceState {
 
     private void onStartThread(long otid) {
         OptionalInt maybeTtid = threadInfos.getTtidFromOtid(otid);
-        int ttid;
-        if (!maybeTtid.isPresent()) {
-            ttid = createAndRegisterThreadInfo(otid).getId();
-        } else {
-            ttid = maybeTtid.getAsInt();
-        }
-        stateAtCurrentWindowEnd.startThread(ttid);
+        // Should have been registered by the TraceCache.
+        assert maybeTtid.isPresent();
+        stateAtCurrentWindowEnd.registerThread(maybeTtid.getAsInt());
     }
 
     private void onJoinThread(long otid) {
         OptionalInt maybeTtid = threadInfos.getTtidFromOtid(otid);
-        int ttid;
-        if (!maybeTtid.isPresent()) {
-            ttid = createAndRegisterThreadInfo(otid).getId();
-        } else {
-            ttid = maybeTtid.getAsInt();
-        }
-        stateAtCurrentWindowEnd.joinThread(ttid);
-    }
-
-    Collection<Integer> getUnfinishedTtidsAtWindowStart() {
-        return stateAtCurrentWindowStart.getUnfinishedTtids();
+        // Joins should be in the same window or later than starts,
+        // and we should have already processed the start event even if it was on a different thread.
+        assert maybeTtid.isPresent();
+        stateAtCurrentWindowEnd.joinThread(maybeTtid.getAsInt());
     }
 
     public void preStartWindow() {
@@ -439,7 +392,7 @@ public class TraceState {
         return stateAtCurrentWindowEnd.getThreadsForCurrentWindow();
     }
 
-    long getMinEventIdForWindow() {
-        return stateAtCurrentWindowEnd.getMinEventIdForWindow();
+    TraceProducers getTraceProducers() {
+        return traceProducers;
     }
 }

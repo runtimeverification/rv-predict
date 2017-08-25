@@ -27,4 +27,5 @@ public interface Constants {
     int INVALID_TTID = -1;
 
     long MAX_SIGNAL_NUMBER = 63L;
+    long SIGNAL_NUMBER_COUNT = MAX_SIGNAL_NUMBER + 1;
 }

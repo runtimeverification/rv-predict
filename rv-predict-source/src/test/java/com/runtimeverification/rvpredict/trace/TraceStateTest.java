@@ -166,6 +166,7 @@ public class TraceStateTest {
         RawTrace rawTrace = tu.createRawTrace(
                 tu.threadStart(THREAD_ID_2),
                 tu.threadJoin(THREAD_ID_2));
+        traceState.createAndRegisterThreadInfo(THREAD_ID_2, OptionalInt.of(rawTrace.getThreadInfo().getId()));
         traceState.fastProcess(rawTrace);
 
         Assert.assertThat(traceState.getThreadsForCurrentWindow(), hasSize(2));
@@ -178,7 +179,7 @@ public class TraceStateTest {
     @Test
     public void createsThreadInfo() {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID);
+        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID, OptionalInt.empty());
 
         Assert.assertEquals(THREAD_ID, threadInfo.getOriginalThreadId());
         Assert.assertEquals(0, threadInfo.getSignalDepth());
@@ -217,7 +218,7 @@ public class TraceStateTest {
     @Test
     public void retrievesTtidsActiveAtWindowStart() throws InvalidTraceDataException {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID);
+        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID, OptionalInt.empty());
 
         Assert.assertFalse(traceState.getTtidForThreadOngoingAtWindowStart(THREAD_ID, NO_SIGNAL).isPresent());
 
@@ -242,7 +243,7 @@ public class TraceStateTest {
     @Test
     public void threadStartPlaces() throws InvalidTraceDataException {
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID);
+        ThreadInfo threadInfo = traceState.createAndRegisterThreadInfo(THREAD_ID, OptionalInt.empty());
 
         Assert.assertTrue(traceState.getThreadStartsInTheCurrentWindow(threadInfo.getId()));
         Assert.assertFalse(traceState.getThreadEndsInTheCurrentWindow(threadInfo.getId()));

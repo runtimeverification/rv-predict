@@ -26,6 +26,9 @@ for arg in "$@"; do
 	case "$arg" in
 	--)	break
 		;;
+	-help)	help=yes
+		break
+		;;
 	-M|-E)	# -M implies -E, and -E skips normal compilation
 		compile=no
 		link=no
@@ -57,7 +60,8 @@ else
 	compiler=clang-3.8
 fi
 
-if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ]; then
+if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]
+then
 	pass="-Xclang -load -Xclang $pass_dir/rvpinstrument.so -g"
 fi
 

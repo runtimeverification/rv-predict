@@ -29,5 +29,5 @@ int main() {
     }
 
     printf("%ld\n", accum);
-    return 0;
+    return accum & 0377U;
 }

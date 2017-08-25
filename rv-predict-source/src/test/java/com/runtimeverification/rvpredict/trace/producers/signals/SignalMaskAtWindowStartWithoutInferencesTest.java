@@ -19,7 +19,7 @@ import static com.runtimeverification.rvpredict.testutils.MoreAsserts.isEmptyMap
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class SignalMaskAtWindowStartWithoutInferrencesTest {
+public class SignalMaskAtWindowStartWithoutInferencesTest {
     private static final long SIGNAL_NUMBER_1 = 2;
     private static final long SIGNAL_NUMBER_2 = 3;
     private static final int TTID_1 = 101;
@@ -30,7 +30,7 @@ public class SignalMaskAtWindowStartWithoutInferrencesTest {
 
     @Test
     public void returnsSignals() {
-        ComputingProducerWrapper<SignalMaskAtWindowStartWithoutInferrences> producer =
+        ComputingProducerWrapper<SignalMaskAtWindowStartWithoutInferences> producer =
                 initProducer(module, mockSignalMaskAtWindowStartLeaf);
 
         when(mockSignalMaskAtWindowStartLeaf.getMasks())
@@ -46,7 +46,7 @@ public class SignalMaskAtWindowStartWithoutInferrencesTest {
 
     @Test
     public void resets() {
-        ComputingProducerWrapper<SignalMaskAtWindowStartWithoutInferrences> producer =
+        ComputingProducerWrapper<SignalMaskAtWindowStartWithoutInferences> producer =
                 initProducer(module, mockSignalMaskAtWindowStartLeaf);
 
         when(mockSignalMaskAtWindowStartLeaf.getMasks())
@@ -67,11 +67,11 @@ public class SignalMaskAtWindowStartWithoutInferrencesTest {
         Assert.assertThat(producer.getComputed().getMask(TTID_1), isAbsent());
     }
 
-    private ComputingProducerWrapper<SignalMaskAtWindowStartWithoutInferrences> initProducer(
+    private ComputingProducerWrapper<SignalMaskAtWindowStartWithoutInferences> initProducer(
             TestProducerModule module,
             SignalMaskAtWindowStartLeaf signalMaskAtWindowStartLeaf) {
         return new ComputingProducerWrapper<>(
-                new SignalMaskAtWindowStartWithoutInferrences(
+                new SignalMaskAtWindowStartWithoutInferences(
                         new ComputingProducerWrapper<>(signalMaskAtWindowStartLeaf, module)),
                 module
         );

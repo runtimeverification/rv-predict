@@ -86,7 +86,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
     }
 
     @Test
-    public void fillsMaskWithInferrences() {
+    public void fillsMaskWithInferences() {
         ComputingProducerWrapper<SignalMaskAtWindowOrThreadStartWithInferences> producer =
                 initProducer(
                         module,

@@ -126,7 +126,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
     }
 
     @Test
-    public void copiesEnableAndDisableInferrencesToOutput() {
+    public void copiesEnableAndDisableInferencesToOutput() {
         ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure> producer =
                 initProducer(
                         module,

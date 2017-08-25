@@ -76,11 +76,11 @@ public class SignalEnabledAtStartInferenceTransitiveClosure
         mergeToFormer(
                 getState().signalToTtidWhereDisabledAtStart,
                 signalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart());
-        transitiveInferrences(getState().signalToTtidWhereEnabledAtStart, SignalMask.SignalMaskBit.ENABLED);
-        transitiveInferrences(getState().signalToTtidWhereDisabledAtStart, SignalMask.SignalMaskBit.DISABLED);
+        transitiveInferences(getState().signalToTtidWhereEnabledAtStart, SignalMask.SignalMaskBit.ENABLED);
+        transitiveInferences(getState().signalToTtidWhereDisabledAtStart, SignalMask.SignalMaskBit.DISABLED);
     }
 
-    private void transitiveInferrences(
+    private void transitiveInferences(
             Map<Long, Set<Integer>> signalToTtids, SignalMask.SignalMaskBit expectedMaskBit) {
         signalToTtids.forEach((signalNumber, ttids) -> {
             for (int ttid : Lists.reverse(sortedTtidsWithParentFirst.getTtids())) {

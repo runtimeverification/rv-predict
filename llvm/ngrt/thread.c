@@ -9,7 +9,7 @@
 #include <stdint.h> /* for uint32_t */
 #include <stdlib.h> /* for EXIT_FAILURE */
 #include <stdio.h> /* for fprintf(3) */
-#include <string.h> /* for strerror(3) */
+#include <string.h> /* for strerror(3), strcasecmp(3) */
 #include <unistd.h> /* for sysconf */
 
 #include "init.h"
@@ -38,12 +38,16 @@ static uint32_t next_id = 0;
 static pthread_t serializer;
 static pthread_cond_t wakecond;
 static int nwake = 0;
+static int nforks = 0;
 static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
 static bool transmit = true;
+bool rvp_trace_only = true;
 
 pthread_key_t rvp_thread_key;
-static pthread_once_t rvp_init_once = PTHREAD_ONCE_INIT;
+static pthread_once_t rvp_establish_atfork_once = PTHREAD_ONCE_INIT;
+static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
+static pthread_once_t rvp_prefork_init_once = PTHREAD_ONCE_INIT;
 
 static int rvp_thread_detach(rvp_thread_t *);
 static void rvp_thread_destroy(rvp_thread_t *);
@@ -217,8 +221,7 @@ rvp_serializer_create(void)
 {
 	int rc;
 
-	if ((serializer_fd = rvp_trace_open()) == -1)
-		err(EXIT_FAILURE, "%s: rvp_trace_open", __func__);
+	serializer_fd = rvp_trace_open();
 
 	thread_lock();
 	assert(thread_head->t_next == NULL);
@@ -241,7 +244,7 @@ rvp_serializer_create(void)
 }
 
 void
-rvp_thread_init(void)
+rvp_thread_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(int (*)(pthread_t, void **), pthread_join);
 	ESTABLISH_PTR_TO_REAL(
@@ -281,12 +284,18 @@ rvp_assert_atomicity(void)
 }
 
 static void
-rvp_init(void)
+rvp_prefork_init(void)
 {
 	rvp_assert_atomicity();
-	rvp_lock_init();	// needed by rvp_signal_init()
+	rvp_lock_prefork_init();	// needed by rvp_signal_init()
+	rvp_signal_prefork_init();
+	rvp_thread_prefork_init();
+}
+
+static void
+rvp_postfork_init(void)
+{
 	rvp_signal_init();
-	rvp_thread_init();
 	rvp_rings_init();
 
 	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
@@ -310,11 +319,52 @@ rvp_init(void)
 	atexit(rvp_stop_transmitter);
 }
 
+static void
+__rvpredict_postfork_init(void)
+{
+	/* Only perform the post-fork initialization after the first fork. */
+	if (nforks != 1)
+		return;
+	rvp_postfork_init();
+	rvp_static_intrs_reinit();
+}
+
+static void
+rvp_next_fork(void)
+{
+	nforks++;
+}
+
+static void
+rvp_establish_atfork(void)
+{
+	/* Before the parent forks, call rvp_next_fork() to increase
+	 * a fork(2) counter.
+	 */
+	const int rc = pthread_atfork(rvp_next_fork, NULL,
+	    __rvpredict_postfork_init);
+	if (rc != 0) {
+		errx(EXIT_FAILURE,
+		    "%s: pthread_atfork: %s", __func__, strerror(rc));
+	}
+}
+
 void
 __rvpredict_init(void)
 {
-	(void)pthread_once(&rvp_init_once, rvp_init);
-	rvp_static_intrs_reinit();
+	const char *s;
+
+	rvp_trace_only = (s = getenv("RVP_TRACE_ONLY")) != NULL &&
+	    strcasecmp(s, "yes") == 0;
+
+	(void)pthread_once(&rvp_prefork_init_once, rvp_prefork_init);
+	if (rvp_trace_only) {
+		(void)pthread_once(&rvp_postfork_init_once, rvp_postfork_init);
+		rvp_static_intrs_reinit();
+	} else {
+		(void)pthread_once(&rvp_establish_atfork_once,
+		    rvp_establish_atfork);
+	}
 }
 
 static void

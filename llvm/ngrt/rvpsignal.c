@@ -73,7 +73,7 @@ rvp_signal_table_init(void)
 }
 
 void
-rvp_signal_init(void)
+rvp_signal_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const struct sigaction *, struct sigaction *),
@@ -87,6 +87,11 @@ rvp_signal_init(void)
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(const sigset_t *),
 	    sigsuspend);
+}
+
+void
+rvp_signal_init(void)
+{
 	rvp_signal_table_init();
 }
 

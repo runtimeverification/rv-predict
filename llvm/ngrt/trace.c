@@ -48,18 +48,16 @@ writeall(int fd, const void *buf, size_t nbytes)
 int
 rvp_trace_open(void)
 {
-	const char *tracefn = getenv("RVP_TRACE_FILE");
+	const char *envfile = getenv("RVP_TRACE_FILE");
+	const char *tracefn = (envfile != NULL) ? envfile : "./rvpredict.trace";
 
-	int fd = open((tracefn != NULL) ? tracefn : "./rvpredict.trace",
-	    O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	int fd = open(tracefn, O_WRONLY|O_CREAT|O_TRUNC, 0600);
 
 	if (fd == -1)
-		return -1;
+		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
 
-	if (writeall(fd, &header, sizeof(header)) == -1) {
-		close(fd);
-		return -1;
-	}
+	if (writeall(fd, &header, sizeof(header)) == -1)
+		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
 
 	return fd;
 }

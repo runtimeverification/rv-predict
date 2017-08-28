@@ -11,15 +11,15 @@
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop() */
 
 static long pgsz = 0;
-static bool rvp_do_debug = false;
+static const bool rvp_do_debug = false;
 
 static void
 rvp_debugf(const char *fmt, ...)
 {
 	va_list ap;
-	va_start(ap, fmt);
 	if (!rvp_do_debug)
 		return;
+	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
 }
@@ -281,6 +281,9 @@ rvp_ring_discard_by_slots(rvp_ring_t *r, const int nslots,
 		rvp_debugf("%s.%d: r %p lastidx %d\n",
 		    __func__, __LINE__, (void *)r, lastidx);
 	}
+	/* TBD if bracket != NULL, write cidx back to
+	 * TBD bracket->it_interruptor_sidx right here.
+	 */
 	if (residue > 0) {
 		residue -= rvp_ring_discard_to(r, lastidx, idepthp);
 		rvp_debugf("%s.%d: r %p residue %d\n",
@@ -302,6 +305,10 @@ rvp_ring_discard_by_slots(rvp_ring_t *r, const int nslots,
 		    "%s.%d: r %p exit -1 intr %d\n",
 		    __func__, __LINE__, (void *)r, intr);
 
+		/* XXX Should be consumed before rather than properly consumed
+		 * XXX before?  Can't there be an interruption right after
+		 * XXX the last event?
+		 */
 		if (rvp_ring_index_properly_consumed_before(r, intr, end))
 			return -1;
 	}

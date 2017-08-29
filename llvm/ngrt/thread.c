@@ -220,6 +220,7 @@ static void
 rvp_serializer_create(void)
 {
 	int rc;
+	sigset_t maskall, omask;
 
 	serializer_fd = rvp_trace_open();
 
@@ -235,11 +236,23 @@ rvp_serializer_create(void)
 	};
 	thread_unlock();
 
+	sigfillset(&maskall);
+
+	if ((rc = real_pthread_sigmask(SIG_BLOCK, &maskall, &omask)) != 0) {
+		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
+		    __LINE__, strerror(rc));
+	}
+
 	rc = real_pthread_create(&serializer, NULL, serialize, NULL);
 
 	if (rc != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_create: %s", __func__,
 		    strerror(rc));
+	}
+
+	if ((rc = real_pthread_sigmask(SIG_SETMASK, &omask, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
+		    __LINE__, strerror(rc));
 	}
 }
 

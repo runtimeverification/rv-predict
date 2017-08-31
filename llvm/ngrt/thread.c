@@ -129,10 +129,10 @@ thread_lock(sigset_t *oldmask)
 static void
 thread_unlock(const sigset_t *oldmask)
 {
-	if (real_pthread_sigmask(SIG_SETMASK, oldmask, NULL) != 0)
-		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
 	if (real_pthread_mutex_unlock(&thread_mutex) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_unlock", __func__);
+	if (real_pthread_sigmask(SIG_SETMASK, oldmask, NULL) != 0)
+		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
 }
 
 /* Caller must hold thread_mutex. */

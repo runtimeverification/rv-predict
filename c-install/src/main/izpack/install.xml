@@ -86,11 +86,11 @@
                 <exclude name="rv-predict" />
                 <os family="unix"/>
             </fileset>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpa" type="bin" keep="true" stage="never"/>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpc" type="bin" keep="true" stage="never"/>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpc++" type="bin" keep="true" stage="never"/>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpdump" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvplicense" type="bin" keep="true" stage="never"/>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpsymbolize" type="bin" keep="true" stage="never"/>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvsyms" type="bin" keep="true" stage="never"/>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpx" type="bin" keep="true" stage="never"/>
             <fileset dir="lib" targetdir="$INSTALL_PATH/lib">
 		<exclude name="libclang_rt.*"/>

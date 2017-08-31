@@ -7,6 +7,7 @@
 
 #include <sys/param.h>	/* for MIN(a, b) */
 
+#include "rvpsignal.h"
 #include "thread.h"
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop() */
 
@@ -93,7 +94,10 @@ rvp_ring_wait_for_slot(rvp_ring_t *r, uint32_t *slot)
 	}
 }
 
-/* If there is not an item on the ring at index `lidx`, or if there is
+/* If the ring is empty but `lidx == ridx` and `lidx` will be the
+ * next item consumed when the ring re-fills, then return true.
+ *
+ * If there is not an item on the ring at index `lidx`, or if there is
  * not an item at `ridx` and `ridx` does not equal the producer index,
  * then return false.
  *
@@ -114,7 +118,7 @@ rvp_ring_index_consumed_before(const rvp_ring_t *r, int lidx, int ridx)
 	//              ^
 	//             cidx
 	if (cidx == pidx)
-		return false;
+		return cidx == lidx && lidx == ridx;
 
 	// |............***********************............|
 	//              ^                      ^
@@ -162,42 +166,6 @@ rvp_ring_index_properly_consumed_before(rvp_ring_t *r, int lidx, int ridx)
 	return rvp_ring_index_consumed_before(r, lidx, ridx) && lidx != ridx;
 }
 
-/* This does not recurse into interruptors.  Returns the number of slots
- * discarded.
- */
-static int
-rvp_ring_discard_to(rvp_ring_t *r, const int next, uint32_t *idepthp)
-{
-	const uint32_t * const producer = r->r_producer,
-	    * const consumer = r->r_consumer;
-	const int cidx = consumer - &r->r_items[0],
-		  pidx = producer - &r->r_items[0];
-	int preconsumed = 0;
-
-	if (cidx == pidx)
-		return 0;
-
-	if (*idepthp != r->r_idepth) {
-		preconsumed = sizeof(r->r_sigdepth) / sizeof(r->r_items[0]);
-		rvp_debugf("%s.%d inserted sigdepth %zd at %d\n",
-		    __func__, __LINE__,
-		    preconsumed * sizeof(r->r_items[0]), cidx);
-		*idepthp = r->r_idepth;
-	}
-
-	r->r_consumer = &r->r_items[next];
-
-	if (cidx < next && next <= pidx)
-		return preconsumed + next - cidx;
-
-	assert(pidx < cidx);
-
-	if (cidx < next)
-		return preconsumed + next - cidx;
-	assert(next <= pidx);
-	return preconsumed + next + rvp_ring_capacity(r) + 1 - cidx; 
-}
-
 static inline int
 rvp_ring_residue_and_end_to_consumer_index(const rvp_ring_t *r,
     int residue, int end)
@@ -216,25 +184,97 @@ rvp_ring_residue_and_end_to_consumer_index(const rvp_ring_t *r,
 		return r->r_producer - r->r_items;
 }
 
-/* Return `n < 0` if slots up to `end` were discarded but more remain in
- * `r`, `n = 0` if `nslots` slots were discarded and no more remain in
- * `r`, and `n > 0` if `n < nslots` more slots remain to be discarded.
+/* This does not recurse into interruptors.  Returns the number of slots
+ * discarded.
+ */
+static int
+rvp_ring_discard_to(rvp_ring_t *r, int residue, int *nextp,
+    uint32_t *idepthp)
+{
+	const uint32_t * const producer = r->r_producer,
+	    * const consumer = r->r_consumer;
+	const int cidx = consumer - &r->r_items[0],
+		  pidx = producer - &r->r_items[0];
+	int preconsumed = 0;
+	int next0 = *nextp;
+
+	if (cidx == pidx)
+		return 0;
+
+	if (*idepthp != r->r_idepth) {
+		preconsumed = sizeof(r->r_sigdepth) / sizeof(r->r_items[0]);
+		residue -= preconsumed;
+		rvp_debugf("%s.%d inserted %zd-byte sigdepth at %d\n",
+		    __func__, __LINE__,
+		    preconsumed * sizeof(r->r_items[0]), cidx);
+		*idepthp = r->r_idepth;
+	}
+
+	assert(0 < residue);
+	const int next = rvp_ring_residue_and_end_to_consumer_index(r,
+	    residue, next0);
+	*nextp = next;
+
+	assert(rvp_ring_index_consumed_before(r, next, pidx));
+
+	r->r_consumer = &r->r_items[next];
+
+	if (cidx < next)
+		return preconsumed + next - cidx;
+
+	assert(pidx < cidx && next <= pidx);
+
+	return preconsumed + next + rvp_ring_capacity(r) + 1 - cidx; 
+}
+
+static void
+rvp_ring_drop_interruption(rvp_ring_t *r)
+{
+	rvp_iring_t *ir = &r->r_iring;
+	rvp_interruption_t *prev = ir->ir_consumer;
+	rvp_interruption_t *next =
+	    (prev == rvp_iring_last(ir)) ? &ir->ir_items[0] : (prev + 1);
+
+#if 0	// XXX This looks unnecessary for making the ring eligible for
+	// reuse
+	rvp_signal_ring_put(NULL, prev->it_interruptor);
+#endif
+
+	assert(prev != ir->ir_producer);
+
+	atomic_store_explicit(&ir->ir_consumer, next, memory_order_release);
+}
+
+/* Return `n < 0` if slots up to `bracket->it_interruptor_eidx` were
+ * discarded but more remain in `r`, `n = 0` if `nslots` slots were
+ * discarded and no more remain in `r`, and `n > 0` if `n < nslots` more
+ * slots remain to be discarded.
+ *
+ * If bracket != NULL, write the new consumer index for `r` back to
+ * bracket->it_interruptor_sidx every time it advances.
  */
 static int
 rvp_ring_discard_by_slots(rvp_ring_t *r, const int nslots,
-    const int start, const int end, uint32_t *idepthp)
+    rvp_interruption_t *bracket, uint32_t *idepthp)
 {
 	int lastidx, residue = nslots;
 	const int pidx = r->r_producer - r->r_items;
 	int cidx = r->r_consumer - r->r_items;
-	const rvp_interruption_t *it = NULL;
+	rvp_interruption_t *it = NULL;
+	const int start = (bracket != NULL)
+	    ? bracket->it_interruptor_sidx
+	    : -1;
+	const int end = (bracket != NULL)
+	    ? rvp_interruption_get_end(bracket, NULL)
+	    : -1;
+
+	assert(bracket == NULL || bracket->it_interruptor == r);
 
 	assert(residue >= 0);
 
 	assert(start < 0 || rvp_ring_index_consumed_before(r, cidx, start));
 
-	lastidx = rvp_ring_residue_and_end_to_consumer_index(r,
-	    residue, end);
+	lastidx = rvp_ring_residue_and_end_to_consumer_index(r, residue, end);
 
 	rvp_debugf(
 	    "%s.%d: r %p enter residue %d cidx %d start %d end %d pidx %d\n",
@@ -243,7 +283,7 @@ rvp_ring_discard_by_slots(rvp_ring_t *r, const int nslots,
 	for (it = rvp_ring_first_interruption(r);
 	     it != NULL && residue > 0;
 	     it = rvp_ring_next_interruption(r, it)) {
-		const int intr = it->it_interrupted_idx;
+		int intr = it->it_interrupted_idx;
 		rvp_debugf(
 		    "%s.%d: r %p it %p residue %d lastidx %d cidx %d intr %d\n",
 		    __func__, __LINE__, (void *)r, (const void *)it, residue,
@@ -251,16 +291,17 @@ rvp_ring_discard_by_slots(rvp_ring_t *r, const int nslots,
 		if (rvp_ring_index_properly_consumed_before(r, lastidx, intr))
 			break;
 		if (rvp_ring_index_properly_consumed_before(r, cidx, intr)) {
-			residue -= rvp_ring_discard_to(r, intr, idepthp);
+			residue -= rvp_ring_discard_to(r, residue, &intr, idepthp);
 			assert(residue >= 0);
+			if (bracket != NULL)
+				bracket->it_interruptor_sidx = intr;
 		}
 		assert(r->r_idepth != it->it_interruptor->r_idepth);
 		cidx = intr;
 		rvp_debugf("%s.%d: r %p residue %d\n",
 		    __func__, __LINE__, (void *)r, residue);
 		residue = rvp_ring_discard_by_slots(it->it_interruptor, residue,
-		    it->it_interruptor_sidx, rvp_interruption_get_end(it),
-		    idepthp);
+		    it, idepthp);
 		rvp_debugf("%s.%d: r %p residue %d\n",
 		    __func__, __LINE__, (void *)r, residue);
 		/* If residue < 0, then rvp_ring_discard_by_slots() didn't
@@ -272,22 +313,22 @@ rvp_ring_discard_by_slots(rvp_ring_t *r, const int nslots,
 		if (residue < 0)
 			break;
 		rvp_ring_drop_interruption(r);
-		/* The call to rvp_ring_discard_by_slots can reduce the residue
-		 * without consuming any items on this ring, so we have
-		 * to recompute the last index on this ring.
+		/* The call to rvp_ring_discard_by_slots can reduce the
+		 * residue without consuming any items on this ring, so
+		 * we have to recompute the last index on this ring.
 		 */
 		lastidx = rvp_ring_residue_and_end_to_consumer_index(r,
 		    residue, end);
 		rvp_debugf("%s.%d: r %p lastidx %d\n",
 		    __func__, __LINE__, (void *)r, lastidx);
 	}
-	/* TBD if bracket != NULL, write cidx back to
-	 * TBD bracket->it_interruptor_sidx right here.
-	 */
 	if (residue > 0) {
-		residue -= rvp_ring_discard_to(r, lastidx, idepthp);
+		residue -= rvp_ring_discard_to(r, residue, &lastidx, idepthp);
+		assert(residue >= 0);
 		rvp_debugf("%s.%d: r %p residue %d\n",
 		    __func__, __LINE__, (void *)r, residue);
+		if (bracket != NULL)
+			bracket->it_interruptor_sidx = lastidx;
 	}
 	if (residue == 0 && end >= 0) {
 		rvp_debugf("%s.%d: r %p cidx %d\n",
@@ -328,35 +369,47 @@ rvp_ring_discard_by_bytes(rvp_ring_t *r, const ssize_t nwritten,
 {
 	const ssize_t slotsz = sizeof(r->r_items[0]);
 	return
-	   rvp_ring_discard_by_slots(r, nwritten / slotsz, -1, -1, idepthp) *
+	   rvp_ring_discard_by_slots(r, nwritten / slotsz, NULL, idepthp) *
 	   slotsz;
 }
 
-/* Fill I/O vectors with the ring content between `cidx` and `pidx`
- * until vectors run out.  Return true if there were enough I/O vectors
- * between *iovp and lastiov to hold the ring content between cidx and
- * pidx.  Return false if there were no vectors or only enough vectors
- * for a partial write.
+/* Fill I/O vectors with all of the ring content between `cidx` and
+ * `pidx` and, if necessary, a vector for a change of signal depth.  If
+ * there are not enough vectors, fill none.
+ *
+ * If there were enough I/O vectors between *iovp and
+ * lastiov to hold the ring content between cidx and pidx and any change
+ * of signal depth, return the number of I/O vectors that remain.
+ * Return -1 if there were not enough vectors.
+ *
+ * XXX It's important to write whole events.  The producer pointer only
+ * advances to event boundaries.  An interrupt always begins and ends on
+ * an event boundary, too.  So as long as we end at a producer pointer
+ * or at an interrupt, we will write whole events.  But we cannot stop
+ * writing at an arbitrary slot in the ring or else the bytes of an
+ * event may be split by another thread's events.
  */
-static bool
+static int
 rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
     const struct iovec *lastiov, int cidx, int pidx, uint32_t *idepthp)
 {
 	uint32_t *producer = &r->r_items[pidx], *consumer = &r->r_items[cidx];
+	struct iovec *iov = *iovp;
+	bool writeback_depth = false;
 
 	if (consumer == producer)
-		return false;
+		return -1;
 
-	if (*iovp == lastiov)
-		return false;
+	if (iov == lastiov)
+		return -1;
 
 	if (r->r_idepth != *idepthp) {
 		/* Need at least two iovecs so that we can insert at least
 		 * one item from the ring after this change of interrupt
 		 * depth.
 		 */
-		if (*iovp + 1 == lastiov)
-			return false;
+		if (iov + 1 == lastiov)
+			return -1;
 
 		r->r_sigdepth = (rvp_sigdepth_t){
 			  .deltop = (rvp_addr_t)rvp_vec_and_op_to_deltop(0,
@@ -364,38 +417,46 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 			, .depth = r->r_idepth
 		};
 
-		*(*iovp)++ = (struct iovec){
+		*iov++ = (struct iovec){
 			  .iov_base = &r->r_sigdepth
 			, .iov_len = sizeof(r->r_sigdepth)
 		};
-		rvp_debugf("%s.%d inserting sigdepth %zu at cidx %d\n",
-		    __func__, __LINE__, sizeof(r->r_sigdepth), cidx);
-		*idepthp = r->r_idepth;
+		writeback_depth = true;
 	}
 
 	if (consumer < producer) {
-		*(*iovp)++ = (struct iovec){
+		*iov++ = (struct iovec){
 			  .iov_base = consumer
 			, .iov_len = (producer - consumer) *
 				     sizeof(consumer[0])
 		};
 	} else {	/* consumer > producer */
-		*(*iovp)++ = (struct iovec){
+		*iov++ = (struct iovec){
 			  .iov_base = consumer
 			, .iov_len = (r->r_last + 1 - consumer) *
 				     sizeof(consumer[0])
 		};
 
-		if (*iovp == lastiov)
-			return false;
+		if (iov == lastiov)
+			return -1;
 
-		*(*iovp)++ = (struct iovec){
+		*iov++ = (struct iovec){
 			  .iov_base = r->r_items
 			, .iov_len = (producer - r->r_items) *
 				     sizeof(r->r_items[0])
 		};
 	}
-	return true;
+	*iovp = iov;
+	rvp_debugf("%s.%d r %p span %td -> %td\n",
+	    __func__, __LINE__, (void *)r, cidx, producer - r->r_items);
+	if (writeback_depth) {
+		rvp_debugf(
+		    "%s.%d r %p inserted %zu-byte sigdepth %p at cidx %d\n",
+		    __func__, __LINE__, (void *)r, sizeof(r->r_sigdepth),
+		    &r->r_sigdepth, cidx);
+		*idepthp = r->r_idepth;
+	}
+	return lastiov - *iovp;
 }
 
 rvp_interruption_t *
@@ -423,53 +484,64 @@ rvp_ring_put_interruption(rvp_ring_t *r, rvp_ring_t *interruptor, int sidx)
  * not fill the iovec at lastiov or after.  Return true if any iovecs
  * were filled, false otherwise.
  */
-bool
-rvp_ring_get_iovs(rvp_ring_t *r, int start, int end,
+int
+rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
     struct iovec **iovp, const struct iovec *lastiov, uint32_t *idepthp)
 {
 	struct iovec *iov;
 	struct iovec * const iov0 = *iovp;
-	const rvp_interruption_t *it = NULL;
+	rvp_interruption_t *it = NULL;
 	const int pidx = r->r_producer - r->r_items;
 	const int cidx = r->r_consumer - r->r_items;
-	int first = (start >= 0)
-	    ? start
-	    : r->r_consumer - r->r_items;
-	const int last =
+	int first = (bracket != NULL)
+	    ? bracket->it_interruptor_sidx
+	    : cidx;
+	bool unfinished = false;
+	const int last = (bracket != NULL)
+	    ? rvp_interruption_get_end(bracket, &unfinished)
+	    : pidx;
+	/* XXX clamp last to pidx? */
+#if 0
 	    (end >= 0 &&
 	     rvp_ring_index_properly_consumed_before(r, end, pidx))
                 ? end
                 : pidx;
+#endif
+	ptrdiff_t residue;
 
-	assert(start < 0 ||
-	       rvp_ring_index_consumed_before(r, cidx, start));
+	assert(bracket == NULL ||
+	    rvp_ring_index_consumed_before(r, cidx,
+	        bracket->it_interruptor_sidx));
 
-	rvp_debugf("%s.%d: r %p enter cidx %d start %d end %d pidx %d\n",
-	    __func__, __LINE__, (void *)r,
-	    cidx, start, end, pidx);
+	rvp_debugf("%s.%d: r %p enter cidx %d first %d last %d pidx %d\n",
+	    __func__, __LINE__, (void *)r, cidx, first, last, pidx);
 
 	for (it = rvp_ring_first_interruption(r);
-	     it != NULL && *iovp < lastiov;
+	     (residue = lastiov - *iovp) > 0 && it != NULL;
 	     it = rvp_ring_next_interruption(r, it)) {
 		const int intr = it->it_interrupted_idx;
 
 		rvp_debugf(
 		    "%s.%d: r %p it %p #iovs %td first %d intr %d last %d\n",
 		    __func__, __LINE__, (void *)r, (const void *)it,
-		    lastiov - *iovp, first, intr, last);
+		    residue, first, intr, last);
 
-		if (rvp_ring_index_properly_consumed_before(r, last, intr))
+		if (rvp_ring_index_properly_consumed_before(r, intr, first)) {
+			rvp_debugf(
+			    "%s.%d: r %p it %p is before first; skipping\n",
+			    __func__, __LINE__, (void *)r, (const void *)it);
+			continue;
+		}
+
+		if (rvp_ring_index_properly_consumed_before(r, last, intr)) {
+			rvp_debugf("%s.%d: r %p it %p is beyond last\n",
+			    __func__, __LINE__, (void *)r, (const void *)it);
 			break;
-
-		assert((first == last && last == intr) ||
-		       (first < last && first <= intr &&
-		        intr <= last) ||
-		       (last < first &&
-		        (intr <= last || first <= intr)));
+		}
 
 		if (rvp_ring_index_properly_consumed_before(r, first, intr) &&
-		    !rvp_ring_get_iovs_between(r, iovp, lastiov, first, intr,
-		            idepthp))
+		    (residue = rvp_ring_get_iovs_between(r, iovp, lastiov, first, intr,
+		            idepthp)) < 0)
 			goto out;
 
 		assert(r->r_idepth != it->it_interruptor->r_idepth);
@@ -479,22 +551,18 @@ rvp_ring_get_iovs(rvp_ring_t *r, int start, int end,
 		rvp_debugf("%s.%d: r %p #iovs %td\n",
 		    __func__, __LINE__, (void *)r, lastiov - *iovp);
 
-		// TBD the proper fix is to pass `it` or NULL both to
-		// rvp_ring_get_iovs() and to rvp_ring_discard_by_bytes().
-		// In rvp_ring_discard_by_bytes(), advance
-		// it->it_interruptor_sidx as well as the ring's consumer
-		// pointer.
-		if (!rvp_ring_get_iovs(it->it_interruptor,
-		    it->it_interruptor_sidx, rvp_interruption_get_end(it),
-		    iovp, lastiov, idepthp))
+		residue = rvp_ring_get_iovs(it->it_interruptor,
+		    it, iovp, lastiov, idepthp);
+
+		if (residue < 0)
 			goto out;
 
 		rvp_debugf("%s.%d: r %p #iovs %td\n",
-		    __func__, __LINE__, (void *)r, lastiov - *iovp);
+		    __func__, __LINE__, (void *)r, residue);
 	}
-	if (*iovp < lastiov) {
-		(void)rvp_ring_get_iovs_between(r, iovp, lastiov, first, last,
-		    idepthp);
+	if (residue > 0) {
+		residue = rvp_ring_get_iovs_between(r, iovp, lastiov,
+		    first, last, idepthp);
 	}
 
 out:
@@ -503,6 +571,191 @@ out:
 		    __func__, __LINE__, (void *)r, iov - iov0, iov->iov_len);
 	}
 	rvp_debugf("%s.%d: r %p exit #iovs %td\n",
-	    __func__, __LINE__, (void *)r, lastiov - *iovp);
-	return iov0 < *iovp;
+	    __func__, __LINE__, (void *)r, residue);
+	return residue;
+}
+
+static int
+rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
+    const struct iovec *lastiov, int cidx, uint32_t *idepthp)
+{
+	uint32_t *consumer = &r->r_items[cidx], *producer;
+	const struct iovec *iov = *iovp;
+	bool writeback_depth = false;
+
+	if (iov == lastiov)
+		return -1;
+
+	if (r->r_idepth != *idepthp) {
+		/* Need at least two iovecs so that we can insert at least
+		 * one item from the ring after this change of interrupt
+		 * depth.
+		 */
+		if (iov + 1 == lastiov)
+			return -1;
+
+		assert(iov->iov_base == &r->r_sigdepth &&
+		       iov->iov_len == sizeof(r->r_sigdepth));
+		iov++;
+		writeback_depth = true;
+	}
+
+	assert(iov->iov_base == consumer);
+
+	if (iov->iov_len == (r->r_last + 1 - consumer) * sizeof(consumer[0])) {
+		iov++;
+		if (iov == lastiov)
+			return -1;
+		assert(iov->iov_base == r->r_items);
+		producer = iov->iov_len / sizeof(r->r_items[0]) + r->r_items;
+		iov++;
+	} else {
+		producer = iov->iov_len / sizeof(consumer[0]) + consumer;
+		iov++;
+	}
+	assert(consumer == r->r_consumer);
+	r->r_consumer = producer;
+
+	rvp_debugf("%s.%d r %p span %td -> %td\n",
+	    __func__, __LINE__, (void *)r, cidx, producer - r->r_items);
+	*iovp = iov;
+	if (writeback_depth) {
+		rvp_debugf(
+		    "%s.%d r %p discarded %zu-byte sigdepth %p at cidx %d\n",
+		    __func__, __LINE__, (void *)r,
+		    sizeof(r->r_sigdepth), &r->r_sigdepth, cidx);
+		*idepthp = r->r_idepth;
+	}
+	return lastiov - *iovp;
+}
+
+/* Return -1 if the I/O vectors were exhausted and `r` or its interruptors
+ * still contain events, or if interruptions are unfinished.
+ *
+ * Return 0 if the I/O vectors were exhausted and neither `r` nor its
+ * interruptors contain more events.
+ *
+ * Otherwise, return the number of I/O vectors that remain.
+ */
+int
+rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
+    const struct iovec **iovp, const struct iovec *lastiov, uint32_t *idepthp)
+{
+	const struct iovec *iov;
+	const struct iovec * const iov0 = *iovp;
+	rvp_interruption_t *it = NULL;
+	const int pidx = r->r_producer - r->r_items;
+	const int cidx = r->r_consumer - r->r_items;
+	int first = (bracket != NULL)
+	    ? bracket->it_interruptor_sidx
+	    : r->r_consumer - r->r_items;
+	bool unfinished = false;
+	const int last = (bracket != NULL)
+	    ? rvp_interruption_get_end(bracket, &unfinished)
+	    : pidx;
+	ptrdiff_t residue;
+
+	assert(bracket == NULL ||
+	       rvp_ring_index_consumed_before(r, cidx,
+	           bracket->it_interruptor_sidx));
+
+	rvp_debugf("%s.%d: r %p enter cidx %d first %d last %d pidx %d\n",
+	    __func__, __LINE__, (void *)r, cidx, first, last, pidx);
+
+	for (it = rvp_ring_first_interruption(r);
+	     (residue = lastiov - *iovp) > 0 && it != NULL;
+	     it = rvp_ring_next_interruption(r, it)) {
+		const int intr = it->it_interrupted_idx;
+
+		rvp_debugf(
+		    "%s.%d: r %p it %p #iovs %td first %d intr %d last %d\n",
+		    __func__, __LINE__, (void *)r, (const void *)it,
+		    residue, first, intr, last);
+
+		if (rvp_ring_index_properly_consumed_before(r, intr, first)) {
+			rvp_debugf("%s.%d: r %p it %p is before first; "
+			    "should have been dropped already\n",
+			    __func__, __LINE__, (void *)r, (const void *)it);
+			assert(false);
+		}
+
+		if (rvp_ring_index_properly_consumed_before(r, last, intr)) {
+			rvp_debugf("%s.%d: r %p it %p is beyond last\n",
+			    __func__, __LINE__, (void *)r, (const void *)it);
+			break;
+		}
+
+		if (rvp_ring_index_properly_consumed_before(r, first, intr) &&
+		    (residue = rvp_ring_discard_iovs_between(r, iovp, lastiov,
+		     first, idepthp)) < 0)
+			goto out;
+
+		if (bracket != NULL) {
+			bracket->it_interruptor_sidx =
+			    r->r_consumer - r->r_items; 
+		}
+		assert(r->r_idepth != it->it_interruptor->r_idepth);
+
+		first = intr;
+
+		rvp_debugf("%s.%d: r %p #iovs %td\n",
+		    __func__, __LINE__, (void *)r, lastiov - *iovp);
+
+		residue = rvp_ring_discard_iovs(it->it_interruptor,
+		    it, iovp, lastiov, idepthp);
+
+		if (residue < 0) {
+			break;
+		}
+
+		rvp_debugf("%s.%d: r %p dropping it %p #iovs %td\n",
+		    __func__, __LINE__, (void *)r, (void *)it, residue);
+		rvp_ring_drop_interruption(r);
+	}
+	if (residue > 0) {
+		residue = rvp_ring_discard_iovs_between(r, iovp, lastiov, first,
+		    idepthp);
+		if (residue < 0)
+			goto out;
+		first = r->r_consumer - r->r_items;
+		if (bracket != NULL) {
+			bracket->it_interruptor_sidx = first; 
+		}
+	}
+	if (residue == 0) {
+		rvp_debugf("%s.%d: r %p residue 0 first %d last %d\n",
+		    __func__, __LINE__, (void *)r, first, last);
+
+		if (rvp_ring_index_properly_consumed_before(r, first, last)) {
+			residue = -1;
+			goto out;
+		}
+
+		if ((it = rvp_ring_first_interruption(r)) == NULL)
+			goto out;
+
+		const int intr = it->it_interrupted_idx;
+
+		rvp_debugf(
+		    "%s.%d: r %p intr %d\n",
+		    __func__, __LINE__, (void *)r, intr);
+
+		/* XXX Should be consumed before rather than properly consumed
+		 * XXX before?  Can't there be an interruption right after
+		 * XXX the last event?
+		 */
+		if (rvp_ring_index_consumed_before(r, intr, last)) {
+			residue = -1;
+			goto out;
+		}
+	}
+
+out:
+	for (iov = iov0; iov < *iovp; iov++) {
+		rvp_debugf("%s.%d: r %p iov[%td].iov_len = %zu\n",
+		    __func__, __LINE__, (void *)r, iov - iov0, iov->iov_len);
+	}
+	rvp_debugf("%s.%d: r %p exit #iovs %td\n",
+	    __func__, __LINE__, (void *)r, residue);
+	return unfinished ? -1 : residue;
 }

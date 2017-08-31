@@ -27,9 +27,9 @@ static rvp_signal_t * _Atomic *signal_tbl = NULL;
 static int nsignals = 0;
 static int signals_origin = -1;
 
-static uint32_t nsigblocksets = 0;
-static rvp_sigblockset_t *sigblockset_head = NULL;
-static pthread_mutex_t sigblockset_lock = PTHREAD_MUTEX_INITIALIZER;
+static _Atomic uint32_t nsigblocksets = 0;
+static rvp_sigblockset_t * _Atomic sigblockset_head = NULL;
+static rvp_sigblockset_t * _Atomic sigblockset_freehead = NULL;
 
 static rvp_ring_t * _Atomic signal_rings = NULL;
 
@@ -230,7 +230,7 @@ rvp_signal_rings_replenish(void)
 
 		while (!atomic_compare_exchange_weak(&signal_rings,
 		    &r->r_next, r))
-			;	// do nothing
+			;	// TBD exponential backoff
 	}
 }
 
@@ -244,12 +244,6 @@ rvp_signal_ring_get(rvp_thread_t *t, uint32_t idepth)
 		rvp_wake_replenisher();
 	}
 	return r;
-}
-
-static inline bool
-rvp_ring_is_dirty(const rvp_ring_t *r)
-{
-	return rvp_ring_nfull(r) != 0 || rvp_iring_nfull(&r->r_iring) != 0;
 }
 
 void
@@ -359,17 +353,19 @@ sigset_to_mask(const sigset_t *set)
 	return mask;
 }
 
-uint32_t
-rvp_sigblocksets_emit(int fd, uint32_t lastn)
+rvp_sigblockset_t *
+rvp_sigblocksets_emit(int fd, rvp_sigblockset_t *last_head)
 {
-	rvp_sigblockset_t *bs;
-	uint32_t nsets;
+	rvp_sigblockset_t *bs, *head;
 
-	real_pthread_mutex_lock(&sigblockset_lock);
+	head = sigblockset_head;
+	// XXX barrier between nsigblocksets and sigblockset_head read?
 
-	for (bs = sigblockset_head; bs != NULL; bs = bs->bs_next) {
-		if (bs->bs_number < lastn)
-			continue;
+	// newest sigblocksets are always at the head of the list, so
+	// emit them until we see the previous head
+	for (bs = head; bs != NULL; bs = bs->bs_next) {
+		if (bs == last_head)
+			break;
 		rvp_sigmaskmemo_t map = (rvp_sigmaskmemo_t){
 			  .deltop = (rvp_addr_t)rvp_vec_and_op_to_deltop(0,
 			      RVP_OP_SIGMASKMEMO)
@@ -381,35 +377,101 @@ rvp_sigblocksets_emit(int fd, uint32_t lastn)
 			err(EXIT_FAILURE, "%s: write", __func__);
 	}
 
-	nsets = nsigblocksets;
+	return head;
+}
 
-	real_pthread_mutex_unlock(&sigblockset_lock);
+/* Signal handlers call intern_sigset(), so it has to be lockless, and
+ * it cannot call malloc(3) to get a new sigblockset_t.
+ *
+ * General idea: keep a free list, which is refreshed by the serialization
+ * thread.  If the free list is empty, and we're in interrupt context,
+ * then signal the relay to wake the serialization thread.
+ *
+ * sigblockset_head is an atomic pointer.  intern_sigset() performs these
+ * actions in a loop:
+ * 1) `head = sigblockset_head;`
+ * 2) scan from `head` until end for a match `bs` for `s`
+ * 3) finding a match, return it.
+ * 4) finding no match, take an item off of the free list and
+ *    fill it.
+ * 5) use a compare-and-set to replace `head` with the new item
+ *    at `sigblockset_head`; failing that, use a compare-and-set
+ *    to put back the new item and start over at (1).
+ * 6) return the new item
+ */
+static rvp_sigblockset_t *
+intern_sigset_try_once(const sigset_t *s)
+{
+	rvp_sigblockset_t *head, *bs;
 
-	return nsets;
+	head = sigblockset_head;
+	for (bs = head; bs != NULL; bs = bs->bs_next) {
+		if (sigeqset(&bs->bs_sigset, s))
+			return bs;
+	}
+
+	assert(bs == NULL);
+
+	for (;;) {
+		if (bs == NULL && (bs = sigblockset_freehead) == NULL) {
+			rvp_wake_replenisher();
+			// TBD exponential backoff
+			continue;
+		}
+		if (atomic_compare_exchange_strong(&sigblockset_freehead, &bs,
+		    bs->bs_next))
+			break;
+	}
+	bs->bs_next = head;
+	bs->bs_sigset = *s;
+	if (atomic_compare_exchange_strong(&sigblockset_head, &head,
+	    bs))
+		return bs;
+
+	/* The sigblockset list changed, so we need to re-scan to see if
+	 * the new blockset is necessary.  Put this one back on the free list
+	 * in the mean time.  
+	 */
+	bs->bs_next = sigblockset_freehead;
+	while (!atomic_compare_exchange_strong(&sigblockset_freehead,
+	    &bs->bs_next, bs))
+		;	// TBD exponential backoff
+
+	return NULL;
+}
+
+static void
+rvp_sigblocksets_replenish_once(void)
+{
+	rvp_sigblockset_t *bs;
+
+	if ((bs = malloc(sizeof(*bs))) == NULL)
+		err(EXIT_FAILURE, "%s: malloc", __func__);
+	bs->bs_number = nsigblocksets++;
+	bs->bs_next = sigblockset_freehead;
+	while (!atomic_compare_exchange_strong(&sigblockset_freehead,
+	    &bs->bs_next, bs))
+		;	// TBD exponential backoff
+}
+
+void
+rvp_sigblocksets_replenish(void)
+{
+	int i;
+
+	if (sigblockset_freehead != NULL)
+		return;
+
+	for (i = 0; i < 5; i++)
+		rvp_sigblocksets_replenish_once();
 }
 
 rvp_sigblockset_t *
 intern_sigset(const sigset_t *s)
 {
 	rvp_sigblockset_t *bs;
-
-	real_pthread_mutex_lock(&sigblockset_lock);
-	for (bs = sigblockset_head; bs != NULL; bs = bs->bs_next) {
-		if (sigeqset(&bs->bs_sigset, s))
-			break;
-	}
-
-	if (bs == NULL) {
-		if ((bs = malloc(sizeof(*bs))) == NULL)
-			err(EXIT_FAILURE, "%s: malloc", __func__);
-		bs->bs_number = nsigblocksets++;
-		bs->bs_sigset = *s;
-		bs->bs_next = sigblockset_head;
-		sigblockset_head = bs;
-	}
-
-	real_pthread_mutex_unlock(&sigblockset_lock);
-
+	while ((bs = intern_sigset_try_once(s)) == NULL)
+		;	// do nothing
 	return bs;
 }
 

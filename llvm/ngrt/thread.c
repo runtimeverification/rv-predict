@@ -31,6 +31,7 @@ volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
 unsigned int rvp_log2_nthreads = 1;
 
 /* thread_mutex protects thread_head, next_id */
+static sigset_t allmask;
 static pthread_mutex_t thread_mutex;
 static rvp_thread_t * volatile thread_head = NULL;
 static uint32_t next_id = 0;
@@ -117,15 +118,19 @@ rvp_thread0_create(void)
 }
 
 static void
-thread_lock(void)
+thread_lock(sigset_t *oldmask)
 {
+	if (real_pthread_sigmask(SIG_BLOCK, &allmask, oldmask) != 0)
+		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
 	if (real_pthread_mutex_lock(&thread_mutex) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_lock", __func__);
 }
 
 static void
-thread_unlock(void)
+thread_unlock(const sigset_t *oldmask)
 {
+	if (real_pthread_sigmask(SIG_SETMASK, oldmask, NULL) != 0)
+		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
 	if (real_pthread_mutex_unlock(&thread_mutex) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_unlock", __func__);
 }
@@ -145,11 +150,12 @@ static void
 rvp_stop_transmitter(void)
 {
 	int rc;
+	sigset_t oldmask;
 
-	thread_lock();
+	thread_lock(&oldmask);
 	transmit = false;
 	rvp_wake_transmitter_locked();
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	if ((rc = real_pthread_join(serializer, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_join: %s",
@@ -162,14 +168,16 @@ serialize(void *arg __unused)
 {
 	int fd = serializer_fd;
 	rvp_thread_t *t, *next_t;
-	uint32_t nblocksets_last = 0;
-	sigset_t maskall;
+	rvp_sigblockset_t *blocksets_last = NULL;
+	sigset_t maskall, oldmask;
 
+	/* This shouldn't be necessary: this thread is created with
+	 * all signals blocked.
+	 */
 	sigfillset(&maskall);
-
 	real_pthread_sigmask(SIG_BLOCK, &maskall, NULL);
 
-	thread_lock();
+	thread_lock(&oldmask);
 	while (transmit || nwake > 0) {
 		bool any_emptied;
 
@@ -184,6 +192,7 @@ serialize(void *arg __unused)
 
 		rvp_increase_ggen();
 
+		rvp_sigblocksets_replenish();
 		rvp_signal_rings_replenish();
 
 		do {
@@ -192,8 +201,8 @@ serialize(void *arg __unused)
 			 * many words flushed?
 			 */
 
-			nblocksets_last = rvp_sigblocksets_emit(fd,
-			    nblocksets_last);
+			blocksets_last = rvp_sigblocksets_emit(fd,
+			    blocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
 				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
@@ -210,7 +219,7 @@ serialize(void *arg __unused)
 			rvp_thread_destroy(t);
 		}
 	}
-	thread_unlock();
+	thread_unlock(&oldmask);
 	if (close(fd) == -1)
 		warn("%s: close", __func__);
 	return NULL;
@@ -220,11 +229,11 @@ static void
 rvp_serializer_create(void)
 {
 	int rc;
-	sigset_t maskall, omask;
+	sigset_t oldmask;
 
 	serializer_fd = rvp_trace_open();
 
-	thread_lock();
+	thread_lock(&oldmask);
 	assert(thread_head->t_next == NULL);
 	/* I don't use rvp_thread_flush_to_fd() here because I do not
 	 * want to log a change of thread here under any circumstances.
@@ -234,11 +243,11 @@ rvp_serializer_create(void)
 		  .lc_tid = thread_head->t_id
 		, .lc_idepth = 0
 	};
-	thread_unlock();
+	thread_unlock(&oldmask);
 
-	sigfillset(&maskall);
+	sigfillset(&allmask);
 
-	if ((rc = real_pthread_sigmask(SIG_BLOCK, &maskall, &omask)) != 0) {
+	if ((rc = real_pthread_sigmask(SIG_BLOCK, &allmask, &oldmask)) != 0) {
 		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
 		    __LINE__, strerror(rc));
 	}
@@ -250,7 +259,7 @@ rvp_serializer_create(void)
 		    strerror(rc));
 	}
 
-	if ((rc = real_pthread_sigmask(SIG_SETMASK, &omask, NULL)) != 0) {
+	if ((rc = real_pthread_sigmask(SIG_SETMASK, &oldmask, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
 		    __LINE__, strerror(rc));
 	}
@@ -313,6 +322,8 @@ rvp_postfork_init(void)
 
 	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
 		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
+	if (sigfillset(&allmask) == -1)
+		err(EXIT_FAILURE, "%s: sigfillset", __func__);
 	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
 	if (pthread_cond_init(&wakecond, NULL) != 0)
@@ -390,10 +401,11 @@ rvp_update_nthreads(uint32_t n)
 static int
 rvp_thread_attach(rvp_thread_t *t)
 {
-	thread_lock();
+	sigset_t oldmask;
+	thread_lock(&oldmask);
 
 	if ((t->t_id = ++next_id) == 0) {
-		thread_unlock();
+		thread_unlock(&oldmask);
 		errx(EXIT_FAILURE, "%s: out of thread IDs", __func__);
 	}
 
@@ -405,7 +417,7 @@ rvp_thread_attach(rvp_thread_t *t)
 	t->t_next = thread_head;
 	thread_head = t;
 
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	return 0;
 }
@@ -436,8 +448,9 @@ rvp_thread_detach(rvp_thread_t *tgt)
 {
 	rvp_thread_t * volatile *tp;
 	int rc;
+	sigset_t oldmask;
 
-	thread_lock();
+	thread_lock(&oldmask);
 
 	for (tp = &thread_head; *tp != NULL && *tp != tgt; tp = &(*tp)->t_next)
 		;
@@ -448,7 +461,7 @@ rvp_thread_detach(rvp_thread_t *tgt)
 	} else
 		rc = ENOENT;
 
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	return rc;
 }
@@ -498,15 +511,16 @@ rvp_thread_t *
 rvp_pthread_to_thread(pthread_t pthread)
 {
 	rvp_thread_t *t;
+	sigset_t oldmask;
 
-	thread_lock();
+	thread_lock(&oldmask);
 
 	for (t = thread_head; t != NULL; t = t->t_next) {
 		if (t->t_pthread == pthread)
 			break;
 	}
 
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	if (t == NULL)
 		errno = ESRCH;
@@ -517,9 +531,11 @@ rvp_pthread_to_thread(pthread_t pthread)
 void
 rvp_wake_transmitter(void)
 {
-	thread_lock();
+	sigset_t oldmask;
+
+	thread_lock(&oldmask);
 	rvp_wake_transmitter_locked();
-	thread_unlock();
+	thread_unlock(&oldmask);
 }
 
 static void *

@@ -197,18 +197,18 @@ rvp_ring_open_slot(rvp_ring_t *r, uint32_t *slot)
 	rvp_ring_wait_for_slot(r, slot);
 }
 
-static inline const rvp_interruption_t *
-rvp_iring_last(const rvp_iring_t *ir)
+static inline rvp_interruption_t *
+rvp_iring_last(rvp_iring_t *ir)
 {
 	return &ir->ir_items[__arraycount(ir->ir_items) - 1];
 }
 
-static inline const rvp_interruption_t *
-rvp_ring_next_interruption(rvp_ring_t *r, const rvp_interruption_t *prev)
+static inline rvp_interruption_t *
+rvp_ring_next_interruption(rvp_ring_t *r, rvp_interruption_t *prev)
 {
 	rvp_iring_t *ir = &r->r_iring;
 	rvp_interruption_t *producer = ir->ir_producer;
-	const rvp_interruption_t *next =
+	rvp_interruption_t *next =
 	    (prev == rvp_iring_last(ir)) ? &ir->ir_items[0] : (prev + 1);
 
 	if (next == producer)
@@ -217,7 +217,7 @@ rvp_ring_next_interruption(rvp_ring_t *r, const rvp_interruption_t *prev)
 	return next;
 }
 
-static inline const rvp_interruption_t *
+static inline rvp_interruption_t *
 rvp_ring_first_interruption(rvp_ring_t *r)
 {
 	rvp_iring_t *ir = &r->r_iring;
@@ -230,17 +230,10 @@ rvp_ring_first_interruption(rvp_ring_t *r)
 	return consumer;
 }
 
-static inline void
-rvp_ring_drop_interruption(rvp_ring_t *r)
+static inline bool
+rvp_ring_is_dirty(const rvp_ring_t *r)
 {
-	rvp_iring_t *ir = &r->r_iring;
-	rvp_interruption_t *prev = ir->ir_consumer;
-	rvp_interruption_t *next =
-	    (prev == rvp_iring_last(ir)) ? &ir->ir_items[0] : (prev + 1);
-
-	assert(prev != ir->ir_producer);
-
-	atomic_store_explicit(&ir->ir_consumer, next, memory_order_release);
+	return rvp_ring_nfull(r) != 0 || rvp_iring_nfull(&r->r_iring) != 0;
 }
 
 static inline int
@@ -316,18 +309,27 @@ rvp_ring_put_buf(rvp_ring_t *r, rvp_buf_t b)
 	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
 }
 
+/* Return `true` if the interruption is unfinished, false otherwise. */
+static inline bool
+rvp_interruption_unfinished(const rvp_interruption_t *it)
+{
+	return it->it_interruptor_eidx < 0;
+}
+
 /* Where `it` is an interruption and `r` the ring for the interruptor,
  * return the producer index if the interruption has not finished
  * (it->it_interruptor_eidx < 0).  Otherwise, return the end index of
  * the interruption.
  */
 static inline int
-rvp_interruption_get_end(const rvp_interruption_t *it)
+rvp_interruption_get_end(const rvp_interruption_t *it, bool *unfinishedp)
 {
 	const rvp_ring_t *r = it->it_interruptor;
 	const int pidx = r->r_producer - r->r_items;
 	atomic_thread_fence(memory_order_acquire);
 	const int eidx = it->it_interruptor_eidx;
+	if (unfinishedp != NULL)
+		*unfinishedp = eidx < 0;
 	return (eidx < 0) ? pidx : eidx;
 }
 
@@ -340,8 +342,10 @@ rvp_interruption_close(rvp_interruption_t *it, int eidx)
 
 void rvp_rings_init(void);
 int rvp_ring_stdinit(rvp_ring_t *);
-bool rvp_ring_get_iovs(rvp_ring_t *, int, int, struct iovec **,
+int rvp_ring_get_iovs(rvp_ring_t *, rvp_interruption_t *, struct iovec **,
     const struct iovec *, uint32_t *);
+int rvp_ring_discard_iovs(rvp_ring_t *, rvp_interruption_t *,
+    const struct iovec **, const struct iovec *, uint32_t *);
 bool rvp_ring_flush_to_fd(rvp_ring_t *, int, rvp_lastctx_t *);
 ssize_t rvp_ring_discard_by_bytes(rvp_ring_t *, const ssize_t, uint32_t *);
 rvp_interruption_t *rvp_ring_put_interruption(rvp_ring_t *, rvp_ring_t *, int);

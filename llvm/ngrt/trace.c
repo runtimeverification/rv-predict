@@ -108,8 +108,10 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 
 	first_ring_iov = iovp;
 
-	idepth0 = (lc == NULL) ? 0 : lc->lc_idepth;
-	if (!rvp_ring_get_iovs(r, -1, -1, &iovp, lastiov, &idepth0))
+	idepth0 = idepth1 = (lc == NULL) ? 0 : r->r_idepth;
+	(void)rvp_ring_get_iovs(r, NULL, &iovp, lastiov, &idepth0);
+
+	if (iovp == first_ring_iov)
 		return false;
 
 	nwritten = writev(fd, iov, iovp - &iov[0]);
@@ -121,13 +123,9 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 
 	assert(nwritten > 0);
 
-	idepth1 = (lc == NULL) ? 0 : lc->lc_idepth;
-
-	const ssize_t nleft = rvp_ring_discard_by_bytes(r, nwritten, &idepth1);
-
+	const struct iovec *check_iov = first_ring_iov;
+	assert(rvp_ring_discard_iovs(r, NULL, &check_iov, iovp, &idepth1) <= 0);
 	assert(idepth0 == idepth1);
-
-	assert(nleft <= 0);
 
 	if (lc != NULL) {
 		lc->lc_tid = r->r_tid;

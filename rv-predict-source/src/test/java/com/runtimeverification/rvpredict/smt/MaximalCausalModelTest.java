@@ -1896,6 +1896,33 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
     }
+
+    @Test
+    public void signalsInterruptUnfinishedSignals() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
+                        tu.enableSignal(SIGNAL_NUMBER_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, TWO_SIGNALS),
+                        tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_1, GENERATION_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1))
+                );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, tu, true));
+    }
     // TODO(virgil): Uncomment these when signal mask reads become consistent.
     /*
     @Test

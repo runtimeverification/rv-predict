@@ -67,7 +67,7 @@ public class TraceProducers extends ProducerModule {
                     this);
     private final ComputingProducerWrapper<TtidSetDifference> threadEndsInTheCurrentWindow =
             new ComputingProducerWrapper<>(
-                    new TtidSetDifference(ttidsStartedAtWindowEnd, ttidsStartedAtWindowStart),
+                    new TtidSetDifference(ttidsFinishedAtWindowEnd, ttidsFinishedAtWindowStart),
                     this);
     private final ComputingProducerWrapper<TtidSetDifference> unfinishedTtidsAtWindowStart =
             new ComputingProducerWrapper<>(

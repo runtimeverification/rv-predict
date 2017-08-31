@@ -112,10 +112,27 @@ begins with
 .El
 .\" This next command is for sections 1, 6, 7 and 8 only.
 .Sh ENVIRONMENT
+.Bl -tag -width "RVP_TRACE_FILE"
+.It Ev RVP_TRACE_FILE
 .Nm
 ignores the setting of
 .Ev RVP_TRACE_FILE
 in the user's environment.
+.It Ev RVP_ANALYSIS_ARGS
+.Nm treats the content of
+.Ev RVP_ANALYSIS_ARGS
+as if they appeared at the beginning of its command-line arguments.
+Actual command-line arguments will override the arguments 
+set by
+.Ev RVP_ANALYSIS_ARGS .
+.It Ev RVP_WINDOW_SIZE
+.Nm
+treats this as the default window size.
+.Ev RVP_WINDOW_SIZE takes precedence over window-size arguments in
+.Ev RVP_ANALYSIS_ARGS ,
+however, it may be overridden with a command-line argument.
+.Op Fl Fl window Ar size
+on the command line.
 .Sh FILES
 .Bl -tag -width "/usr/share/examples/rv-predict-c/"
 .It Pa rvpredict.trace

@@ -94,6 +94,18 @@ symbolize()
 symbolize_passthrough=
 analyze_passthrough=
 
+if [ ${RVP_WINDOW_SIZE:-none} != none ]; then
+	if [ -n "$(echo -n "$RVP_WINDOW_SIZE" | sed 's/^[0-9]\+$//g')" ]; then
+		echo "$(basename $0): malformed RVP_WINDOW_SIZE: expected decimal digits, read '${RVP_WINDOW_SIZE}'" 2>&1
+		exit 1
+	fi
+	set -- "--window" ${RVP_WINDOW_SIZE} "$@"
+fi
+
+if [ -n "${RVP_ANALYSIS_ARGS:-}" ]; then
+	set -- ${RVP_ANALYSIS_ARGS} "$@"
+fi
+
 while [ $# -gt 1 ]; do
 	case $1 in
 	--no-symbol|--no-trim)

@@ -572,7 +572,7 @@ out:
 	}
 	rvp_debugf("%s.%d: r %p exit #iovs %td\n",
 	    __func__, __LINE__, (void *)r, residue);
-	return residue;
+	return unfinished ? -1 : residue;
 }
 
 static int

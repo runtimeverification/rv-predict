@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "nbcompat.h"
+
 int
-main(int argc, char **argv)
+main(int argc __unused, char **argv __unused)
 {
 	sigset_t ss;
 	int first, last, signum;

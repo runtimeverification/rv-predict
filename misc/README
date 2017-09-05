@@ -1,0 +1,3 @@
+This directory contains experiments (eitherorboth, fork, raise, sigcount)
+and unused code that may be difficult to reproduce or to find again
+(main_entry.cpp).

@@ -22,16 +22,18 @@ static const char *tmproot = "/tmp";
 static const char *self_exe_pathname = "/proc/self/exe";
 static const char *trace_var = "RVP_TRACE_FILE";
 
+const char *product_name = "RV-Predict/C";
+
 char *
-get_binary_path(char *argv0)
+get_binary_path(void)
 {
 	char *linkname;
 	ssize_t namesize = 4;
 	const long path_max = pathconf(self_exe_pathname, _PC_NAME_MAX);
 
 	if (path_max == -1) {
-		err(EXIT_FAILURE, "RV-Predict/C could not find out the "
-		    "maximum filename length");
+		err(EXIT_FAILURE, "%s could not find out the "
+		    "maximum filename length", product_name);
 	}
 
 	for (namesize = MIN(4, path_max);
@@ -41,8 +43,8 @@ get_binary_path(char *argv0)
 		 : SSIZE_MAX) {
 		linkname = malloc(namesize + 1);
 		if (linkname == NULL) {
-			errx(EXIT_FAILURE, "RV-Predict/C could not allocate "
-			    "memory for the link name in %s",
+			errx(EXIT_FAILURE, "%s could not allocate "
+			    "memory for the link name in %s", product_name,
 			    self_exe_pathname); 
 		}
 
@@ -50,11 +52,16 @@ get_binary_path(char *argv0)
 		    namesize + 1);
 
 		if (nread == -1) {
+#if 0
+			/* this is where we can compensate for missing
+			 * /proc by using argv[0]
+			 */
 			if (errno == ENOENT)
 				return argv0;
+#endif
 			err(EXIT_FAILURE,
-			    "RV-Predict/C could not read the link name from %s",
-			    self_exe_pathname);
+			    "%s could not read the link name from %s",
+			    product_name, self_exe_pathname);
 		}
 
 		if (nread > namesize) {
@@ -64,8 +71,9 @@ get_binary_path(char *argv0)
 		linkname[nread] = '\0';
 		return linkname;
 	}
-	errx(EXIT_FAILURE, "RV-Predict/C could not allocate a "
-	    "buffer big enough to read the link at %s", self_exe_pathname);
+	errx(EXIT_FAILURE, "%s could not allocate a "
+	    "buffer big enough to read the link at %s", product_name,
+	    self_exe_pathname);
 }
 
 static void
@@ -73,7 +81,7 @@ restore_signals(sigset_t *omask)
 {
 	if ((errno = real_pthread_sigmask(SIG_SETMASK, omask, NULL)) != 0) {
 		err(EXIT_FAILURE,
-		    "RV-Predict/C could not restore the signal mask");
+		    "%s could not restore the signal mask", product_name);
 	}
 }
 
@@ -93,7 +101,7 @@ block_signals(sigset_t *omask)
 	if ((errno = real_pthread_sigmask(SIG_BLOCK, &s, omask)) == 0)
 		return;
 errexit:
-	err(EXIT_FAILURE, "RV-Predict/C could not block signals");
+	err(EXIT_FAILURE, "%s could not block signals", product_name);
 }
 
 static void
@@ -105,8 +113,8 @@ cleanup(char *tmpdir)
 	char *paths[] = {tmpdir, NULL};
 
 	if ((tree = fts_open(paths, FTS_PHYSICAL, NULL)) == NULL) {
-		err(EXIT_FAILURE, "RV-Predict/C could not clean up its "
-		    "temporary directory at %s", tmpdir);
+		err(EXIT_FAILURE, "%s could not clean up its "
+		    "temporary directory at %s", product_name, tmpdir);
 	}
 
 	while ((entry = fts_read(tree)) != NULL) {
@@ -116,22 +124,23 @@ cleanup(char *tmpdir)
 		case FTS_SLNONE:
 		case FTS_DEFAULT:
 			if (unlink(entry->fts_path) == -1 && errno != ENOENT) {
-				warn("RV-Predict/C encountered "
+				warn("%s encountered "
 				    "an error at non-directory path %s",
-				    entry->fts_path);
+				    product_name, entry->fts_path);
 			}
 			break;
 		case FTS_DNR:
 		case FTS_ERR:
 		case FTS_NS:
-			warnx("RV-Predict/C encountered an error "
-			    "at path %s: %s", entry->fts_path,
+			warnx("%s encountered an error "
+			    "at path %s: %s", product_name, entry->fts_path,
 			    strerror(entry->fts_errno));
 			break;
 		case FTS_DP:
 			if (rmdir(entry->fts_path) == -1) {
-				err(EXIT_FAILURE, "RV-Predict/C could not "
-				    "remove a temporary directory");
+				err(EXIT_FAILURE, "%s could not "
+				    "remove a temporary directory",
+				    product_name);
 			}
 			break;
 		default:
@@ -141,7 +150,7 @@ cleanup(char *tmpdir)
 }
 
 void
-__rvpredict_main_entry(int argc, char **argv)
+rvp_supervision_start(void)
 {
 	int status;
 	pid_t pid;
@@ -158,23 +167,24 @@ __rvpredict_main_entry(int argc, char **argv)
 	if (rvp_trace_only)
 		return;
 
-	char *const binpath = get_binary_path((argc > 0) ? argv[0] : NULL);
+	char *const binpath =
+	    get_binary_path(/* (argc > 0) ? argv[0] : NULL */);
 
 	if (binpath == NULL) {
-		errx(EXIT_FAILURE, "RV-Predict/C could not find a path to the "
-		    "executable binary that it was running");
+		errx(EXIT_FAILURE, "%s could not find a path to the "
+		    "executable binary that it was running", product_name);
 	}
 
 	if ((tmpdir = malloc(path_max + 1)) == NULL ||
 	    (tracename = malloc(path_max + 1)) == NULL) {
 		errx(EXIT_FAILURE,
-		    "RV-Predict/C could not allocate two buffers of %ld bytes",
-		    path_max + 1);
+		    "%s could not allocate two buffers of %ld bytes",
+		    product_name, path_max + 1);
 	}
 
 	if ((binbase = strdup(binpath)) == NULL) {
 		errx(EXIT_FAILURE,
-		    "RV-Predict/C could not allocate %ld bytes storage",
+		    "%s could not allocate %ld bytes storage", product_name,
 		    strlen(binpath) + 1);
 	}
 
@@ -183,12 +193,13 @@ __rvpredict_main_entry(int argc, char **argv)
 
 	if (nwritten < 0 || nwritten >= path_max + 1) {
 		errx(EXIT_FAILURE,
-		    "RV-Predict/C could not create a temporary directory name");
+		    "%s could not create a temporary directory name",
+		    product_name);
 	}
 
 	if (mkdtemp(tmpdir) == NULL) {
 		err(EXIT_FAILURE,
-		    "RV-Predict/C could not create a temporary directory");
+		    "%s could not create a temporary directory", product_name);
 	}
 
 	nwritten = snprintf(tracename, path_max + 1, "%s/rvpredict.trace",
@@ -196,13 +207,13 @@ __rvpredict_main_entry(int argc, char **argv)
 
 	if (nwritten < 0 || nwritten >= path_max + 1) {
 		errx(EXIT_FAILURE,
-		    "RV-Predict/C could not create a trace filename");
+		    "%s could not create a trace filename", product_name);
 	}
 
 	if (setenv(trace_var, tracename, 1) != 0) {
 		err(EXIT_FAILURE,
-		    "RV-Predict/C could not export a trace filename to "
-		    "the environment");
+		    "%s could not export a trace filename to "
+		    "the environment", product_name);
 	}
 
 	// TBD Avoid using some arbitrary file in the analysis.
@@ -211,7 +222,7 @@ __rvpredict_main_entry(int argc, char **argv)
 
 	if ((pid = fork()) == -1) {
 		err(EXIT_FAILURE,
-		    "RV-Predict/C could not fork a supervisor process");
+		    "%s could not fork a supervisor process", product_name);
 	}
 
 	block_signals(&omask);
@@ -227,25 +238,27 @@ __rvpredict_main_entry(int argc, char **argv)
 		if (errno == EINTR)
 			continue;
 		err(EXIT_FAILURE,
-		    "RV-Predict/C failed unexpectedly "
-		    "while it waited for the instrumented program");
+		    "%s failed unexpectedly "
+		    "while it waited for the instrumented program",
+		    product_name);
 	}
 
 	if ((pid = fork()) == -1) {
 		err(EXIT_FAILURE,
-		    "RV-Predict/C could not fork an analysis process");
+		    "%s could not fork an analysis process", product_name);
 	}
 
 	if (pid == 0) {
 		char *const args[] = {"rvpa", binpath, NULL};
 
 		if (chdir(tmpdir) == -1) {
-			err(EXIT_FAILURE, "RV-Predict/C could not change to "
-			    "its temporary directory");
+			err(EXIT_FAILURE, "%s could not change to "
+			    "its temporary directory", product_name);
 		}
 		if (execvp("rvpa", args) == -1) {
 			err(EXIT_FAILURE,
-			    "RV-Predict/C could not start an analysis process");
+			    "%s could not start an analysis process",
+			    product_name);
 		}
 		// unreachable
 	}
@@ -255,8 +268,9 @@ __rvpredict_main_entry(int argc, char **argv)
 		if (errno == EINTR)
 			continue;
 		err(EXIT_FAILURE,
-		    "RV-Predict/C failed unexpectedly "
-		    "while it waited for the analysis process to finish");
+		    "%s failed unexpectedly "
+		    "while it waited for the analysis process to finish",
+		    product_name);
 	}
 
 	cleanup(tmpdir);

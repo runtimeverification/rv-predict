@@ -16,6 +16,7 @@
 #include "interpose.h"
 #include "relay.h"
 #include "rvpsignal.h"
+#include "supervise.h"
 #include "thread.h"
 #include "trace.h"
 
@@ -39,14 +40,13 @@ static uint32_t next_id = 0;
 static pthread_t serializer;
 static pthread_cond_t wakecond;
 static int nwake = 0;
-static int nforks = 0;
+static bool forked = false;
 static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
 static bool transmit = true;
 bool rvp_trace_only = true;
 
 pthread_key_t rvp_thread_key;
-static pthread_once_t rvp_establish_atfork_once = PTHREAD_ONCE_INIT;
 static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
 static pthread_once_t rvp_prefork_init_once = PTHREAD_ONCE_INIT;
 
@@ -343,36 +343,16 @@ rvp_postfork_init(void)
 	atexit(rvp_stop_transmitter);
 }
 
-static void
-__rvpredict_postfork_init(void)
-{
-	/* Only perform the post-fork initialization after the first fork. */
-	if (nforks != 1)
-		return;
-	rvp_postfork_init();
-	rvp_static_intrs_reinit();
-}
-
-static void
-rvp_next_fork(void)
-{
-	nforks++;
-}
-
-static void
-rvp_establish_atfork(void)
-{
-	/* Before the parent forks, call rvp_next_fork() to increase
-	 * a fork(2) counter.
-	 */
-	const int rc = pthread_atfork(rvp_next_fork, NULL,
-	    __rvpredict_postfork_init);
-	if (rc != 0) {
-		errx(EXIT_FAILURE,
-		    "%s: pthread_atfork: %s", __func__, strerror(rc));
-	}
-}
-
+/* If RVP_TRACE_ONLY == "yes", then every __rvpredict_init() call
+ * begins and ends in the application process.
+ *
+ * If RVP_TRACE_ONLY != "yes", then one __rvpredict_init() call
+ * begins in the supervisor's process---the process that
+ * forks the application thread, waits for the application to finish,
+ * and then runs the data-race predictor.  That call ends in the
+ * application process.  Every other __rvpredict_init() call begins
+ * and ends in the application process.
+ */
 void
 __rvpredict_init(void)
 {
@@ -381,14 +361,15 @@ __rvpredict_init(void)
 	rvp_trace_only = (s = getenv("RVP_TRACE_ONLY")) != NULL &&
 	    strcasecmp(s, "yes") == 0;
 
-	(void)pthread_once(&rvp_prefork_init_once, rvp_prefork_init);
 	if (rvp_trace_only) {
-		(void)pthread_once(&rvp_postfork_init_once, rvp_postfork_init);
-		rvp_static_intrs_reinit();
-	} else {
-		(void)pthread_once(&rvp_establish_atfork_once,
-		    rvp_establish_atfork);
+		(void)pthread_once(&rvp_prefork_init_once, rvp_prefork_init);
+	} else if (!forked) {
+		forked = true;
+		rvp_prefork_init();
+		rvp_supervision_start();
 	}
+	(void)pthread_once(&rvp_postfork_init_once, rvp_postfork_init);
+	rvp_static_intrs_reinit();
 }
 
 static void

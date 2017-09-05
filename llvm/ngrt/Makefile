@@ -12,7 +12,7 @@ STRIPFLAG=
 INCS=intr_exports.h
 CC=clang
 CFLAGS+=-std=c11
-COPTS+=-O3
+#COPTS+=-O3
 DBG+=-g
 CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT

@@ -73,7 +73,9 @@
                 <os family="windows"/>
             </fileset>
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
-                <exclude name="*.bat" />
+                <include name="checkJava" />
+                <include name="rvplicense" />
+                <include name="rv-predict" />
                 <os family="unix"/>
             </fileset>
             <fileset dir="lib/native/windows32" targetdir="$INSTALL_PATH/bin">
@@ -82,6 +84,9 @@
             <fileset dir="lib/native/windows64" targetdir="$INSTALL_PATH/bin">
                 <os family="windows" arch="amd64"/>
             </fileset>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/checkJava" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvplicense" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/rv-predict" type="bin" keep="true" stage="never"/>
         </pack>
         <pack name="Examples" required="no" installGroups="New Application" >
             <description>Example Java programs illustrating RV-Predict's features.</description>

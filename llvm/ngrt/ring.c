@@ -478,11 +478,22 @@ rvp_ring_put_interruption(rvp_ring_t *r, rvp_ring_t *interruptor, int sidx)
 	return prev;
 }
 
-/* Fill iovecs with the ring content beginning at the consumer pointer.
+/* Fill iovecs with content of ring `r` beginning at its consumer pointer.
  * Recurse into any interrupting rings.  Fill the iovecs beginning at
- * the one at *iovp, and advance *iovp as each iovec is filled, but do
- * not fill the iovec at lastiov or after.  Return true if any iovecs
- * were filled, false otherwise.
+ * the one at `*iovp`, and advance `*iovp` as each iovec is filled, but do
+ * not fill the iovec at `lastiov` or after.
+ *
+ * Return -1 if an unfinished interrupt is encountered or if there are
+ * more discontinuous spans of events to serialize than there were
+ * I/O vectors between `*iovp` and `lastiov`, exclusive.  Otherwise,
+ * return the number of I/O vectors that remain unfilled.
+ *
+ * rvp_ring_get_iovs() and rvp_ring_discard_iovs() form a pair:
+ * rvp_ring_get_iovs() examines the event "tree" rooted at `r` and
+ * produces an array of I/O vectors for the unserialized events,
+ * while rvp_ring_discard_iovs() uses the I/O vector array created by
+ * rvp_ring_get_iovs() to advance the consumer pointers of that
+ * event tree.
  */
 int
 rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,

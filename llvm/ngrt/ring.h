@@ -28,6 +28,15 @@ typedef struct _rvp_lastctx {
 	uint32_t lc_idepth;
 } rvp_lastctx_t;
 
+/* An item on an interruptions ring.  An interruption, `it`, tells
+ * the index of the consumer pointer when some ring (`r`) was
+ * interrupted (`it->it_interrupted_idx`), the signal ring where the
+ * interruption's events were logged (`it->it_interruptor`), and the
+ * range of events on the signal ring belonging to the interruption
+ * (`it->it_interruptor_sidx` to `it->it_interruptor_eidx`, exclusive).
+ * Until the interruption has finished, `it->it_interruptor_eidx`
+ * is set to -1.
+ */
 typedef struct _rvp_interruption {
 	rvp_ring_t *	it_interruptor;
 	int		it_interrupted_idx;
@@ -35,25 +44,80 @@ typedef struct _rvp_interruption {
 	int _Atomic	it_interruptor_eidx;
 } rvp_interruption_t;
 
-/* interruptions ring */
+/* An interruptions ring.  Every ring has one of these.  Before a thread
+ * starts to run an interrupt/signal handler, the RV-Predict/C instrumentation
+ * acquires a new ring, fills an rvp_interruption_t, `it`, and adds `it` to the interrupted ring, `r`,
+ * at `r->r_iring.ir_producer`.  Events in the handler are logged to
+ * the 
+ */
 typedef struct _rvp_iring {
 	rvp_interruption_t * _Atomic volatile ir_producer,
 	                   * _Atomic volatile ir_consumer;
 	rvp_interruption_t ir_items[8];
 } rvp_iring_t;
 
+/* An event ring.  An execution sequence (thread/interrupt/signal) has
+ * an event ring, `r`.  Each new event on the sequence is logged at
+ * `r->r_producer`.  When the sequence is interrupted, information about
+ * the interruption, including a pointer to the interrupt's ring, is
+ * written to the interruption ring at `r->r_iring.ir_producer`.
+ *
+ * All of the event rings form a "forest" where each "tree" is rooted at
+ * a thread, rings branch from a ring's interruptions ring, and leaves are
+ * events.
+ *
+ * Note: while an event may span multiple slots in an event ring,
+ * `r->r_producer` only advances by whole events.  On the interruptions
+ * ring, every interruption index (`it->it_interrupted_idx`) derives from
+ * a value actually taken by `r->r_producer`, so interruptions only occur
+ * on event boundaries.
+ */
 struct _rvp_ring {
+	// producer and consumer pointers
 	uint32_t * _Atomic volatile r_producer, * _Atomic volatile r_consumer;
-	uint32_t *r_last;
-	uint32_t *r_items;
-	const char *r_lastpc;
-	volatile uint64_t r_lgen;	// thread-local generation number
-	rvp_ring_t *r_next;
-	rvp_ring_state_t _Atomic r_state;
-	uint32_t r_tid;
-	uint32_t r_idepth;
-	rvp_iring_t r_iring;
-	rvp_sigdepth_t r_sigdepth;
+
+	uint32_t *r_last;		// the consumer pointer follows
+	uint32_t *r_items;		// the producer pointer around and
+					// around the items
+					// between r_items and r_last,
+					// inclusive.
+
+	const char *r_lastpc;		// the last program counter (PC)
+					// of an event on this sequence
+
+	volatile uint64_t r_lgen;	// sequence-local generation number
+
+	rvp_ring_t *r_next;		// all signal rings are strung together
+					// through r_next
+
+	rvp_ring_state_t _Atomic r_state;	// clean: no sequence is using
+						// this ring, and it has no
+						// items that need to be
+						// serialized
+						//
+						// dirty: no sequence is using
+						// this ring, however, it
+						// contains items that need to
+						// be serialized
+						//
+						// in-use: a sequence is
+						// logging on this ring; it
+						// may or may not contains
+						// items that need to be
+						// serialized
+
+	uint32_t r_tid;			// the thread ID and interrupt
+	uint32_t r_idepth;		// depth that identify the sequence
+					// that this ring corresponds to
+
+	rvp_iring_t r_iring;		// record of interruptions: when
+					// each interruption occurred, what
+					// sequence interrupted, which events
+					// in that sequence belong to
+					// the interruption
+					//
+	rvp_sigdepth_t r_sigdepth;	// storage for a change of signal
+					// depth event
 };
 
 extern volatile _Atomic uint64_t rvp_ggen;

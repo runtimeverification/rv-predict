@@ -39,7 +39,11 @@ rvp_static_intr_handler(int signum)
 	for (i = 0; i < nassigned; i++) {
 		rvp_static_intr_t *si = &rvp_static_intr[i];
 		if (si->si_signum == signum) {
-			(*si->si_handler)();
+			if (si->si_nactive == 0) {
+				++si->si_nactive;
+				(*si->si_handler)();
+				--si->si_nactive;
+			}
 			si->si_times++;
 		}
 	}

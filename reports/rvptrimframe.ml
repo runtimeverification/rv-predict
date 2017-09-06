@@ -89,6 +89,6 @@ let () = try
         }
       in
       let renderer = Rv_error.create metadata in
-      ignore(Rv_error.render_error renderer (Rv_error.StackError trimmed))
+      ignore(Rv_error.render_error renderer (Rv_error.StackError trimmed, fun x -> x))
   done
 with End_of_file -> ()

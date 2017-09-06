@@ -75,11 +75,11 @@ format_description fmt strs
 
 let symbolize_lock raw : lock =
 let (symbol, loc) = rvsyms_frame raw.locked_at in
-{id=symbolize_field raw.id; locked_at={symbol=symbol; loc=loc; locks=[]; elided=false}}
+{id=symbolize_field raw.id; locked_at={symbol=symbol; loc=loc; locks=[]; elided=false; local_vars=[]}}
 
 let symbolize_frame raw : frame =
 let (symbol, loc) = rvsyms_frame raw.address in
-{symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks; elided=false}
+{symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks; elided=false; local_vars=[]}
 
 let symbolize_trace_component (raw : raw_stack_trace_component) : stack_trace_component =
 {description=Some (symbolize_format_str raw.description_format raw.description_fields); frames=List.map symbolize_frame raw.frames}
@@ -113,6 +113,6 @@ let () = try
       }
     in
     let renderer = Rv_error.create metadata in
-    ignore(Rv_error.render_error renderer (Rv_error.StackError symbolized))
+    ignore(Rv_error.render_error renderer (Rv_error.StackError symbolized, fun x -> x))
   done
 with End_of_file -> ()

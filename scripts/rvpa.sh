@@ -87,7 +87,7 @@ symbolize()
 		then
 			rvpsymbolize "$@" | trim_stack
 		else
-			rvpsymbolize-json "$@" | rvptrimframe | rvperror
+			rvpsymbolize-json "$@" | rvptrimframe
 		fi
 	elif [ "${filter_symbol:-yes}" = yes ]
 	then
@@ -95,7 +95,7 @@ symbolize()
 		then
 			rvpsymbolize "$@"
 		else
-			rvpsymbolize-json "$@" | rvperror
+			rvpsymbolize-json "$@"
 		fi
 	else
 		cat

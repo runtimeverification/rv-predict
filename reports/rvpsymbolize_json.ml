@@ -75,11 +75,11 @@ format_description fmt strs
 
 let symbolize_lock raw : lock =
 let (symbol, loc) = rvsyms_frame raw.locked_at in
-{id=symbolize_field raw.id; locked_at={symbol=symbol; loc=loc; locks=[]; elided=false}}
+{id=symbolize_field raw.id; locked_at={symbol=symbol; loc=loc; locks=[]; elided=false; local_vars=[]}}
 
 let symbolize_frame raw : frame =
 let (symbol, loc) = rvsyms_frame raw.address in
-{symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks; elided=false}
+{symbol=symbol; loc=loc; locks=List.map symbolize_lock raw.locks; elided=false; local_vars=[]}
 
 let symbolize_trace_component (raw : raw_stack_trace_component) : stack_trace_component =
 {description=Some (symbolize_format_str raw.description_format raw.description_fields); frames=List.map symbolize_frame raw.frames}
@@ -89,19 +89,30 @@ let symbolize_trace (raw : raw_stack_trace) : stack_trace =
 let symbolize_format_str fmt fields =
 let strs = List.map symbolize_field fields in
 format_description fmt strs
-let symbolize raw = 
+let symbolize raw =
 {description=symbolize_format_str raw.description_format raw.description_fields; stack_traces=List.map symbolize_trace raw.stack_traces; category=raw.category; error_id=raw.error_id; citations=[]; friendly_cat=None; long_desc=None}
 
 let magic = "[RV-Predict]"
 let magic_len = String.length magic
 
-let () = try 
+let () = try
   while true do
     let line = input_line stdin in
     if String.length line >= magic_len && String.sub line 0 magic_len = magic then prerr_endline line else
     let err = Error_j.raw_stack_error_of_string line in
     let symbolized = symbolize err in
-    print_string (Error_j.string_of_stack_error symbolized);
-    print_newline ()
+    let metadata : Error_t.metadata =
+      {
+        suppressions = [{ condition = `Category `LintError; suppress = false }] ;
+        message_length = 80 ;
+        format = `Console ;
+        previous_errors = [] ;
+        fatal_errors = false ;
+        rv_error = "" ;
+        output = None ;
+      }
+    in
+    let renderer = Rv_error.create metadata in
+    ignore(Rv_error.render_error renderer (Rv_error.StackError symbolized, fun x -> x))
   done
 with End_of_file -> ()

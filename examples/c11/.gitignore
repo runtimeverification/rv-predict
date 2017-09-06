@@ -14,6 +14,7 @@ simplerace
 spcq
 square-sum
 stolz-queue
+stolz-queue.plain
 stolz-queue.rvp
 stolz-queue.tsan
 .*.swp

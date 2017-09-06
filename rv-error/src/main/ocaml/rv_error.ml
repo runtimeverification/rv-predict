@@ -252,7 +252,8 @@ let render_error_to_channels (this : renderer) (error : rv_error) : unit =
   map (render_error_to_channel (Json_renderer.instance this) error) kcc_report_json_location
 
 
-let render_stack_error (this : renderer) (error : stack_error) : bool =
+let render_stack_error (this : renderer) (error : stack_error * (rv_error -> rv_error)) : bool =
+  let (error, update_error) = error in
   let top_frame = get_top_frame error.stack_traces in
   let error_id = get_real_error_id error.error_id error.category in
   let citations = get_citations error_id in
@@ -261,6 +262,7 @@ let render_stack_error (this : renderer) (error : stack_error) : bool =
   if suppress this error.category error_id top_frame (StackError error)
   then false
   else
+    let StackError error = update_error (StackError error) in
     let rendered_error = { error with
                            error_id = error_id;
                            citations = citations;
@@ -272,7 +274,8 @@ let render_stack_error (this : renderer) (error : stack_error) : bool =
       this.data.fatal_errors
 
 
-let render_location_error (this : renderer) (error : location_error) : bool =
+let render_location_error (this : renderer) (error : location_error * (rv_error -> rv_error)) : bool =
+  let (error, update_error) = error in
   let error_id = get_real_error_id error.error_id error.category in
   let citations = get_citations error_id in
   let friendly_cat = string_of_error_category error.category in
@@ -280,6 +283,7 @@ let render_location_error (this : renderer) (error : location_error) : bool =
   if suppress this error.category error_id (Some error.loc) (LocationError error)
   then false
   else
+    let LocationError error = update_error (LocationError error) in
     let rendered_error = { error with
                            error_id = error_id;
                            citations = citations;
@@ -291,11 +295,12 @@ let render_location_error (this : renderer) (error : location_error) : bool =
       this.data.fatal_errors
 
 
-let render_error (this : renderer) (error : rv_error) : bool =
+let render_error (this : renderer) (error : rv_error * (rv_error -> rv_error)) : bool =
+  let (error, update_error) = error in
   let fatal =
     match error with
-    | StackError error -> render_stack_error this error
-    | LocationError error -> render_location_error this error
+    | StackError error -> render_stack_error this (error, update_error)
+    | LocationError error -> render_location_error this (error, update_error)
   in
   add_previous_error this error ;
   fatal

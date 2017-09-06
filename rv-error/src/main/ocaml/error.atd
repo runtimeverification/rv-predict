@@ -33,6 +33,7 @@ type frame = {
   symbol: string;
   ?loc: location option;
   locks: lock list;
+  local_vars: local_var list;
   elided: bool;
 }
 
@@ -40,6 +41,66 @@ type raw_frame = {
   address: string;
   locks: raw_lock list;
 }
+
+type local_var = {
+  id: string;
+  vtype: value_type;
+  size: int;
+  bytes: byte_value list;
+}
+
+type byte_value = [
+| Int of int
+| Indeterminate
+| Unspecified
+| Bitfield of sized_byte_value list
+| EncodedValue of encoded_value
+]
+
+type sized_byte_value = {
+  length: int;
+  value: byte_value;
+}
+
+type encoded_value = {
+  value: string;
+  bstart: int;
+  bend: int;
+}
+
+type sized_type = {
+  vtype: value_type;
+  size : int;
+}
+
+type value_type = [
+| Bool
+| Bitfield of sized_type
+| Float
+| Double
+| LongDouble
+| Void
+| NoType
+| ShortInt
+| Int
+| LongInt
+| LongLongInt
+| SignedChar
+| UnsignedShortInt
+| UnsignedInt
+| UnsignedLongInt
+| UnsignedLongLongInt
+| UnsignedChar
+| Char
+| Pointer of value_type
+| Enum of string
+| Union of string
+| Struct of string
+| Array of sized_type
+| IncompleteArray of value_type
+| VariableArray of value_type
+| Function
+]
 
 type lock = {
   id: string;
@@ -118,7 +179,7 @@ type raw_stack_error = {
   stack_traces: raw_stack_trace list;
   category: error_category;
   error_id: string;
-} 
+}
 
 type metadata = {
   suppressions: suppression list;

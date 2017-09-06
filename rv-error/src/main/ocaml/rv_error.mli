@@ -7,6 +7,6 @@ type rv_error = Base_renderer.rv_error =
 
 
 val create : Error_t.metadata -> t
-val render_error : t -> rv_error -> bool
+val render_error : t -> rv_error * (rv_error -> rv_error) -> bool
 val get_metadata : t -> Error_t.metadata
 val rv_error_of_string : string -> rv_error

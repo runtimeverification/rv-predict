@@ -14,7 +14,7 @@ cleanup()
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
 	kill $bgpid
 	rm -rf ${destdir} ${tmpdir}
-	wait $bgpid
+	wait $bgpid || true
 }
 
 [ $# -eq 1 ] || usage
@@ -88,4 +88,3 @@ fakeroot -s ${rootfifo} chown -R root:root ${destdir}/DEBIAN
 # that we accumulated previously takes effect.
 #
 fakeroot -i ${rootsave} dpkg-deb -b ${destdir} rv-predict-c-${version}.deb
-exit 0

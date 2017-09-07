@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.order;
 
 import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 
 import java.util.HashMap;
@@ -12,20 +13,21 @@ public class HappensBefore {
     private Map<Long, VectorClock> threadStarts = new HashMap<>();
     private Map<Long, VectorClock> threadCurrent = new HashMap<>();
 
-    private ThreadLocal<VectorClock> localClock = ThreadLocal.withInitial(() -> {
-        long tid = Thread.currentThread().getId();
-        VectorClock clock = new VectorClock(threadStarts.get(tid));
-        clock.increment(tid);
-        threadCurrent.put(tid, clock);
-        return clock;
-    });
-
-
     private final Metadata metadata;
 
     public HappensBefore(Metadata metadata) {
         this.metadata = metadata;
     }
+
+    private VectorClock getClock(long tid) {
+        VectorClock clock = threadCurrent.get(tid);
+        if (clock == null) {
+            clock = new VectorClock(threadStarts.get(tid));
+            threadCurrent.put(tid, clock);
+        }
+        return clock;
+    }
+
 
     /**
      * Incorporates current event into the Happens-Before ordering.
@@ -37,27 +39,28 @@ public class HappensBefore {
      * @param address    id of concurrent object affected by the event (dependent on eventType)
      * @return           the clocks of the current thread upon processing the event
      */
-    public VectorClock log(EventType eventType, long tid, long address) {
-        VectorClock clock = localClock.get();
+    public VectorClock log(ReadonlyEventInterface event) {
+        long tid = event.getOriginalThreadId();
+        VectorClock clock = getClock(tid);
         clock.increment(tid);
-        switch (eventType) {
+        switch (event.getType()) {
         case READ:
-            if (metadata.isVolatile(address)) {
-                clock.update(volatileWrite.get(address));
+            if (metadata.isVolatile(event.getDataInternalIdentifier())) {
+                clock.update(volatileWrite.get(event.getDataInternalIdentifier()));
             }
             break;
         case WRITE:
-            if (metadata.isVolatile(address)) {
-                updatePreviousClock(address, clock, volatileWrite);
+            if (metadata.isVolatile(event.getDataInternalIdentifier())) {
+                updatePreviousClock(event.getDataInternalIdentifier(), clock, volatileWrite);
             }
             break;
         case WRITE_LOCK:
         case READ_LOCK:
-            clock.update(unlocks.get(address));
+            clock.update(unlocks.get(event.getSyncObject()));
             break;
         case WRITE_UNLOCK:
         case READ_UNLOCK:
-            updatePreviousClock(address, clock, unlocks);
+            updatePreviousClock(event.getSyncObject(), clock, unlocks);
             break;
         case WAIT_ACQUIRE:
         case WAIT_RELEASE:
@@ -66,7 +69,7 @@ public class HappensBefore {
             threadStarts.put(tid, clock);
             break;
         case JOIN_THREAD:
-            clock.update(threadCurrent.get(address));
+            clock.update(threadCurrent.get(event.getSyncedThreadId()));
             break;
         case CLINIT_ENTER:
         case CLINIT_EXIT:
@@ -80,14 +83,14 @@ public class HappensBefore {
         return clock;
     }
 
-    private void updatePreviousClock(long address, VectorClock clock, Map<Long, VectorClock> previousClocks) {
-        VectorClock vClock = previousClocks.get(address);
+    private void updatePreviousClock(long clockId, VectorClock clock, Map<Long, VectorClock> previousClocks) {
+        VectorClock vClock = previousClocks.get(clockId);
         if (vClock != null) {
             vClock.update(clock);
         } else {
             vClock = new VectorClock(clock);
         }
-        previousClocks.put(address, vClock);
+        previousClocks.put(clockId, vClock);
     }
 
 

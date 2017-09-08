@@ -1,3 +1,27 @@
+/* This is a linker script.  Its directives tell the linker how to
+ * construct a binary from the text and data defined by a program's
+ * object files.
+ *
+ * `rvpc` uses this linker script to gather the variables annotated
+ * __rv_register in every object file into one data section called
+ * `.data.registers`.  The `INSERT AFTER` statement ensures that the
+ * linker script augments the default linker script instead of replacing
+ * it.
+ *
+ * This linker script introduces two symbols that we can access from C,
+ * `__data_registers_begin` and `__data_registers_end`, which point at
+ * the first byte of the section and the byte *after* the last byte of
+ * the section.  The runtime declares both the pointers `extern const
+ * char * const`, so it can "measure" the data-register section,
+ * `ptrdiff_t register_section_size =
+ *     __data_registers_begin - __data_registers_end;` 
+ *
+ * It is useful to measure the data-register section so that the runtime
+ * knows how much memory to allocate for register "metadata."
+ * It is useful to know where the section begins, `__data_registers_begin`,
+ * so that a reference to any register, `regp`, can be converted to an
+ * index into the metadata, `regp - __data_registers_begin`.
+ */
 SECTIONS
 {
 	__data_registers_begin = . ;

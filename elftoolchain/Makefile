@@ -2,6 +2,13 @@
 
 SRCDIR=$(.CURDIR)/../external/bsd/elftoolchain
 
+#
+# I set variables such as MAKEFLAGS= in the environment when children
+# of `make` (sub-makes) also need to see the value.  I pass the WITH_*
+# variables on the command line because only the top-level `make`
+# needs to see it.  I could probably pass the WITH_* variables in the
+# environment, too.
+#
 cleandir distclean:
 	cd $(SRCDIR) && \
 	MAKEFLAGS= $(MAKE) WITH_DOCUMENTATION=no WITH_TESTS=no clean

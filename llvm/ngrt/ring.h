@@ -46,9 +46,9 @@ typedef struct _rvp_interruption {
 
 /* An interruptions ring.  Every ring has one of these.  Before a thread
  * starts to run an interrupt/signal handler, the RV-Predict/C instrumentation
- * acquires a new ring, fills an rvp_interruption_t, `it`, and adds `it` to the interrupted ring, `r`,
- * at `r->r_iring.ir_producer`.  Events in the handler are logged to
- * the 
+ * acquires a new ring, fills an rvp_interruption_t, `it`, and adds `it` to
+ * the interrupted ring, `r`, at `r->r_iring.ir_producer`.  Events in the
+ * handler are logged to the new ring.
  */
 typedef struct _rvp_iring {
 	rvp_interruption_t * _Atomic volatile ir_producer,

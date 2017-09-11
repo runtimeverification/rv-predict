@@ -342,6 +342,10 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 			continue;
 		}
 
+		/* An interruption after `last` may not have affected the
+		 * interrupt that we are presently serializing, but some
+		 * subsequent interrupt, so we had better stop here.
+		 */
 		if (rvp_ring_index_properly_consumed_before(r, last, intr)) {
 			rvp_debugf("%s.%d: r %p it %p is beyond last\n",
 			    __func__, __LINE__, (void *)r, (const void *)it);

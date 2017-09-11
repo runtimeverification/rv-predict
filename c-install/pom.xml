@@ -134,8 +134,8 @@
                         <configuration>
                             <resources>
                                 <resource>
-                                    <directory>.</directory>
-                                    <include>rv-predict-c-@{info.appVersion}.deb</include>
+                                    <directory>..</directory>
+                                    <include>rv-predict-c-${info.appVersion}.deb</include>
                                 </resource>
                             </resources>
                             <outputDirectory>${staging.dir.app}</outputDirectory>

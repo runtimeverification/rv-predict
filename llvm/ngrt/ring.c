@@ -351,7 +351,7 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		if (rvp_ring_index_properly_consumed_before(r, first, intr) &&
 		    (residue = rvp_ring_get_iovs_between(r, iovp, lastiov, first, intr,
 		            idepthp)) < 0)
-			goto out;
+			break;
 
 		assert(r->r_idepth != it->it_interruptor->r_idepth);
 
@@ -364,7 +364,7 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		    it, iovp, lastiov, idepthp);
 
 		if (residue < 0)
-			goto out;
+			break;
 
 		rvp_debugf("%s.%d: r %p #iovs %td\n",
 		    __func__, __LINE__, (void *)r, residue);
@@ -374,7 +374,6 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		    first, last, idepthp);
 	}
 
-out:
 	for (iov = iov0; iov < *iovp; iov++) {
 		rvp_debugf("%s.%d: r %p iov[%td].iov_len = %zu\n",
 		    __func__, __LINE__, (void *)r, iov - iov0, iov->iov_len);
@@ -497,7 +496,7 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		if (rvp_ring_index_properly_consumed_before(r, first, intr) &&
 		    (residue = rvp_ring_discard_iovs_between(r, iovp, lastiov,
 		     first, idepthp)) < 0)
-			goto out;
+			break;
 
 		if (bracket != NULL) {
 			bracket->it_interruptor_sidx =
@@ -513,9 +512,8 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		residue = rvp_ring_discard_iovs(it->it_interruptor,
 		    it, iovp, lastiov, idepthp);
 
-		if (residue < 0) {
+		if (residue < 0)
 			break;
-		}
 
 		rvp_debugf("%s.%d: r %p dropping it %p #iovs %td\n",
 		    __func__, __LINE__, (void *)r, (void *)it, residue);

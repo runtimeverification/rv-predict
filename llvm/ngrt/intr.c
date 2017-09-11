@@ -100,6 +100,34 @@ rvp_static_intrs_reinit(void)
 	if (rvp_static_nintrs > _POSIX_RTSIG_MAX)
 		errx(EXIT_FAILURE, "too many interrupt priorities");
 
+	long nsec = 1000 * 1000;	// 1 millisecond
+	const char *ivalenv = getenv("RVP_INTR_INTERVAL");
+	if (ivalenv != NULL) {
+		char *end;
+		errno = 0;
+		nsec = strtol(ivalenv, &end, 10);
+		if (errno != 0) {
+			err(EXIT_FAILURE,
+			    "could not interpret "
+			    "RVP_INTR_INTERVAL (%s) "
+			    "as a decimal number", ivalenv);
+		} else if (*end != '\0') {
+			errx(EXIT_FAILURE,
+			    "garbage at end of RVP_INTR_INTERVAL (%s)",
+			    ivalenv);
+		}
+	}
+	const struct itimerspec it = {
+		  .it_value = {
+			  .tv_sec = 0
+			, .tv_nsec = nsec
+		  }
+		, .it_interval = {
+			  .tv_sec = 0
+			, .tv_nsec = nsec
+		  }
+	};
+
 	for (i = nassigned; i < rvp_static_nintrs; i++) {
 		struct sigaction sa;
 		int signum = SIGRTMIN + i;
@@ -112,34 +140,6 @@ rvp_static_intrs_reinit(void)
 		sa.sa_handler = rvp_static_intr_handler;
 		if (sigaction(signum, &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
-
-		long nsec = 1000 * 1000;	// 1 millisecond
-		const char *ivalenv = getenv("RVP_INTR_INTERVAL");
-		if (ivalenv != NULL) {
-			char *end;
-			errno = 0;
-			nsec = strtol(ivalenv, &end, 10);
-			if (errno != 0) {
-				err(EXIT_FAILURE,
-				    "could not interpret "
-				    "RVP_INTR_INTERVAL (%s) "
-				    "as a decimal number", ivalenv);
-			} else if (*end != '\0') {
-				errx(EXIT_FAILURE,
-				    "garbage at end of RVP_INTR_INTERVAL (%s)",
-				    ivalenv);
-			}
-		}
-		const struct itimerspec it = {
-			  .it_value = {
-				  .tv_sec = 0
-				, .tv_nsec = nsec
-			  }
-			, .it_interval = {
-				  .tv_sec = 0
-				, .tv_nsec = nsec
-			  }
-		};
 
 		struct sigevent sigev = {
 			  .sigev_notify = SIGEV_SIGNAL

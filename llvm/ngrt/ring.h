@@ -56,21 +56,23 @@ typedef struct _rvp_iring {
 	rvp_interruption_t ir_items[8];
 } rvp_iring_t;
 
-/* An event ring.  An execution sequence (thread/interrupt/signal) has
- * an event ring, `r`.  Each new event on the sequence is logged at
- * `r->r_producer`.  When the sequence is interrupted, information about
- * the interruption, including a pointer to the interrupt's ring, is
- * written to the interruption ring at `r->r_iring.ir_producer`.
+/* An event ring contains events that are serialized as one
+ * or more unsigned 32-bit integers.  An execution sequence
+ * (thread/interrupt/signal) has an event ring, `r`.  Each new event
+ * on the sequence is logged at `r->r_producer`.  When the sequence is
+ * interrupted, information about the interruption, including a pointer
+ * to the interrupt's ring, is written to the interruption ring at
+ * `r->r_iring.ir_producer`.
  *
  * All of the event rings form a "forest" where each "tree" is rooted at
- * a thread, rings branch from a ring's interruptions ring, and leaves are
- * events.
+ * a thread, rings branch from a ring's interruptions ring, and leaves
+ * are events.
  *
  * Note: while an event may span multiple slots in an event ring,
  * `r->r_producer` only advances by whole events.  On the interruptions
- * ring, every interruption index (`it->it_interrupted_idx`) derives from
- * a value actually taken by `r->r_producer`, so interruptions only occur
- * on event boundaries.
+ * ring, every interruption index (`it->it_interrupted_idx`) derives
+ * from a value actually taken by `r->r_producer`, so interruptions only
+ * occur on event boundaries.
  */
 struct _rvp_ring {
 	// producer and consumer pointers

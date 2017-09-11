@@ -61,9 +61,7 @@ rvp_static_intr_fire_all(void)
 		/* Don't let this signal run on top of itself. */
 		if (si->si_nactive > 0)
 			continue;
-		++si->si_nactive;
 		raise(si->si_signum);
-		--si->si_nactive;
 	}
 }
 

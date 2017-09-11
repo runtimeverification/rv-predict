@@ -197,6 +197,10 @@ __rvpredict_intr_disable(void)
 {
 	int rc;
 
+	/* To guarantee that every interrupt is observed at least once
+	 * in each interrupts-enabled interval, fire all interrupts
+	 * before disabling them.
+	 */
 	rvp_static_intr_fire_all();
 	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
@@ -214,6 +218,10 @@ __rvpredict_intr_enable(void)
 		    strerror(rc));
 	}
 
+	/* To guarantee that every interrupt is observed at least once
+	 * in each interrupts-enabled interval, fire all interrupts
+	 * after enabling them.
+	 */
 	rvp_static_intr_fire_all();
 }
 

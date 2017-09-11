@@ -162,7 +162,6 @@ rvp_buf_trace_load_cog(rvp_buf_t *b, volatile uint64_t *lgenp)
 }
 
 void rvp_ring_init(rvp_ring_t *, uint32_t *, size_t);
-void rvp_ring_wait_for_slot(rvp_ring_t *, uint32_t *);
 void rvp_ring_wait_for_nempty(rvp_ring_t *, int);
 void rvp_wake_transmitter(void);
 
@@ -252,13 +251,6 @@ rvp_iring_await_one_empty(rvp_ring_t *r)
 {
 	rvp_ring_request_service(r);
 	rvp_iring_wait_for_one_empty(r);
-}
-
-static inline void
-rvp_ring_open_slot(rvp_ring_t *r, uint32_t *slot)
-{
-	rvp_ring_request_service(r);
-	rvp_ring_wait_for_slot(r, slot);
 }
 
 static inline rvp_interruption_t *

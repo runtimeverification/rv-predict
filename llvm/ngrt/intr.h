@@ -6,6 +6,8 @@
 #include <stdint.h>
 
 void __rvpredict_intr_register(void (*)(void), int32_t);
+extern const char * const __data_registers_begin;
+extern const char * const __data_registers_end;
 
 #endif /* _RVP_INTR_H_ */
 

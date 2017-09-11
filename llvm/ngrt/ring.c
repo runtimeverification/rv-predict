@@ -171,12 +171,31 @@ rvp_ring_drop_interruption(rvp_ring_t *r)
 	atomic_store_explicit(&ir->ir_consumer, next, memory_order_release);
 }
 
-/* Fill I/O vectors with all of the ring content between `cidx` and
- * `pidx` and, if necessary, a vector for a change of signal depth.  If
+rvp_interruption_t *
+rvp_ring_put_interruption(rvp_ring_t *r, rvp_ring_t *interruptor, int sidx)
+{
+	rvp_iring_t *ir = &r->r_iring;
+	rvp_interruption_t *prev = ir->ir_producer;
+	rvp_interruption_t *next =
+	    (prev == rvp_iring_last(ir)) ? &ir->ir_items[0] : (prev + 1);
+
+	while (rvp_iring_nempty(ir) < 1)
+		rvp_iring_await_one_empty(r);
+
+	prev->it_interruptor = interruptor;
+	prev->it_interrupted_idx = r->r_producer - r->r_items;
+	prev->it_interruptor_sidx = sidx;
+	prev->it_interruptor_eidx = -1;
+	atomic_store_explicit(&ir->ir_producer, next, memory_order_release);
+	return prev;
+}
+
+/* Fill I/O vectors with all of the ring content between `first` and
+ * `last` and, if necessary, a vector for a change of signal depth.  If
  * there are not enough vectors, fill none.
  *
  * If there were enough I/O vectors between *iovp and
- * lastiov to hold the ring content between cidx and pidx and any change
+ * lastiov to hold the ring content between `first` and `last` and any change
  * of signal depth, return the number of I/O vectors that remain.
  * Return -1 if there were not enough vectors.
  *
@@ -189,13 +208,13 @@ rvp_ring_drop_interruption(rvp_ring_t *r)
  */
 static int
 rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
-    const struct iovec *lastiov, int cidx, int pidx, uint32_t *idepthp)
+    const struct iovec *lastiov, int first, int last, uint32_t *idepthp)
 {
-	uint32_t *producer = &r->r_items[pidx], *consumer = &r->r_items[cidx];
+	uint32_t *end = &r->r_items[last], *start = &r->r_items[first];
 	struct iovec *iov = *iovp;
 	bool writeback_depth = false;
 
-	if (consumer == producer)
+	if (start == end)
 		return -1;
 
 	if (iov == lastiov)
@@ -222,17 +241,17 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 		writeback_depth = true;
 	}
 
-	if (consumer < producer) {
+	if (start < end) {
 		*iov++ = (struct iovec){
-			  .iov_base = consumer
-			, .iov_len = (producer - consumer) *
-				     sizeof(consumer[0])
+			  .iov_base = start
+			, .iov_len = (end - start) *
+				     sizeof(start[0])
 		};
-	} else {	/* consumer > producer */
+	} else {	/* start > end */
 		*iov++ = (struct iovec){
-			  .iov_base = consumer
-			, .iov_len = (r->r_last + 1 - consumer) *
-				     sizeof(consumer[0])
+			  .iov_base = start
+			, .iov_len = (r->r_last + 1 - start) *
+				     sizeof(start[0])
 		};
 
 		if (iov == lastiov)
@@ -240,40 +259,21 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 
 		*iov++ = (struct iovec){
 			  .iov_base = r->r_items
-			, .iov_len = (producer - r->r_items) *
+			, .iov_len = (end - r->r_items) *
 				     sizeof(r->r_items[0])
 		};
 	}
 	*iovp = iov;
 	rvp_debugf("%s.%d r %p span %td -> %td\n",
-	    __func__, __LINE__, (void *)r, cidx, producer - r->r_items);
+	    __func__, __LINE__, (void *)r, first, end - r->r_items);
 	if (writeback_depth) {
 		rvp_debugf(
-		    "%s.%d r %p inserted %zu-byte sigdepth %p at cidx %d\n",
+		    "%s.%d r %p inserted %zu-byte sigdepth %p at first %d\n",
 		    __func__, __LINE__, (void *)r, sizeof(r->r_sigdepth),
-		    &r->r_sigdepth, cidx);
+		    &r->r_sigdepth, first);
 		*idepthp = r->r_idepth;
 	}
 	return lastiov - *iovp;
-}
-
-rvp_interruption_t *
-rvp_ring_put_interruption(rvp_ring_t *r, rvp_ring_t *interruptor, int sidx)
-{
-	rvp_iring_t *ir = &r->r_iring;
-	rvp_interruption_t *prev = ir->ir_producer;
-	rvp_interruption_t *next =
-	    (prev == rvp_iring_last(ir)) ? &ir->ir_items[0] : (prev + 1);
-
-	while (rvp_iring_nempty(ir) < 1)
-		rvp_iring_await_one_empty(r);
-
-	prev->it_interruptor = interruptor;
-	prev->it_interrupted_idx = r->r_producer - r->r_items;
-	prev->it_interruptor_sidx = sidx;
-	prev->it_interruptor_eidx = -1;
-	atomic_store_explicit(&ir->ir_producer, next, memory_order_release);
-	return prev;
 }
 
 /* Fill iovecs with content of ring `r` beginning at its consumer pointer.

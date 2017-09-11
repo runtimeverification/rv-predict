@@ -375,9 +375,9 @@ rvp_interruption_unfinished(const rvp_interruption_t *it)
 }
 
 /* Where `it` is an interruption and `r` the ring for the interruptor,
- * return the producer index if the interruption has not finished
- * (it->it_interruptor_eidx < 0).  Otherwise, return the end index of
- * the interruption.
+ * return the interruptor's producer index if the interruption has not
+ * finished (it->it_interruptor_eidx < 0).  Otherwise, return the end
+ * index of the interruption.
  */
 static inline int
 rvp_interruption_get_end(const rvp_interruption_t *it, bool *unfinishedp)

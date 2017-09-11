@@ -29,7 +29,7 @@ typedef struct _rvp_lastctx {
 } rvp_lastctx_t;
 
 /* An item on an interruptions ring.  An interruption, `it`, tells
- * the index of the consumer pointer when some ring (`r`) was
+ * the index of the producer pointer when some ring (`r`) was
  * interrupted (`it->it_interrupted_idx`), the signal ring where the
  * interruption's events were logged (`it->it_interruptor`), and the
  * range of events on the signal ring belonging to the interruption

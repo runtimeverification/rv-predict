@@ -99,7 +99,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <executable>../deb-release.sh</executable>
+                    <executable>${basedir}/../deb-release.sh</executable>
                     <workingDirectory>${basedir}/..</workingDirectory>
                     <arguments>
                         <argument>${info.appVersion}</argument>
@@ -134,8 +134,8 @@
                         <configuration>
                             <resources>
                                 <resource>
-                                    <directory>.</directory>
-                                    <include>rv-predict-c-@{info.appVersion}.deb</include>
+                                    <directory>..</directory>
+                                    <include>rv-predict-c-${info.appVersion}.deb</include>
                                 </resource>
                             </resources>
                             <outputDirectory>${staging.dir.app}</outputDirectory>

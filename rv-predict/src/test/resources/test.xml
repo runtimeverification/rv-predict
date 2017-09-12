@@ -88,6 +88,7 @@
     </test>
 
     <test name="jtsan.CustomTests-positive" module="basic">
+        <runs value="8" />
         <arg value="jtsan.CustomTests" />
         <arg value="positive" />
     </test>

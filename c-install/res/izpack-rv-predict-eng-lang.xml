@@ -10,7 +10,7 @@
     <str id="DependencyPanel.headline" txt="Dependencies" />
     <str id="PacksPanel.headline" txt="Packages" />
 
-    <str id="InstallPanel.headline" txt="Copying temporary files"/>
+    <str id="InstallPanel.headline" txt="Copy temporary files"/>
     <str id="InstallPanel.tip" txt="Overall progress"/>
     <str id="InstallPanel.progress" txt="Packages progress"/>
 

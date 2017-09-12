@@ -12,6 +12,7 @@
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
         <run-privileged condition="izpack.linuxinstall|izpack.windowsinstall|izpack.macinstall"/>
+        <tempdir variablename="INSTALL_PATH"/>
     </info>
 
     <variables>
@@ -49,10 +50,19 @@
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
     </resources>
 
+    <conditions>
+        <condition type="comparenumerics" id="false">
+            <arg1>1</arg1>
+            <arg2>2</arg2>
+            <operator>eq</operator>
+        </condition>
+    </conditions>
+
     <!-- Installer Panel Sequence -->
     <panels>
-        <!-- TODO(virgil): Is there a point in asking the user about the temp directory? Most likely not. -->
-        <panel classname="TargetPanel"/>
+        <!-- There is a long-standing izpack problem that a TargetPanel is required. We don't need one,
+             so we're filtering it out using a condition -->
+        <panel classname="TargetPanel" id="targetPanelId" condition="false"/>
         <!-- Check RV key and make sure it validates properly -->
         <panel classname="UserInputPanel" id="rvkey">
             <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>

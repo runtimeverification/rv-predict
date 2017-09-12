@@ -153,11 +153,15 @@ rvp_ring_index_properly_consumed_before(rvp_ring_t *r, int lidx, int ridx)
 	return rvp_ring_index_consumed_before(r, lidx, ridx) && lidx != ridx;
 }
 
-static void
+/* Drop the first interruption on the ring `r` and return either the one
+ * after or NULL if there are no interruptions left.
+ */
+static rvp_interruption_t *
 rvp_ring_drop_interruption(rvp_ring_t *r)
 {
 	rvp_iring_t *ir = &r->r_iring;
 	rvp_interruption_t *prev = ir->ir_consumer;
+	rvp_interruption_t *producer = ir->ir_producer;
 	rvp_interruption_t *next =
 	    (prev == rvp_iring_last(ir)) ? &ir->ir_items[0] : (prev + 1);
 
@@ -169,6 +173,11 @@ rvp_ring_drop_interruption(rvp_ring_t *r)
 	assert(prev != ir->ir_producer);
 
 	atomic_store_explicit(&ir->ir_consumer, next, memory_order_release);
+
+	if (next == producer)
+		return NULL;
+
+	return next;
 }
 
 rvp_interruption_t *
@@ -476,7 +485,7 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 
 	for (it = rvp_ring_first_interruption(r);
 	     (residue = lastiov - *iovp) > 0 && it != NULL;
-	     it = rvp_ring_next_interruption(r, it)) {
+	     it = rvp_ring_drop_interruption(r)) {
 		const int intr = it->it_interrupted_idx;
 
 		rvp_debugf(
@@ -521,7 +530,6 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 
 		rvp_debugf("%s.%d: r %p dropping it %p #iovs %td\n",
 		    __func__, __LINE__, (void *)r, (void *)it, residue);
-		rvp_ring_drop_interruption(r);
 	}
 	if (residue > 0) {
 		residue = rvp_ring_discard_iovs_between(r, iovp, lastiov, first,

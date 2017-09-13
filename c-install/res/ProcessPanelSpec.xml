@@ -3,7 +3,7 @@
         xmlns:izpack="http://izpack.org/schema/processing" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://izpack.org/schema/processing http://izpack.org/schema/5.0/izpack-processing-5.0.xsd">
     <job name="Install the RV-Predict/C package">
-        <!-- TODO: add a different job for the dependencies. -->
+        <!-- TODO(virgil): Maybe split this job in two, the first one installs the package, the second one installs its dependencies. -->
         <os family="unix"/>
         <executefile name="$INSTALL_PATH/bin/install-package.sh">
             <arg>$rvProductVersion</arg>

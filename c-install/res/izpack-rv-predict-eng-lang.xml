@@ -1,0 +1,21 @@
+<langpack>
+    <str id="installer.reversetitle" txt="$APP_NAME - Install"/>
+
+    <str id="TargetPanel.headline" txt="Temporary files"/>
+    <str id="TargetPanel.info" txt="Select the temporary files path:"/>
+    <str id="TargetPanel.warn" txt="The directory already exists! Are you sure you want to write the temporary files here and possibly overwrite existing files?"/>
+
+    <str id="UserInputPanel.headline" txt="License" />
+    <str id="LicencePanel.headline" txt="License" />
+    <str id="DependencyPanel.headline" txt="Dependencies" />
+    <str id="PacksPanel.headline" txt="Packages" />
+
+    <str id="InstallPanel.headline" txt="Copying temporary files"/>
+    <str id="InstallPanel.tip" txt="Overall progress"/>
+    <str id="InstallPanel.progress" txt="Packages progress"/>
+
+    <str id="ProcessPanel.headline" txt="Installation"/>
+    <str id="ProcessPanel.heading" txt="Installing"/>
+
+    <str id="HTMLFinishInfoPanel.headline" txt="Complete" />
+</langpack>

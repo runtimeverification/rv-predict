@@ -22,8 +22,10 @@ Make sure that the RV-Predict/C `bin` directory is in your PATH.
 Ordinarily, the RV-Predict/C programs will be in `/usr/bin/`, and
 `/usr/bin/` will be part of the system's default PATH.
 
-Before you use RV-Predict/C for the first time, you should sign up for
-a license key.  Follow the instructions at [https://runtimeverification.com/licensing](https://runtimeverification.com/licensing).
+If you used the GUI installer, then it installed a valid license key
+for you.  Otherwise, before you use RV-Predict/C for the first time,
+you *may* need to sign up for a license key.  Follow the instructions at
+[https://runtimeverification.com/licensing](https://runtimeverification.com/licensing).
 Then run `rvplicense` to fetch a new key.
 
 ```
@@ -55,7 +57,9 @@ Here is a typical `rvpc` invocation that produces an executable binary,
 $ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
 ```
 
-When you run the binary,
+When you run the binary, it waits for your application code to finish,
+and then it performs the data-race prediction and writes a report to
+the standard error stream:
 
 ```
 $ ./lpcq
@@ -64,10 +68,49 @@ read item 1
 read item 2
 read item 3
 read item 4
+Data race on [0x00000000020d1fe0]:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:34:2
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:49
+	in produce at .../c11/lpcq_main.c:164
+	in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+
+
+Data race on q.tailp at lpcq_main.c;main:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:26:19
+	in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+	in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:48
+	in produce at .../c11/lpcq_main.c:164
+	in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
 ```
 
-it writes a trace of the program execution to the file `rvpredict.trace`
-in the current directory.
+If you would prefer to capture your program's RV-Predict/C event trace
+to analyze, later, then you can do that.  Use the `RVP_TRACE_ONLY` environment
+variable to change the program's operating mode, like this:
+ 
+```
+$ RVP_TRACE_ONLY=yes ./lpcq
+read item 0
+read item 1
+read item 2
+read item 3
+read item 4
+```
+
+Your program writes a trace of the program execution to the file
+`rvpredict.trace` in the current directory.
 
 You can analyze the trace using `rvpa`, which prints race reports to
 its standard error output.  `rvpa` requires one argument, the name of
@@ -103,39 +146,7 @@ Data race on q.tailp at lpcq_main.c;main:
     Thread 1 is the main thread
 ```
 
-The `rvpx` script provides a shortcut: it runs your program and analyzes
-it one step, and it does not leave an `rvpredict.trace` file in your
-home directory.  On the `rvpx` command line, tell the name of a program
-that was compiled with `rvpc`, and the program arguments:
-
-```
-$ rvpx ./lpcq -s
-read item 0
-read item 1
-read item 2
-read item 3
-read item 4
-Data race on [0x00007ffd19f94658]:
-    Write in thread 2
-      > in lpcq_get at .../c11/lpcq.c:36
-	in consume at .../c11/lpcq_main.c:104
-    Thread 2 created by thread 1
-	in main at .../c11/lpcq_main.c:230
-
-    Read in signal SIGALRM
-      > in lpcq_put at .../c11/lpcq.c:47:19
-	in handler at .../c11/lpcq_main.c:139:1
-    Interrupting thread 2
-      > in lpcq_get at .../c11/lpcq.c:36
-	in consume at .../c11/lpcq_main.c:104
-    Thread 2 created by thread 1
-	in main at .../c11/lpcq_main.c:230
-.
-.
-.
-```
-
-Both `rvpa` and `rvpx` accept options that disable conversions applied
+`rvpa` accepts options that disable conversions applied
 to the raw data-race reports.  `--no-symbol` disables conversion of data
 addresses to variable names, and instruction address to line and column
 numbers.  When `--no-trim` is given, data-race reports will show stack
@@ -270,7 +281,7 @@ a variety of examples in C and C++.  Look at the README files under
 `examples/rv-predict-c/` for more information.
 
 The most important programs for the everyday RV-Predict/C user are `rvpc`
-and `rvpx`:
+and `rvpa`:
 
 `rvpc`: a wrapper for `clang` that compiles and links programs with
     RV-Predict/C instrumentation.  When a program built with `rvpc` runs, it
@@ -279,14 +290,12 @@ and `rvpx`:
 
 `rvpc++`: like `rvpc`, only for `clang++`.
 
-`rvpx`: a wrapper for running and analyzing programs that were built
-    with RV-Predict/C instrumentation.  If you ordinarily run your
-    program like `<command> <arguments>`, then run `rvpx <command>
-    <arguments>` to see data-race reports. `rvpx` redirects the
-    trace file for <command> from `./rvpredict.trace` to a temporary
-    directory.  Then it analyzes the trace for data races.  After
-    reporting any data races on the standard error output, `rvpx`
-    deletes the temporary directory.
+`rvpa`: a program for analyzing event traces that were recorded by
+    RV-Predict/C instrumentation.  If you ran your program like
+    `RVP_TRACE_ONLY=yes <command> <arguments>`, then run `rvpa <command>`
+    to see data-race reports. `rvpa` analyzes the `rvpredict.trace` in
+    the current directory for data races, reporting them on the standard
+    error stream.
 
 Advanced users may find a couple of other programs in the package useful.
 Those programs are `rvpsymbolize` and `rvpdump`.  Note that those programs
@@ -326,6 +335,11 @@ positive.  This will be fixed in the 2.1 release.
 RV-Predict/C does not filter system include files and libraries from
 data-race reports.  This is especially apparent in C++ programs.
 This will be fixed in the 2.1 release.
+
+## Support
+
+For support and bug reports please visit
+[Runtime Verification Support](http://runtimeverification.com/support).
 
 ## Further reading
 

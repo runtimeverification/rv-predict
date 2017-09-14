@@ -4,6 +4,7 @@
 
     <jar src="res/panels/RVPanels.jar" />
     <jar src="rv-licensing.jar" />
+    <jar src="rv-predict-c-installer-tools.jar"/>
 
     <!-- General Application Information -->
     <info>
@@ -70,6 +71,7 @@
         <panel classname="LicencePanel"/>
         <panel classname="InstallPanel"/>
         <!-- TODO(virgil): Maybe add a SudoPanel here. -->
+        <panel classname="SudoPanel"/>
         <panel classname="ProcessPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>
@@ -83,13 +85,9 @@
             </file>
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="EVALUATION-LICENSE.md" targetdir="$INSTALL_PATH"/>
-            <file src="install-scripts/install-shell.sh" targetdir="$INSTALL_PATH/bin">
-                <os family="unix"/>
-            </file>
             <file src="install-scripts/install.sh" targetdir="$INSTALL_PATH/bin">
                 <os family="unix"/>
             </file>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/install-shell.sh" type="bin" keep="true" stage="never"/>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="never"/>
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.bat" />

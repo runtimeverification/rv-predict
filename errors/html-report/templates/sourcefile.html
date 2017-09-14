@@ -1,16 +1,68 @@
 {% extends "layout.html" %}
 {% block head %}
+<style>
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+  h1 {
+    margin-left: 8px;
+  }
+  .container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+  div.pre {
+    height: calc(100% - 100px);
+    width: 100%;
+    padding-left: 8px;
+    box-sizing: border-box;
+  }
+  @keyframes highlight {
+    0% {
+      background-color: #ff8880;
+    }
+    100% {
+      background-color: #ffcccc;
+    }
+  }
+  .line-with-errors.highlight .hll {
+    animation: highlight 1.5s;
+  }
+</style>
 <script type="text/javascript">
   $(function () {
     $("div.line-with-errors").click(function() {
       $("div.errors", this).slideToggle(200)
-    });
-    $("div.errors").hide();
+    })
+    
+    // jump to `linno` if specified
+    // for example: 2-buffer-overflow.c.html?lineno=148 will then jump to line 148
+    var match = window.location.search.match(/\?lineno=(\d+)/)
+    if (match) {
+      var lineno = match[1]
+      var $el = $('.line-with-errors.line-' + lineno)
+      if ($el.length) {
+        $el.addClass('highlight')
+        var el = $el[0]
+        el.scrollIntoView()
+        $('.errors', $el).show()
+        var container = $('.container')[0]
+        if (container) {
+          container.scrollTop = Math.max(0, (container.scrollTop - container.offsetHeight * 0.382))
+        }
+      }
+    }
   });
 </script>
 {% endblock %}
 {% block title %}{{filename}}{% endblock %}
 {% block content %}
-<h1><a href="{{output_dir}}/index.html"><img alt="Report Index" class="breadcrumb" src="{{output_dir}}/static/rv_logo.png"/></a> &raquo; {{filename}}</h1>
-{{ code|highlight(errorlines, fileid)|safe }}
+<div class="container">
+    <h1><a href="{{output_dir}}/index.html"><img alt="Report Index" class="breadcrumb" src="{{output_dir}}/static/rv_logo.png"/></a> &raquo; {{filename}}</h1>
+    {{ code|highlight(errorlines, fileid)|safe }}
+</div>
 {% endblock %}

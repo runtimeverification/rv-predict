@@ -38,7 +38,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                 yield 0, '<sup class="after"></sup>\n'
                 yield 0, '</span>'
                 continue
-            yield 0, '<div class="line-with-errors">'
+            yield 0, '<div class="line-%d line line-with-errors">' % lineno
             if len(self.hl_links[lineno]) == 1:
                 err = self.hl_links[lineno][0]
                 ix = err[u'index']
@@ -48,7 +48,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                 yield 0, '</a>'
             else:
                     yield i, txt
-            yield 0, '<div class="errors">'
+            yield 0, '<div class="errors" style="display:none;">'
             for err in self.hl_links[lineno]:
                 yield 0, '<span class="lineno">   </span>'
                 msg = '%s (%s)' % (err[u'description'], err[u'error_id'])
@@ -113,9 +113,18 @@ def null_frame():
     }
 
 errorsByFile = defaultdict(listdict)
+error_frequency_map = {}
+for ix, err in enumerate(errors): # build error frequency map
+    error_id = err[u'error_id']
+    if error_id in error_frequency_map:
+        error_frequency_map[error_id] += 1
+    else:
+        error_frequency_map[error_id] = 1
+
 for ix, err in enumerate(errors):
     err[u'index'] = ix
     err[u'errdesc'] = '%s (%s)' % (err[u'description'], err[u'error_id'])
+    err[u'frequency'] = error_frequency_map[err[u'error_id']]
     if (u'stack_traces' in err):
         traces = err[u'stack_traces']
         if traces:

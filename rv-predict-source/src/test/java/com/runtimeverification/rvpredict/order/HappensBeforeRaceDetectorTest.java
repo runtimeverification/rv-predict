@@ -328,12 +328,9 @@ public class HappensBeforeRaceDetectorTest {
             traceState.preStartWindow();
             trace = traceState.initNextTraceWindow(rawTraces);
             detector.run(trace);
-            for (Race race : detector.races) {
-                if (race.firstEvent().equals(e1) && race.secondEvent().equals(e2) ||
-                        race.firstEvent().equals(e2) && race.secondEvent().equals(e1)) {
-                    return true;
-                }
-            }
+            Race testRace = new Race(e1, e2, trace, mockConfiguration);
+            String testRaceSig = testRace.toString();
+            return detector.races.containsKey(testRaceSig);
         }
         return false;
     }

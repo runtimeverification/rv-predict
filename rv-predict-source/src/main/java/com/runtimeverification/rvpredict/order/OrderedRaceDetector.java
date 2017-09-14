@@ -1,13 +1,34 @@
 package com.runtimeverification.rvpredict.order;
 
 import com.google.common.collect.ImmutableList;
+import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.engine.main.RaceDetector;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.trace.OrderedTraceReader;
+import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.violation.Race;
 
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class OrderedRaceDetector {
+public class OrderedRaceDetector implements RaceDetector {
+    protected final List<String> reports;
+    protected final Configuration config;
+    protected final OrderedTraceReader traceReader;
+    protected final VectorClockTraceReader vectorClockReader;
+    final Map<String, Race> races;
     Map<Long,ReadonlyOrderedEventInterface> lastWrites = new HashMap<>();
     Map<Long,Collection<ReadonlyOrderedEventInterface>> lastReads = new HashMap<>();
+
+    protected OrderedRaceDetector(Configuration config, MetadataInterface metadata, VectorClockOrderInterface happensBefore) {
+        this.config = config;
+        reports = new ArrayList<>();
+        traceReader = new OrderedTraceReader();
+        vectorClockReader = new VectorClockTraceReader(traceReader, happensBefore, OrderedEvent::new);
+        races = new HashMap<>();
+    }
 
     public Collection<ReadonlyOrderedEventInterface> process(ReadonlyOrderedEventInterface event) {
         if (event.isReadOrWrite())
@@ -40,4 +61,32 @@ public class OrderedRaceDetector {
         return builder.build();
     }
 
+    @Override
+    public List<String> getRaceReports() {
+        return reports;
+    }
+
+    @Override
+    public void run(Trace trace) {
+        traceReader.reset(trace);
+        try {
+            while (true) {
+                ReadonlyOrderedEventInterface event = vectorClockReader.readEvent();
+                Collection<ReadonlyOrderedEventInterface> racingEvents = process(event);
+                racingEvents.forEach((rEvent) -> {
+                    Race race = new Race(event, rEvent, trace, config);
+                    String raceSig = race.toString();
+                    if (!races.containsKey(raceSig)) {
+                        races.put(raceSig, race);
+                        String report = race.generateRaceReport();
+                        reports.add(report);
+                        config.logger().reportRace(report);
+                    }
+                });
+            }
+        } catch (EOFException ignored) {
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

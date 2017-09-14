@@ -1,15 +1,8 @@
 package com.runtimeverification.rvpredict.order;
 
-import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
-import com.runtimeverification.rvpredict.trace.OrderedLoggedTraceReader;
-import com.runtimeverification.rvpredict.violation.Race;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 

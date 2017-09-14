@@ -11,7 +11,7 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.linuxinstall|izpack.windowsinstall|izpack.macinstall"/>
+        <run-privileged condition="izpack.windowsinstall|izpack.macinstall"/>
         <tempdir variablename="INSTALL_PATH"/>
     </info>
 
@@ -83,10 +83,14 @@
             </file>
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="EVALUATION-LICENSE.md" targetdir="$INSTALL_PATH"/>
-            <file src="install-scripts/install-package.sh" targetdir="$INSTALL_PATH/bin">
+            <file src="install-scripts/install-shell.sh" targetdir="$INSTALL_PATH/bin">
                 <os family="unix"/>
             </file>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/install-package.sh" type="bin" keep="true" stage="never"/>
+            <file src="install-scripts/install.sh" targetdir="$INSTALL_PATH/bin">
+                <os family="unix"/>
+            </file>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/install-shell.sh" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="never"/>
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.bat" />
                 <os family="windows"/>

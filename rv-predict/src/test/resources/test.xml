@@ -34,7 +34,7 @@
         <arg value="airlinetickets.Airlinetickets" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
-        <runs value="16" />
+        <runs value="32" />
         <rvarg key="--window" value="5000" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
     </test>
@@ -49,7 +49,7 @@
         <arg value="demo.Example" />
     </test>
     <test name="boundedbuffer.BoundedBuffer" module="basic">
-        <runs value="32" />
+        <runs value="64" />
         <arg value="boundedbuffer.BoundedBuffer" />
         <rvarg key="--window" value="800" />
     </test>
@@ -88,6 +88,7 @@
     </test>
 
     <test name="jtsan.CustomTests-positive" module="basic">
+        <runs value="8" />
         <arg value="jtsan.CustomTests" />
         <arg value="positive" />
     </test>

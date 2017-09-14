@@ -1,0 +1,153 @@
+{% extends "layout.html" %}
+{% block title %}Error {{err.index}}{% endblock %}
+{% block head %}
+<script type="text/javascript">
+
+  function showNLines(n, startLine, context) {
+    for (i = startLine; i < startLine + n; i++) {
+      showline(i, context);
+    }
+  }
+
+  function showline(line, context) {
+    $(".line-"+line, context).show();
+  }
+
+  function expandUp(fileId, line, obj) {
+    var $div = $("[data-fileid=" + fileId + "][data-line=" + line + "]");
+    var oldStart = Number($div.attr("data-context-start"));
+    var dStart = Number($div.attr("data-context-dstart"));
+    if (isNaN(dStart)) { dStart = 10;}
+    var start = oldStart - dStart;
+    if (start < 0) {
+      start = 0;
+      $(obj).hide();
+    }
+    showNLines(oldStart-start, start+1, $div);
+    $div.attr("data-context-start", start);
+    $div.attr("data-context-dstart", 2*dStart);
+  }
+
+  function expandDown(fileId, line, obj) {
+    var $div = $("[data-fileid=" + fileId + "][data-line=" + line + "]");
+    var oldEnd = Number($div.attr("data-context-end"));
+    var size = Number($div.attr("size"));
+    var dEnd = Number($div.attr("data-context-dend"));
+    if (isNaN(dEnd)) { dEnd = 10;}
+    var end = oldEnd + dEnd;
+    if (end > size + 1) {
+      end = size + 1;
+      $(obj).hide();
+    }
+    showNLines(end-oldEnd, oldEnd, $div);
+    $div.attr("data-context-end", end);
+    $div.attr("data-context-dend", 2*dEnd);
+  }
+
+  $(document).ready(function() {
+  $("[data-fileid]").each(function(){
+  var obj=this;
+  var dat = this.dataset.fileid;
+  var path=dat+".html ."+dat;
+  // cast to integer
+  var line = +this.dataset.line;
+  $(".stack-frame", this).load(path, function() {
+  var size = $(".line", this).length;
+  $(".expand span.lineno", obj).width($(".line span.lineno", obj).width());
+  $(".line", this).hide();
+  $(obj).attr("size", size);
+  var locks = obj.dataset.locks.split(" ");
+  for (var i = 0; i < locks.length; i++) {
+    $(".line-"+locks[i] + " .after", this).append((i+1));
+    $(".line-"+locks[i], this).addClass("hll3");
+  }
+  $(".line-"+line, this).addClass("hll2");
+  showNLines(7, line-3, this);
+  if (line-3 <= 1) {
+    $(".expand-up", obj).hide();
+  }
+  if (line+3 >= size) {
+    $(".expand-down", obj).hide();
+  }
+  });
+  });
+  });
+</script>
+{% endblock %}
+{% block content %}
+<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/></a>{% if not err.primary_component.frames[0].loc.missing %} &raquo; <a href="{{output_dir}}{{err.primary_component.frames[0].loc.abs_file}}.html">{{err.primary_component.frames[0].loc.rel_file}}</a>{% endif %} &raquo; Error {{err.index}}</h1>
+<h2>{{err.description}}</h2>
+{% macro lock_lines(locks) %}{% for lock in locks %}{{lock.locked_at.loc.line}} {% endfor %}{% endmacro %}
+{% macro source_snippet(frame, initial, at) %}
+<li class="{{initial}}">{{at}}
+ {{frame.symbol}} at {% if not frame.loc.missing %}<a href="{{output_dir}}{{frame.loc.abs_file}}.html">{{frame.loc.rel_file}}</a><br>
+    <ul class="snippet details" data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}" data-locks="{{lock_lines(frame.locks)}}">
+      <li class="expand expand-up" onClick="expandUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
+      <li><div class="stack-frame pre"></div>
+      </li>
+      <li class="expand expand-down" onClick="expandDown('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
+    </ul>
+    {% if frame.locks %}
+    <div class="locks details">
+    <h3>Locks</h3>
+    <ol class="locks">
+    {% for lock in frame.locks %}
+      <li>{{lock.id}}</li>
+    {% endfor %}
+    </ol>
+    </div>
+    {% endif %}
+    <div class="clear"></div>
+    {% else %}{% if frame.loc.line %}{{frame.loc.rel_file}}:{{frame.loc.line}}{% else %}{{frame.loc.rel_file}}{% endif %}{% endif %}
+</li>
+{% endmacro %}
+{% macro created_by(trace) %}
+Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
+{% endmacro %}
+{% for trace in err.stack_traces %}
+{% if not loop.first %}
+<div class="skip"></div>
+{% endif %}
+{% for component in trace.components %}
+{% if component.description %}
+<h3 class="component">{{component.description}}</h3>
+{% endif %}
+<div class="listContainer">
+  <ul class="expList">
+  {% for frame in component.frames %}
+  {% if loop.first %}
+  {% if frame.loc.missing %}
+  {{source_snippet(frame, "dead", "in")}}
+  {% else %}
+  {{source_snippet(frame, "expanded", "in")}}
+  {% endif %}
+  {% else %}
+  {% if frame.loc.missing %}
+  {{source_snippet(frame, "dead", "called by")}}
+  {% else %}
+  {{source_snippet(frame, "collapsed", "called by")}}
+  {% endif %}
+  {% endif %}
+  {% endfor %}
+  </ul>
+</div>
+{% endfor %}
+{% if trace.thread_id %}
+<div class="listContainer">
+  <ul class="expList">
+  {% if trace.thread_created_by %}
+    {{source_snippet(trace.thread_created_at,"collapsed",created_by(trace))}}
+  {% else %}
+    <li class="dead">Thread {{trace.thread_id}} is the main thread</li>
+  {% endif %}
+  </ul>
+</div>
+{% endif %}
+{% endfor %}
+<h2>{{err.friendly_cat}} ({{err.error_id}})</h2>
+<p>{{err.long_desc}}</p>
+<h2>Citations</h2>
+{% for cite in err.citations %}
+<div class="cite"><a href="http://rvdoc.org/{{cite.document}}/{{cite.section}}">See {{cite.document}} section {{cite.section}}{% if cite.paragraph %}:{{cite.paragraph}}{% endif %}</a></div>
+{% endfor %}
+{% endblock %}

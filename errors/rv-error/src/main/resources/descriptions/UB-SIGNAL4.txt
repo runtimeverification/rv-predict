@@ -1,0 +1,1 @@
+According to ISO C11, it is undefined behavior to call the signal function with an invalid value for the signal handler argument. In practice, this can cause corrupted program state or unintended behavior. To resolve this issue, ensure the signal handler argument of the signal function is a valid function pointer to an existing function of the correct type.

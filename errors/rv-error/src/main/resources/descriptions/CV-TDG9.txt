@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to declare a variably-modified type at file scope. In practice, this is a compiler error that prevents the application from being built. The correct solution is to either change the declaration to a fixed size array type, or move the declaration inside a function.

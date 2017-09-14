@@ -11,7 +11,8 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
+        <run-privileged condition="izpack.linuxinstall|izpack.windowsinstall|izpack.macinstall"/>
+        <tempdir variablename="INSTALL_PATH"/>
     </info>
 
     <variables>
@@ -19,6 +20,7 @@
         <!-- Variables required for adding RV key to installer -->
         <variable name="rvFullProductName" value="RV-Predict-C"/>
         <variable name="rvProductId" value="predict"/>
+        <variable name="rvProductVersion" value="@{info.appVersion}"/>
         <variable name="rvLicensePath" value="lib"/>
     </variables>
 
@@ -38,25 +40,37 @@
 
     <!-- Installer Resources -->
     <resources>
-        <res id="CustomLangPack.xml_eng" src="res/izpack-rv-eng-lang.xml"/>
+        <res id="CustomLangPack.xml_eng" src="res/izpack-rv-predict-eng-lang.xml"/>
         <!-- User input spec defining RV key inputs -->
         <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
         <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
-        <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
+        <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/rv-predict-finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
+        <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec.xml"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
     </resources>
 
+    <conditions>
+        <condition type="comparenumerics" id="false">
+            <arg1>1</arg1>
+            <arg2>2</arg2>
+            <operator>eq</operator>
+        </condition>
+    </conditions>
+
     <!-- Installer Panel Sequence -->
     <panels>
-        <panel classname="TargetPanel"/>
+        <!-- There is a long-standing izpack problem that a TargetPanel is required. We don't need one,
+             so we're filtering it out using a condition -->
+        <panel classname="TargetPanel" id="targetPanelId" condition="false"/>
         <!-- Check RV key and make sure it validates properly -->
         <panel classname="UserInputPanel" id="rvkey">
             <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
         </panel>
         <panel classname="LicencePanel"/>
-        <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
+        <!-- TODO(virgil): Maybe add a SudoPanel here. -->
+        <panel classname="ProcessPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>
 
@@ -64,45 +78,24 @@
     <packs>
         <pack name="RV-Predict" required="yes" installGroups="New Application" >
             <description>Required RV-Predict libraries and executables.</description>
-<!-- TBD move LICENSE.md somewhere sensible -->
-            <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
-<!-- TBD new docs
-            <file src="docs" targetdir="$INSTALL_PATH"/>
--->
-<!--
-            <singlefile src="USERS-MANUAL.md" target="$INSTALL_PATH/USERS-MANUAL.md"/>
--->
-            <fileset dir="share/doc" casesensitive="yes" targetdir="$INSTALL_PATH/share/doc">
+            <file src="rv-predict-c-@{info.appVersion}.deb" targetdir="$INSTALL_PATH">
                 <os family="unix"/>
-            </fileset>
-            <singlefile src="share/doc/rv-predict-c/README.md" target="$INSTALL_PATH/README.md"/>
+            </file>
+            <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
+            <file src="EVALUATION-LICENSE.md" targetdir="$INSTALL_PATH"/>
+            <file src="install-scripts/install-package.sh" targetdir="$INSTALL_PATH/bin">
+                <os family="unix"/>
+            </file>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/install-package.sh" type="bin" keep="true" stage="never"/>
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.bat" />
                 <os family="windows"/>
             </fileset>
-            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
-                <exclude name="*.bat" />
-                <exclude name="checkJava" />
-                <exclude name="rv-predict" />
-                <os family="unix"/>
-            </fileset>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpa" type="bin" keep="true" stage="never"/>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpc" type="bin" keep="true" stage="never"/>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpc++" type="bin" keep="true" stage="never"/>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvplicense" type="bin" keep="true" stage="never"/>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpsymbolize" type="bin" keep="true" stage="never"/>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/rvpx" type="bin" keep="true" stage="never"/>
             <fileset dir="lib" targetdir="$INSTALL_PATH/lib">
-		<exclude name="libclang_rt.*"/>
-		<exclude name="native/**"/>
-		<exclude name="native"/>
-            </fileset>
-            <file src="rv-predict.jar" targetdir="$INSTALL_PATH/lib"/>
-        </pack>
-        <pack name="Examples" required="no" installGroups="New Application" >
-            <description>Example C programs illustrating RV-Predict's features.</description>
-            <fileset dir="share/examples" casesensitive="yes" targetdir="$INSTALL_PATH/share/examples">
-                <os family="unix"/>
+                <exclude name="libclang_rt.*"/>
+                <exclude name="native/**"/>
+                <exclude name="native"/>
+                <os family="windows"/>
             </fileset>
         </pack>
     </packs>

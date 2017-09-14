@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+{% block title %}RV-Match Error Report{% endblock %}
+
+{% block head %}
+<script type="text/javascript">
+  $(document).ready(function() {
+  var table = $("#myTable").DataTable( {
+  fixedHeader: {
+    headerOffset: $("#myTableHeader").outerHeight(true),
+    header: true
+  },
+  paging: false,
+  dom: 'rtB',
+  stateSave: true,
+  stateDuration: -1,
+  buttons: [
+  {extend:'csv',filename:'errors'},
+  {extend:'excel',filename:'errors'},
+  {extend:'pdf',filename:'errors'},
+  ],
+  columns: [
+  {"name": "id"},
+  {"name": "error"},
+  {"name": "function", "className": "function"},
+  {"name": "file"},
+  {"name": "line"},
+  ]
+  } );
+
+  $(window).bind('beforeunload', function() {
+    if (typeof(Storage) !== "undefined") {
+      sessionStorage.myTable_searchValue = $("#myTable_search").val();
+      sessionStorage.myTable_scrollTop = $(window).scrollTop();
+    }
+  });
+
+  if (typeof(Storage) !== "undefined") {
+    if (sessionStorage.myTable_searchValue) {
+      $("#myTable_search").val(sessionStorage.myTable_searchValue);
+    }
+    if (sessionStorage.myTable_scrollTop) {
+      $(window).scrollTop(sessionStorage.myTable_scrollTop);
+    }
+  }
+  
+  $("#myTable_search")
+    .on("keyup", function() { // filter according to key pressed
+      var text = this.value.trim();
+      var regex;
+      var words = text.split(/\s/);
+      var terms = {};
+      var cols = table.settings().init().columns;
+      for (var i = 0; i < cols.length; i++) {
+        terms[cols[i].name] = "";
+      }
+      var global = "";
+      for (var i = 0; i < words.length; i++) {
+        var word = words[i];
+        var idx = word.indexOf(':');
+        if (idx !== -1) {
+          var label = word.substring(0, idx);
+          var term = word.substring(idx+1);
+          if (label in terms) {
+            terms[label] = terms[label] + " " + term;
+          } else {
+            global = global + " " + word;
+          }
+        } else {
+          global = global + " " + word;
+        }
+      }
+      for (var col in terms) {
+        table.column(col+":name").search(terms[col]);
+      }
+      table.search(global).draw();
+    });
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<div id="myTableHeader">
+<div class="float-left">
+<h1><img class="home-icon" src="static/rv_logo.png" alt="Runtime Verification"/> RV-Match Error Report</h1>
+</div>
+<div id="myTable_filter" class="dataTables_filter"><label>Search:<input id="myTable_search" class="" placeholder="" aria-controls="myTable" type="search"></label></div>
+</div>
+<table id="myTable" class="tablesorter myTable">
+  <thead>
+    <tr>
+      <th class="dt-right">ID</th>
+      <th class="dt-left">Error</th>
+      <th class="dt-left">Function</th>
+      <th class="dt-left">File</th>
+      <th class="dt-right">Line</th>
+    </tr>
+  </thead>
+  <tbody>
+{% for err in errors %}
+    <tr>
+      <td class="dt-right"><a href="error-{{err.index}}.html">{{err.index}}</a></td>
+      <td><a href="error-{{err.index}}.html">{{err.errdesc}}</a></td>
+      <td>{{err.function}}</td>
+      <td>
+      {% if not err.missing %}
+        <a href=".{{err.abs_file}}.html">{{err.file}}</a>
+      {% else %}
+        {{err.file}}
+      {% endif %}
+      </td>
+      <td class="dt-right">{{err.line}}</td>
+    </tr>
+{% endfor %}
+  <tfoot>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </tfoot>
+</table>
+{% endblock %}

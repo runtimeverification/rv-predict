@@ -1,0 +1,1 @@
+According to ISO C11, the value of variables of static or thread-storage duration which are not given initializers is zeroed. However, it is possible that you forgot to provide the initializer for the field. If this is the intended behavior, the error can be suppressed with no ill effect.

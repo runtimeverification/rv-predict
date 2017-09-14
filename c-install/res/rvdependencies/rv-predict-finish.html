@@ -1,0 +1,13 @@
+<html>
+    <h3> Successfully installed $APP_NAME </h3><hr><br><br>
+    <!-- TODO(virgil): The path to this file should be the output of something like
+
+         mkcmake PREFIX=/usr -C doc -V '${FILESDIR}'
+
+         Right now it seems that one can't compute that in install.xml, it should be sent
+         from Maven, and, most likely, one needs to write a plugin for that. -->
+    See /usr/share/doc/rv-predict-c/USERS-MANUAL.md for instructions on getting started.
+    <br><br>
+    To uninstall, please run<br>
+    sudo dpkg -r rv-predict-c
+</html>

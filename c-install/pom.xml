@@ -12,6 +12,7 @@
     <properties>
         <!-- Installer variables -->
         <info.appName>RV-Predict/C</info.appName>
+        <info.appVersion>0.1.0-SNAPSHOT</info.appVersion>
         <izpack.dir.app>${basedir}/src/main/izpack</izpack.dir.app>
         <staging.dir.app>${basedir}/../target/release/rv-predict</staging.dir.app>
     </properties>
@@ -85,7 +86,7 @@
                     </execution>
                 </executions>
             </plugin>
-	    <plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.1</version>
@@ -98,16 +99,64 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <executable>mkcmake</executable>
+                    <executable>${basedir}/../deb-release.sh</executable>
+                    <workingDirectory>${basedir}/..</workingDirectory>
                     <arguments>
-                        <argument>-C</argument>
-                        <argument>${basedir}/..</argument>
-                        <argument>MKJAR=no</argument>
-                        <argument>PREFIX=${basedir}/../target/release/rv-predict</argument>
-                        <argument>depend</argument>
-                        <argument>install</argument>
+                        <argument>${info.appVersion}</argument>
                     </arguments>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.6</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>res</directory>
+                                </resource>
+                            </resources>
+                            <outputDirectory>${staging.dir.app}/res</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-deb</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>..</directory>
+                                    <include>rv-predict-c-${info.appVersion}.deb</include>
+                                </resource>
+                            </resources>
+                            <outputDirectory>${staging.dir.app}</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-scripts</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>scripts</directory>
+                                </resource>
+                            </resources>
+                            <outputDirectory>${staging.dir.app}/install-scripts</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.izpack</groupId>

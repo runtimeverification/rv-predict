@@ -3,12 +3,25 @@ if you have downloaded binaries for Ubuntu 14.04:
 
 export PATH=${HOME}/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}
 
-awk
-clang+llvm-3.8.1 with development components (.h, .a/.so files)
-grep
-JDK 1.8
-lex
-libarchive
-m4
-sed
-yacc
+Here are some programs that must be available:
+ 
+	awk
+	clang+llvm-3.8.1 with development components (.h, .a/.so files)
+	grep
+	JDK 1.8
+	lex
+	libarchive
+	m4
+	opam
+	sed
+	yacc
+
+OPAM packages required by the unified error reporting in errors/:
+
+	Probably NOT needed: zarith mlgmp 
+
+	Definitely needed: csv uri ocamlbuild-atdgen ocp-ocamlres
+
+	Maybe needed: uuidm camomile atdgen atdj ctypes ctypes-foreign
+
+	Install with `opam install -y <packages here>`.

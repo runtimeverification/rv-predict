@@ -27,7 +27,7 @@ public class VectorClock {
         }
     }
 
-    Map<Long, Long> clocks;
+    Map<Integer, Integer> clocks;
     public VectorClock() {
         clocks = new HashMap<>();
     }
@@ -39,13 +39,13 @@ public class VectorClock {
         }
     }
 
-    public void increment(long clock) {
-        clocks.put(clock, clocks.getOrDefault(clock, 0L) + 1);
+    public void increment(int clock) {
+        clocks.put(clock, clocks.getOrDefault(clock, 0) + 1);
     }
 
     public void update(VectorClock c) {
         if (c != null) {
-            c.clocks.forEach((clock, value) -> clocks.put(clock, Long.max(value, clocks.getOrDefault(clock, 0L))));
+            c.clocks.forEach((clock, value) -> clocks.put(clock, Integer.max(value, clocks.getOrDefault(clock, 0))));
         }
     }
 
@@ -56,7 +56,7 @@ public class VectorClock {
                 Comparison.EQUAL,
                 (c, entry) -> {
                     if (c == Comparison.NOT_COMPARABLE) return Comparison.NOT_COMPARABLE;
-                    Long toValue = to.clocks.get(entry.getKey());
+                    Integer toValue = to.clocks.get(entry.getKey());
                     if (toValue == null) return Comparison.NOT_COMPARABLE;
                     switch (Long.signum(entry.getValue().compareTo(toValue))) {
                         case -1: return c.and(Comparison.BEFORE);
@@ -67,5 +67,10 @@ public class VectorClock {
                 Comparison::and);
         if (clocks.size() < to.clocks.size()) return aggregate.and(Comparison.BEFORE);
         return aggregate;
+    }
+
+    @Override
+    public String toString() {
+        return clocks.toString();
     }
 }

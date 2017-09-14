@@ -13,14 +13,14 @@ public class VectorClockTest {
     public void setUp() throws Exception {
         clock1 = new VectorClock();
         clock2 = new VectorClock();
-        clock2.clocks.put(1L, 0L);
-        clock2.clocks.put(2L, 3L);
-        clock2.clocks.put(3L, 7L);
+        clock2.clocks.put(1, 0);
+        clock2.clocks.put(2, 3);
+        clock2.clocks.put(3, 7);
 
         clock3 = new VectorClock();
-        clock3.clocks.put(1L, 5L);
-        clock3.clocks.put(3L, 4L);
-        clock3.clocks.put(5L, 1L);
+        clock3.clocks.put(1, 5);
+        clock3.clocks.put(3, 4);
+        clock3.clocks.put(5, 1);
 
     }
 
@@ -28,24 +28,24 @@ public class VectorClockTest {
     public void increment() throws Exception {
         clock1.increment(15);
         Assert.assertThat(clock1.clocks, hasMapSize(1));
-        Assert.assertTrue(clock1.clocks.containsKey(15L));
-        Assert.assertEquals(1L, clock1.clocks.get(15L).longValue());
+        Assert.assertTrue(clock1.clocks.containsKey(15));
+        Assert.assertEquals(1, clock1.clocks.get(15).longValue());
 
         VectorClock clock;
         clock = new VectorClock(clock2);
         clock2.increment(15);
         Assert.assertThat(clock2.clocks, hasMapSize(4));
-        Assert.assertTrue(clock2.clocks.containsKey(15L));
-        Assert.assertEquals(1L, clock2.clocks.get(15L).longValue());
+        Assert.assertTrue(clock2.clocks.containsKey(15));
+        Assert.assertEquals(1, clock2.clocks.get(15).longValue());
         includedIn(clock, clock2);
 
         clock = new VectorClock(clock2);
         clock2.increment(1);
         Assert.assertThat(clock2.clocks, hasMapSize(4));
-        Assert.assertEquals(1L, clock2.clocks.get(1L).longValue());
+        Assert.assertEquals(1, clock2.clocks.get(1).longValue());
         clock.clocks.forEach((c, value) -> {
             Assert.assertTrue(clock2.clocks.containsKey(c));
-            if (c != 1L) {
+            if (c != 1) {
                 Assert.assertEquals(value.longValue(), clock2.clocks.get(c).longValue());
             }
         });
@@ -67,18 +67,18 @@ public class VectorClockTest {
 
         clockTest.update(clock3);
         Assert.assertThat(clockTest.clocks, hasMapSize(4));
-        Assert.assertEquals(5L, clockTest.clocks.get(1L).longValue());
-        Assert.assertEquals(3L, clockTest.clocks.get(2L).longValue());
-        Assert.assertEquals(7L, clockTest.clocks.get(3L).longValue());
-        Assert.assertEquals(1L, clockTest.clocks.get(5L).longValue());
+        Assert.assertEquals(5, clockTest.clocks.get(1).longValue());
+        Assert.assertEquals(3, clockTest.clocks.get(2).longValue());
+        Assert.assertEquals(7, clockTest.clocks.get(3).longValue());
+        Assert.assertEquals(1, clockTest.clocks.get(5).longValue());
 
         clockTest = new VectorClock(clock3);
         clockTest.update(clock2);
         Assert.assertThat(clockTest.clocks, hasMapSize(4));
-        Assert.assertEquals(5L, clockTest.clocks.get(1L).longValue());
-        Assert.assertEquals(3L, clockTest.clocks.get(2L).longValue());
-        Assert.assertEquals(7L, clockTest.clocks.get(3L).longValue());
-        Assert.assertEquals(1L, clockTest.clocks.get(5L).longValue());
+        Assert.assertEquals(5, clockTest.clocks.get(1).longValue());
+        Assert.assertEquals(3, clockTest.clocks.get(2).longValue());
+        Assert.assertEquals(7, clockTest.clocks.get(3).longValue());
+        Assert.assertEquals(1, clockTest.clocks.get(5).longValue());
     }
 
     @Test
@@ -92,10 +92,10 @@ public class VectorClockTest {
         Assert.assertEquals(VectorClock.Comparison.NOT_COMPARABLE, clock3.compareTo(clock2));
 
         VectorClock clockTest = new VectorClock(clock2);
-        clock2.clocks.put(2L, 4L);
+        clock2.clocks.put(2, 4);
         Assert.assertEquals(VectorClock.Comparison.AFTER, clock2.compareTo(clockTest));
         Assert.assertEquals(VectorClock.Comparison.BEFORE, clockTest.compareTo(clock2));
-        clockTest.clocks.put(10L, 0L);
+        clockTest.clocks.put(10, 0);
         Assert.assertEquals(VectorClock.Comparison.NOT_COMPARABLE, clock2.compareTo(clockTest));
         Assert.assertEquals(VectorClock.Comparison.NOT_COMPARABLE, clockTest.compareTo(clock2));
 

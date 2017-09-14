@@ -200,25 +200,27 @@ public class Race {
                     getHeldLocksReport(heldLocks, metadata)));
         }
         boolean atLeastOneKnownElementInTheTrace = generateStackTrace(e, heldLocks, sb);
-        for (int stackIndex = 1; stackIndex < signalStackEvents.size(); stackIndex++) {
-            SignalStackEvent stackEvent = signalStackEvents.get(stackIndex);
-            sb.append("    Interrupting ");
-            int ttid = stackEvent.getTtid();
-            if (trace.getThreadType(ttid) == ThreadType.THREAD) {
-                sb.append("thread ");
-                sb.append(trace.getOriginalThreadIdForTraceThreadId(ttid));
-            } else {
-                sb.append("signal S");
-                sb.append(trace.getSignalNumber(ttid));
-            }
-            Optional<ReadonlyEventInterface> maybeEvent = signalStackEvents.get(stackIndex).getEvent();
-            if (!maybeEvent.isPresent()) {
-                sb.append(" before any event.\n");
-            } else {
-                heldLocks = trace.getHeldLocksAt(maybeEvent.get());
-                sb.append(getHeldLocksReport(heldLocks, metadata));
-                sb.append("\n");
-                generateStackTrace(maybeEvent.get(), heldLocks, sb);
+        if (signalStackEvents != null) {
+            for (int stackIndex = 1; stackIndex < signalStackEvents.size(); stackIndex++) {
+                SignalStackEvent stackEvent = signalStackEvents.get(stackIndex);
+                sb.append("    Interrupting ");
+                int ttid = stackEvent.getTtid();
+                if (trace.getThreadType(ttid) == ThreadType.THREAD) {
+                    sb.append("thread ");
+                    sb.append(trace.getOriginalThreadIdForTraceThreadId(ttid));
+                } else {
+                    sb.append("signal S");
+                    sb.append(trace.getSignalNumber(ttid));
+                }
+                Optional<ReadonlyEventInterface> maybeEvent = signalStackEvents.get(stackIndex).getEvent();
+                if (!maybeEvent.isPresent()) {
+                    sb.append(" before any event.\n");
+                } else {
+                    heldLocks = trace.getHeldLocksAt(maybeEvent.get());
+                    sb.append(getHeldLocksReport(heldLocks, metadata));
+                    sb.append("\n");
+                    generateStackTrace(maybeEvent.get(), heldLocks, sb);
+                }
             }
         }
         return atLeastOneKnownElementInTheTrace;

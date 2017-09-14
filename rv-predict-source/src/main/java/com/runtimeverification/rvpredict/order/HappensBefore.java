@@ -1,25 +1,31 @@
 package com.runtimeverification.rvpredict.order;
 
-import com.runtimeverification.rvpredict.log.EventType;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.trace.OrderedLoggedTraceReader;
+import com.runtimeverification.rvpredict.violation.Race;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class HappensBefore {
+public class HappensBefore implements VectorClockOrderInterface {
     private Map<Long, VectorClock> unlocks = new HashMap<>();
     private Map<Long, VectorClock> volatileWrite = new HashMap<>();
-    private Map<Long, VectorClock> threadStarts = new HashMap<>();
-    private Map<Long, VectorClock> threadCurrent = new HashMap<>();
+    private Map<Integer, VectorClock> threadStarts = new HashMap<>();
+    private Map<Integer, VectorClock> threadCurrent = new HashMap<>();
 
-    private final Metadata metadata;
+    private final MetadataInterface metadata;
 
-    public HappensBefore(Metadata metadata) {
+    public HappensBefore(MetadataInterface metadata) {
         this.metadata = metadata;
     }
 
-    private VectorClock getClock(long tid) {
+    private VectorClock getClock(int tid) {
         VectorClock clock = threadCurrent.get(tid);
         if (clock == null) {
             clock = new VectorClock(threadStarts.get(tid));
@@ -28,19 +34,9 @@ public class HappensBefore {
         return clock;
     }
 
-
-    /**
-     * Incorporates current event into the Happens-Before ordering.
-     *
-     * Note: Assumes events are sent in increasing order of their gid.
-     *
-     * @param eventType  type of the event being handled
-     * @param tid        id of the thread emitting the event
-     * @param address    id of concurrent object affected by the event (dependent on eventType)
-     * @return           the clocks of the current thread upon processing the event
-     */
+    @Override
     public VectorClock log(ReadonlyEventInterface event) {
-        long tid = event.getOriginalThreadId();
+        int tid = (int)event.getOriginalThreadId();
         VectorClock clock = getClock(tid);
         clock.increment(tid);
         switch (event.getType()) {
@@ -66,10 +62,10 @@ public class HappensBefore {
         case WAIT_RELEASE:
             break;
         case START_THREAD:
-            threadStarts.put(tid, clock);
+            threadStarts.put((int)event.getSyncedThreadId(), new VectorClock(clock));
             break;
         case JOIN_THREAD:
-            clock.update(threadCurrent.get(event.getSyncedThreadId()));
+            clock.update(threadCurrent.get((int)event.getSyncedThreadId()));
             break;
         case CLINIT_ENTER:
         case CLINIT_EXIT:
@@ -89,9 +85,8 @@ public class HappensBefore {
             vClock.update(clock);
         } else {
             vClock = new VectorClock(clock);
+            previousClocks.put(clockId, vClock);
         }
-        previousClocks.put(clockId, vClock);
     }
-
 
 }

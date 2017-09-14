@@ -1,0 +1,1 @@
+According to ISO C11, it is undefined behavior to call fopen or freopen except with one of the supported file open modes, which are enumerated in the citation below. In practice the code may ignore other values, perform some kind of platform specific behavior, or terminate abnormally with an error. The solution is to use one of the supported modes to open the file.

@@ -1,0 +1,6 @@
+PKG atdgen csv uri pprint str unix ocplib-ocamlres
+
+S .
+S _build
+
+B _build

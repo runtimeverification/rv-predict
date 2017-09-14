@@ -1,0 +1,222 @@
+type error_category = [
+  Undefined of language
+| Unspecified of language
+| ImplementationDefined of language
+| ConditionallySupported
+| IllFormed
+| Underspecified of language
+| ConstraintViolation
+| SyntaxError of language
+| LintError
+]
+
+type citation = {
+  document: string;
+  section: string;
+  ?paragraph: string option;
+}
+
+type language = [
+  C
+| CPP
+]
+
+type location = {
+  rel_file: string;
+  abs_file: string;
+  line: int;
+  ?column: int option;
+  system_header: bool;
+}
+
+type frame = {
+  symbol: string;
+  ?loc: location option;
+  locks: lock list;
+  local_vars: local_var list;
+  elided: bool;
+}
+
+type raw_frame = {
+  address: string;
+  locks: raw_lock list;
+}
+
+type local_var = {
+  id: string;
+  vtype: value_type;
+  size: int;
+  bytes: byte_value list;
+}
+
+type byte_value = [
+| Int of int
+| Indeterminate
+| Unspecified
+| Bitfield of sized_byte_value list
+| EncodedValue of encoded_value
+]
+
+type sized_byte_value = {
+  length: int;
+  value: byte_value;
+}
+
+type encoded_value = {
+  value: string;
+  bstart: int;
+  bend: int;
+}
+
+type sized_type = {
+  vtype: value_type;
+  size : int;
+}
+
+type value_type = [
+| Bool
+| Bitfield of sized_type
+| Float
+| Double
+| LongDouble
+| Void
+| NoType
+| ShortInt
+| Int
+| LongInt
+| LongLongInt
+| SignedChar
+| UnsignedShortInt
+| UnsignedInt
+| UnsignedLongInt
+| UnsignedLongLongInt
+| UnsignedChar
+| Char
+| Pointer of value_type
+| Enum of string
+| Union of string
+| Struct of string
+| Array of sized_type
+| IncompleteArray of value_type
+| VariableArray of value_type
+| Function
+]
+
+type lock = {
+  id: string;
+  locked_at: frame;
+}
+
+type raw_lock = {
+  id: raw_field;
+  locked_at: string;
+}
+
+type stack_trace_component = {
+  ?description: string option;
+  frames: frame list;
+}
+
+type raw_stack_trace_component = {
+  description_format: string;
+  description_fields: raw_component_field list;
+  frames: raw_frame list;
+}
+
+type raw_component_field = [
+  Signal of int
+| Lock of raw_field
+]
+
+type stack_trace = {
+  components: stack_trace_component list;
+  ?thread_id: string option;
+  ?thread_created_by: string option;
+  ?thread_created_at: frame option;
+}
+
+type raw_stack_trace = {
+  components: raw_stack_trace_component list;
+  ?thread_id: string option;
+  ?thread_created_by: string option;
+  ?thread_created_at: raw_frame option;
+}
+
+type location_error = {
+  description: string;
+  loc: frame;
+  category: error_category;
+  error_id: string;
+  citations: citation list;
+  ?friendly_cat: string option;
+  ?long_desc: string option;
+}
+
+type stack_error = {
+  description: string;
+  stack_traces: stack_trace list;
+  category: error_category;
+  error_id: string;
+  citations: citation list;
+  ?friendly_cat: string option;
+  ?long_desc: string option;
+}
+
+type raw_field = {
+  address: string;
+  ?frame1: raw_field_frame option;
+  ?frame2: raw_field_frame option;
+}
+
+type raw_field_frame = {
+  pc: string;
+  cfa: string;
+}
+
+type raw_stack_error = {
+  description_format: string;
+  description_fields: raw_field list;
+  stack_traces: raw_stack_trace list;
+  category: error_category;
+  error_id: string;
+}
+
+type metadata = {
+  suppressions: suppression list;
+  message_length: int;
+  format: format;
+  ?output: string option;
+  previous_errors: string list;
+  fatal_errors: bool;
+  rv_error: string;
+}
+
+type format = [
+  CSV
+| Console
+| HTML
+| JSON
+]
+
+type suppression = {
+  condition: condition;
+  suppress: bool;
+}
+
+type line_spec = {
+  start_line: int;
+  end_line: int;
+  ?file: string option;
+}
+
+type condition = [
+  Category of error_category
+| ErrorId of string
+| SystemHeader of bool
+| Line of line_spec
+| File of string
+| Symbol of string
+| Ifdef of string
+| Ifndef of string
+| Duplicate of bool
+]

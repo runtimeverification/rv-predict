@@ -1,0 +1,1 @@
+According to ISO C11, it is undefined behavior to call the raise function when handling a signal that was itself raised by a call to abort or raise. In practice, this could lead to unexpected or non-portable behavior. To resolve this issue, avoid calling the raise function in signal handlers or use the POSIX sigaction function to register handlers. 

@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint for a function parameter to appear with a storage class specifier other than register. In practice this is a compiler error that prevents the application from being built. The correct solution is to remove the incorrect storage class specifier from the function parameter.

@@ -1,0 +1,1 @@
+According to ISO C11, it is allowed to call free on a null pointer. However, this action does nothing. It is possible that this is a case where you are calling free on the wrong value, which could lead to memory leaks or potentially even a double-free error on some inputs. If this is the intended behavior, you can suppress this warning with no ill effect.

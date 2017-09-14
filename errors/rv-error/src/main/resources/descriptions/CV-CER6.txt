@@ -1,0 +1,1 @@
+According to ISO C11, it is undefined behavior to dereference an expression that is not of pointer type. In practice this is a compiler error that prevents the application from being built. The correct solution is to convert the value to a pointer prior to dereferencing it.

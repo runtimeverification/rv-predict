@@ -1,0 +1,1 @@
+According to ISO C11, it is undefined behavior to call longjmp without first initializing a jump buffer with a call to setjmp. In practice, this is likely to corrupt control flow in your application or directly result in abnormal program termination. The correct behavior is to always call setjmp on a particular object of type struct jmp_buf prior to calling longjmp.

@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block head %}
+<script type="text/javascript">
+  $(function () {
+    $("div.line-with-errors").click(function() {
+      $("div.errors", this).slideToggle(200)
+    });
+    $("div.errors").hide();
+  });
+</script>
+{% endblock %}
+{% block title %}{{filename}}{% endblock %}
+{% block content %}
+<h1><a href="{{output_dir}}/index.html"><img alt="Report Index" class="breadcrumb" src="{{output_dir}}/static/rv_logo.png"/></a> &raquo; {{filename}}</h1>
+{{ code|highlight(errorlines, fileid)|safe }}
+{% endblock %}

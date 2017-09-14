@@ -1,0 +1,5 @@
+version = "1.0"
+description = "RV Error package -- OCAML"
+requires = "atdgen csv uri pprint str unix ocplib-ocamlres"
+archive(native) = "rv_error.cmxa"
+archive(byte) = "rv_error.cma"

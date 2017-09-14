@@ -1,0 +1,1 @@
+According to ISO C11, it is undefined behavior to call vsnprintf with a va_list that has not been initialized. In practice this can lead to accessing memory incorrectly and exposing memory to the user. The correct solution is to call an initialization function to initialize a va_list prior to a call to vsnprintf.

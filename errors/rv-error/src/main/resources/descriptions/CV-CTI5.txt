@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint for a struct or union with a flexible array member to be the element of an array. In practice this is a compiler error and prevents the application from being built. The solution is to refactor the portion of the struct not containing the flexible array member into a separate struct type.

@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block title %}Error Descriptions{% endblock %}
+{% block content %}
+<a name="CCV1"><h1>Signed Integer Overflow</h1>
+<div id="CCV1"><h2>Undefined behavior (UB-CCV1).</h2>
+
+    According to ISO C11, if the mathematical of an arithmetic operation
+    producing a signed result can not be represented in the result type
+    the behavior is undefined.
+    In practice, this error can cause buffer overflow vunlerabilites.
+    Because it is allowed for the minimum value in a signed type to
+    have a greater absolute value than the maximum value, it is also possible
+    for a prefix negation or a division (by -1) to produce an integer overflow.
+    <h2>Citations</h2>
+    <div class="cite"><a href="http://rvdoc.org/C11/6.5" target="_top">see C11 section 6.5:5</a></div>
+    <div class="cite"><a href="http://rvdoc.org/C11/J.2" target="_top">see C11 section J.2:1 item 36</a></div>
+    <div class="cite"><a href="http://rvdoc.org/CERT-C/INT32-C" target="_top">see CERT-C section INT32-C</a></div>
+</div></a>
+<a name="CEMX1"><h1>Division By Zero</h1>
+<div id="CEMX1"><h2>Undefined behavior (UB-CEMX1).</h2>
+
+    According to ISO C11, if the value of the second operand of a division
+    expression is zero, the behavior is undefined. In practice, this error is
+    very serious and may trigger abnormal termination of the entire
+    application. Input data should be compared against zero before division is
+    performed.
+    <h2>Citations</h2>
+    <div class="cite"><a href="http://rvdoc.org/C11/6.5.5" target="_top">see C11 section 6.5.5:5</a></div>
+    <div class="cite"><a href="http://rvdoc.org/C11/J.2" target="_top">see C11 section J.2:1 item 45</a></div>
+    <div class="cite"><a href="http://rvdoc.org/CERT-C/INT33-C" target="_top">see CERT-C section INT33-C</a></div>
+</div></a>
+{% endblock %}

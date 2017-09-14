@@ -83,7 +83,7 @@ symbolize()
 {
 	if [ ${filter_symbol:-yes} = yes -a ${filter_trim:-yes} = yes ]
 	then
-		if [ "${RVP_OLD_REPORT_FMT+yes}" = yes ]
+		if [ "${RVP_OLD_REPORT_FMT:-no}" = yes ]
 		then
 			rvpsymbolize "$@" | trim_stack
 		else
@@ -91,7 +91,7 @@ symbolize()
 		fi
 	elif [ "${filter_symbol:-yes}" = yes ]
 	then
-		if [ ${RVP_OLD_REPORT_FMT+yes} = yes ]
+		if [ ${RVP_OLD_REPORT_FMT:-no} = yes ]
 		then
 			rvpsymbolize "$@"
 		else

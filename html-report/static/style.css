@@ -71,9 +71,43 @@ body .vg { color: #19177C } /* Name.Variable.Global */
 body .vi { color: #19177C } /* Name.Variable.Instance */
 body .il { color: #666666 } /* Literal.Number.Integer.Long */
 
+table.dataTable thead .sorting {
+    background-image: url("./images/sort_both.png") !important;
+}
+table.dataTable thead .sorting_asc {
+    background-image: url("./images/sort_asc.png") !important;
+}
+table.dataTable thead .sorting_desc {
+    background-image: url("./images/sort_desc.png") !important;
+}
+table.dataTable thead .sorting_asc_disabled {
+    background-image: url("./images/sort_asc_disabled.png") !important;
+}
+table.dataTable thead .sorting_desc_disabled {
+    background-image: url("./images/sort_desc_disabled.png") !important;
+}
+
 /* Code Errors */
 div.errors a { color: red; background-color: #ffcccc }
 a:link span.lineno { text-decoration: none }
+
+#table-header #table-filter {
+    margin-top: 26px;
+}
+
+#table-header #table-filter #table-search {
+    max-width: 100%;
+    width: 300px;
+    margin-right: 12px;
+    padding: 4px 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+    outline: none;
+    border: 1px solid #9a9a9a;
+}
+#table-header #table-filter #table-search:focus {
+    border: 1px solid #fea707;
+}
 
 /********************/
 /* EXPANDABLE LIST  */
@@ -214,7 +248,6 @@ h3.component {
 
 .dataTables_filter {
   float: right;
-  margin-top: 1em;
 }
 
 .dataTable tbody td.function {
@@ -227,6 +260,7 @@ div.float-left {
 
 a {
   text-decoration: none;
+  /* color: #0070c9; */
 }
 
 div.stack-frame pre{
@@ -252,7 +286,7 @@ div.pre {
   font-family: monospace;
 }
 
-#myTableHeader {
+#table-header {
   position: fixed;
   top: 0;
   width: 99%;
@@ -265,12 +299,12 @@ div.pre {
   top: 4em;
 }
 table.dataTable.myTable thead th {
-  font-weight: normal;
-  padding: 0px 10px;
+  /*font-weight: normal;
+  padding: 0px 10px;*/
   background-color: #f8f8f8;
 }
 table.dataTable.myTable tbody td {
-  padding: 4px 10px;
+  padding: 4px 18px;
 }
 .dataTables_wrapper div.dt-buttons {
   position: fixed;
@@ -289,9 +323,18 @@ body {
   margin-top: 0;
 }
 
-@media only screen and (max-width: 70ex) {
-    #myTableHeader h1 {
+@media only screen and (max-width: 660px) {
+    #table-header h1 {
         display: none;
+    }
+
+    #table-header #table-filter {
+        float: none;
+        width: 100%;
+    }
+
+    #table-header #table-filter #table-search {
+        width: calc(100% - 8px);
     }
 }
 

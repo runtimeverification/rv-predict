@@ -58,8 +58,8 @@ $ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
 ```
 
 When you run the binary, it waits for your application code to finish,
-and then it performs the data-race prediction and writes a report to
-the standard error stream:
+then it performs the data-race prediction and writes a report to the
+standard error stream:
 
 ```
 $ ./lpcq
@@ -97,9 +97,9 @@ Data race on q.tailp at lpcq_main.c;main:
 ```
 
 If you would prefer to capture your program's RV-Predict/C event trace
-to analyze, later, then you can do that.  Use the `RVP_TRACE_ONLY` environment
-variable to change the program's operating mode, like this:
- 
+to analyze later, then you can do that.  Use the `RVP_TRACE_ONLY`
+environment variable to change the program's operating mode, like this:
+
 ```
 $ RVP_TRACE_ONLY=yes ./lpcq
 read item 0

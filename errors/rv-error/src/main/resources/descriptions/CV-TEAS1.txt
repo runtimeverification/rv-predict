@@ -1,0 +1,1 @@
+According to ISO C11, assignment expressions must have one of the five categories of allowed types enumerated in the citation below. It is a constraint violation if any other pair of types is used. In practice, this is a compiler error that prevents the application from being built. The correct solution is to fix the types of the operands to the assignment.

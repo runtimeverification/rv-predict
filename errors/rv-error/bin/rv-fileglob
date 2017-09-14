@@ -1,0 +1,18 @@
+#!/bin/bash
+# evaluates a file glob to determine whether a particular file matches the glob.
+
+if [ $# -lt 3 ]
+then
+  printf "%s\n" "Usage: $(basename "$0") <absolute path to file> <working directory for glob to use> <glob>"
+  printf "%s\n" "Returns 0 if the glob matches the file in question, otherwise returns nonzero."
+  printf "%s\n" "Does not care if the file still exists; we only evaluate whether the glob would match such a file."
+  exit 1
+fi
+
+mkdir -p "$HOME/.rvsuppress$1"
+touch "$HOME/.rvsuppress$1/fileglob"
+cd "$HOME/.rvsuppress$2"
+ls $3/fileglob &>/dev/null
+result=$?
+rm "$HOME/.rvsuppress$1/fileglob"
+exit $result

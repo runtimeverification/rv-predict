@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint to define a symbol with internal linkage multiple times in the same translation unit. In practice this is a compiler error that prevents the application from being built. The solution is to delete one of the definitions or rename one so that it has a unique name not declared elsewhere in the translation unit.

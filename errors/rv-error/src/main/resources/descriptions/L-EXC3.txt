@@ -1,0 +1,1 @@
+When comparing a function pointer against a null pointer constant, it is possible that you intended to in fact call the function pointer, but parentheses were omitted. If this is the intended behavior, the error can be suppressed with no ill effect.

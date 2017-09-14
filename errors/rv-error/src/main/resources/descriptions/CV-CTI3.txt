@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint for a bit field to be declared with a width that is not an integer constant expression. In practice, this is a compiler error that prevents the application from being built. The correct solution is to always use a constant expression when specifying the width of a bit field.

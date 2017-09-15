@@ -1,3 +1,6 @@
+*.cmi
+*.cmx
+*.o
 _build
 rv_error.native
 rv_error_res.ml

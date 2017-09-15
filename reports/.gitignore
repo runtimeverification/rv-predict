@@ -1,7 +1,6 @@
 *.cmi
 *.cmx
 *.o
-rv-error
 rvpshortenpaths
 rvpsymbolize-json
 rvptrimframe

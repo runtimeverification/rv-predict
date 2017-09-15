@@ -141,6 +141,11 @@ else
 	progpath=$(pwd)/${progname}
 fi
 
+if ! test -e ${progpath}; then
+	echo "$1: File not found" 1>&2
+	exit 1
+fi
+
 if [ "${RVP_OLD_REPORT_FMT:-no}" = yes ]
 then
 	new_report_fmt=

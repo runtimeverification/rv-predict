@@ -1,0 +1,11 @@
+{
+	"suppressions" : [{
+		"condition" : ["Category","LintError"],
+		 "suppress" : false
+	}],
+	"message_length" : 80,
+	"format" : "JSON",
+	"previous_errors" : [],
+	"fatal_errors" : false,
+	"rv_error" : ""
+}

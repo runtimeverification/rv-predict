@@ -90,7 +90,7 @@ symbolize()
 	rvpsymbolize-json "$@" | \
 	{ [ ${filter_trim:-yes} = yes ] && rvptrimframe || cat ; } | \
 	{ [ ${filter_shorten:-yes} = yes ] && rvpshortenpaths || cat ; } | \
-	rv-error ${sharedir}/rv-error-metadata.json
+	rv-error ${sharedir}/${output_format:-console}-metadata.json
 }
 
 while [ $# -gt 1 ]; do
@@ -98,6 +98,19 @@ while [ $# -gt 1 ]; do
 	--no-shorten|--no-symbol|--no-trim)
 		eval filter_${1##--no-}=no
 		shift
+		;;
+	--output=*)
+		eval output_format=${1##--output=}
+		shift
+		case $output_format in
+		console|csv|json)
+			;;
+		*)
+			echo "$(basename $0): unknown output format "
+			    "'${output_format}'" 1>&2
+			exit 1
+			;;
+		esac
 		;;
 	--window)
 		shift

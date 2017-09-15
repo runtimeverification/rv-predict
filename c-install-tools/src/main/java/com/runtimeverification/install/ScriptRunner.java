@@ -20,8 +20,6 @@ public class ScriptRunner {
         String script = args[1];
         String version = args[2];
 
-        handler.logOutput(password, false);
-
         List<Thread> threads = new ArrayList<>();
 
         try {

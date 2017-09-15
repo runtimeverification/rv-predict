@@ -102,6 +102,6 @@ let () = try
     let err = Error_j.raw_stack_error_of_string line in
     let symbolized = symbolize err in
     let s = Error_j.string_of_stack_error symbolized in
-    print_string s
+    print_endline s
   done
 with End_of_file -> ()

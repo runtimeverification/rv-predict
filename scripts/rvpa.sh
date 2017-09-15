@@ -99,7 +99,7 @@ symbolize()
 		fi
 	else
 		cat
-	fi | rv-error ${sharedir}/rv-error-metadata.json
+	fi | rvpshortenpaths | rv-error ${sharedir}/rv-error-metadata.json
 }
 
 symbolize_passthrough=

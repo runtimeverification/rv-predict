@@ -78,6 +78,6 @@ let () = try
     let trimmed = trim_error err in
     if is_real_race trimmed then
       let s = Error_j.string_of_stack_error trimmed in
-      print_string s
+      print_endline s
   done
 with End_of_file -> ()

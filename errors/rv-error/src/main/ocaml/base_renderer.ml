@@ -79,7 +79,7 @@ let render_elided (buffer : rv_buffer) (numElided : int) : unit =
   if numElided = 0
   then ()
   else (
-    add_line buffer      "   ... " ;
+    add_line buffer      "        ... " ;
     add_string buffer    (string_of_int numElided) ;
     add_string buffer    " library frame" ;
     if numElided > 1

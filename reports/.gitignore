@@ -1,5 +1,6 @@
 *.cmi
 *.cmx
 *.o
+rv-error
 rvpsymbolize-json
 rvptrimframe

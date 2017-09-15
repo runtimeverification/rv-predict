@@ -51,9 +51,9 @@ done
 
 
 if [ ${cplusplus:-no} = yes ]; then
-	compiler="clang++ -std=c++11"
+	compiler="clang-3.8++ -std=c++11"
 else
-	compiler=clang
+	compiler=clang-3.8
 fi
 
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ]; then

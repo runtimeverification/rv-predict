@@ -66,6 +66,9 @@ static cl::opt<bool>  ClInstrumentAtomics(
 static cl::opt<bool>  ClInstrumentMemIntrinsics(
     "rvpredict-instrument-memintrinsics", cl::init(true),
     cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
+static cl::opt<bool> ClAutoAnalyze(
+    "rvpredict-auto-analyze", cl::init(true),
+    cl::desc("Automatically invoke analysis"));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -105,6 +108,7 @@ public:
                                       SmallVectorImpl<Instruction *> &All,
                                       const DataLayout &DL);
   bool addrPointsToConstantData(Value *Addr);
+  bool addrContainsRegister(Value *);
   int getMemoryAccessFuncIndex(Value *Addr, const DataLayout &DL);
 
   Type *intptr_type;
@@ -113,6 +117,8 @@ public:
   Function *fnexit;
   // Accesses sizes are powers of two: 1, 2, 4, 8, 16.
   static const size_t kNumberOfAccessSizes = 5;
+  Function *peek[kNumberOfAccessSizes];	// register peek
+  Function *poke[kNumberOfAccessSizes];	// register poke
   Function *load[kNumberOfAccessSizes];
   Function *store[kNumberOfAccessSizes];
   Function *unaligned_load[kNumberOfAccessSizes];
@@ -239,9 +245,19 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 		    m.getOrInsertFunction(load_name,
                         void_type, ptr_type, type, nullptr));
 
+		SmallString<32> peek_name("__rvpredict_peek" + byte_size_str);
+		peek[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(peek_name,
+                        type, ptr_type, nullptr));
+
 		SmallString<32> store_name("__rvpredict_store" + byte_size_str);
 		store[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(store_name,
+		        void_type, ptr_type, type, nullptr));
+
+		SmallString<32> poke_name("__rvpredict_poke" + byte_size_str);
+		poke[i] = checkSanitizerInterfaceFunction(
+		    m.getOrInsertFunction(poke_name,
 		        void_type, ptr_type, type, nullptr));
 
 		SmallString<64> unaligned_load_name(
@@ -644,7 +660,8 @@ RVPredictInstrument::runOnFunction(Function &F)
 
 	InterruptAnnotation &analysis = getAnalysis<InterruptAnnotation>();
 	uint8_t prio;
-	if (analysis.getISRPrioLevel(F, prio)) {
+	auto priorities = analysis.getISRPrioLevels(F);
+	for (auto prio : priorities) {
 		IRBuilder<> builder(ctorfn->getEntryBlock().getFirstNonPHI());
 		auto void_type = builder.getVoidTy();
 		auto int32_type = builder.getInt32Ty();
@@ -677,6 +694,24 @@ RVPredictInstrument::runOnFunction(Function &F)
 	return didInstrument;
 }
 
+/**
+ * Check if an address is a register.
+ */
+bool
+RVPredictInstrument::addrContainsRegister(Value *addr)
+{
+	// If this is a GEP, just analyze its pointer operand.
+	if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(addr))
+		addr = gep->getPointerOperand();
+	else if (GEPOperator *gep = dyn_cast<GEPOperator>(addr))
+		addr = gep->getPointerOperand();
+
+	if (GlobalVariable *v = dyn_cast<GlobalVariable>(addr))
+		return getAnalysis<InterruptAnnotation>().isRegister(*v);
+
+	return false;
+}
+
 bool
 RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
                                             const DataLayout &DL)
@@ -694,6 +729,7 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
       Addr = Load->getPointerOperand();
       Val = Load;
   }
+
   Type *OrigTy = cast<PointerType>(Addr->getType())->getElementType();
   const uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
   Type *Ty = Type::getIntNTy(IRB.getContext(), TypeSize);
@@ -701,6 +737,20 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
   int Idx = getMemoryAccessFuncIndex(Addr, DL);
   if (Idx < 0)
     return false;
+  if (addrContainsRegister(Addr)) {
+	Instruction *CastInsn = CastInst::CreateBitOrPointerCast(Val, Ty);
+	if (IsWrite) {
+		CastInsn->insertBefore(I);
+		CallInst *ci = CallInst::Create(poke[Idx], {Addr, CastInsn});
+		ReplaceInstWithInst(I, ci);
+	} else {
+		CallInst *ci = CallInst::Create(peek[Idx], {Addr});
+		ci->insertBefore(I);
+		I->replaceAllUsesWith(ci);
+		I->eraseFromParent();
+	}
+	return true;
+  }
   if (IsWrite) {
     // Val may be a vector type if we are storing several vptrs at once.
     // In this case, just take the first element of the vector since this is

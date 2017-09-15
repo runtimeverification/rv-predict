@@ -29,7 +29,7 @@ compiles a C or C++ program with instrumentation that produces a trace
 of the program's run-time behavior.
 The trace records events including memory loads and stores,
 lock acquisition and release, thread creation and destruction.
-The trace can be analyzed by
+The trace is analyzed by
 .Tn RV-Predict/C ,
 which searches feasible schedules of the trace events for schedules
 that involve
@@ -53,15 +53,14 @@ runtime and its dependencies.
 .Pp
 When
 .Ar program
-is run, it records a trace of its dynamic behavior to a file in the
-current working directory called
-.Pa rvpredict.trace .
-.Pp
-A separate program,
-.Xr rvpa 1 ,
-analyzes the trace, producing a report of data races that
+is run, it records a trace of its dynamic behavior to a temporary file
+and automatically performs
 .Tn RV-Predict/C
-predicts.
+data-race prediction on the trace after
+.Ar program
+calls
+.Xr exit 2
+or is cancelled with a signal.
 .Sh EXIT STATUS
 See
 .Xr clang 1
@@ -78,6 +77,28 @@ Otherwise, the program writes its trace file to
 the default location.
 .Ev RVP_TRACE_FILE
 must name a file, not a directory.
+.It Ev RVP_TRACE_ONLY
+Finding
+.Ev RVP_TRACE_ONLY
+set to "yes" when it runs,
+.Ar program
+records a trace of its dynamic behavior to a file in the current working
+directory called
+.Pa rvpredict.trace .
+.Pp
+Run
+.Xr rvpa 1 
+to analyze the trace and produce a report of data races that
+.Tn RV-Predict/C
+predicts.
+.It Ev RVP_ANALYSIS_ARGS
+Affects the automatic data-race prediction.
+See
+.Xr rvpa 1 .
+.It Ev RVP_WINDOW_SIZE
+Affects the automatic data-race prediction.
+See
+.Xr rvpa 1 .
 .El
 .Sh FILES
 .Bl -tag -width "/usr/share/examples/rv-predict-c/"
@@ -116,9 +137,45 @@ instrumentation:
 $ rvpc -o lpcq lpcq.c lpcq_main.c signals.c
 .Ed
 .Pp
-Run it, and look for the trace file:
+Run it to see the data-race predictions:
 .Bd -literal
 $ ./lpcq
+read item 0
+read item 1
+read item 2
+read item 3
+read item 4
+Data race on q.tailp at lpcq_main.c;main:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:26:19
+        in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+        in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:48
+        in produce at .../c11/lpcq_main.c:164
+        in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+
+
+Data race on [0x0000000000612080]:
+    Read in thread 2
+      > in lpcq_get at .../c11/lpcq.c:34:2
+        in consume at .../c11/lpcq_main.c:104
+    Thread 2 created by thread 1
+        in main at .../c11/lpcq_main.c:230
+
+    Write in thread 1
+      > in lpcq_put at .../c11/lpcq.c:49
+        in produce at .../c11/lpcq_main.c:164
+        in main at .../c11/lpcq_main.c:243
+    Thread 1 is the main thread
+.Ed
+.Pp
+Run it in trace-only mode, and look for the trace file:
+.Bd -literal
+$ RVP_TRACE_ONLY=yes ./lpcq
 read item 0
 read item 1
 read item 2

@@ -12,11 +12,13 @@ STRIPFLAG=
 INCS=intr_exports.h
 CC=clang
 CFLAGS+=-std=c11
-COPTS+=-O3 -g
+#COPTS+=-O3
+DBG+=-g
 CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS=access.c const.c func.c lock.c notimpl.c
-SRCS+=relay.c ring.c rmw.c rvpsignal.c sigutil.c
+SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c sigutil.c
+SRCS+=supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c
 WARNS=4

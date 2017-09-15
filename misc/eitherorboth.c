@@ -9,6 +9,8 @@
 #include <sys/types.h>	/* for getpid */
 #include <unistd.h>
 
+#include "nbcompat.h"
+
 static volatile _Atomic int handled = 0;
 static const int estbsig = SIGHUP;
 static pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
@@ -17,13 +19,13 @@ static sigset_t sigset;
 static pthread_t main_thd, sender_thd, waiter_thd;
 
 static void
-handler(int signum)
+handler(int signum __unused)
 {
 	handled++;
 }
 
 static void *
-waiter(void *arg)
+waiter(void *arg __unused)
 {
 	struct sigaction sa;
 
@@ -51,7 +53,7 @@ waiter(void *arg)
 }
 
 static void *
-sender(void *arg)
+sender(void *arg __unused)
 {
 	int stage = 0;
 	pid_t mypid = getpid();
@@ -74,7 +76,7 @@ sender(void *arg)
 }
 
 int
-main(int argc, char **argv)
+main(int argc __unused, char **argv __unused)
 {
 	int rcvdsig = 0;
 	int rc;

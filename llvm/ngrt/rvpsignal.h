@@ -31,9 +31,10 @@ int __rvpredict_sigaction(int, const struct sigaction *, struct sigaction *);
 int __rvpredict_sigprocmask(int, const sigset_t *, sigset_t *);
 int __rvpredict_pthread_sigmask(int, const sigset_t *, sigset_t *);
 
-uint32_t rvp_sigblocksets_emit(int, uint32_t);
+rvp_sigblockset_t *rvp_sigblocksets_emit(int, rvp_sigblockset_t *);
 rvp_sigblockset_t *intern_sigset(const sigset_t *);
 void rvp_signal_rings_replenish(void);
+void rvp_sigblocksets_replenish(void);
 bool rvp_signal_rings_flush_to_fd(int, rvp_lastctx_t *);
 uint64_t sigset_to_mask(const sigset_t *);
 sigset_t *mask_to_sigset(uint64_t, sigset_t *);

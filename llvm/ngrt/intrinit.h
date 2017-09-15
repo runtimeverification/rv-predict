@@ -4,6 +4,7 @@
 #define _RVP_INTR_INIT_H_
 
 void rvp_static_intrs_init(void);
+void rvp_static_intrs_reinit(void);
 
 #endif /* _RVP_INTR_INIT_H_ */
 

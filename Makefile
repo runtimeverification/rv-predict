@@ -2,7 +2,7 @@ OS!=uname -s
 
 PROJECTNAME=rv-predict-c
 
-SUBPRJ=doc examples scripts:llvm errors:reports
+SUBPRJ=doc examples ldscript scripts:llvm errors:reports
 
 .if $(OS) == "Linux"
 SUBPRJ+=elftoolchain:rvsyms

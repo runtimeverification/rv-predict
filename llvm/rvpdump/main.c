@@ -48,7 +48,7 @@ main(int argc, char **argv)
 				    optarg);
 			}
 			if (end == optarg) {
-				errx(EXIT_FAILURE, "no numeric characters"
+				errx(EXIT_FAILURE, "no numeric characters "
 				    "in -n %s", optarg);
 			}
 			if (*end != '\0') {

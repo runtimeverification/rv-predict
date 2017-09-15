@@ -38,10 +38,18 @@ let remove_prefix_component (prefix:int) (c: stack_trace_component) : stack_trac
   {c with frames=List.map (remove_prefix_frame prefix) c.frames}
 
 let update_prefix_trace (prefix:string option) (tr: stack_trace) =
-  List.fold_left update_prefix_component prefix tr.components
+  let prefix = List.fold_left update_prefix_component prefix tr.components in
+  match tr.thread_created_at with
+  | None -> prefix
+  | Some frame -> update_prefix_frame prefix frame
 
 let remove_prefix_trace (prefix:int) (tr: stack_trace) =
-  {tr with components=List.map (remove_prefix_component prefix) tr.components}
+  let created =
+    match tr.thread_created_at with
+    | None -> None
+    | Some frame -> Some (remove_prefix_frame prefix frame)
+  in
+  {tr with components=List.map (remove_prefix_component prefix) tr.components; thread_created_at=created}
 
 let update_prefix_error (prefix:string option) (err: stack_error) =
   List.fold_left update_prefix_trace prefix err.stack_traces

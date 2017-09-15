@@ -1,5 +1,9 @@
 #!/bin/sh
 
+if [ "$RV_PREDICT_LICENSE_ACCEPTED" = "yes" ]; then
+	exit 0
+fi
+
 set -e
 
 more -d<<END-OF-LICENSE

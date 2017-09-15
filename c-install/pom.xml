@@ -27,6 +27,11 @@
             <artifactId>rv-predict</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.runtimeverification.rvpredict</groupId>
+            <artifactId>rv-predict-c-installer-tools</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
     <build>
         <extensions>

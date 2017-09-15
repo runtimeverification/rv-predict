@@ -16,6 +16,7 @@ instrumentation using
 .Op Fl Fl no-symbol
 .Op Fl Fl no-system
 .Op Fl Fl no-trim
+.Op Fl Fl output=...
 .Op Fl -
 .Ar program
 .Sh DESCRIPTION
@@ -97,6 +98,10 @@ from eliding all stack frames under
 all frames under a thread's
 .Fn start_routine ,
 and all frames under a signal handler.
+.It Fl Fl output=console|csv|json
+indicates the desired output format.
+.Dq console
+is the default.
 .It Fl -
 indicates the last option
 for

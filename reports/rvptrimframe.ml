@@ -22,7 +22,7 @@ let rec trim_rvp frames = match frames with
     else
       frame :: (trim_rvp tail)
 
-let library_frames_regex = Str.regexp "\\(/usr/include\\)\\|\\(/usr/local/include\\)"
+let library_frames_regex = Str.regexp "\\(/usr/include\\)\\|\\(/usr/local/include\\)\\|\\(/usr/lib\\)"
 
 let escaped_shell s = "'" ^ (Str.global_replace (Str.regexp "'") "'\\''" s) ^ "'"
 
@@ -77,18 +77,7 @@ let () = try
     let err = Error_j.stack_error_of_string line in
     let trimmed = trim_error err in
     if is_real_race trimmed then
-      let metadata : Error_t.metadata =
-        {
-          suppressions = [{ condition = `Category `LintError; suppress = false }] ;
-          message_length = 80 ;
-          format = `Console ;
-          previous_errors = [] ;
-          fatal_errors = false ;
-          rv_error = "" ;
-          output = None ;
-        }
-      in
-      let renderer = Rv_error.create metadata in
-      ignore(Rv_error.render_error renderer (Rv_error.StackError trimmed, fun x -> x))
+      let s = Error_j.string_of_stack_error trimmed in
+      print_string s
   done
 with End_of_file -> ()

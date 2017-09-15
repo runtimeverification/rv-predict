@@ -3,6 +3,8 @@
 set -e
 set -u
 
+sharedir=$(dirname $0)/../share/rv-predict-c
+
 usage()
 {
 	echo "usage: $(basename $0) [--prompt-for-license] [--window size] [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--] program" 1>&2
@@ -11,8 +13,6 @@ usage()
 
 rvpredict()
 {
-	sharedir=$(dirname $0)/../share/rv-predict-c
-
 	min_major="1"
 	min_minor="8"
 	min_version=${min_major}.${min_minor}
@@ -99,7 +99,7 @@ symbolize()
 		fi
 	else
 		cat
-	fi
+	fi | rv-error ${sharedir}/rv-error-metadata.json
 }
 
 symbolize_passthrough=
@@ -141,7 +141,7 @@ else
 	progpath=$(pwd)/${progname}
 fi
 
-if [ "${RVP_OLD_REPORT_FMT+yes}" = yes ]
+if [ "${RVP_OLD_REPORT_FMT:-no}" = yes ]
 then
 	new_report_fmt=
 else
@@ -149,5 +149,5 @@ else
 fi
 
 rvpredict --offline ${prompt:-} ${window:---window 2000} ${new_report_fmt} --detect-interrupted-thread-race \
-    --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
-    symbolize ${symbolize_passthrough} $progpath 1>&2
+    --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- \
+| symbolize ${symbolize_passthrough} $progpath 2>&1

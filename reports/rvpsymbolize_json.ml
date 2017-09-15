@@ -101,18 +101,7 @@ let () = try
     if String.length line >= magic_len && String.sub line 0 magic_len = magic then prerr_endline line else
     let err = Error_j.raw_stack_error_of_string line in
     let symbolized = symbolize err in
-    let metadata : Error_t.metadata =
-      {
-        suppressions = [{ condition = `Category `LintError; suppress = false }] ;
-        message_length = 80 ;
-        format = `Console ;
-        previous_errors = [] ;
-        fatal_errors = false ;
-        rv_error = "" ;
-        output = None ;
-      }
-    in
-    let renderer = Rv_error.create metadata in
-    ignore(Rv_error.render_error renderer (Rv_error.StackError symbolized, fun x -> x))
+    let s = Error_j.string_of_stack_error symbolized in
+    print_string s
   done
 with End_of_file -> ()

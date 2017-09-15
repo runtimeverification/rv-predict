@@ -8,12 +8,14 @@
 
 MAN=rvpa.1 rvpc.1 rvplicense.1 rvpsymbolize.1 rvpx.1
 FILESMODE=0755
-FILES=rvpa.sh rvpc.sh rvplicense.sh rvpsymbolize.sh rvpx.sh
+FILES=rvpa.sh rvpc.sh rvplicense.sh rvpsymbolize.sh rvpx.sh rv-error-metadata.json
 FILESNAME_rvpa.sh=rvpa
 FILESNAME_rvpc.sh=rvpc
 FILESNAME_rvplicense.sh=rvplicense
 FILESNAME_rvpsymbolize.sh=rvpsymbolize
 FILESNAME_rvpx.sh=rvpx
+FILESMODE_rv-error-metadata.json=0644
+FILESDIR_rv-error-metadata.json=$(DATADIR)/rv-predict-c
 LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
 MLINKS=rvpc.1 rvpc++.1
 

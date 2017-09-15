@@ -81,37 +81,22 @@ trim_stack()
 
 symbolize()
 {
-	if [ ${filter_symbol:-yes} = yes -a ${filter_trim:-yes} = yes ]
+	if ! [ ${filter_symbol:-yes} = yes ]
 	then
-		if [ "${RVP_OLD_REPORT_FMT:-no}" = yes ]
-		then
-			rvpsymbolize "$@" | trim_stack
-		else
-			rvpsymbolize-json "$@" | rvptrimframe
-		fi
-	elif [ "${filter_symbol:-yes}" = yes ]
-	then
-		if [ ${RVP_OLD_REPORT_FMT:-no} = yes ]
-		then
-			rvpsymbolize "$@"
-		else
-			rvpsymbolize-json "$@"
-		fi
-	else
 		cat
-	fi | rvpshortenpaths | rv-error ${sharedir}/rv-error-metadata.json
-}
+		return 0
+	fi
 
-symbolize_passthrough=
+	rvpsymbolize-json "$@" | \
+	{ [ ${filter_trim:-yes} = yes ] && rvptrimframe || cat ; } | \
+	{ [ ${filter_shorten:-yes} = yes ] && rvpshortenpaths || cat ; } | \
+	rv-error ${sharedir}/rv-error-metadata.json
+}
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--no-symbol|--no-trim)
+	--no-shorten|--no-symbol|--no-trim)
 		eval filter_${1##--no-}=no
-		shift
-		;;
-	--no-*)
-		symbolize_passthrough="${symbolize_passthrough:-} ${1}"
 		shift
 		;;
 	--window)
@@ -155,4 +140,4 @@ fi
 
 rvpredict --offline ${prompt:-} ${window:---window 2000} ${new_report_fmt} --detect-interrupted-thread-race \
     --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- \
-| symbolize ${symbolize_passthrough} $progpath 2>&1
+| symbolize $progpath 2>&1

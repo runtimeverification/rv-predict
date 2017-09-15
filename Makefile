@@ -2,16 +2,16 @@ OS!=uname -s
 
 PROJECTNAME=rv-predict-c
 
-SUBDIR=doc examples scripts .WAIT llvm reports
+SUBPRJ=doc examples scripts:llvm reports
 
 .if $(OS) == "Linux"
-SUBDIR+=elftoolchain .WAIT
+SUBPRJ+=elftoolchain:rvsyms
+.else
+SUBPRJ+=rvsyms
 .endif
-
-SUBDIR+=rvsyms
 
 .if $(MKJAR:Uyes) == "yes"
-SUBDIR+=maven
+SUBPRJ+=maven
 .endif
 
-.include <mkc.subdir.mk>
+.include <mkc.subprj.mk>

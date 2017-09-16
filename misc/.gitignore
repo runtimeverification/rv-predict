@@ -1,5 +1,6 @@
 eitherorboth
 fork
 *.o
+pass_array
 raise
 sigcount

@@ -152,16 +152,20 @@ public class CompactMetadata implements MetadataInterface {
             }
         }
         Optional<ReadonlyEventInterface> maybeCfaAfter = globalAfter.getBracket();
+        String delim = " :";
         if (maybeCfaAfter.isPresent()) {
             ReadonlyEventInterface cfaAfter = maybeCfaAfter.get();
-            sb.append(String.format(" : 0x%016x/0x%016x",
+            sb.append(String.format("%s 0x%016x/0x%016x",
+                    delim,
                     cfaAfter.getLocationId(),
                     cfaAfter.getCanonicalFrameAddress()));
+            delim = "";
         }
         Optional<ReadonlyEventInterface> maybeCfaBefore = globalBefore.getBracket();
         if (maybeCfaBefore.isPresent()) {
             ReadonlyEventInterface cfaBefore = maybeCfaBefore.get();
-            sb.append(String.format(" : 0x%016x/0x%016x",
+            sb.append(String.format("%s 0x%016x/0x%016x",
+                    delim,
                     cfaBefore.getLocationId(),
                     cfaBefore.getCanonicalFrameAddress()));
         }

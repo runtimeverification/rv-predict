@@ -1,4 +1,14 @@
 #!/bin/sh
+#
+# I use this script to compare the runtime overhead of RV-Predict/C
+# instrumentation with ThreadSanitizer instrumentation, and to compare
+# the instrumentation overheads with the program built without any
+# instrumentation.
+#
+# I make the comparisons on the queue example sent to us by Volker Stolz.
+# RV-Predict/C ordinarily finds more data races in fewer tries than
+# ThreadSanitizer.
+#
 
 usage()
 {

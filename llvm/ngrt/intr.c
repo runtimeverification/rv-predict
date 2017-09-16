@@ -190,6 +190,10 @@ rvp_static_intrs_init(void)
 		if (sigaddset(&intr_mask, signum) != 0)
 			errx(EXIT_FAILURE, "%s: sigaddset", __func__);
 	}
+	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
 }
 
 void

@@ -8,7 +8,7 @@ cleanup_hook()
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
 
 	reason=$1
-	if true; then
+	if [ ${reason} != EXIT ]; then
 		echo "$(basename $0): caught signal $reason.  Cleaning up." 1>&2
 	fi
 	for core in $(ls $tmpdir/*core 2> /dev/null); do
@@ -103,6 +103,7 @@ exitcode=1
 #
 normalize | tee $tmpdir/original | \
 grep "$func_addr_regex" | sed "s/.*$func_addr_regex.*/{\1}/g" | sort -u | \
+    tee $tmpdir/rvsyms_func_input | \
     rvsyms -r $1 | \
     sed 's/\([^:]\+\)\(:[^:]\+:[^;]\+\);\(.\+\);;\(.\+\)$/\4 \1 \2 \3/
 s/\([^:]\+\)\(:[^;]\+\);\(.\+\);;\(.\+\)$/\4 \1 \2 \3/
@@ -156,6 +157,7 @@ fi
 #
 grep "$data_addr_regex" < $tmpdir/original | \
 sed "s/.*$data_addr_regex.*/\1/g" | sort -u | \
+    tee $tmpdir/rvsyms_data_input | \
     rvsyms -r $1 | \
     tee $tmpdir/datasyms_proto_script | \
     sed "$data_sym_sed_template" > $tmpdir/datasyms_sed_script
@@ -164,14 +166,6 @@ sed -f $tmpdir/datasyms_sed_script < $tmpdir/original | \
     sed -f $tmpdir/funcsyms_sed_script | sed -f $tmpdir/signal_sed_script | \
     clean_brackets
 
-if true; then
-	rm -rf $tmpdir
-else
-	echo look in $tmpdir 1>&2
-fi
-
-trap - EXIT ALRM HUP INT PIPE QUIT TERM
-
-rm -rf $tmpdir
+exitcode=0
 
 exit 0

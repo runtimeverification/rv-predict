@@ -81,19 +81,24 @@ rvp_ring_wait_for_nempty(rvp_ring_t *r, int nempty)
 	}
 }
 
-/* If the ring is empty but `lidx == ridx` and `lidx` will be the
- * next item consumed when the ring re-fills, then return true.
+/* Visualize the buffer as a ring where the consumer pointer
+ * follows the producer pointer in a clockwise direction. When the
+ * producer and the consumer are equal, then they indicate a point. When
+ * the producer and the consumer are unequal, then they indicate a
+ * clockwise directed arc, consumer->producer.
  *
- * If there is not an item on the ring at index `lidx`, or if there is
- * not an item at `ridx` and `ridx` does not equal the producer index,
- * then return false.
+ * If the producer and consumer indicate a point, `P`, then
+ * rvp_ring_cp_arc_contains_lr_arc() returns true only if `lidx == ridx
+ * == P`.
  *
- * Otherwise, return true if ring index `lidx` points at an item that
- * will be consumed before the item at index `ridx`, or if `lidx ==
- * ridx`.
+ * If the producer and consumer indicate an arc, consumer->producer,
+ * then rvp_ring_cp_arc_contains_lr_arc() returns true if `lidx ==
+ * ridx == P` for `P` a point on that arc, or if the clockwise arc
+ * lidx->ridx is entirely contained in consumer->producer. Otherwise,
+ * rvp_ring_cp_arc_contains_lr_arc() returns false.
  */
 static bool
-rvp_ring_index_consumed_before(const rvp_ring_t *r, int lidx, int ridx)
+rvp_ring_cp_arc_contains_lr_arc(const rvp_ring_t *r, int lidx, int ridx)
 {
 	uint32_t *producer = r->r_producer, *consumer = r->r_consumer;
 	const int cidx = consumer - &r->r_items[0],
@@ -146,11 +151,18 @@ rvp_ring_index_consumed_before(const rvp_ring_t *r, int lidx, int ridx)
 	return cidx <= lidx && ridx <= pidx;
 }
 
-/* Like rvp_ring_index_consumed_before, but return false if `lidx == ridx`. */
+/* Let us call the path from `lidx` to `ridx` an arc, always.  If
+ * the two pointers indicate the same point, then let us call it a
+ * "degenerate arc."  If the two pointers indicate different points,
+ * then let us call the path a "proper arc."  If `lidx` and `ridx` form
+ * a proper arc, then rvp_ring_cp_arc_contains_proper_lr_arc() returns
+ * rvp_ring_cp_arc_contains_lr_arc(r, lidx, ridx).  Otherwise, it returns
+ * false.
+ */
 static inline bool
-rvp_ring_index_properly_consumed_before(rvp_ring_t *r, int lidx, int ridx)
+rvp_ring_cp_arc_contains_proper_lr_arc(rvp_ring_t *r, int lidx, int ridx)
 {
-	return rvp_ring_index_consumed_before(r, lidx, ridx) && lidx != ridx;
+	return rvp_ring_cp_arc_contains_lr_arc(r, lidx, ridx) && lidx != ridx;
 }
 
 /* Drop the first interruption on the ring `r` and return either the one
@@ -321,14 +333,14 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 	/* XXX clamp last to pidx? */
 #if 0
 	    (end >= 0 &&
-	     rvp_ring_index_properly_consumed_before(r, end, pidx))
+	     rvp_ring_cp_arc_contains_proper_lr_arc(r, end, pidx))
                 ? end
                 : pidx;
 #endif
 	ptrdiff_t residue;
 
 	assert(bracket == NULL ||
-	    rvp_ring_index_consumed_before(r, cidx,
+	    rvp_ring_cp_arc_contains_lr_arc(r, cidx,
 	        bracket->it_interruptor_sidx));
 
 	rvp_debugf("%s.%d: r %p enter cidx %d first %d last %d pidx %d\n",
@@ -344,7 +356,7 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		    __func__, __LINE__, (void *)r, (const void *)it,
 		    residue, first, intr, last);
 
-		if (rvp_ring_index_properly_consumed_before(r, intr, first)) {
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, intr, first)) {
 			rvp_debugf(
 			    "%s.%d: r %p it %p is before first; skipping\n",
 			    __func__, __LINE__, (void *)r, (const void *)it);
@@ -355,13 +367,13 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		 * interrupt that we are presently serializing, but some
 		 * subsequent interrupt, so we had better stop here.
 		 */
-		if (rvp_ring_index_properly_consumed_before(r, last, intr)) {
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, last, intr)) {
 			rvp_debugf("%s.%d: r %p it %p is beyond last\n",
 			    __func__, __LINE__, (void *)r, (const void *)it);
 			break;
 		}
 
-		if (rvp_ring_index_properly_consumed_before(r, first, intr) &&
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, first, intr) &&
 		    (residue = rvp_ring_get_iovs_between(r, iovp, lastiov, first, intr,
 		            idepthp)) < 0)
 			break;
@@ -477,7 +489,7 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 	ptrdiff_t residue;
 
 	assert(bracket == NULL ||
-	       rvp_ring_index_consumed_before(r, cidx,
+	       rvp_ring_cp_arc_contains_lr_arc(r, cidx,
 	           bracket->it_interruptor_sidx));
 
 	rvp_debugf("%s.%d: r %p enter cidx %d first %d last %d pidx %d\n",
@@ -493,20 +505,20 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		    __func__, __LINE__, (void *)r, (const void *)it,
 		    residue, first, intr, last);
 
-		if (rvp_ring_index_properly_consumed_before(r, intr, first)) {
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, intr, first)) {
 			rvp_debugf("%s.%d: r %p it %p is before first; "
 			    "should have been dropped already\n",
 			    __func__, __LINE__, (void *)r, (const void *)it);
 			assert(false);
 		}
 
-		if (rvp_ring_index_properly_consumed_before(r, last, intr)) {
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, last, intr)) {
 			rvp_debugf("%s.%d: r %p it %p is beyond last\n",
 			    __func__, __LINE__, (void *)r, (const void *)it);
 			break;
 		}
 
-		if (rvp_ring_index_properly_consumed_before(r, first, intr) &&
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, first, intr) &&
 		    (residue = rvp_ring_discard_iovs_between(r, iovp, lastiov,
 		     first, idepthp)) < 0)
 			break;
@@ -545,7 +557,7 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		rvp_debugf("%s.%d: r %p residue 0 first %d last %d\n",
 		    __func__, __LINE__, (void *)r, first, last);
 
-		if (rvp_ring_index_properly_consumed_before(r, first, last)) {
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, first, last)) {
 			residue = -1;
 			goto out;
 		}
@@ -563,7 +575,7 @@ rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		 * XXX before?  Can't there be an interruption right after
 		 * XXX the last event?
 		 */
-		if (rvp_ring_index_consumed_before(r, intr, last)) {
+		if (rvp_ring_cp_arc_contains_lr_arc(r, intr, last)) {
 			residue = -1;
 			goto out;
 		}

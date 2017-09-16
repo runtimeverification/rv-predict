@@ -27,6 +27,8 @@ static rvp_signal_t * _Atomic *signal_tbl = NULL;
 static int nsignals = 0;
 static int signals_origin = -1;
 
+static _Atomic int nrings_needed = 0;
+
 static _Atomic uint32_t nsigblocksets = 0;
 static rvp_sigblockset_t * _Atomic sigblockset_head = NULL;
 static rvp_sigblockset_t * _Atomic sigblockset_freehead = NULL;
@@ -209,15 +211,34 @@ rvp_wake_replenisher(void)
 	rvp_wake_relay();
 }
 
-/* Calls to rvp_signal_rings_replenish() are synchronized by
- * the serialization thread, for now.
+/* If nrings_needed == 0, do nothing.
+ *
+ * If nrings_needed != 0, then ensure that there are nrings_needed + 1 clean
+ * rings, and reset nrings_needed to 0.
+ *
+ * Calls to rvp_signal_rings_replenish() are synchronized by
+ * the serialization thread.
+ *
  */
 void
 rvp_signal_rings_replenish(void)
 {
+	int nclean = 0;
+	const int nneeded = atomic_exchange(&nrings_needed, 0);
 	int nallocated;
+	rvp_ring_t *r;
 
-	for (nallocated = 0; nallocated < 5; nallocated++) {
+	if (nneeded == 0)
+		return;
+
+	for (r = signal_rings;
+	     nclean <= nneeded && r != NULL;
+	     r = r->r_next) {
+		if (r->r_state == RVP_RING_S_CLEAN)
+			nclean++;
+	}
+
+	for (nallocated = nclean; nallocated <= nneeded; nallocated++) {
 		rvp_ring_t *r = calloc(sizeof(*r), 1);
 		if (r == NULL && nallocated == 0)
 			err(EXIT_FAILURE, "%s: calloc", __func__);
@@ -239,10 +260,15 @@ rvp_signal_ring_get(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;
 
-	while ((r = rvp_signal_ring_get_scan(t, idepth)) == NULL) {
-		// TBD backoff
+	if ((r = rvp_signal_ring_get_scan(t, idepth)) != NULL)
+		return r;
+
+	nrings_needed++;
+
+	do {
 		rvp_wake_replenisher();
-	}
+	} while ((r = rvp_signal_ring_get_scan(t, idepth)) == NULL);
+
 	return r;
 }
 

@@ -24,6 +24,6 @@ main(int argc __unused, char **argv __unused)
 			    {0, 0, 0, 1},
 			    {0, 0, 0, 0, 1}};
 
-	printf("sum = %g", sum(mat));
+	printf("sum = %g\n", sum(mat));
 	return EXIT_SUCCESS;
 }

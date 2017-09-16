@@ -149,6 +149,9 @@ rvp_wake_transmitter_locked(void)
 static void
 rvp_stop_transmitter(void)
 {
+#if 1
+	return;
+#else
 	int rc;
 	sigset_t oldmask;
 
@@ -161,6 +164,7 @@ rvp_stop_transmitter(void)
 		errx(EXIT_FAILURE, "%s: pthread_join: %s",
 		    __func__, strerror(rc));
 	}
+#endif
 }
 
 static void *

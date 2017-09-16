@@ -63,7 +63,19 @@ let rvpsigname = function
 | 17 -> "SIGCHLD"
 | 18 -> "SIGCONT"
 | 19 -> "SIGSTOP"
-| _ -> failwith "could not determine name of signal"
+| 20 -> "SIGTSTP"
+| 21 -> "SIGTTIN"
+| 22 -> "SIGTTOU"
+| 23 -> "SIGURG"
+| 24 -> "SIGXCPU"
+| 25 -> "SIGXFSZ"
+| 26 -> "SIGVTALRM"
+| 27 -> "SIGPROF"
+| 28 -> "SIGWINCH"
+| 29 -> "SIGIO"
+| 30 -> "SIGPWR"
+| 31 -> "SIGSYS"
+| n -> "SIG" ^ (string_of_int n)
 
 let symbolize_component_field = function
 | `Signal n -> rvpsigname n

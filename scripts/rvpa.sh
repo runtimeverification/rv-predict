@@ -13,10 +13,6 @@ usage()
 
 rvpredict()
 {
-	min_major="1"
-	min_minor="8"
-	min_version=${min_major}.${min_minor}
-
 	if which java >/dev/null; then
 		# found java executable in PATH
 		_java=java
@@ -29,20 +25,6 @@ RV Predict requires Java ${min_version} to run but Java was not detected.
 Please either add it to PATH or set the JAVA_HOME environment variable.
 EOF
 		exit 2
-	fi
-
-	version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
-
-	major=$(echo $version | sed 's/^\([0-9]\+\)\..*$/\1/')
-	minor=$(echo $version | sed 's/^[0-9]\+\.\([0-9]\+\).*$/\1/')
-
-	if [ "$major" -lt "$min_major" -o "$major" -eq "$min_major" -a "$minor" -lt "$min_minor" ]; then
-		cat 1>&2 <<EOF
-RV-Predict/C requires Java $min_version to run but the detected version
-is $version.  Please either add Java $min_version bin directory to the PATH
-or set the JAVA_HOME environment variable accordingly.
-EOF
-		exit 3
 	fi
 
 	${_java} -ea -jar ${sharedir}/rv-predict.jar "$@"

@@ -9,7 +9,7 @@ public interface VectorClockOrderInterface {
      * Note: Assumes events are sent in increasing order of their gid.
      *
      * @param event      the event being handled
-     * @return           the clocks of the current thread upon processing the event
+     * @return           the current {@see VectorClock} for the thread upon processing the event
      */
     VectorClock log(ReadonlyEventInterface event);
 }

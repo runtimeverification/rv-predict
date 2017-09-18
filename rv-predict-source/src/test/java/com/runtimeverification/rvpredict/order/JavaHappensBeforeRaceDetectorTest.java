@@ -14,6 +14,7 @@ import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -30,9 +31,8 @@ import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class HappensBeforeRaceDetectorTest {
+public class JavaHappensBeforeRaceDetectorTest {
     private static final int WINDOW_SIZE = 100;
-    private static final int TIMEOUT_MILLIS = 2000;
     private static final long ADDRESS_1 = 200;
     private static final long ADDRESS_2 = 201;
     private static final long ADDRESS_3 = 202;
@@ -114,7 +114,30 @@ public class HappensBeforeRaceDetectorTest {
         Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
-    @Test
+    // According to the Java Memory Model spec, volatile writes are conflicting accesses.
+    // However, this seems to be a problem with the specification itself, according to
+    // http://cs.oswego.edu/pipermail/concurrency-interest/2012-January/008927.html
+    @Ignore
+    public void simpleVolatileWriteWrite() throws Exception {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                e1 = tu.nonAtomicStore(ADDRESS_3, VALUE_2),
+
+                tu.switchThread(THREAD_2, NO_SIGNAL),
+                e2 = tu.nonAtomicStore(ADDRESS_3, VALUE_1)
+        );
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
+
+        Assert.assertTrue(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+    }
+
+     @Test
     public void simpleVolatileNoRace() throws Exception {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
@@ -317,7 +340,7 @@ public class HappensBeforeRaceDetectorTest {
         mockConfiguration.windowSize = WINDOW_SIZE;
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         ThreadInfos threadInfos = traceState.getThreadInfos();
-        HappensBeforeRaceDetector detector = new HappensBeforeRaceDetector(mockConfiguration, mockMetadata);
+        JavaHappensBeforeRaceDetector detector = new JavaHappensBeforeRaceDetector(mockConfiguration, mockMetadata);
 
         Trace trace = null;
         assert !rawTracesList.isEmpty();

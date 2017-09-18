@@ -40,33 +40,36 @@ public class VectorClock {
     }
 
     public void increment(int clock) {
-        clocks.put(clock, clocks.getOrDefault(clock, 0) + 1);
+        clocks.merge(clock, 1, (oldValue, newValue) -> oldValue + 1);
     }
 
     public void update(VectorClock c) {
         if (c != null) {
-            c.clocks.forEach((clock, value) -> clocks.put(clock, Integer.max(value, clocks.getOrDefault(clock, 0))));
+            c.clocks.forEach((clock, value) -> clocks.merge(clock, value, Integer::max));
         }
     }
 
     public Comparison compareTo(VectorClock to) {
         if (to == null) return Comparison.NOT_COMPARABLE;
         if (clocks.size() > to.clocks.size()) return to.compareTo(this).reverse();
-        Comparison aggregate = clocks.entrySet().stream().reduce(
-                Comparison.EQUAL,
-                (c, entry) -> {
-                    if (c == Comparison.NOT_COMPARABLE) return Comparison.NOT_COMPARABLE;
-                    Integer toValue = to.clocks.get(entry.getKey());
-                    if (toValue == null) return Comparison.NOT_COMPARABLE;
-                    switch (Long.signum(entry.getValue().compareTo(toValue))) {
-                        case -1: return c.and(Comparison.BEFORE);
-                        case 1: return c.and(Comparison.AFTER);
-                        default: return c;
-                    }
-                },
-                Comparison::and);
-        if (clocks.size() < to.clocks.size()) return aggregate.and(Comparison.BEFORE);
-        return aggregate;
+        Comparison c = Comparison.EQUAL;
+        for (Map.Entry<Integer, Integer> entry : clocks.entrySet()) {
+            Integer toValue = to.clocks.get(entry.getKey());
+            if (toValue == null) {
+                return Comparison.NOT_COMPARABLE;
+            }
+            switch (Long.signum(entry.getValue().compareTo(toValue))) {
+                case -1:
+                    c = c.and(Comparison.BEFORE);
+                    break;
+                case 1:
+                    c = c.and(Comparison.AFTER);
+                    break;
+            }
+            if (c == Comparison.NOT_COMPARABLE) return Comparison.NOT_COMPARABLE;
+        }
+        if (clocks.size() < to.clocks.size()) return c.and(Comparison.BEFORE);
+        return c;
     }
 
     @Override

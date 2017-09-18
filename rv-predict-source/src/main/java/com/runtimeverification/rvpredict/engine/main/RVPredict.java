@@ -41,7 +41,7 @@ import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.CompactMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
-import com.runtimeverification.rvpredict.order.HappensBeforeRaceDetector;
+import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
 import com.runtimeverification.rvpredict.trace.LLVMCompactTraceCache;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -78,7 +78,7 @@ public class RVPredict {
             traceCache = new TraceCache(config, metadata);
         }
         if (config.isHappensBefore()) {
-            this.detector = new HappensBeforeRaceDetector(config, metadata);
+            this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
         } else {
             this.detector = new MaximalRaceDetector(config);
         }

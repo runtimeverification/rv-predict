@@ -32,7 +32,6 @@
                 <module>tests</module>
                 <module>installer</module>
                 <module>c-installer</module>
-                <module>c-installer-tools</module>
                 <module>rv-predict</module>
             </modules>
             <activation>

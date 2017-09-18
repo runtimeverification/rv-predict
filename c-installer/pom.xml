@@ -27,11 +27,6 @@
             <artifactId>rv-predict</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>c-installer-tools</artifactId>
-            <version>${project.version}</version>
-        </dependency>
     </dependencies>
     <build>
         <extensions>
@@ -58,7 +53,7 @@
                                 <artifactItem>
                                     <groupId>com.runtimeverification.install</groupId>
                                     <artifactId>rv-install</artifactId>
-                                    <version>1.5-SNAPSHOT</version>
+                                    <version>1.5.1-SNAPSHOT</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${staging.dir.app}</outputDirectory>

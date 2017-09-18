@@ -4,7 +4,6 @@
 
     <jar src="res/panels/RVPanels.jar" />
     <jar src="rv-licensing.jar" />
-    <jar src="c-installer-tools.jar"/>
 
     <!-- General Application Information -->
     <info>
@@ -70,8 +69,9 @@
         </panel>
         <panel classname="LicencePanel"/>
         <panel classname="InstallPanel"/>
-        <!-- TODO(virgil): Maybe add a SudoPanel here. -->
-        <panel classname="SudoPanel"/>
+        <panel classname="UserInputPanel" id="sudo">
+            <validator classname="com.izforge.izpack.panels.sudo.SudoPasswordValidator"/>
+        </panel>
         <panel classname="ProcessPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>

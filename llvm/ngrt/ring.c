@@ -356,6 +356,10 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 		    __func__, __LINE__, (void *)r, (const void *)it,
 		    residue, first, intr, last);
 
+		/* There may be interruptions on this ring that did not
+		 * interrupt `bracket`.  Rather, they interrupted
+		 * some interrupt that preceded `bracket`. Skip them.
+		 */
 		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, intr, first)) {
 			rvp_debugf(
 			    "%s.%d: r %p it %p is before first; skipping\n",

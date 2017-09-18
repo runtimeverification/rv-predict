@@ -181,7 +181,7 @@ rvp_signal_ring_acquire_scan(rvp_thread_t *t, uint32_t idepth)
 	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t dirty = RVP_RING_S_DIRTY;
 
-		if (!atomic_compare_exchange_weak(&r->r_state, &dirty,
+		if (!atomic_compare_exchange_strong(&r->r_state, &dirty,
 						 RVP_RING_S_INUSE))
 			continue;
 		if (r->r_tid == tid && r->r_idepth == idepth)
@@ -194,7 +194,7 @@ rvp_signal_ring_acquire_scan(rvp_thread_t *t, uint32_t idepth)
 	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t clean = RVP_RING_S_CLEAN;
 
-		if (atomic_compare_exchange_weak(&r->r_state, &clean,
+		if (atomic_compare_exchange_strong(&r->r_state, &clean,
 						 RVP_RING_S_INUSE)) {
 			r->r_tid = tid;
 			r->r_idepth = idepth;

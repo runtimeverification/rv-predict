@@ -1,11 +1,16 @@
-/* this code that used to be at the end of RVPredictInstrument::runOnFunction
- * contains some hard-won knowledge of how to use the LLVM API
+/* This code that used to be at the end of RVPredictInstrument::runOnFunction
+ * contains some hard-won knowledge of how to use the LLVM API.
+ *
+ * It matches a function `main` and inserts a call to
+ * __rvpredict_main_entry() at the top, printing a diagnostic messages
+ * if `main`'s signature is `int main(int, char **) { ... }` or `int
+ * main(void) { ... }`.
  */
 
 	PointerType *ptr_to_ptr_to_char_type =
 	    Type::getInt8Ty(F.getContext())->getPointerTo()->getPointerTo();
 
-	if (ClAutoAnalyze && F.getName() == "main") {
+	if (F.getName() == "main") {
 		std::string type_message;
 		llvm::raw_string_ostream sstr(type_message);
 		IRBuilder<> builder(F.getEntryBlock().getFirstNonPHI());

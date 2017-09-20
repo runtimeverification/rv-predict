@@ -202,8 +202,8 @@ __rvpredict_intr_disable(void)
 	int rc;
 
 	/* To guarantee that every interrupt is observed at least once
-	 * in each interrupts-enabled interval, fire all interrupts
-	 * before disabling them.
+	 * in each interrupts-enabled interval, add a request to fire
+	 * all interrupts before disabling them.
 	 */
 	rvp_static_intr_fire_all();
 	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
@@ -223,8 +223,8 @@ __rvpredict_intr_enable(void)
 	}
 
 	/* To guarantee that every interrupt is observed at least once
-	 * in each interrupts-enabled interval, fire all interrupts
-	 * after enabling them.
+	 * in each interrupts-enabled interval, add a request to fire
+	 * all interrupts each time they are enabled.
 	 */
 	rvp_static_intr_fire_all();
 }

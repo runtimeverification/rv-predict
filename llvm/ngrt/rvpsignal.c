@@ -165,7 +165,7 @@ rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
 #endif
 
 static rvp_ring_t *
-rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
+rvp_signal_ring_acquire_scan(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;
 	const uint32_t tid = t->t_id;
@@ -181,7 +181,7 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
 	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t dirty = RVP_RING_S_DIRTY;
 
-		if (!atomic_compare_exchange_weak(&r->r_state, &dirty,
+		if (!atomic_compare_exchange_strong(&r->r_state, &dirty,
 						 RVP_RING_S_INUSE))
 			continue;
 		if (r->r_tid == tid && r->r_idepth == idepth)
@@ -194,7 +194,7 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
 	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t clean = RVP_RING_S_CLEAN;
 
-		if (atomic_compare_exchange_weak(&r->r_state, &clean,
+		if (atomic_compare_exchange_strong(&r->r_state, &clean,
 						 RVP_RING_S_INUSE)) {
 			r->r_tid = tid;
 			r->r_idepth = idepth;
@@ -256,18 +256,18 @@ rvp_signal_rings_replenish(void)
 }
 
 rvp_ring_t *
-rvp_signal_ring_get(rvp_thread_t *t, uint32_t idepth)
+rvp_signal_ring_acquire(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;
 
-	if ((r = rvp_signal_ring_get_scan(t, idepth)) != NULL)
+	if ((r = rvp_signal_ring_acquire_scan(t, idepth)) != NULL)
 		return r;
 
 	nrings_needed++;
 
 	do {
 		rvp_wake_replenisher();
-	} while ((r = rvp_signal_ring_get_scan(t, idepth)) == NULL);
+	} while ((r = rvp_signal_ring_acquire_scan(t, idepth)) == NULL);
 
 	return r;
 }
@@ -298,7 +298,7 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_signal_t *s = rvp_signal_lookup(signum);
 	uint32_t idepth = atomic_fetch_add_explicit(&t->t_idepth, 1,
 	    memory_order_acquire);
-	rvp_ring_t *r = rvp_signal_ring_get(t, idepth + 1);
+	rvp_ring_t *r = rvp_signal_ring_acquire(t, idepth + 1);
 	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
 	rvp_interruption_t *it = rvp_ring_put_interruption(oldr, r,
 	    r->r_producer - r->r_items);

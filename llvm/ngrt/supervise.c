@@ -27,8 +27,7 @@ const char *product_name = "RV-Predict/C";
 char *
 get_binary_path(void)
 {
-	char *linkname;
-	ssize_t namesize = 4;
+	char *linkname, *tightname;
 	const long path_max = pathconf(self_exe_pathname, _PC_NAME_MAX);
 
 	if (path_max == -1) {
@@ -36,44 +35,41 @@ get_binary_path(void)
 		    "maximum filename length", product_name);
 	}
 
-	for (namesize = MIN(4, path_max);
-	     namesize <= path_max;
-	     namesize = (SSIZE_MAX - namesize >= namesize)
-	         ? (namesize + namesize)
-		 : SSIZE_MAX) {
-		linkname = malloc(namesize + 1);
-		if (linkname == NULL) {
-			errx(EXIT_FAILURE, "%s could not allocate "
-			    "memory for the link name in %s", product_name,
-			    self_exe_pathname); 
-		}
-
-		const ssize_t nread = readlink(self_exe_pathname, linkname,
-		    namesize + 1);
-
-		if (nread == -1) {
-#if 0
-			/* this is where we can compensate for missing
-			 * /proc by using argv[0]
-			 */
-			if (errno == ENOENT)
-				return argv0;
-#endif
-			err(EXIT_FAILURE,
-			    "%s could not read the link name from %s",
-			    product_name, self_exe_pathname);
-		}
-
-		if (nread > namesize) {
-			free(linkname);
-			continue;
-		}
-		linkname[nread] = '\0';
-		return linkname;
+	linkname = malloc(path_max + 1);
+	if (linkname == NULL) {
+		errx(EXIT_FAILURE, "%s could not allocate "
+		    "memory for the link name in %s", product_name,
+		    self_exe_pathname); 
 	}
-	errx(EXIT_FAILURE, "%s could not allocate a "
-	    "buffer big enough to read the link at %s", product_name,
-	    self_exe_pathname);
+
+	const ssize_t nread = readlink(self_exe_pathname, linkname,
+	    path_max + 1);
+
+	if (nread == -1) {
+#if 0
+		/* this is where we can compensate for missing
+		 * /proc by using argv[0]
+		 */
+		if (errno == ENOENT)
+			return argv0;
+#endif
+		err(EXIT_FAILURE,
+		    "%s could not read the link name from %s",
+		    product_name, self_exe_pathname);
+	}
+
+	if (nread > path_max) {
+		free(linkname);
+		errx(EXIT_FAILURE, "%s read a link at %s that was bigger than "
+		    "expected: %zd bytes", product_name, self_exe_pathname,
+		    nread);
+	}
+	linkname[nread] = '\0';
+	/* Fit the buffer more tightly to the link name. */
+	if (nread + 1 < path_max + 1 &&
+	    (tightname = realloc(linkname, nread + 1)) != NULL)
+		return tightname;
+	return linkname;
 }
 
 static void
@@ -215,6 +211,9 @@ rvp_supervision_start(void)
 		    "%s could not export a trace filename to "
 		    "the environment", product_name);
 	}
+
+	free(tracename);
+	free(binbase);
 
 	// TBD Avoid using some arbitrary file in the analysis.
 	// Check binpath for an RV-Predict/C runtime symbol, and see if

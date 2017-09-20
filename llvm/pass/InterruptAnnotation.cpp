@@ -101,15 +101,13 @@ InterruptAnnotation::isRegister(GlobalVariable &v) const
 }
 
 /**
- * Get the priority level of an ISR.
+ * Get the priority levels of an ISR.
  *
  * @param F
  *      The ISR function.
- * @param[out] prio
- *      The priority level of the ISR.
  * @return
- *      False if the given function is not annotated as an ISR
- *      function; otherwise, True.
+ *      The priority levels at which the ISR may run, or an empty
+ *      vector if it is assigned no priorities.
  */
 std::vector<uint8_t>
 InterruptAnnotation::getISRPrioLevels(Function &F) const
@@ -120,8 +118,8 @@ InterruptAnnotation::getISRPrioLevels(Function &F) const
         return priorities;
     }
     for (auto it = sourcePrioMap->second.begin(); it != sourcePrioMap->second.end(); it++) {
-		priorities.push_back(it->second);
-	}
+        priorities.push_back(it->second);
+    }
     return priorities;
 }
 
@@ -170,7 +168,7 @@ InterruptAnnotation::runOnModule(Module &M)
 			;
 		else if (Pair.first.startswith("rvp-isr-") ||
 			     Pair.first.equals("disableIRQ") ||
-		         Pair.first.equals("enableIRQ")) {
+			     Pair.first.equals("enableIRQ")) {
 			auto first_insn = f->getEntryBlock().getFirstNonPHI();
 #if 1
 			auto debug_loc = first_insn->getDebugLoc();
@@ -213,7 +211,7 @@ InterruptAnnotation::runOnModule(Module &M)
 		// object_annotation = { [ GlobalVariable variable, ... ],
 		//                       [ [ char[] annotation, ... ], ...], ... }
 		//
-        ConstantStruct *object_annotation = cast<ConstantStruct>(*it);
+		ConstantStruct *object_annotation = cast<ConstantStruct>(*it);
 		//
 		// anno_ctnr = [ annotation, ... ]
 		//

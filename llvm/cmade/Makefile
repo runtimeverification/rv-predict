@@ -1,5 +1,5 @@
-LLVM1404=$(HOME)/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-14.04
-LLVM1604=$(HOME)/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-16.04
+LLVM1404=$(HOME)/clang+llvm-3.9.0-x86_64-linux-gnu-ubuntu-14.04
+LLVM1604=$(HOME)/clang+llvm-3.9.0-x86_64-linux-gnu-ubuntu-16.04
 
 .if exists($(LLVM1404))
 LLVMDIR?=$(LLVM1404)
@@ -33,7 +33,7 @@ rvpinstrument.so: build/pass/rvpinstrument.so installit
 build: $(.CURDIR)/../CMakeLists.txt $(.CURDIR)/../pass/CMakeLists.txt $(.CURDIR)/../runtime/CMakeLists.txt
 	@rm -rf $(.OBJDIR)/build
 	@$(INSTALL) -d -m 0700 $(.OBJDIR)/build
-	cd $(.OBJDIR)/build && cmake -DCMAKE_C_COMPILER=$(LLVMDIR)/bin/clang -DCMAKE_CXX_COMPILER=$(LLVMDIR)/bin/clang++ -DLLVM_DIR=$(LLVMDIR)/share/llvm/cmake $(.CURDIR)/..
+	cd $(.OBJDIR)/build && cmake -DCMAKE_C_COMPILER=$(LLVMDIR)/bin/clang -DCMAKE_CXX_COMPILER=$(LLVMDIR)/bin/clang++ -DLLVM_DIR=$(LLVMDIR)/lib/cmake/llvm $(.CURDIR)/..
 
 build/runtime/lib/linux/libclang_rt.tsan_cxx-x86_64.a \
 build/runtime/lib/linux/libclang_rt.tsan_cxx-x86_64.a.syms \

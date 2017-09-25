@@ -5,16 +5,18 @@
 #include <errno.h> /* for ESRCH */
 #include <inttypes.h> /* for PRIu32 */
 #include <signal.h> /* for pthread_sigmask */
+#include <stdatomic.h> /* for atomic_is_lock_free */
 #include <stdint.h> /* for uint32_t */
 #include <stdlib.h> /* for EXIT_FAILURE */
 #include <stdio.h> /* for fprintf(3) */
-#include <string.h> /* for strerror(3) */
+#include <string.h> /* for strerror(3), strcasecmp(3) */
 #include <unistd.h> /* for sysconf */
 
 #include "init.h"
 #include "interpose.h"
 #include "relay.h"
 #include "rvpsignal.h"
+#include "supervise.h"
 #include "thread.h"
 #include "trace.h"
 
@@ -30,6 +32,7 @@ volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
 unsigned int rvp_log2_nthreads = 1;
 
 /* thread_mutex protects thread_head, next_id */
+static sigset_t allmask;
 static pthread_mutex_t thread_mutex;
 static rvp_thread_t * volatile thread_head = NULL;
 static uint32_t next_id = 0;
@@ -37,12 +40,15 @@ static uint32_t next_id = 0;
 static pthread_t serializer;
 static pthread_cond_t wakecond;
 static int nwake = 0;
+static bool forked = false;
 static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
 static bool transmit = true;
+bool rvp_trace_only = true;
 
 pthread_key_t rvp_thread_key;
-static pthread_once_t rvp_init_once = PTHREAD_ONCE_INIT;
+static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
+static pthread_once_t rvp_prefork_init_once = PTHREAD_ONCE_INIT;
 
 static int rvp_thread_detach(rvp_thread_t *);
 static void rvp_thread_destroy(rvp_thread_t *);
@@ -112,17 +118,21 @@ rvp_thread0_create(void)
 }
 
 static void
-thread_lock(void)
+thread_lock(sigset_t *oldmask)
 {
+	if (real_pthread_sigmask(SIG_BLOCK, &allmask, oldmask) != 0)
+		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
 	if (real_pthread_mutex_lock(&thread_mutex) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_lock", __func__);
 }
 
 static void
-thread_unlock(void)
+thread_unlock(const sigset_t *oldmask)
 {
 	if (real_pthread_mutex_unlock(&thread_mutex) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_unlock", __func__);
+	if (real_pthread_sigmask(SIG_SETMASK, oldmask, NULL) != 0)
+		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
 }
 
 /* Caller must hold thread_mutex. */
@@ -139,17 +149,22 @@ rvp_wake_transmitter_locked(void)
 static void
 rvp_stop_transmitter(void)
 {
+#if 1
+	return;
+#else
 	int rc;
+	sigset_t oldmask;
 
-	thread_lock();
+	thread_lock(&oldmask);
 	transmit = false;
 	rvp_wake_transmitter_locked();
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	if ((rc = real_pthread_join(serializer, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_join: %s",
 		    __func__, strerror(rc));
 	}
+#endif
 }
 
 static void *
@@ -157,14 +172,16 @@ serialize(void *arg __unused)
 {
 	int fd = serializer_fd;
 	rvp_thread_t *t, *next_t;
-	uint32_t nblocksets_last = 0;
-	sigset_t maskall;
+	rvp_sigblockset_t *blocksets_last = NULL;
+	sigset_t maskall, oldmask;
 
+	/* This shouldn't be necessary: this thread is created with
+	 * all signals blocked.
+	 */
 	sigfillset(&maskall);
-
 	real_pthread_sigmask(SIG_BLOCK, &maskall, NULL);
 
-	thread_lock();
+	thread_lock(&oldmask);
 	while (transmit || nwake > 0) {
 		bool any_emptied;
 
@@ -179,6 +196,7 @@ serialize(void *arg __unused)
 
 		rvp_increase_ggen();
 
+		rvp_sigblocksets_replenish();
 		rvp_signal_rings_replenish();
 
 		do {
@@ -187,15 +205,17 @@ serialize(void *arg __unused)
 			 * many words flushed?
 			 */
 
-			nblocksets_last = rvp_sigblocksets_emit(fd,
-			    nblocksets_last);
+			blocksets_last = rvp_sigblocksets_emit(fd,
+			    blocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
 				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
 				    fd, &serializer_lc);
 			}
+#if 0
 			any_emptied |= rvp_signal_rings_flush_to_fd(fd,
 			    &serializer_lc);
+#endif
 		} while (any_emptied);
 
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
@@ -203,7 +223,7 @@ serialize(void *arg __unused)
 			rvp_thread_destroy(t);
 		}
 	}
-	thread_unlock();
+	thread_unlock(&oldmask);
 	if (close(fd) == -1)
 		warn("%s: close", __func__);
 	return NULL;
@@ -213,11 +233,11 @@ static void
 rvp_serializer_create(void)
 {
 	int rc;
+	sigset_t oldmask;
 
-	if ((serializer_fd = rvp_trace_open()) == -1)
-		err(EXIT_FAILURE, "%s: rvp_trace_open", __func__);
+	serializer_fd = rvp_trace_open();
 
-	thread_lock();
+	thread_lock(&oldmask);
 	assert(thread_head->t_next == NULL);
 	/* I don't use rvp_thread_flush_to_fd() here because I do not
 	 * want to log a change of thread here under any circumstances.
@@ -227,7 +247,14 @@ rvp_serializer_create(void)
 		  .lc_tid = thread_head->t_id
 		, .lc_idepth = 0
 	};
-	thread_unlock();
+	thread_unlock(&oldmask);
+
+	sigfillset(&allmask);
+
+	if ((rc = real_pthread_sigmask(SIG_BLOCK, &allmask, &oldmask)) != 0) {
+		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
+		    __LINE__, strerror(rc));
+	}
 
 	rc = real_pthread_create(&serializer, NULL, serialize, NULL);
 
@@ -235,10 +262,15 @@ rvp_serializer_create(void)
 		errx(EXIT_FAILURE, "%s: pthread_create: %s", __func__,
 		    strerror(rc));
 	}
+
+	if ((rc = real_pthread_sigmask(SIG_SETMASK, &oldmask, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
+		    __LINE__, strerror(rc));
+	}
 }
 
 void
-rvp_thread_init(void)
+rvp_thread_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(int (*)(pthread_t, void **), pthread_join);
 	ESTABLISH_PTR_TO_REAL(
@@ -248,16 +280,54 @@ rvp_thread_init(void)
 	ESTABLISH_PTR_TO_REAL(void (*)(void *), pthread_exit);
 }
 
+#define	ASSERT_LOCK_FREENESS(_type)	do {			\
+	typedef _type x_t;					\
+	const volatile x_t x;					\
+	if (!atomic_is_lock_free(&x)) {				\
+		errx(EXIT_FAILURE,				\
+		    "Quitting: atomic operations on type "	\
+		    "`volatile " #_type "` are not lock free "	\
+		    "as RV-Predict/C requires.");		\
+	}							\
+} while (false)
+
 static void
-rvp_init(void)
+rvp_assert_atomicity(void)
 {
-	rvp_lock_init();	// needed by rvp_signal_init()
+	ASSERT_LOCK_FREENESS(bool);
+	ASSERT_LOCK_FREENESS(int);
+	ASSERT_LOCK_FREENESS(uint64_t);
+	ASSERT_LOCK_FREENESS(int64_t);
+	ASSERT_LOCK_FREENESS(uint32_t);
+	ASSERT_LOCK_FREENESS(int32_t);
+	ASSERT_LOCK_FREENESS(uint16_t);
+	ASSERT_LOCK_FREENESS(int16_t);
+	ASSERT_LOCK_FREENESS(uint8_t);
+	ASSERT_LOCK_FREENESS(int8_t);
+	ASSERT_LOCK_FREENESS(rvp_ring_t *);
+	ASSERT_LOCK_FREENESS(rvp_ring_state_t);
+	ASSERT_LOCK_FREENESS(rvp_signal_t *);
+}
+
+static void
+rvp_prefork_init(void)
+{
+	rvp_assert_atomicity();
+	rvp_lock_prefork_init();	// needed by rvp_signal_init()
+	rvp_signal_prefork_init();
+	rvp_thread_prefork_init();
+}
+
+static void
+rvp_postfork_init(void)
+{
 	rvp_signal_init();
-	rvp_thread_init();
 	rvp_rings_init();
 
 	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
 		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
+	if (sigfillset(&allmask) == -1)
+		err(EXIT_FAILURE, "%s: sigfillset", __func__);
 	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
 	if (pthread_cond_init(&wakecond, NULL) != 0)
@@ -277,10 +347,33 @@ rvp_init(void)
 	atexit(rvp_stop_transmitter);
 }
 
+/* If RVP_TRACE_ONLY == "yes", then every __rvpredict_init() call
+ * begins and ends in the application process.
+ *
+ * If RVP_TRACE_ONLY != "yes", then one __rvpredict_init() call
+ * begins in the supervisor's process---the process that
+ * forks the application thread, waits for the application to finish,
+ * and then runs the data-race predictor.  That call ends in the
+ * application process.  Every other __rvpredict_init() call begins
+ * and ends in the application process.
+ */
 void
 __rvpredict_init(void)
 {
-	(void)pthread_once(&rvp_init_once, rvp_init);
+	const char *s;
+
+	rvp_trace_only = (s = getenv("RVP_TRACE_ONLY")) != NULL &&
+	    strcasecmp(s, "yes") == 0;
+
+	if (rvp_trace_only) {
+		(void)pthread_once(&rvp_prefork_init_once, rvp_prefork_init);
+	} else if (!forked) {
+		forked = true;
+		rvp_prefork_init();
+		rvp_supervision_start();
+	}
+	(void)pthread_once(&rvp_postfork_init_once, rvp_postfork_init);
+	rvp_static_intrs_reinit();
 }
 
 static void
@@ -293,10 +386,11 @@ rvp_update_nthreads(uint32_t n)
 static int
 rvp_thread_attach(rvp_thread_t *t)
 {
-	thread_lock();
+	sigset_t oldmask;
+	thread_lock(&oldmask);
 
 	if ((t->t_id = ++next_id) == 0) {
-		thread_unlock();
+		thread_unlock(&oldmask);
 		errx(EXIT_FAILURE, "%s: out of thread IDs", __func__);
 	}
 
@@ -308,7 +402,7 @@ rvp_thread_attach(rvp_thread_t *t)
 	t->t_next = thread_head;
 	thread_head = t;
 
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	return 0;
 }
@@ -339,8 +433,9 @@ rvp_thread_detach(rvp_thread_t *tgt)
 {
 	rvp_thread_t * volatile *tp;
 	int rc;
+	sigset_t oldmask;
 
-	thread_lock();
+	thread_lock(&oldmask);
 
 	for (tp = &thread_head; *tp != NULL && *tp != tgt; tp = &(*tp)->t_next)
 		;
@@ -351,7 +446,7 @@ rvp_thread_detach(rvp_thread_t *tgt)
 	} else
 		rc = ENOENT;
 
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	return rc;
 }
@@ -383,6 +478,8 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 		return NULL;
 	}
 
+	t->t_intr_ring = &t->t_ring;
+
 	rvp_thread_attach(t);
 
 	return t;
@@ -399,15 +496,16 @@ rvp_thread_t *
 rvp_pthread_to_thread(pthread_t pthread)
 {
 	rvp_thread_t *t;
+	sigset_t oldmask;
 
-	thread_lock();
+	thread_lock(&oldmask);
 
 	for (t = thread_head; t != NULL; t = t->t_next) {
 		if (t->t_pthread == pthread)
 			break;
 	}
 
-	thread_unlock();
+	thread_unlock(&oldmask);
 
 	if (t == NULL)
 		errno = ESRCH;
@@ -415,15 +513,14 @@ rvp_pthread_to_thread(pthread_t pthread)
 	return t;
 }
 
-/* TBD For signal-safety, avoid using mutexes and condition variables.
- * Use pthread_kill(3) and an atomic?
- */
 void
 rvp_wake_transmitter(void)
 {
-	thread_lock();
+	sigset_t oldmask;
+
+	thread_lock(&oldmask);
 	rvp_wake_transmitter_locked();
-	thread_unlock();
+	thread_unlock(&oldmask);
 }
 
 static void *

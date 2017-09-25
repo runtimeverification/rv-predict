@@ -1,3 +1,13 @@
-rvpc -D_POSIX_C_SOURCE=199506L -std=c11 -Wall -pedantic -g -O3 -o stolz-queue.rvp stolz-queue.c
+#
+# XXX I used to use -O3 with both of these, but it made RV-Predict report a
+# funny stack trace.  Now I use default optimization for both.
+#
 
-clang -fsanitize=thread -D_POSIX_C_SOURCE=199506L -std=c11 -Wall -pedantic -g -O3 -o stolz-queue.tsan stolz-queue.c
+COMMON="-D_POSIX_C_SOURCE=199506L -std=c11 -Wall -pedantic -g"
+rvpc ${COMMON} -o stolz-queue.rvp stolz-queue.c
+
+clang -fsanitize=thread ${COMMON} -o stolz-queue.tsan stolz-queue.c
+
+clang -pthread ${COMMON} -o stolz-queue.plain stolz-queue.c
+
+

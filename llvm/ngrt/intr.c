@@ -1,4 +1,5 @@
 #include <err.h>
+#include <errno.h>
 #include <inttypes.h> /* for PRId32 */
 #include <signal.h>
 #include <stdbool.h>
@@ -14,57 +15,148 @@
 typedef void (*rvp_intr_handler_t)(void);
 
 typedef struct _rvp_static_intr {
-	rvp_intr_handler_t	si_handler;
-	int32_t			si_prio;
-	int			si_signum;
+	rvp_intr_handler_t		si_handler;
+	volatile _Atomic int32_t	si_prio;
+	volatile _Atomic int		si_signum;
+	volatile _Atomic int		si_nactive;
+	volatile _Atomic uint32_t	si_times;
 } rvp_static_intr_t;
 
 static rvp_static_intr_t rvp_static_intr[128];
 
 static int rvp_static_nintrs = 0;
+static int nassigned = 0;
 
 static bool intr_debug = false;
 
-static const int avail_signals[] = {SIGALRM, SIGCHLD, SIGUSR2};
 static sigset_t intr_mask;
-
-static int
-rvp_static_intr_compare(const void *l, const void *r)
-{
-	const rvp_static_intr_t *lsi = l, *rsi = r;
-
-	return lsi->si_prio - rsi->si_prio;
-}
 
 static void
 rvp_static_intr_handler(int signum)
 {
 	int i;
 
-	for (i = 0; i < rvp_static_nintrs; i++) {
-		const rvp_static_intr_t *si = &rvp_static_intr[i];
-		if (si->si_signum == signum)
-			(*si->si_handler)();
+	for (i = 0; i < nassigned; i++) {
+		rvp_static_intr_t *si = &rvp_static_intr[i];
+		if (si->si_signum == signum) {
+			if (si->si_nactive == 0) {
+				++si->si_nactive;
+				(*si->si_handler)();
+				--si->si_nactive;
+			}
+			si->si_times++;
+		}
 	}
 }
 
-#if 0
 static void
 rvp_static_intr_fire_all(void)
 {
 	int i;
 
-	for (i = 0; i < rvp_static_nintrs; i++) {
-		const rvp_static_intr_t *si = &rvp_static_intr[i];
+	for (i = 0; i < nassigned; i++) {
+		rvp_static_intr_t *si = &rvp_static_intr[i];
+		if (si->si_signum == -1)
+			continue;
+		/* Don't let this signal run on top of itself. */
+		if (si->si_nactive > 0)
+			continue;
 		raise(si->si_signum);
 	}
 }
-#endif
+
+void
+__rvpredict_isr_fire(void (*isr)(void))
+{
+	int i;
+	bool fired = false;
+	sigset_t nonintr_mask;
+
+	if (sigemptyset(&nonintr_mask) == -1)
+		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
+
+	for (i = 0; i < nassigned; i++) {
+		rvp_static_intr_t *si = &rvp_static_intr[i];
+		if (si->si_handler != isr)
+			continue;
+		if (si->si_signum == -1)
+			continue;
+		const uint32_t times = si->si_times;
+		raise(si->si_signum);
+		while (times == si->si_times) {
+			(void)sigsuspend(&nonintr_mask);
+		}
+		fired = true;
+	}
+	if (!fired)
+		abort();
+}
+
+void
+rvp_static_intrs_reinit(void)
+{
+	int i;
+
+	if (rvp_static_nintrs > _POSIX_RTSIG_MAX)
+		errx(EXIT_FAILURE, "too many interrupt priorities");
+
+	long nsec = 1000 * 1000;	// 1 millisecond
+	const char *ivalenv = getenv("RVP_INTR_INTERVAL");
+	if (ivalenv != NULL) {
+		char *end;
+		errno = 0;
+		nsec = strtol(ivalenv, &end, 10);
+		if (errno != 0) {
+			err(EXIT_FAILURE,
+			    "could not interpret "
+			    "RVP_INTR_INTERVAL (%s) "
+			    "as a decimal number", ivalenv);
+		} else if (*end != '\0') {
+			errx(EXIT_FAILURE,
+			    "garbage at end of RVP_INTR_INTERVAL (%s)",
+			    ivalenv);
+		}
+	}
+	const struct itimerspec it = {
+		  .it_value = {
+			  .tv_sec = 0
+			, .tv_nsec = nsec
+		  }
+		, .it_interval = {
+			  .tv_sec = 0
+			, .tv_nsec = nsec
+		  }
+	};
+
+	for (i = nassigned; i < rvp_static_nintrs; i++) {
+		struct sigaction sa;
+		int signum = SIGRTMIN + i;
+		rvp_static_intr[i].si_signum = signum;
+
+		memset(&sa, 0, sizeof(sa));
+
+		sa.sa_mask = intr_mask;
+
+		sa.sa_handler = rvp_static_intr_handler;
+		if (sigaction(signum, &sa, NULL) == -1)
+			err(EXIT_FAILURE, "%s: sigaction", __func__);
+
+		struct sigevent sigev = {
+			  .sigev_notify = SIGEV_SIGNAL
+			, .sigev_signo = signum
+		};
+		timer_t timerid;
+		if (timer_create(CLOCK_MONOTONIC, &sigev, &timerid) == -1)
+			err(EXIT_FAILURE, "%s: timer_create", __func__);
+		timer_settime(timerid, 0, &it, NULL);
+	}
+	nassigned = rvp_static_nintrs;
+}
 
 void
 rvp_static_intrs_init(void)
 {
-	int i, j, nprio = 0, rc;
+	int i, rc;
 	sigset_t original_mask;
 
 	const char *debugenv = getenv("RVP_INTR_DEBUG");
@@ -85,72 +177,22 @@ rvp_static_intrs_init(void)
 	if (sigemptyset(&intr_mask) != 0)
 		errx(EXIT_FAILURE, "%s: sigemptyset", __func__);
 
-	for (i = 0; i < __arraycount(avail_signals); i++) {
-		if (sigismember(&original_mask, avail_signals[i]) == 1) {
+	for (i = 0; i < _POSIX_RTSIG_MAX; i++) {
+		int signum = SIGRTMIN + i;
+		if (sigismember(&original_mask, signum) == 1) {
 			errx(EXIT_FAILURE,
 			    "%s: did not expect signal %d to be masked",
-			    __func__, avail_signals[i]);
+			    __func__, signum);
 		}
-		if (sigaddset(&intr_mask, avail_signals[i]) != 0)
+		if (intr_debug) {
+			fprintf(stderr, "DI masks %d\n", signum);  
+		}
+		if (sigaddset(&intr_mask, signum) != 0)
 			errx(EXIT_FAILURE, "%s: sigaddset", __func__);
 	}
-
-	qsort(rvp_static_intr, rvp_static_nintrs, sizeof(rvp_static_intr[0]),
-	    rvp_static_intr_compare);
-
-	for (i = 0; i < rvp_static_nintrs; i++) {
-		if (i == 0 ||
-		    rvp_static_intr[i - 1].si_prio !=
-		    rvp_static_intr[i].si_prio)
-			nprio++;
-	}
-
-	if (nprio > __arraycount(avail_signals))
-		errx(EXIT_FAILURE, "too many interrupt priorities");
-
-	for (i = j = 0; i < rvp_static_nintrs; i++) {
-		if (i > 0 &&
-		    rvp_static_intr[i - 1].si_prio !=
-		    rvp_static_intr[i].si_prio)
-			j++;
-		rvp_static_intr[i].si_signum = avail_signals[j];
-	}
-
-	for (i = 0; i < nprio; i++) {
-		struct sigevent sigev = {
-			  .sigev_notify = SIGEV_SIGNAL
-			, .sigev_signo = avail_signals[i]
-		};
-		struct sigaction sa;
-		timer_t timerid;
-		const struct itimerspec it = {
-			  .it_value = {
-				  .tv_sec = 0
-				, .tv_nsec = 100 * 1000
-			  }
-			, .it_interval = {
-				  .tv_sec = 0
-				, .tv_nsec = 100 * 1000
-			  }
-		};
-
-		memset(&sa, 0, sizeof(sa));
-
-		if (timer_create(CLOCK_MONOTONIC, &sigev, &timerid) == -1)
-			err(EXIT_FAILURE, "%s: timer_create", __func__);
-
-		if (sigemptyset(&sa.sa_mask) == -1)
-			err(EXIT_FAILURE, "%s: sigemptyset", __func__);
-
-		for (j = i; j < nprio; j++) {
-			if (sigaddset(&sa.sa_mask, avail_signals[j]) == -1)
-				err(EXIT_FAILURE, "%s: sigaddset", __func__);
-		}
-		sa.sa_handler = rvp_static_intr_handler;
-		if (sigaction(avail_signals[i], &sa, NULL) == -1)
-			err(EXIT_FAILURE, "%s: sigaction", __func__);
-
-		timer_settime(timerid, 0, &it, NULL);
+	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
 	}
 }
 
@@ -159,9 +201,11 @@ __rvpredict_intr_disable(void)
 {
 	int rc;
 
-#if 0
+	/* To guarantee that every interrupt is observed at least once
+	 * in each interrupts-enabled interval, add a request to fire
+	 * all interrupts before disabling them.
+	 */
 	rvp_static_intr_fire_all();
-#endif
 	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
@@ -177,15 +221,17 @@ __rvpredict_intr_enable(void)
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
 	}
-#if 0
+
+	/* To guarantee that every interrupt is observed at least once
+	 * in each interrupts-enabled interval, add a request to fire
+	 * all interrupts each time they are enabled.
+	 */
 	rvp_static_intr_fire_all();
-#endif
 }
 
 void
 __rvpredict_intr_register(void (*handler)(void), int32_t prio)
 {
-	prio = 0;
 	if (intr_debug) {
 		fprintf(stderr, "%s: handler %p prio %" PRId32 "\n",
 		    __func__, (const void *)handler, prio);
@@ -196,5 +242,6 @@ __rvpredict_intr_register(void (*handler)(void), int32_t prio)
 		    __func__, (const void *)handler, prio);
 	}
 	rvp_static_intr[rvp_static_nintrs++] =
-	    (rvp_static_intr_t){.si_handler = handler, .si_prio = prio};
+	    (rvp_static_intr_t){.si_handler = handler, .si_prio = prio,
+	                        .si_signum = -1, .si_nactive = 0};
 }

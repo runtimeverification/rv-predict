@@ -130,7 +130,7 @@ static ssize_t dwarf_array_type_size(Dwarf_Debug, Dwarf_Die);
 static Dwarf_Die
 dwarf_walk_first(dwarf_walk_t *walk, const dwarf_walk_params_t *params)
 {
-	walk->stack_height = 0;
+	memset(walk, '\0', sizeof(*walk));
 	walk->dbg = params->dbg;
 	walk->predicate = params->predicate;
 	walk->ctx.print_address = params->print_address;
@@ -142,10 +142,6 @@ dwarf_walk_first(dwarf_walk_t *walk, const dwarf_walk_params_t *params)
 	walk->ctx.dataptr = params->dataptr;
 	walk->ctx.frameptr = params->frameptr;
 	walk->ctx.insnptr = params->insnptr;
-	walk->ctx.cie_list = NULL;
-	walk->ctx.fde_list = NULL;
-	walk->ctx.rstate.have_cfa_offset = false;
-	walk->ctx.ncies = walk->ctx.nfdes = 0;
 	walk->cu_by_cu = true;
 	strstack_init(&walk->ctx.symstk);
 

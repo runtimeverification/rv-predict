@@ -1,4 +1,14 @@
 #!/bin/sh
+#
+# I use this script to compare the runtime overhead of RV-Predict/C
+# instrumentation with ThreadSanitizer instrumentation, and to compare
+# the instrumentation overheads with the program built without any
+# instrumentation.
+#
+# I make the comparisons on the queue example sent to us by Volker Stolz.
+# RV-Predict/C ordinarily finds more data races in fewer tries than
+# ThreadSanitizer.
+#
 
 usage()
 {
@@ -22,13 +32,24 @@ with_rvp()
 	count=200
 	while [ $count -gt 0 ]; do
 		count=$((count - 1))
-		./stolz-queue.rvp > /dev/null
+		RVP_TRACE_ONLY=yes ./stolz-queue.rvp > /dev/null
+	done
+}
+
+with_plain()
+{
+	echo trying plain 
+	count=200
+	while [ $count -gt 0 ]; do
+		count=$((count - 1))
+		./stolz-queue.plain > /dev/null
 	done
 }
 
 if [ $# -eq 0 ]; then
 	time ./time-stolz-queue tsan
 	time ./time-stolz-queue rvp
+	time ./time-stolz-queue plain
 elif [ $# -eq 1 ]; then
 	case $1 in
 	tsan)
@@ -36,6 +57,9 @@ elif [ $# -eq 1 ]; then
 		;;
 	rvp)
 		with_rvp
+		;;
+	plain)
+		with_plain
 		;;
 	*)
 		usage

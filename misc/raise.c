@@ -6,8 +6,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "nbcompat.h"
+
 static void
-handler(int signum)
+handler(int signum __unused)
 {
 	const char msg[] = "got signal\n";
 	write(STDOUT_FILENO, msg, strlen(msg));

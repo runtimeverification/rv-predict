@@ -92,6 +92,19 @@ symbolize()
 }
 
 symbolize_passthrough=
+analyze_passthrough=
+
+if [ ${RVP_WINDOW_SIZE:-none} != none ]; then
+	if [ -n "$(echo -n "$RVP_WINDOW_SIZE" | sed 's/^[0-9]\+$//g')" ]; then
+		echo "$(basename $0): malformed RVP_WINDOW_SIZE: expected decimal digits, read '${RVP_WINDOW_SIZE}'" 2>&1
+		exit 1
+	fi
+	set -- "--window" ${RVP_WINDOW_SIZE} "$@"
+fi
+
+if [ -n "${RVP_ANALYSIS_ARGS:-}" ]; then
+	set -- ${RVP_ANALYSIS_ARGS} "$@"
+fi
 
 while [ $# -gt 1 ]; do
 	case $1 in
@@ -108,8 +121,13 @@ while [ $# -gt 1 ]; do
 		window="--window $1"
 		shift
 		;;
-	--prompt-for-license)
-		prompt=$1
+	--solver-timeout)
+		analyze_passthrough="${analyze_passthrough:-} $1 $2"
+		shift
+		shift
+		;;
+	--prompt-for-license|--debug)
+		analyze_passthrough="${analyze_passthrough:-} $1"
 		shift
 		;;
 	--)
@@ -130,6 +148,7 @@ else
 	progpath=$(pwd)/${progname}
 fi
 
-rvpredict --offline ${prompt:-} ${window:---window 2000} --detect-interrupted-thread-race \
+rvpredict --offline ${analyze_passthrough:-} ${window:---window 2000} \
+    --detect-interrupted-thread-race \
     --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
     symbolize ${symbolize_passthrough} $progpath 1>&2

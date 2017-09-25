@@ -10,5 +10,7 @@ JDK 1.8
 lex
 libarchive
 m4
+mk-configure
+pandoc
 sed
 yacc

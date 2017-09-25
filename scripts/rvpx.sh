@@ -64,13 +64,13 @@ passthrough=
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--window)
+	--window|--solver-timeout)
 		passthrough="${passthrough:-} $1 $2"
 		shift
 		shift
 		;;
 	--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim|\
-	--prompt-for-license)
+	--prompt-for-license|--debug)
 		passthrough="${passthrough:-} $1"
 		shift
 		;;

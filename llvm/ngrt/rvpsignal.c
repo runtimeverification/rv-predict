@@ -27,9 +27,11 @@ static rvp_signal_t * _Atomic *signal_tbl = NULL;
 static int nsignals = 0;
 static int signals_origin = -1;
 
-static uint32_t nsigblocksets = 0;
-static rvp_sigblockset_t *sigblockset_head = NULL;
-static pthread_mutex_t sigblockset_lock = PTHREAD_MUTEX_INITIALIZER;
+static _Atomic int nrings_needed = 0;
+
+static _Atomic uint32_t nsigblocksets = 0;
+static rvp_sigblockset_t * _Atomic sigblockset_head = NULL;
+static rvp_sigblockset_t * _Atomic sigblockset_freehead = NULL;
 
 static rvp_ring_t * _Atomic signal_rings = NULL;
 
@@ -73,7 +75,7 @@ rvp_signal_table_init(void)
 }
 
 void
-rvp_signal_init(void)
+rvp_signal_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const struct sigaction *, struct sigaction *),
@@ -87,6 +89,11 @@ rvp_signal_init(void)
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(const sigset_t *),
 	    sigsuspend);
+}
+
+void
+rvp_signal_init(void)
+{
 	rvp_signal_table_init();
 }
 
@@ -131,6 +138,7 @@ rvp_signal_lookup(int signum)
 	return atomic_load_explicit(&signal_tbl[signum], memory_order_acquire);
 }
 
+#if 0
 bool
 rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
 {
@@ -154,9 +162,10 @@ rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
 	}
 	return any_emptied;
 }
+#endif
 
 static rvp_ring_t *
-rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
+rvp_signal_ring_acquire_scan(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;
 	const uint32_t tid = t->t_id;
@@ -172,7 +181,7 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
 	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t dirty = RVP_RING_S_DIRTY;
 
-		if (!atomic_compare_exchange_weak(&r->r_state, &dirty,
+		if (!atomic_compare_exchange_strong(&r->r_state, &dirty,
 						 RVP_RING_S_INUSE))
 			continue;
 		if (r->r_tid == tid && r->r_idepth == idepth)
@@ -185,22 +194,10 @@ rvp_signal_ring_get_scan(rvp_thread_t *t, uint32_t idepth)
 	for (r = signal_rings; r != NULL; r = r->r_next) {
 		rvp_ring_state_t clean = RVP_RING_S_CLEAN;
 
-		if (atomic_compare_exchange_weak(&r->r_state, &clean,
+		if (atomic_compare_exchange_strong(&r->r_state, &clean,
 						 RVP_RING_S_INUSE)) {
 			r->r_tid = tid;
 			r->r_idepth = idepth;
-			/* XXX some other thread may have changed to
-			 * XXX a later generation already.  probably
-			 * XXX should log a _COG immediately before _ENTERSIG
-			 * XXX so that an interruption isn't processed in
-			 * XXX a window prior to events that happened
-			 * XXX before it.
-			 * XXX
-			 * XXX XXX This issue ought to be fixed, should delete
-			 * XXX XXX the comment and the following assignment
-			 * XXX XXX and test.
-			 */
-			r->r_lgen = 0;
 			break;
 		}
 	}
@@ -214,15 +211,34 @@ rvp_wake_replenisher(void)
 	rvp_wake_relay();
 }
 
-/* Calls to rvp_signal_rings_replenish() are synchronized by
- * the serialization thread, for now.
+/* If nrings_needed == 0, do nothing.
+ *
+ * If nrings_needed != 0, then ensure that there are nrings_needed + 1 clean
+ * rings, and reset nrings_needed to 0.
+ *
+ * Calls to rvp_signal_rings_replenish() are synchronized by
+ * the serialization thread.
+ *
  */
 void
 rvp_signal_rings_replenish(void)
 {
+	int nclean = 0;
+	const int nneeded = atomic_exchange(&nrings_needed, 0);
 	int nallocated;
+	rvp_ring_t *r;
 
-	for (nallocated = 0; nallocated < 5; nallocated++) {
+	if (nneeded == 0)
+		return;
+
+	for (r = signal_rings;
+	     nclean <= nneeded && r != NULL;
+	     r = r->r_next) {
+		if (r->r_state == RVP_RING_S_CLEAN)
+			nclean++;
+	}
+
+	for (nallocated = nclean; nallocated <= nneeded; nallocated++) {
 		rvp_ring_t *r = calloc(sizeof(*r), 1);
 		if (r == NULL && nallocated == 0)
 			err(EXIT_FAILURE, "%s: calloc", __func__);
@@ -235,19 +251,24 @@ rvp_signal_rings_replenish(void)
 
 		while (!atomic_compare_exchange_weak(&signal_rings,
 		    &r->r_next, r))
-			;	// do nothing
+			;	// TBD exponential backoff
 	}
 }
 
 rvp_ring_t *
-rvp_signal_ring_get(rvp_thread_t *t, uint32_t idepth)
+rvp_signal_ring_acquire(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;
 
-	while ((r = rvp_signal_ring_get_scan(t, idepth)) == NULL) {
-		// TBD backoff
+	if ((r = rvp_signal_ring_acquire_scan(t, idepth)) != NULL)
+		return r;
+
+	nrings_needed++;
+
+	do {
 		rvp_wake_replenisher();
-	}
+	} while ((r = rvp_signal_ring_acquire_scan(t, idepth)) == NULL);
+
 	return r;
 }
 
@@ -256,7 +277,7 @@ rvp_signal_ring_put(rvp_thread_t *t __unused, rvp_ring_t *r)
 {
 	rvp_ring_state_t inuse = RVP_RING_S_INUSE;
 
-	rvp_ring_state_t nstate = rvp_ring_nfull(r) != 0
+	rvp_ring_state_t nstate = rvp_ring_is_dirty(r)
 	    ? RVP_RING_S_DIRTY
 	    : RVP_RING_S_CLEAN;
 
@@ -277,11 +298,13 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_signal_t *s = rvp_signal_lookup(signum);
 	uint32_t idepth = atomic_fetch_add_explicit(&t->t_idepth, 1,
 	    memory_order_acquire);
-	rvp_ring_t *r = rvp_signal_ring_get(t, idepth + 1);
+	rvp_ring_t *r = rvp_signal_ring_acquire(t, idepth + 1);
 	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
+	rvp_interruption_t *it = rvp_ring_put_interruption(oldr, r,
+	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	r->r_lgen = (oldr != NULL) ? oldr->r_lgen : t->t_ring.r_lgen;
+	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a
 	 * change of PC, a change of thread, and a change in outstanding
@@ -304,16 +327,27 @@ handler_wrapper(int signum, siginfo_t *info, void *ctx)
 
 	b = RVP_BUF_INITIALIZER;
 
-	if (oldr != NULL)
-		oldr->r_lgen = r->r_lgen;
-	else
-		t->t_ring.r_lgen = r->r_lgen;
+	/* I copy the local generation back so that the interrupted sequence
+	 * does not have to resynchronize with ggen.  It's ok to copy back
+	 * the local generation, here: this ring's local generation is not
+	 * going to increase any more in this signal, and oldr is not
+	 * visible until I copy it back to t_intr_ring. 
+	 */
+	oldr->r_lgen = r->r_lgen;
 
-	atomic_store(&t->t_intr_ring, oldr);
-	atomic_store_explicit(&t->t_idepth, idepth, memory_order_release);
+	atomic_store_explicit(&t->t_intr_ring, oldr, memory_order_release);
+	/* At this juncture, a new signal could start with parent
+	 * t_intr_ring and a greater idepth than this thread's, but
+	 * that's ok, it will just get a new ring.
+	 */
 	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
 	rvp_ring_put_buf(r, b);
+	rvp_interruption_close(it, r->r_producer - r->r_items);
 	rvp_signal_ring_put(t, r);
+	/* I wait until after the ring is relinquished to restore the old
+	 * idepth so that the relinquished ring is available for reuse.
+	 */
+	atomic_store_explicit(&t->t_idepth, idepth, memory_order_release);
 }
 
 sigset_t *
@@ -345,17 +379,19 @@ sigset_to_mask(const sigset_t *set)
 	return mask;
 }
 
-uint32_t
-rvp_sigblocksets_emit(int fd, uint32_t lastn)
+rvp_sigblockset_t *
+rvp_sigblocksets_emit(int fd, rvp_sigblockset_t *last_head)
 {
-	rvp_sigblockset_t *bs;
-	uint32_t nsets;
+	rvp_sigblockset_t *bs, *head;
 
-	real_pthread_mutex_lock(&sigblockset_lock);
+	head = sigblockset_head;
+	// XXX barrier between nsigblocksets and sigblockset_head read?
 
-	for (bs = sigblockset_head; bs != NULL; bs = bs->bs_next) {
-		if (bs->bs_number < lastn)
-			continue;
+	// newest sigblocksets are always at the head of the list, so
+	// emit them until we see the previous head
+	for (bs = head; bs != NULL; bs = bs->bs_next) {
+		if (bs == last_head)
+			break;
 		rvp_sigmaskmemo_t map = (rvp_sigmaskmemo_t){
 			  .deltop = (rvp_addr_t)rvp_vec_and_op_to_deltop(0,
 			      RVP_OP_SIGMASKMEMO)
@@ -367,35 +403,101 @@ rvp_sigblocksets_emit(int fd, uint32_t lastn)
 			err(EXIT_FAILURE, "%s: write", __func__);
 	}
 
-	nsets = nsigblocksets;
+	return head;
+}
 
-	real_pthread_mutex_unlock(&sigblockset_lock);
+/* Signal handlers call intern_sigset(), so it has to be lockless, and
+ * it cannot call malloc(3) to get a new sigblockset_t.
+ *
+ * General idea: keep a free list, which is refreshed by the serialization
+ * thread.  If the free list is empty, and we're in interrupt context,
+ * then signal the relay to wake the serialization thread.
+ *
+ * sigblockset_head is an atomic pointer.  intern_sigset() performs these
+ * actions in a loop:
+ * 1) `head = sigblockset_head;`
+ * 2) scan from `head` until end for a match `bs` for `s`
+ * 3) finding a match, return it.
+ * 4) finding no match, take an item off of the free list and
+ *    fill it.
+ * 5) use a compare-and-set to replace `head` with the new item
+ *    at `sigblockset_head`; failing that, use a compare-and-set
+ *    to put back the new item and start over at (1).
+ * 6) return the new item
+ */
+static rvp_sigblockset_t *
+intern_sigset_try_once(const sigset_t *s)
+{
+	rvp_sigblockset_t *head, *bs;
 
-	return nsets;
+	head = sigblockset_head;
+	for (bs = head; bs != NULL; bs = bs->bs_next) {
+		if (sigeqset(&bs->bs_sigset, s))
+			return bs;
+	}
+
+	assert(bs == NULL);
+
+	for (;;) {
+		if (bs == NULL && (bs = sigblockset_freehead) == NULL) {
+			rvp_wake_replenisher();
+			// TBD exponential backoff
+			continue;
+		}
+		if (atomic_compare_exchange_strong(&sigblockset_freehead, &bs,
+		    bs->bs_next))
+			break;
+	}
+	bs->bs_next = head;
+	bs->bs_sigset = *s;
+	if (atomic_compare_exchange_strong(&sigblockset_head, &head,
+	    bs))
+		return bs;
+
+	/* The sigblockset list changed, so we need to re-scan to see if
+	 * the new blockset is necessary.  Put this one back on the free list
+	 * in the mean time.  
+	 */
+	bs->bs_next = sigblockset_freehead;
+	while (!atomic_compare_exchange_strong(&sigblockset_freehead,
+	    &bs->bs_next, bs))
+		;	// TBD exponential backoff
+
+	return NULL;
+}
+
+static void
+rvp_sigblocksets_replenish_once(void)
+{
+	rvp_sigblockset_t *bs;
+
+	if ((bs = malloc(sizeof(*bs))) == NULL)
+		err(EXIT_FAILURE, "%s: malloc", __func__);
+	bs->bs_number = nsigblocksets++;
+	bs->bs_next = sigblockset_freehead;
+	while (!atomic_compare_exchange_strong(&sigblockset_freehead,
+	    &bs->bs_next, bs))
+		;	// TBD exponential backoff
+}
+
+void
+rvp_sigblocksets_replenish(void)
+{
+	int i;
+
+	if (sigblockset_freehead != NULL)
+		return;
+
+	for (i = 0; i < 5; i++)
+		rvp_sigblocksets_replenish_once();
 }
 
 rvp_sigblockset_t *
 intern_sigset(const sigset_t *s)
 {
 	rvp_sigblockset_t *bs;
-
-	real_pthread_mutex_lock(&sigblockset_lock);
-	for (bs = sigblockset_head; bs != NULL; bs = bs->bs_next) {
-		if (sigeqset(&bs->bs_sigset, s))
-			break;
-	}
-
-	if (bs == NULL) {
-		if ((bs = malloc(sizeof(*bs))) == NULL)
-			err(EXIT_FAILURE, "%s: malloc", __func__);
-		bs->bs_number = nsigblocksets++;
-		bs->bs_sigset = *s;
-		bs->bs_next = sigblockset_head;
-		sigblockset_head = bs;
-	}
-
-	real_pthread_mutex_unlock(&sigblockset_lock);
-
+	while ((bs = intern_sigset_try_once(s)) == NULL)
+		;	// do nothing
 	return bs;
 }
 
@@ -497,6 +599,19 @@ rvp_thread_trace_getmask(rvp_thread_t *t __unused,
 	rvp_trace_mask(RVP_OP_SIGGETMASK, bs->bs_number, retaddr);
 }
 
+#if 0
+static inline void
+trace_sigmask_op(const void *retaddr, int how)
+{
+	rvp_ring_t *r = rvp_ring_for_curthr();
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
+	rvp_buf_put_voidptr(&b, mtx);
+
+	rvp_ring_put_buf(r, b);
+}
+#endif
+
 static int
 rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
     const sigset_t *set, sigset_t *oldset)
@@ -508,6 +623,14 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	/* TBD trace a read from `set` and, if `oldset` is not NULL,
 	 * a write to it.
 	 */
+#if 0
+	uint64_t gen;
+
+	if (how == SIG_BLOCK)
+		rvp_buf_trace_load_cog(&b, &r->r_lgen);
+	else
+		gen = rvp_ggen_before_store();
+#endif
 
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
@@ -546,6 +669,10 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	else
 		rvp_thread_trace_setmask(t, how, mask, retaddr);
 
+#if 0
+	if (how != SIG_BLOCK)
+		rvp_buf_trace_cog(&b, &r->r_lgen, gen);
+#endif
 	return 0;
 }
 

@@ -2,7 +2,10 @@ SUBDIR=trace
 
 MKINSTALL=no
 
-all: bin/rvpc lib/rvpinstrument.so lib/rvprt.a
+all: share/rv-predict-c/ldscript bin/rvpc lib/rvpinstrument.so lib/rvprt.a
+
+share/rv-predict-c/ldscript:
+	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../../ldscript install
 
 bin/rvpc:
 	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../../scripts install

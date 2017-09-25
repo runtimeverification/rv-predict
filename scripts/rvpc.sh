@@ -7,6 +7,7 @@
 set -e
 set -u
 
+ldscript_dir=$(dirname $0)/../share/rv-predict-c
 pass_dir=$(dirname $0)/../lib
 runtime_dir=$(dirname $0)/../lib
 
@@ -24,6 +25,9 @@ fi
 for arg in "$@"; do
 	case "$arg" in
 	--)	break
+		;;
+	-help)	help=yes
+		break
 		;;
 	-M|-E)	# -M implies -E, and -E skips normal compilation
 		compile=no
@@ -56,15 +60,17 @@ else
 	compiler=clang-3.8
 fi
 
-if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ]; then
+if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]
+then
 	pass="-Xclang -load -Xclang $pass_dir/rvpinstrument.so -g"
 fi
 
 # -ldl for dlsym()
 # -lrt for timer_create() et cetera, in hacks.c
+# -latomic for atomic_is_lock_free()
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -pthread -g"
+	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -latomic -pthread -g"
 fi
 
 $compiler ${pass:-} "$@" ${runtime:-}

@@ -72,7 +72,7 @@ rvp_ring_for_curthr(void)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 
-	return (t->t_intr_ring != NULL) ? t->t_intr_ring : &t->t_ring;
+	return t->t_intr_ring;
 }
 
 #endif /* _RVP_THREAD_H_ */

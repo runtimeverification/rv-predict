@@ -48,18 +48,16 @@ writeall(int fd, const void *buf, size_t nbytes)
 int
 rvp_trace_open(void)
 {
-	const char *tracefn = getenv("RVP_TRACE_FILE");
+	const char *envfile = getenv("RVP_TRACE_FILE");
+	const char *tracefn = (envfile != NULL) ? envfile : "./rvpredict.trace";
 
-	int fd = open((tracefn != NULL) ? tracefn : "./rvpredict.trace",
-	    O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	int fd = open(tracefn, O_WRONLY|O_CREAT|O_TRUNC, 0600);
 
 	if (fd == -1)
-		return -1;
+		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
 
-	if (writeall(fd, &header, sizeof(header)) == -1) {
-		close(fd);
-		return -1;
-	}
+	if (writeall(fd, &header, sizeof(header)) == -1)
+		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
 
 	return fd;
 }
@@ -67,8 +65,8 @@ rvp_trace_open(void)
 bool
 rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 {
-	uint32_t *next_consumer;
 	ssize_t nwritten;
+	uint32_t idepth0, idepth1;
 	rvp_fork_join_switch_t threadswitch = {
 		  .deltop =
 		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
@@ -79,7 +77,7 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGDEPTH)
 		, .depth = r->r_idepth
 	};
-	struct iovec iov[4] = {
+	struct iovec iov[20] = {
 		  [0] = (struct iovec){
 			  .iov_base = &threadswitch
 			, .iov_len = sizeof(threadswitch)
@@ -94,7 +92,10 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	if (lc == NULL)
 		;
 	else if (lc->lc_tid != r->r_tid) {
-		iovp++; /* emit 'switch' to r->r_tid */
+		iovp++; /* emit 'switch' to r->r_tid; that will
+			 * reset the reader's interrupt depth to 0.
+			 */
+
 		if (r->r_idepth != 0) {
 			iovp++; /* emit 'sigdepth' to r->r_idepth */
 		}
@@ -102,22 +103,36 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		iov[0] = iov[1];
 		iovp++; /* emit 'sigdepth' to r->r_idepth */
 	}
+	const struct iovec *first_ring_iov, *iiov,
+	    *lastiov = &iov[__arraycount(iov)];
 
-	if (!rvp_ring_get_iovs(r, &iovp, &next_consumer))
+	first_ring_iov = iovp;
+
+	idepth0 = idepth1 = (lc == NULL) ? 0 : r->r_idepth;
+	(void)rvp_ring_get_iovs(r, NULL, &iovp, lastiov, &idepth0);
+
+	if (iovp == first_ring_iov)
 		return false;
 
 	nwritten = writev(fd, iov, iovp - &iov[0]);
-	do {
-		--iovp;
-		nwritten -= iovp->iov_len;
-	} while (iovp != &iov[0]);
+	if (nwritten == -1)
+		err(EXIT_FAILURE, "%s: writev", __func__);
 
-	assert(nwritten == 0);
-	r->r_consumer = next_consumer;
+	for (iiov = &iov[0]; iiov < first_ring_iov; iiov++)
+		nwritten -= iiov->iov_len;
+
+	assert(nwritten > 0);
+
+	const struct iovec *check_iov = first_ring_iov;
+	assert(rvp_ring_discard_iovs(r, NULL, &check_iov, iovp, &idepth1) <= 0);
+	assert(idepth0 == idepth1);
+
 	if (lc != NULL) {
 		lc->lc_tid = r->r_tid;
-		lc->lc_idepth = r->r_idepth;
-	}
+		lc->lc_idepth = idepth0;
+	} else
+		assert(idepth0 == 0);
+
 	return true;
 }
 

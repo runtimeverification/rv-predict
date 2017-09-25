@@ -25,12 +25,8 @@ rvp_wake_relay(void)
 static void *
 relay(void *arg __unused)
 {
-	sigset_t sigset, maskall;
+	sigset_t sigset;
 	int expected_signum = -1, rc, rcvd_signum;
-
-	sigfillset(&maskall);
-
-	real_pthread_sigmask(SIG_BLOCK, &maskall, NULL);
 
 	for (;;) {
 		if (expected_signum != relay_signum) {
@@ -56,9 +52,22 @@ void
 rvp_relay_create(void)
 {
 	int rc;
+	sigset_t maskall, omask;
+
+	sigfillset(&maskall);
+
+	if ((rc = real_pthread_sigmask(SIG_BLOCK, &maskall, &omask)) != 0) {
+		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
+		    __LINE__, strerror(rc));
+	}
 
 	if ((rc = real_pthread_create(&relay_thread, NULL, relay, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_create: %s", __func__,
 		    strerror(rc));
+	}
+
+	if ((rc = real_pthread_sigmask(SIG_SETMASK, &omask, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s.%d: pthread_sigmask: %s", __func__,
+		    __LINE__, strerror(rc));
 	}
 }

@@ -35,11 +35,11 @@ public class LicenseChecker {
             case NO_LICENSE:
                 return "This product has no license on file.\n"
                         + "Please sign up for a license at " + LICENSE_URL + ","
-                        + "\nthen run this tool with --prompt-for-license.";
+                        + "\nthen run rvplicense.";
             case INVALID_OR_EXPIRED:
                 return "Your license is invalid or expired.\n"
                         + "Please renew it at " + LICENSE_URL + ","
-                        + "then run this tool with --prompt-for-license.";
+                        + "then run rvplicense.";
             case VALID:
                 return "Your license is valid.";
             default:

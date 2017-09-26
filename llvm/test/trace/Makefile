@@ -19,5 +19,6 @@ WARNS=4
 STRIPFLAG=
 
 COPTS+=-O3 -g -O0
+LDADD+=-pthread
 
 .include <mkc.prog.mk>

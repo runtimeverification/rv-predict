@@ -10,7 +10,7 @@ LIB?=rvprt
 
 STRIPFLAG=
 INCS=intr_exports.h
-CC=clang
+CC?=clang
 CFLAGS+=-std=c11
 #COPTS+=-O3
 DBG+=-g

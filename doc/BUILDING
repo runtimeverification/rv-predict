@@ -7,6 +7,7 @@ Here are some programs that must be available:
 
 	awk
 	clang+llvm-3.9.0 with development components (.h, .a/.so files)
+	gmake
 	grep
 	JDK 1.8
 	lex

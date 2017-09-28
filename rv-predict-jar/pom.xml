@@ -2,7 +2,7 @@
     <parent>
         <groupId>com.runtimeverification.rvpredict</groupId>
         <artifactId>root</artifactId>
-        <version>1.8.2-SNAPSHOT</version>
+        <version>1.8.5-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>jar</artifactId>
@@ -45,6 +45,7 @@
                         <configuration>
                             <descriptor>src/main/assembly/assembly.xml</descriptor>
                             <appendAssemblyId>false</appendAssemblyId>
+			    <finalName>rv-predict</finalName>
                             <archive>
                                 <manifest>
                                     <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>

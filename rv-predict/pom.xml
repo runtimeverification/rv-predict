@@ -10,12 +10,12 @@
     <dependencies>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-jar</artifactId>
+            <artifactId>jar</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-source</artifactId>
+            <artifactId>java</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -172,7 +172,7 @@
                     <groups>com.runtimeverification.rvpredict.IntegrationTest</groups>
                     <systemPropertyVariables>
                         <rvPath>${project.parent.build.directory}/release/${project.artifactId}</rvPath>
-                        <examplesPath>${project.parent.basedir}/rv-predict-tests</examplesPath>
+                        <examplesPath>${project.parent.basedir}/tests</examplesPath>
                         <rvVersion>${version}</rvVersion>
                     </systemPropertyVariables>
                 </configuration>

@@ -16,9 +16,9 @@ MAVEN_OPTS=
 buildit: .PHONY
 .if $(RELEASE:Uno) == "no"
 	@cd $(.CURDIR)/../native-z3 && mvn -q -DskipTests -DskipDocs install
-	@cd $(.CURDIR)/../rv-predict-source && mvn -q -DskipTests -DskipDocs compile
+	@cd $(.CURDIR)/../java && mvn -q -DskipTests -DskipDocs compile
 	@[ -d $(.CURDIR)/../target/release/rv-predict ] || mkdir -p $(.CURDIR)/../target/release/rv-predict
-	@cd $(.CURDIR)/../rv-predict-source/target/classes && jar cf $(.CURDIR)/../target/release/rv-predict/rv-predict.jar .
+	@cd $(.CURDIR)/../java/target/classes && jar cf $(.CURDIR)/../target/release/rv-predict/rv-predict.jar .
 .else
 	# I used to pass -DskipTests -DskipDocs here.
 	cd $(.CURDIR)/.. && mvn -Dobfuscate -U $(MAVEN_OPTS) package
@@ -35,7 +35,7 @@ $(.CURDIR)/../target/release/rv-predict/rv-predict.jar: buildit
 clean cleandir distclean:
 	@cd $(.CURDIR)/.. && mvn -q clean
 
-#CLEANDIRS+=$(.CURDIR)/../target $(.CURDIR)/../rv-predict-source/target
+#CLEANDIRS+=$(.CURDIR)/../target $(.CURDIR)/../java/target
 CLEANFILES+=$(CLEANABLE_FILES)
 
 .include <mkc.files.mk>

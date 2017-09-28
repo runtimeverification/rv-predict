@@ -6,7 +6,7 @@
     </parent>
     <!-- Based on guide at http://docs.codehaus.org/display/IZPACK/Compiling+Using+Maven -->
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>rv-predict-c-installer</artifactId>
+    <artifactId>c-installer</artifactId>
     <name>rv-predict-c-installer</name>
     <packaging>pom</packaging>
     <properties>
@@ -29,7 +29,7 @@
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-c-installer-tools</artifactId>
+            <artifactId>c-installer-tools</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
@@ -172,7 +172,7 @@
                     <baseDir>${staging.dir.app}</baseDir>
                     <installFile>${izpack.dir.app}/install.xml</installFile>
                     <outputDirectory>${project.build.directory}</outputDirectory>
-                    <finalName>${project.build.finalName}</finalName>
+                    <finalName>rv-predict-${project.artifactId}-${project.version}</finalName>
                     <enableOverrideArtifact>true</enableOverrideArtifact>
                     <mkdirs>true</mkdirs>
                     <autoIncludeUrl>false</autoIncludeUrl>

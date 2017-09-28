@@ -11,8 +11,10 @@ cleandir distclean:
 tags:
 	@touch $(.CURDIR)/tags
 
+depend:
+
 install: all
 
-$(TARGETS:Ncleandir:Ndistclean:Nfilelist:Ninstalldirs:Ntags):
+$(TARGETS:Ncleandir:Ndistclean:Nfilelist:Ninstalldirs:Ntags:Ndepend):
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) $(.TARGET)

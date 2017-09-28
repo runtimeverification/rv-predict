@@ -22,7 +22,7 @@ uninstall:
 rv-error: $(SRCDIR)/rv-error
 	@cp $(.ALLSRC) $(.OBJDIR)/.
 
-$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Nall):
+$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Nall:Ndepend):
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) $(.TARGET)
 

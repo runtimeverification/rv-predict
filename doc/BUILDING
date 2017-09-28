@@ -1,7 +1,4 @@
-Make sure that you have Clang and LLVM 3.9 in your PATH.  E.g.,
-if you have downloaded binaries for Ubuntu 14.04:
-
-export PATH=${HOME}/clang+llvm-3.9.0-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}
+Make sure that you have Clang 3.9 in your PATH.
 
 Here are some programs that must be available:
 

@@ -12,7 +12,7 @@
     <properties>
         <!-- Installer variables -->
         <info.appName>RV-Predict/C</info.appName>
-        <info.appVersion>0.1.0-SNAPSHOT</info.appVersion>
+        <info.appVersion>${project.version}</info.appVersion>
         <izpack.dir.app>${basedir}/src/main/izpack</izpack.dir.app>
         <staging.dir.app>${basedir}/../target/release/rv-predict</staging.dir.app>
     </properties>

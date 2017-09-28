@@ -18,7 +18,7 @@ clean: resources_clean
 
 
 install: all uninstall
-	ocamlfind install $(NAME) _build/error_t.mli _build/error_j.mli _build/error_t.cmi _build/error_j.cmi _build/rv_error.mli _build/rv_error.cmi _build/$(ARCHIVE) _build/$(LIBRARY) META \
+	ocamlfind install $(NAME) _build/error_t.mli _build/error_j.mli _build/error_t.cmi _build/error_t.cmx _build/error_j.cmi _build/error_j.cmx _build/rv_error.mli _build/rv_error.cmi _build/rv_error.cmx _build/$(ARCHIVE) _build/$(LIBRARY) META \
              -optional _build/$(XARCHIVE) _build/$(SARCHIVE) error.atd
 
 uninstall:

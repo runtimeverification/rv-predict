@@ -21,12 +21,12 @@
     <modules>
         <module>native-z3</module>
         <module>rv-predict</module>
-        <module>rv-predict-jar</module>
-        <module>rv-predict-source</module>
-        <module>rv-predict-tests</module>
-        <module>rv-predict-installer</module>
-        <module>c-install</module>
-        <module>c-install-tools</module>
+        <module>jar</module>
+        <module>java</module>
+        <module>tests</module>
+        <module>installer</module>
+        <module>c-installer</module>
+        <module>c-installer-tools</module>
     </modules>
     <url>http://www.runtimeverification.com</url>
     <scm>

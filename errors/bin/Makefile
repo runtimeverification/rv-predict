@@ -26,7 +26,7 @@ $(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) $(.TARGET)
 
-$(SRCDIR)/rv-error:
+$(SRCDIR)/rv-error: .PHONY
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) native
 

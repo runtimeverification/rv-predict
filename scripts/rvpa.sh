@@ -145,15 +145,8 @@ if ! test -e ${progpath}; then
 	exit 1
 fi
 
-if [ "${RVP_OLD_REPORT_FMT:-no}" = yes ]
-then
-	new_report_fmt=
-else
-	new_report_fmt=--json-report
-fi
-
 rvpredict --offline ${analyze_passthrough:-} ${window:---window 2000} \
-    ${new_report_fmt} \
+    --json-report \
     --detect-interrupted-thread-race \
     --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
     symbolize $progpath 2>&1

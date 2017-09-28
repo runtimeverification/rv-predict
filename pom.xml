@@ -30,7 +30,7 @@
     </modules>
     <url>http://www.runtimeverification.com</url>
     <scm>
-        <connection>scm:git:git@github.com:runtimeverification/rv-predict.git</connection>
+        <connection>scm:git:ssh://git@github.com:runtimeverification/rv-predict.git</connection>
         <tag>root-1.8.6</tag>
     </scm>
     <repositories>

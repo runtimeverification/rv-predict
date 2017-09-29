@@ -24,7 +24,7 @@
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
-                    <finalName>rv-predict-${project.artifactId}-${project.version}</finalName>
+                    <finalName>c-installer-tools</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
                     <outputDirectory>../target/release/rv-predict</outputDirectory>
                 </configuration>

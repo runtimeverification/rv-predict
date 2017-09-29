@@ -1,5 +1,7 @@
 #!/bin/sh
 
-mvn -X -B release:prepare release:clean \
+# release:clean
+
+mvn -X -B release:prepare \
     -Dusername=git -DskipTests -Dobfuscate \
     -Darguments="-DskipTests -Dobfuscate"

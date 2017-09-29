@@ -4,7 +4,7 @@
 
     <jar src="res/panels/RVPanels.jar" />
     <jar src="rv-licensing.jar" />
-    <jar src="rv-predict-c-installer-tools.jar"/>
+    <jar src="c-installer-tools.jar"/>
 
     <!-- General Application Information -->
     <info>

@@ -128,35 +128,6 @@
 
     <build>
         <plugins>
-           <plugin>
-                <groupId>org.codehaus.gmaven</groupId>
-                <artifactId>gmaven-plugin</artifactId>
-                <version>1.5</version>
-                <executions>
-                    <execution>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>execute</goal>
-                        </goals>
-                        <configuration>
-                            <providerSelection>2.0</providerSelection>
-                            <properties>
-                                <script>ocamlfind query rv_error</script>
-                            </properties>
-                            <source>
-                                def command = project.properties.script
-                                def process = command.execute()
-                                process.waitFor()
-
-                                def describe = process.in.text.trim()
-                                println "Found rv_error at: " + describe
-
-                                project.properties.setProperty('atdLocation',describe + "/error.atd")
-                            </source>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>exec-maven-plugin</artifactId>
@@ -174,7 +145,7 @@
                     <arguments>
                       <argument>-package</argument>
                       <argument>com.runtimeverification.error.data</argument>
-                      <argument>${atdLocation}</argument>
+                      <argument>${project.basedir}/../errors/rv-error/src/main/ocaml/error.atd</argument>
                     </arguments>
                   </configuration>
                 </execution>

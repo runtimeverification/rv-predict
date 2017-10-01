@@ -11,7 +11,7 @@ SRCDIR=$(.CURDIR)/../external/bsd/elftoolchain
 #
 cleandir distclean:
 	cd $(SRCDIR) && \
-	MAKEFLAGS= $(MAKE) WITH_DOCUMENTATION=no WITH_TESTS=no clean
+	MAKEFLAGS="-j $(.MAKE.JOBS:U1)" $(MAKE) WITH_DOCUMENTATION=no WITH_TESTS=no clean
 
 #DOLLAR:=\$$$$
 #FROM_DIR!=cd $(SRCDIR) && MAKEFLAGS= $(MAKE) WITH_TESTS=no -V .CURDIR
@@ -32,6 +32,6 @@ $(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags)
 	cd $(SRCDIR) && unset DESTDIR && \
 	LD_LIBRARY_PATH=$(HOME)/pkg/lib:/usr/lib/x86_64-linux-gnu \
 	C_INCLUDE_PATH=$(HOME)/pkg/include \
-	MAKEFLAGS= $(MAKE) WITH_DOCUMENTATION=no WITH_TESTS=no MKPIC=no \
+	MAKEFLAGS="-j $(.MAKE.JOBS:U1)" $(MAKE) WITH_DOCUMENTATION=no WITH_TESTS=no MKPIC=no \
 	$(.TARGET)
 

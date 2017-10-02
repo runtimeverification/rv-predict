@@ -6,7 +6,7 @@ TOP=	$(.CURDIR)/.
 .include "${TOP}/mk/elftoolchain.os.mk"
 
 # Build configuration information first.
-SUBDIR += common
+SUBDIR += common .WAIT
 
 # Build the base libraries next.
 SUBDIR += libelf
@@ -15,7 +15,7 @@ SUBDIR += libdwarf
 # Build additional APIs.
 SUBDIR += libelftc
 .if defined(WITH_PE) && ${WITH_PE:tl} == "yes"
-SUBDIR += libpe
+SUBDIR += libpe .WAIT
 .endif
 
 # Build tools after the libraries.

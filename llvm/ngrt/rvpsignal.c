@@ -450,8 +450,7 @@ intern_sigset_try_once(const sigset_t *s)
 	}
 	bs->bs_next = head;
 	bs->bs_sigset = *s;
-	if (atomic_compare_exchange_strong(&sigblockset_head, &head,
-	    bs))
+	if (atomic_compare_exchange_strong(&sigblockset_head, &head, bs))
 		return bs;
 
 	/* The sigblockset list changed, so we need to re-scan to see if

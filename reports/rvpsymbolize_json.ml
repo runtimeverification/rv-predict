@@ -1,4 +1,9 @@
 open Error_t
+open Arg
+
+let symbolize_flag = ref true
+and args = ref []
+and pgm = ref ""
 
 (* TODO: files can contain colons and semicolons! this string parsing is not sound! *)
 
@@ -10,9 +15,8 @@ let format_description fmt strs =
 let fmt_chunks = Str.split_delim (Str.regexp "\\%s") fmt in
 print_chunks fmt_chunks strs
 
-let escaped_program = "'" ^ (Str.global_replace (Str.regexp "'") "'\\''" Sys.argv.(1)) ^ "'"
-
-let rvsyms_raw str =
+let rvsyms_raw str = 
+  let escaped_program = "'" ^ (Str.global_replace (Str.regexp "'") "'\\''" !pgm) ^ "'" in
   let _out, _in = Unix.open_process ("rvsyms " ^ escaped_program) in
   output_string _in str;
   output_char _in '\n';
@@ -22,6 +26,7 @@ let rvsyms_raw str =
   match status with Unix.WEXITED 0 -> raw | _ -> failwith "rvsyms returned error"
 
 let rvsyms_field str =
+  if not !symbolize_flag then str else
   let raw = rvsyms_raw str in
   if raw = "" then str else
   let parts = Str.split_delim (Str.regexp ";") raw in
@@ -38,6 +43,7 @@ let parse_loc loc =
   | _ -> failwith "could not parse location in rvsyms output"
 
 let rvsyms_frame str =
+  if not !symbolize_flag then (str, None) else
   let raw = rvsyms_raw str in
   let parts = Str.split_delim (Str.regexp ";") raw in
   match parts with
@@ -107,7 +113,21 @@ let symbolize raw =
 let magic = "[RV-Predict]"
 let magic_len = String.length magic
 
+let specs =
+[
+( "-S", Clear symbolize_flag, "do not symbolize")
+]
+
+let prog = Sys.argv.(0)
+
+let errx fmt = Printf.eprintf (format_of_string("%s: ") ^^ fmt) prog
+
 let () = try
+  parse specs (fun arg -> args := List.append !args [arg]) (Printf.sprintf "usage: %s [-S] <program>" prog);
+  (match !args with
+    arg :: [] -> pgm := arg
+  | [] -> (errx "Too few arguments\n"; exit 1)
+  | _ -> (errx "Too many arguments\n"; exit 1));
   while true do
     let line = input_line stdin in
     if String.length line >= magic_len && String.sub line 0 magic_len = magic then prerr_endline line else

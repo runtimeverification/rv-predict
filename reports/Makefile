@@ -1,2 +1,14 @@
-rvpsymbolize-json: $(RV_ERROR_DIR)/error_t.mli $(RV_ERROR_DIR)/error_t.ml $(RV_ERROR_DIR)/error_j.mli $(RV_ERROR_DIR)/error_j.ml rvpsymbolize_json.ml
-	ocamlfind opt -I $(RV_ERROR_DIR) $^ -o rvpsymbolize-json -package atdgen -linkpkg -package unix
+FILESMODE=0755
+FILES=rvpsymbolize-json rvptrimframe rvpshortenpaths
+CLEANFILES_CMD=rm -f *.cmx *.cmi *.o $(FILES)
+
+rvpsymbolize-json: rvpsymbolize_json.ml
+	ocamlfind opt -g $(.ALLSRC) -o $(.OBJDIR)/rvpsymbolize-json -package atdgen -package rv_error -linkpkg -package unix
+
+rvptrimframe: rvptrimframe.ml
+	ocamlfind opt -g $(.ALLSRC) -o $(.OBJDIR)/rvptrimframe -package atdgen -package rv_error -linkpkg -package unix
+
+rvpshortenpaths: rvpshortenpaths.ml
+	ocamlfind opt -g $(.ALLSRC) -o $(.OBJDIR)/rvpshortenpaths -package atdgen -package rv_error -linkpkg -package unix
+
+.include <mkc.prog.mk>

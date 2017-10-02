@@ -68,7 +68,7 @@ cat > ${tmpdir}/control <<END_OF_CONTROL
 Package: rv-predict-c
 Version: ${version}-1
 Architecture: amd64
-Depends: clang-3.8 (>= 1:3.8~), clang-3.8 (<< 1:3.9~), java8-runtime, libc6
+Depends: clang-3.9, java8-runtime-headless, libc6
 Section: devel
 Priority: optional
 Maintainer: David Young <david.young@runtimeverification.com>

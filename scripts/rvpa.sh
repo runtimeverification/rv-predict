@@ -3,6 +3,8 @@
 set -e
 set -u
 
+sharedir=$(dirname $0)/../share/rv-predict-c
+
 usage()
 {
 	echo "usage: $(basename $0) [--prompt-for-license] [--window size] [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--] program" 1>&2
@@ -11,11 +13,6 @@ usage()
 
 rvpredict()
 {
-	sharedir=$(dirname $0)/../share/rv-predict-c
-
-	min_major="1"
-	min_minor="8"
-
 	if which java >/dev/null; then
 		# found java executable in PATH
 		_java=java
@@ -28,20 +25,6 @@ RV Predict requires Java ${min_version} to run but Java was not detected.
 Please either add it to PATH or set the JAVA_HOME environment variable.
 EOF
 		exit 2
-	fi
-
-	version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
-
-	major=$(echo $version | sed 's/^\([0-9]\+\)\..*$/\1/')
-	minor=$(echo $version | sed 's/^[0-9]\+\.\([0-9]\+\).*$/\1/')
-
-	if [ "$major" -lt "$min_major" -o "$major" -eq "$min_major" -a "$minor" -lt "$min_minor" ]; then
-		cat 1>&2 <<EOF
-RV-Predict/C requires Java $min_version to run but the detected version
-is $version.  Please either add Java $min_version bin directory to the PATH
-or set the JAVA_HOME environment variable accordingly.
-EOF
-		exit 3
 	fi
 
 	${_java} -ea -jar ${sharedir}/rv-predict.jar "$@"
@@ -80,18 +63,18 @@ trim_stack()
 
 symbolize()
 {
-	if [ ${filter_symbol:-yes} = yes -a ${filter_trim:-yes} = yes ]
+	if ! [ ${filter_symbol:-yes} = yes ]
 	then
-		rvpsymbolize "$@" | trim_stack
-	elif [ ${filter_symbol:-yes} = yes ]
-	then
-		rvpsymbolize "$@"
-	else
 		cat
+		return 0
 	fi
+
+	rvpsymbolize-json "$@" | \
+	{ [ ${filter_trim:-yes} = yes ] && rvptrimframe || cat ; } | \
+	{ [ ${filter_shorten:-yes} = yes ] && rvpshortenpaths || cat ; } | \
+	rv-error ${sharedir}/${output_format:-console}-metadata.json
 }
 
-symbolize_passthrough=
 analyze_passthrough=
 
 if [ ${RVP_WINDOW_SIZE:-none} != none ]; then
@@ -108,13 +91,22 @@ fi
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--no-symbol|--no-trim)
+	--no-shorten|--no-symbol|--no-trim)
 		eval filter_${1##--no-}=no
 		shift
 		;;
-	--no-*)
-		symbolize_passthrough="${symbolize_passthrough:-} ${1}"
+	--output=*)
+		eval output_format=${1##--output=}
 		shift
+		case $output_format in
+		console|csv|json)
+			;;
+		*)
+			echo "$(basename $0): unknown output format "
+			    "'${output_format}'" 1>&2
+			exit 1
+			;;
+		esac
 		;;
 	--window)
 		shift
@@ -148,7 +140,13 @@ else
 	progpath=$(pwd)/${progname}
 fi
 
+if ! test -e ${progpath}; then
+	echo "$1: File not found" 1>&2
+	exit 1
+fi
+
 rvpredict --offline ${analyze_passthrough:-} ${window:---window 2000} \
+    --json-report \
     --detect-interrupted-thread-race \
     --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
-    symbolize ${symbolize_passthrough} $progpath 1>&2
+    symbolize $progpath 2>&1

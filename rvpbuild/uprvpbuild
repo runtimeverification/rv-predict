@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -ex
+
+install -o rvpbuild -g rvpbuild -m 0600 authorized_keys ~rvpbuild/.ssh/.
+install -o rvpbuild -g rvpbuild -m 0755 srctar-to-deb ~rvpbuild/.
+install -o rvpbuild -g rvpbuild -m 0755 srctar-to-installer ~rvpbuild/.

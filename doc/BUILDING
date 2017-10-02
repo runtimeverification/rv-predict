@@ -1,16 +1,37 @@
-Make sure that you have Clang and LLVM 3.8.1 in your PATH.  E.g.,
-if you have downloaded binaries for Ubuntu 14.04:
+Make sure that you have Clang 3.9 in your PATH.
 
-export PATH=${HOME}/clang+llvm-3.8.1-x86_64-linux-gnu-ubuntu-14.04/bin:${PATH}
+Here are some programs that must be available:
 
-awk
-clang+llvm-3.8.1 with development components (.h, .a/.so files)
-grep
-JDK 1.8
-lex
-libarchive
-m4
-mk-configure
-pandoc
-sed
-yacc
+	awk
+	clang+llvm-3.9.0 with development components (.h, .a/.so files)
+	gmake
+	grep
+	JDK 1.8
+	lex
+	libarchive
+	m4
+	mk-configure
+	opam
+	pandoc
+	sed
+	yacc
+
+OPAM packages required by the unified error reporting in errors/:
+
+	Probably NOT needed: zarith mlgmp 
+
+	Definitely needed: csv uri ocamlbuild-atdgen ocp-ocamlres
+
+	Maybe needed: uuidm camomile atdgen atdj ctypes ctypes-foreign
+
+	Install with `opam install -y <packages here>`.
+
+Configuring a build environment:
+
+	sudo apt install maven openjdk-8-jdk-headless
+	sudo apt install opam m4
+	opam init
+	opam update
+	opam switch 4.03.0
+	eval `opam config env`
+	opam install ocp-ocamlres ocamlbuild-atdgen csv uri atdgen atdj

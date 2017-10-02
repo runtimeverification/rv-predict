@@ -1,6 +1,5 @@
-OCB := ocamlbuild -use-ocamlfind -plugin-tag "package(ocamlbuild_atdgen)"
+OCB := ocamlbuild $(BUILD_DIR_OPT) -use-ocamlfind -plugin-tag "package(ocamlbuild_atdgen)"
 NAME := rv_error
-NATIVE  = $(NAME)_native.native
 ARCHIVE  = $(NAME).cma
 LIBRARY  = $(NAME).a
 XARCHIVE = $(NAME).cmxa
@@ -15,6 +14,7 @@ all: resources
 
 clean: resources_clean
 	$(OCB) -clean
+	@rm -f $(.OBJDIR)/rv-error
 
 
 install: all uninstall
@@ -26,7 +26,7 @@ uninstall:
 
 
 native: install
-	ocamlfind opt -linkpkg -package $(NAME) -o ../../../bin/rv-error $(NAME)_native.ml
+	ocamlfind opt -linkpkg -package $(NAME) -o $(.OBJDIR)/rv-error $(NAME)_native.ml
 	rm -f rv_error_native.cmi rv_error_native.cmx rv_error_native.o
 
 

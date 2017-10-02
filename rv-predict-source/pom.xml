@@ -13,7 +13,7 @@
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>native-z3</artifactId>
-            <version>1.8.2-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.licensing</groupId>
@@ -54,6 +54,11 @@
             <groupId>net.jpountz.lz4</groupId>
             <artifactId>lz4</artifactId>
             <version>1.3.0-b69d567</version>
+        </dependency>
+        <dependency>
+          <groupId>org.json</groupId>
+          <artifactId>json</artifactId>
+          <version>20160810</version>
         </dependency>
 
         <dependency>
@@ -123,6 +128,77 @@
 
     <build>
         <plugins>
+           <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                        <configuration>
+                            <providerSelection>2.0</providerSelection>
+                            <properties>
+                                <script>ocamlfind query rv_error</script>
+                            </properties>
+                            <source>
+                                def command = project.properties.script
+                                def process = command.execute()
+                                process.waitFor()
+
+                                def describe = process.in.text.trim()
+                                println "Found rv_error at: " + describe
+
+                                project.properties.setProperty('atdLocation',describe + "/error.atd")
+                            </source>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>exec-maven-plugin</artifactId>
+              <version>1.5.0</version>
+              <executions>
+                <execution>
+                  <id>run-atdj</id>
+                  <phase>generate-sources</phase>
+                  <goals>
+                    <goal>exec</goal>
+                  </goals>
+                  <configuration>
+                    <executable>atdj.opt</executable>
+                    <workingDirectory>${project.build.directory}/generated-sources</workingDirectory>
+                    <arguments>
+                      <argument>-package</argument>
+                      <argument>com.runtimeverification.error.data</argument>
+                      <argument>${atdLocation}</argument>
+                    </arguments>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>build-helper-maven-plugin</artifactId>
+              <version>3.0.0</version>
+              <executions>
+                <execution>
+                  <id>register-sources</id>
+                  <phase>generate-sources</phase>
+                  <goals>
+                    <goal>add-source</goal>
+                  </goals>
+                  <configuration>
+                    <sources>
+                      <source>${project.build.directory}/generated-sources</source>
+                    </sources>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

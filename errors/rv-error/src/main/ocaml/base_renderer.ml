@@ -79,7 +79,7 @@ let render_elided (buffer : rv_buffer) (numElided : int) : unit =
   if numElided = 0
   then ()
   else (
-    add_line buffer      "   ... " ;
+    add_line buffer      "        ... " ;
     add_string buffer    (string_of_int numElided) ;
     add_string buffer    " library frame" ;
     if numElided > 1
@@ -107,27 +107,25 @@ let render_lock (buffer : rv_buffer) (lock : lock) : unit =
   add_string buffer lock.id ;
   add_char buffer   ' ' ;
   add_string buffer lock.locked_at.symbol ;
-  add_char buffer   '(' ;
-  render_loc buffer lock.locked_at.loc ;
-  add_char buffer   ')'
+  add_string buffer   " at " ;
+  render_loc buffer lock.locked_at.loc
 
 
 let render_frame (buffer : rv_buffer) (state : frame_output) (frame : frame) : frame_output =
   if frame.elided
-  then { numElided=state.numElided + 1; start="by" }
+  then { numElided=state.numElided + 1; start="    in" }
   else (
     render_elided buffer state.numElided ;
-    add_line buffer   "   " ;
+    add_line buffer   "    " ;
     add_string buffer state.start ;
     add_char buffer   ' ' ;
     add_string buffer frame.symbol ;
-    add_char buffer   '(' ;
+    add_string buffer   " at " ;
     render_loc buffer frame.loc ;
-    add_char buffer   ')' ;
     List.iter (render_lock buffer) frame.locks ;
     {
       numElided = 0;
-      start = "by";
+      start = "    in";
     }
   )
 
@@ -136,10 +134,10 @@ let render_component (buffer : rv_buffer) (component : stack_trace_component) : 
   (match component.description with
   | None -> ()
   | Some d ->
-    add_line buffer   "  " ;
+    add_line buffer   "    " ;
     add_string buffer d
   ) ;
-  let start_state = { numElided = 0; start = "at" } in
+  let start_state = { numElided = 0; start = "  > in" } in
   let state = List.fold_left (render_frame buffer) start_state component.frames in
   render_elided buffer state.numElided
 
@@ -151,16 +149,17 @@ let render_trace (buffer : rv_buffer) (trace : stack_trace) : unit =
   | Some thread_id ->
     match trace.thread_created_by with
     | None ->
-      add_line buffer   "  Thread " ;
+      add_line buffer   "    Thread " ;
       add_string buffer thread_id ;
       add_string buffer " is the main thread"
     | Some by ->
-      add_line buffer   "  Thread " ;
+      add_line buffer   "    Thread " ;
       add_string buffer thread_id ;
       add_string buffer " created by thread ";
       add_string buffer by ;
       match trace.thread_created_at with
       | None -> ()
       | Some frame ->
-        let start_state = { numElided = 0; start = "at" } in
-        ignore (render_frame buffer start_state frame)
+        let start_state = { numElided = 0; start = "  > in" } in
+        ignore (render_frame buffer start_state frame) ;
+  add_line buffer ""

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+set -ex
+
+useradd -m rvpbuild
+install -d -o rvpbuild -g rvpbuild ~rvpbuild/.ssh
+./uprvpbuild

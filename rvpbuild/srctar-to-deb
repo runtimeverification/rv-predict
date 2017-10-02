@@ -1,0 +1,62 @@
+#!/bin/sh
+
+set -eu
+
+exitcode=0
+
+trap_with_reason()
+{
+        func="$1"
+        shift
+        for reason; do
+                trap "$func $reason" $reason
+        done
+}
+
+cleanup()
+{
+	trap - EXIT ALRM HUP INT PIPE QUIT TERM
+	reason=$1
+	if [ ${reason} != EXIT ]; then
+		echo "$(basename $0): cancelled by ${reason}" 1>&2
+		exitcode=1
+	fi
+	if [ ${exitcode:-0} -eq 0 ]
+	then
+		tar c stdout stderr rv-predict-c-${version}.deb || true
+	else
+		tar c stdout stderr || true
+	fi | gzip 1>&3
+	cd $HOME
+	rm -rf ${tmpdir}
+	exit $exitcode
+}
+
+opam_init()
+{
+	export OPAMYES=true
+	opam init
+	opam update
+	opam switch 4.03.0
+	eval $(opam config env)
+	opam install ocp-ocamlres ocamlbuild-atdgen csv uri atdgen atdj
+}
+
+tmpdir=$(mktemp -d $HOME/build.XXXXXX)
+
+cd $tmpdir
+
+exec 3>&1 > stdout 2> stderr
+
+trap_with_reason cleanup EXIT ALRM HUP INT PIPE QUIT TERM
+
+opam_init < /dev/null
+
+gunzip | tar x
+
+version=$(cat deb_version)
+
+./deb-release.sh ${version}
+exitcode=$?
+
+exit 0

@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CMAKE_BUILD_TYPE Debug)
 
-find_package(LLVM 3.8 REQUIRED CONFIG)
+find_package(LLVM 3.9 REQUIRED CONFIG)
 
 #
 # The following couple of lines are necessary for cmake

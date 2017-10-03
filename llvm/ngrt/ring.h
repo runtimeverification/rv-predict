@@ -41,7 +41,7 @@ typedef struct _rvp_interruption {
 	rvp_ring_t *	it_interruptor;
 	int		it_interrupted_idx;
 	int		it_interruptor_sidx;
-	int _Atomic	it_interruptor_eidx;
+	volatile int _Atomic	it_interruptor_eidx;
 } rvp_interruption_t;
 
 /* An interruptions ring.  Every ring has one of these.  Before a thread
@@ -92,21 +92,15 @@ struct _rvp_ring {
 	rvp_ring_t *r_next;		// all signal rings are strung together
 					// through r_next
 
-	rvp_ring_state_t _Atomic r_state;	// clean: no sequence is using
-						// this ring, and it has no
-						// items that need to be
-						// serialized
-						//
-						// dirty: no sequence is using
-						// this ring, however, it
-						// contains items that need to
-						// be serialized
-						//
-						// in-use: a sequence is
-						// logging on this ring; it
-						// may or may not contains
-						// items that need to be
-						// serialized
+	// clean: no sequence is using this ring, and it has no
+	// items that need to be serialized
+	//
+	// dirty: no sequence is using this ring, however, it
+	// contains items that need to be serialized
+	//
+	// in-use: a sequence is logging on this ring; it
+	// may or may not contains items that need to be serialized
+	volatile rvp_ring_state_t _Atomic r_state;
 
 	uint32_t r_tid;			// the thread ID and interrupt
 	uint32_t r_idepth;		// depth that identify the sequence

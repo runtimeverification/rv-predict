@@ -3,6 +3,7 @@
 #include <stdatomic.h>
 #include <stdint.h>	/* for uint32_t */
 
+#include "backoff.h"
 #include "init.h"
 #include "interpose.h"
 #include "relay.h"
@@ -30,10 +31,10 @@ static int signals_origin = -1;
 static _Atomic int nrings_needed = 0;
 
 static _Atomic uint32_t nsigblocksets = 0;
-static rvp_sigblockset_t * _Atomic sigblockset_head = NULL;
-static rvp_sigblockset_t * _Atomic sigblockset_freehead = NULL;
+static rvp_sigblockset_t * volatile _Atomic sigblockset_head = NULL;
+static rvp_sigblockset_t * volatile _Atomic sigblockset_freehead = NULL;
 
-static rvp_ring_t * _Atomic signal_rings = NULL;
+static rvp_ring_t * volatile _Atomic signal_rings = NULL;
 
 static void
 rvp_signal_table_init(void)
@@ -227,6 +228,7 @@ rvp_signal_rings_replenish(void)
 	const int nneeded = atomic_exchange(&nrings_needed, 0);
 	int nallocated;
 	rvp_ring_t *r;
+	rvp_backoff_t b;
 
 	if (nneeded == 0)
 		return;
@@ -249,9 +251,11 @@ rvp_signal_rings_replenish(void)
 		r->r_state = RVP_RING_S_CLEAN;
 		r->r_next = signal_rings;
 
-		while (!atomic_compare_exchange_weak(&signal_rings,
-		    &r->r_next, r))
-			;	// TBD exponential backoff
+		for (rvp_backoff_first(&b);
+		     !atomic_compare_exchange_weak(&signal_rings,
+		         &r->r_next, r);
+		     rvp_backoff_next(&b))
+			rvp_backoff_pause(&b);
 	}
 }
 
@@ -385,7 +389,6 @@ rvp_sigblocksets_emit(int fd, rvp_sigblockset_t *last_head)
 	rvp_sigblockset_t *bs, *head;
 
 	head = sigblockset_head;
-	// XXX barrier between nsigblocksets and sigblockset_head read?
 
 	// newest sigblocksets are always at the head of the list, so
 	// emit them until we see the previous head
@@ -401,6 +404,7 @@ rvp_sigblocksets_emit(int fd, rvp_sigblockset_t *last_head)
 		};
 		if (write(fd, &map, sizeof(map)) == -1)
 			err(EXIT_FAILURE, "%s: write", __func__);
+		bs->bs_serialized = true;
 	}
 
 	return head;
@@ -428,20 +432,29 @@ rvp_sigblocksets_emit(int fd, rvp_sigblockset_t *last_head)
 static rvp_sigblockset_t *
 intern_sigset_try_once(const sigset_t *s)
 {
+	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_sigblockset_t *head, *bs;
+	rvp_backoff_t b;
 
 	head = sigblockset_head;
 	for (bs = head; bs != NULL; bs = bs->bs_next) {
-		if (sigeqset(&bs->bs_sigset, s))
+		if (sigeqset(&bs->bs_sigset, s)) {
+			for (rvp_backoff_first(&b);
+			     !bs->bs_serialized;
+			     rvp_backoff_next(&b))
+				rvp_backoff_pause(&b);
 			return bs;
+		}
 	}
 
 	assert(bs == NULL);
 
-	for (;;) {
+	for (rvp_backoff_first(&b); ; rvp_backoff_next(&b)) {
 		if (bs == NULL && (bs = sigblockset_freehead) == NULL) {
+			// consider replacing with rvp_ring_request_service()
+			// or the equivalent
 			rvp_wake_replenisher();
-			// TBD exponential backoff
+			rvp_backoff_pause(&b);
 			continue;
 		}
 		if (atomic_compare_exchange_strong(&sigblockset_freehead, &bs,
@@ -450,18 +463,23 @@ intern_sigset_try_once(const sigset_t *s)
 	}
 	bs->bs_next = head;
 	bs->bs_sigset = *s;
-	if (atomic_compare_exchange_strong(&sigblockset_head, &head,
-	    bs))
+	bs->bs_serialized = false;
+	if (atomic_compare_exchange_strong(&sigblockset_head, &head, bs)) {
+		// new memo: kick serializer so that it's available soon
+		rvp_ring_request_service(r);
 		return bs;
+	}
 
 	/* The sigblockset list changed, so we need to re-scan to see if
 	 * the new blockset is necessary.  Put this one back on the free list
 	 * in the mean time.  
 	 */
 	bs->bs_next = sigblockset_freehead;
-	while (!atomic_compare_exchange_strong(&sigblockset_freehead,
-	    &bs->bs_next, bs))
-		;	// TBD exponential backoff
+	for (rvp_backoff_first(&b);
+	       !atomic_compare_exchange_strong(&sigblockset_freehead,
+	           &bs->bs_next, bs);
+	       rvp_backoff_next(&b))
+		rvp_backoff_pause(&b);
 
 	return NULL;
 }
@@ -470,14 +488,17 @@ static void
 rvp_sigblocksets_replenish_once(void)
 {
 	rvp_sigblockset_t *bs;
+	rvp_backoff_t b;
 
 	if ((bs = malloc(sizeof(*bs))) == NULL)
 		err(EXIT_FAILURE, "%s: malloc", __func__);
 	bs->bs_number = nsigblocksets++;
 	bs->bs_next = sigblockset_freehead;
-	while (!atomic_compare_exchange_strong(&sigblockset_freehead,
-	    &bs->bs_next, bs))
-		;	// TBD exponential backoff
+	for (rvp_backoff_first(&b);
+	     !atomic_compare_exchange_strong(&sigblockset_freehead,
+	         &bs->bs_next, bs);
+	     rvp_backoff_next(&b))
+		rvp_backoff_pause(&b);
 }
 
 void

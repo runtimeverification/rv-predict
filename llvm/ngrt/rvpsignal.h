@@ -9,10 +9,13 @@
 struct _rvp_sigblockset;
 typedef struct _rvp_sigblockset rvp_sigblockset_t;
 
+/* A signal set memo: mapping from a unique identifier to a signal set. */
 struct _rvp_sigblockset {
 	uint32_t		bs_number;
 	sigset_t		bs_sigset;
 	rvp_sigblockset_t	*bs_next;
+	// initialized to false; set to true after the memo is serialized
+	volatile bool _Atomic		bs_serialized;
 };
 
 typedef struct _rvp_signal {

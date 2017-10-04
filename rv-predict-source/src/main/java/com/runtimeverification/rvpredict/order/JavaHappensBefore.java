@@ -79,7 +79,8 @@ public class JavaHappensBefore implements VectorClockOrderInterface {
         return clock;
     }
 
-    private void updateReadClock(long object, int tid, VectorClock clock, Map<Long, Map<Integer, VectorClock>> writeClocks) {
+    private void updateReadClock(
+            long object, int tid, VectorClock clock, Map<Long, Map<Integer, VectorClock>> writeClocks) {
         writeClocks.computeIfAbsent(object, (k) -> new HashMap<>()).forEach((writeTid, writeClock) -> {
             if (tid != writeTid) clock.update(writeClock);
         });

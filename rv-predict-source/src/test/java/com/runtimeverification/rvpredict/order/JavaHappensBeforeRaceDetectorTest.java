@@ -35,7 +35,7 @@ public class JavaHappensBeforeRaceDetectorTest {
     private static final int WINDOW_SIZE = 100;
     private static final long ADDRESS_1 = 200;
     private static final long ADDRESS_2 = 201;
-    private static final long ADDRESS_3 = 202;
+    private static final long ADDRESS_3_VOLATILE = 202;
     private static final long VALUE_1 = 300;
     private static final long VALUE_2 = 301;
     private static final long BASE_ID = 0;
@@ -58,7 +58,7 @@ public class JavaHappensBeforeRaceDetectorTest {
         when(mockContext.newId()).then(invocation -> BASE_ID + nextIdDelta++);
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_2)).thenReturn(3L);
-        when(mockContext.createUniqueDataAddressId(ADDRESS_3)).thenReturn(4L);
+        when(mockContext.createUniqueDataAddressId(ADDRESS_3_VOLATILE)).thenReturn(4L);
         when(mockMetadata.isVolatile(anyLong())).then(invocation -> invocation.getArguments()[0].equals(Long.valueOf(4L)));
         when(mockMetadata.getLocationSig(anyLong())).thenReturn("unknown location");
         Logger logger = new Logger();
@@ -124,10 +124,10 @@ public class JavaHappensBeforeRaceDetectorTest {
         List<ReadonlyEventInterface> e1;
         List<ReadonlyEventInterface> e2;
         List<List<ReadonlyEventInterface>> events = Arrays.asList(
-                e1 = tu.nonAtomicStore(ADDRESS_3, VALUE_2),
+                e1 = tu.nonAtomicStore(ADDRESS_3_VOLATILE, VALUE_2),
 
                 tu.switchThread(THREAD_2, NO_SIGNAL),
-                e2 = tu.nonAtomicStore(ADDRESS_3, VALUE_1)
+                e2 = tu.nonAtomicStore(ADDRESS_3_VOLATILE, VALUE_1)
         );
 
         List<RawTrace> rawTraces = Arrays.asList(
@@ -137,7 +137,7 @@ public class JavaHappensBeforeRaceDetectorTest {
         Assert.assertTrue(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
-     @Test
+    @Test
     public void simpleVolatileNoRace() throws Exception {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
@@ -145,10 +145,10 @@ public class JavaHappensBeforeRaceDetectorTest {
         List<ReadonlyEventInterface> e2;
         List<List<ReadonlyEventInterface>> events = Arrays.asList(
                 e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
-                tu.nonAtomicStore(ADDRESS_3, VALUE_2),
+                tu.nonAtomicStore(ADDRESS_3_VOLATILE, VALUE_2),
 
                 tu.switchThread(THREAD_2, NO_SIGNAL),
-                tu.nonAtomicLoad(ADDRESS_3, VALUE_2),
+                tu.nonAtomicLoad(ADDRESS_3_VOLATILE, VALUE_2),
                 e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1)
         );
 
@@ -180,7 +180,7 @@ public class JavaHappensBeforeRaceDetectorTest {
     }
 
     @Test
-    public void simpleWriteReadNoRace() throws Exception {
+    public void simpleWriteReadAtomicNoRace() throws Exception {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;
@@ -287,51 +287,6 @@ public class JavaHappensBeforeRaceDetectorTest {
         List<RawTrace> rawTraces = Arrays.asList(
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
-
-        Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
-    }
-
-    @Test
-    public void noRace() throws Exception {
-        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
-
-        List<ReadonlyEventInterface> e1;
-        List<ReadonlyEventInterface> e2;
-        List<List<ReadonlyEventInterface>> events = Arrays.asList(
-                tu.lock(LOCK_1),
-                tu.nonAtomicStore(ADDRESS_1, VALUE_1),
-                tu.unlock(LOCK_1),
-
-                tu.switchThread(THREAD_2, NO_SIGNAL),
-                tu.lock(LOCK_1),
-                tu.nonAtomicStore(ADDRESS_2, VALUE_1),
-                tu.unlock(LOCK_1),
-
-                tu.switchThread(THREAD_3, NO_SIGNAL),
-                e1 = tu.nonAtomicStore(ADDRESS_3, VALUE_1),
-                tu.lock(LOCK_1),
-                tu.nonAtomicStore(ADDRESS_2, VALUE_2),
-                tu.unlock(LOCK_1),
-
-                tu.switchThread(THREAD_2, NO_SIGNAL),
-                tu.lock(LOCK_1),
-                tu.nonAtomicLoad(ADDRESS_2, VALUE_2),
-                tu.unlock(LOCK_1),
-                tu.lock(LOCK_1),
-                tu.nonAtomicStore(ADDRESS_1, VALUE_2),
-                tu.unlock(LOCK_1),
-
-                tu.switchThread(THREAD_1, NO_SIGNAL),
-                tu.lock(LOCK_1),
-                tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
-                tu.unlock(LOCK_1),
-                e2 = tu.nonAtomicStore(ADDRESS_3, VALUE_1)
-        );
-
-        List<RawTrace> rawTraces = Arrays.asList(
-                tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
-                tu.extractRawTrace(events, THREAD_2, NO_SIGNAL),
-                tu.extractRawTrace(events, THREAD_3, NO_SIGNAL));
 
         Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }

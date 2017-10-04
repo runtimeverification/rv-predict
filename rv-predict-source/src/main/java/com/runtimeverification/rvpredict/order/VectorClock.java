@@ -1,5 +1,7 @@
 package com.runtimeverification.rvpredict.order;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,6 +29,7 @@ public class VectorClock {
         }
     }
 
+    @VisibleForTesting
     Map<Integer, Integer> clocks;
     public VectorClock() {
         clocks = new HashMap<>();
@@ -56,6 +59,11 @@ public class VectorClock {
         for (Map.Entry<Integer, Integer> entry : clocks.entrySet()) {
             Integer toValue = to.clocks.get(entry.getKey());
             if (toValue == null) {
+                /*
+                If we got here, it must be that clocks.size() <= to.clocks.size(), thus we expect that this <= to;
+                however, toValue == null implies that this has a clock that to doesn't which, given the above,
+                could only happen if they are uncomparable.
+                 */
                 return Comparison.NOT_COMPARABLE;
             }
             switch (Long.signum(entry.getValue().compareTo(toValue))) {
@@ -70,6 +78,17 @@ public class VectorClock {
         }
         if (clocks.size() < to.clocks.size()) return c.and(Comparison.BEFORE);
         return c;
+    }
+
+    @VisibleForTesting
+    VectorClock put(Integer k, Integer v) {
+        clocks.put(k,v);
+        return this;
+    }
+
+    @VisibleForTesting
+    Integer get(Integer k) {
+        return clocks.get(k);
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.order;
 import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.trace.OrderedTraceReader;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -11,7 +12,6 @@ import com.runtimeverification.rvpredict.violation.Race;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class OrderedRaceDetector implements RaceDetector {
     protected final List<String> reports;
@@ -20,36 +20,39 @@ public class OrderedRaceDetector implements RaceDetector {
     protected final OrderedTraceReader traceReader;
     protected final VectorClockTraceReader vectorClockReader;
     final Map<String, Race> races;
-    Map<Long,ReadonlyOrderedEventInterface> lastWrites = new HashMap<>();
-    Map<Long,Collection<ReadonlyOrderedEventInterface>> lastReads = new HashMap<>();
+    Map<Long,ReadonlyOrderedEvent> lastWrites = new HashMap<>();
+    Map<Long,Collection<ReadonlyOrderedEvent>> lastReads = new HashMap<>();
 
-    protected OrderedRaceDetector(Configuration config, MetadataInterface metadata, VectorClockOrderInterface happensBefore) {
+    protected OrderedRaceDetector(
+            Configuration config, MetadataInterface metadata, VectorClockOrderInterface happensBefore) {
         this.config = config;
         this.metadata = metadata;
         reports = new ArrayList<>();
         traceReader = new OrderedTraceReader();
-        vectorClockReader = new VectorClockTraceReader(traceReader, happensBefore, OrderedEvent::new);
+        vectorClockReader = new VectorClockTraceReader(traceReader, happensBefore);
         races = new HashMap<>();
     }
 
-    private Collection<ReadonlyOrderedEventInterface> findEventsUnorderedWith(ReadonlyOrderedEventInterface event) {
+    private Collection<ReadonlyOrderedEvent> findEventsUnorderedWith(ReadonlyOrderedEvent orderedEvent) {
+        ReadonlyEventInterface event = orderedEvent.getEvent();
+        VectorClock clock = orderedEvent.getVectorClock();
         assert event.isReadOrWrite();
-        ImmutableList.Builder<ReadonlyOrderedEventInterface> builder = new ImmutableList.Builder<>();
+        ImmutableList.Builder<ReadonlyOrderedEvent> builder = new ImmutableList.Builder<>();
         long address = event.getDataInternalIdentifier();
-        ReadonlyOrderedEventInterface lastWrite = lastWrites.get(address);
+        ReadonlyOrderedEvent lastWrite = lastWrites.get(address);
         if (lastWrite != null
-                && lastWrite.getVectorClock().compareTo(event.getVectorClock()) != VectorClock.Comparison.BEFORE) {
+                && lastWrite.getVectorClock().compareTo(clock) != VectorClock.Comparison.BEFORE) {
             builder.add(lastWrite);
         }
-        Collection<ReadonlyOrderedEventInterface> lastRead = lastReads.computeIfAbsent(address, k -> new ArrayList<>());
+        Collection<ReadonlyOrderedEvent> lastRead = lastReads.computeIfAbsent(address, k -> new ArrayList<>());
         if (event.isRead()) {
-            lastRead.add(event);
+            lastRead.add(orderedEvent);
         } else { // event.isWrite()
-            lastWrites.put(address, event);
-            builder.addAll(lastRead.stream()
-                    .filter((read) -> read.getVectorClock().compareTo(event.getVectorClock())
+            lastWrites.put(address, orderedEvent);
+            lastRead.stream()
+                    .filter((read) -> read.getVectorClock().compareTo(clock)
                             != VectorClock.Comparison.BEFORE)
-                    .collect(Collectors.toList()));
+                    .forEach(builder::add);
             lastRead.clear();
         }
         return builder.build();
@@ -65,7 +68,8 @@ public class OrderedRaceDetector implements RaceDetector {
         traceReader.reset(trace);
         try {
             while (true) {
-                ReadonlyOrderedEventInterface event = vectorClockReader.readEvent();
+                ReadonlyOrderedEvent orderedEvent = vectorClockReader.readEvent();
+                ReadonlyEventInterface event = orderedEvent.getEvent();
                 if (!event.isReadOrWrite()) {
                     continue;
                 }
@@ -75,9 +79,9 @@ public class OrderedRaceDetector implements RaceDetector {
                     continue;
                 }
 
-                Collection<ReadonlyOrderedEventInterface> unorderedWithEvents = findEventsUnorderedWith(event);
+                Collection<ReadonlyOrderedEvent> unorderedWithEvents = findEventsUnorderedWith(orderedEvent);
                 unorderedWithEvents.forEach((rEvent) -> {
-                    Race race = new Race(event, rEvent, trace, config);
+                    Race race = new Race(event, rEvent.getEvent(), trace, config);
                     String raceSig = race.toString();
                     if (!races.containsKey(raceSig)) {
                         races.put(raceSig, race);

@@ -15,6 +15,7 @@ import java.util.PriorityQueue;
 public class OrderedLoggedTraceReader implements IEventReader {
     private final Configuration config;
     private ReadonlyEventInterface lastEvent;
+    private PriorityQueue<OrderedEventReader> readers;
 
     public OrderedLoggedTraceReader(Configuration config) {
         this.config = config;
@@ -45,7 +46,7 @@ public class OrderedLoggedTraceReader implements IEventReader {
 
     @Override
     public void close() throws IOException {
-        readers.forEach((reader) -> {
+        readers.forEach(reader -> {
             try { reader.close(); } catch (IOException ignored) {}
         });
     }
@@ -85,15 +86,13 @@ public class OrderedLoggedTraceReader implements IEventReader {
 
         @Override
         public int compareTo(OrderedEventReader orderedEventReader) {
-            return Long.signum(nextEvent.getEventId() - orderedEventReader.nextEvent.getEventId());
+            return Long.compare(nextEvent.getEventId(), orderedEventReader.nextEvent.getEventId());
         }
 
         public ReadonlyEventInterface poll() {
             return nextEvent;
         }
     }
-
-    private PriorityQueue<OrderedEventReader> readers;
 
     public void setup() throws IOException {
         readers = new PriorityQueue<>();

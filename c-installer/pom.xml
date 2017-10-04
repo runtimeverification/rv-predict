@@ -104,6 +104,9 @@
                     </execution>
                 </executions>
                 <configuration>
+		    <environmentVariables>
+			<PREBUILT>yes</PREBUILT>
+		    </environmentVariables>
                     <executable>${basedir}/../deb-release.sh</executable>
                     <workingDirectory>${basedir}/..</workingDirectory>
                     <arguments>

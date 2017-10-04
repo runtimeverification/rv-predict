@@ -14,7 +14,9 @@ MAVEN_OPTS=
 .endif
 
 buildit: .PHONY
-.if $(RELEASE:Uno) == "no"
+.if $(PREBUILT:Uno) == "yes"
+	@echo rv-predict.jar is prebuilt.
+.elif $(RELEASE:Uno) == "no"
 	@cd $(.CURDIR)/../native-z3 && mvn -q -DskipTests -DskipDocs install
 	@cd $(.CURDIR)/../java && mvn -q -DskipTests -DskipDocs compile
 	@[ -d $(.CURDIR)/../target/release/rv-predict ] || mkdir -p $(.CURDIR)/../target/release/rv-predict
@@ -26,7 +28,9 @@ buildit: .PHONY
 
 rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar
 	@$(INSTALL) -c -m 0644 $(.ALLSRC:Ncopyit) $(.OBJDIR)/$(.TARGET)
-.if $(RELEASE:Uno) == "no"
+.if $(PREBUILT:Uno) == "yes"
+	@echo Installed prebuilt rv-predict.jar.
+.elif $(RELEASE:Uno) == "no"
 	@$(.CURDIR)/add-metainfo.sh $(.OBJDIR) $(.TARGET)
 .endif
 

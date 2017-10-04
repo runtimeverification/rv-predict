@@ -171,7 +171,7 @@
                     <systemPropertyVariables>
                         <rvPath>${project.parent.build.directory}/release/${project.artifactId}</rvPath>
                         <examplesPath>${project.parent.basedir}/tests</examplesPath>
-                        <rvVersion>${version}</rvVersion>
+                        <rvVersion>${project.version}</rvVersion>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

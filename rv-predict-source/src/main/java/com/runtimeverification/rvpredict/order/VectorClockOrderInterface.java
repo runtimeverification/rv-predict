@@ -11,5 +11,5 @@ public interface VectorClockOrderInterface {
      * @param event      the event being handled
      * @return           the current {@see VectorClock} for the thread upon processing the event
      */
-    VectorClock log(ReadonlyEventInterface event);
+    VectorClock updateVectorClockForEvent(ReadonlyEventInterface event);
 }

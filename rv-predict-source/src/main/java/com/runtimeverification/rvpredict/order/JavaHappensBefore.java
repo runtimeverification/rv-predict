@@ -29,7 +29,7 @@ public class JavaHappensBefore implements VectorClockOrderInterface {
     }
 
     @Override
-    public VectorClock log(ReadonlyEventInterface event) {
+    public VectorClock updateVectorClockForEvent(ReadonlyEventInterface event) {
         int tid = Math.toIntExact(event.getOriginalThreadId());
         VectorClock clock = getClock(tid);
         clock.increment(tid);

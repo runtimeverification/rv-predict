@@ -19,7 +19,7 @@ public class VectorClockTraceReader implements Closeable {
 
     public ReadonlyOrderedEvent readEvent() throws IOException {
         ReadonlyEventInterface event = reader.readEvent();
-        lastEvent = new ReadonlyOrderedEvent(event, order.log(event));
+        lastEvent = new ReadonlyOrderedEvent(event, order.updateVectorClockForEvent(event));
         return lastEvent;
     }
 

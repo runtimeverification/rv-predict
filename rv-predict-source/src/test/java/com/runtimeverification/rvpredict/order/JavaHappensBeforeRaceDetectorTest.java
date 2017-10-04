@@ -225,7 +225,7 @@ public class JavaHappensBeforeRaceDetectorTest {
     }
 
     @Test
-    public void simpleReadWriteNoRace() throws Exception {
+    public void simpleSynchronizedReadWriteNoRace() throws Exception {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;

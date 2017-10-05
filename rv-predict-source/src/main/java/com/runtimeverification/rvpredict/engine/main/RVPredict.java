@@ -40,6 +40,8 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.CompactMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
 import com.runtimeverification.rvpredict.trace.LLVMCompactTraceCache;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -59,17 +61,27 @@ public class RVPredict {
     private final RaceDetector detector;
 
     public RVPredict(Configuration config) {
+        MetadataInterface metadata;
         this.config = config;
         if (config.isLLVMPrediction()) {
             if (config.isCompactTrace()) {
-                traceCache = new LLVMCompactTraceCache(config, new CompactMetadata());
+                CompactMetadata compactMetadata = new CompactMetadata();
+                metadata = compactMetadata;
+                traceCache = new LLVMCompactTraceCache(config, compactMetadata);
             } else {
-                traceCache = new LLVMTraceCache(config, Metadata.singleton());
+                Metadata singleton = Metadata.singleton();
+                metadata = singleton;
+                traceCache = new LLVMTraceCache(config, singleton);
             }
         } else {
-            traceCache = new TraceCache(config, Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace()));
+            metadata = Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace());
+            traceCache = new TraceCache(config, metadata);
         }
-        this.detector = new RaceDetector(config);
+        if (config.isHappensBefore()) {
+            this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
+        } else {
+            this.detector = new MaximalRaceDetector(config);
+        }
     }
 
     public void start() {

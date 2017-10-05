@@ -267,6 +267,10 @@ public class Configuration implements Constants {
         return patternList;
     }
 
+    public boolean isHappensBefore() {
+        return happens_before;
+    }
+
 
     public enum OS {
         OSX(true), LINUX(true), UNKNOWN(false), WINDOWS(false);
@@ -340,6 +344,10 @@ public class Configuration implements Constants {
     public final static String opt_only_predict = "--predict";
     @Parameter(names = opt_only_predict, description = "Run prediction on logs from the given directory", hidden = true, descriptionKey = "1200")
     private String predict_dir = null;
+
+    public final static String opt_happens_before = "--happens-before";
+    @Parameter(names = opt_happens_before, description = "Run prediction using the Happens Before ordering", hidden = true, descriptionKey = "1250")
+    private boolean happens_before = false;
 
     public final static String opt_event_profile = "--profile";
     @Parameter(names = opt_event_profile, description = "Output event profiling statistics", hidden = true, descriptionKey = "1300")

@@ -29,8 +29,10 @@
 package com.runtimeverification.rvpredict.log;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.engine.main.MaximalRaceDetector;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.trace.TraceState;
@@ -112,7 +114,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         this.config = config;
         this.crntState = new TraceState(config, metadata);
         this.windowSize = config.windowSize;
-        this.detector = new RaceDetector(config);
+        if (config.isHappensBefore()) {
+            this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
+        } else {
+            this.detector = new MaximalRaceDetector(config);
+        }
         bufferCleaner = new BufferCleaner();
         bufferCleaner.start();
     }

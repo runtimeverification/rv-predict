@@ -13,10 +13,13 @@ public class ReadTrace {
     public static void main(String args[]) {
         Configuration config = Configuration.instance(args);
         Metadata metadata = Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace());
-        try (VectorClockTraceReader reader = new VectorClockTraceReader(new OrderedLoggedTraceReader(config), new JavaHappensBefore(metadata))) {
+        try (VectorClockTraceReader reader = new VectorClockTraceReader(
+                new OrderedLoggedTraceReader(config), new JavaHappensBefore(metadata))) {
                 while (true) {
                     ReadonlyOrderedEvent event = reader.readEvent();
-                    String locSig = event.getEvent().getLocationId() < 0 ? "n/a" : metadata.getLocationSig(event.getEvent().getLocationId());
+                    String locSig = event.getEvent().getLocationId() < 0 ?
+                            "n/a" :
+                            metadata.getLocationSig(event.getEvent().getLocationId());
                     System.out.printf("%s %s%n", event.toString(), locSig);
                 }
         }

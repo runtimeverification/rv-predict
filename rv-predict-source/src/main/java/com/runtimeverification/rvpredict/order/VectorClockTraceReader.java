@@ -6,6 +6,12 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import java.io.Closeable;
 import java.io.IOException;
 
+/**
+ * A wrapper over an {@see IEventReader} which annotates events with vector clocks given a
+ * {@see VectorClockOrderInterface} ordering.
+ *
+ * @author TraianSF
+ */
 public class VectorClockTraceReader implements Closeable {
     private final IEventReader reader;
     private final VectorClockOrderInterface order;

@@ -5,6 +5,8 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 
 /**
  * A {@see ReadonlyEventInterface} with an additional {@see VectorClock}
+ *
+ * @author TraianSF
  */
 public class ReadonlyOrderedEvent {
     private final ReadonlyEventInterface event;

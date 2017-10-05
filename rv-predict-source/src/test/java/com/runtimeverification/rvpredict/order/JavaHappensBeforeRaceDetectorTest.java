@@ -59,7 +59,8 @@ public class JavaHappensBeforeRaceDetectorTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_2)).thenReturn(3L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_3_VOLATILE)).thenReturn(4L);
-        when(mockMetadata.isVolatile(anyLong())).then(invocation -> invocation.getArguments()[0].equals(Long.valueOf(4L)));
+        when(mockMetadata.isVolatile(anyLong())).
+                then(invocation -> invocation.getArguments()[0].equals(Long.valueOf(4L)));
         when(mockMetadata.getLocationSig(anyLong())).thenReturn("unknown location");
         Logger logger = new Logger();
         try {
@@ -87,7 +88,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertTrue(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertTrue(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     @Test
@@ -111,7 +113,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertFalse(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     // According to the Java Memory Model spec, volatile writes are conflicting accesses.
@@ -134,7 +137,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertTrue(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertTrue(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     @Test
@@ -156,7 +160,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertFalse(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     @Test
@@ -176,7 +181,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertTrue(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertTrue(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     @Test
@@ -196,11 +202,14 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractEventByType(e1, EventType.WRITE), extractEventByType(e2, EventType.READ)));
+        Assert.assertFalse(
+                hasRace(Collections.singletonList(rawTraces),
+                        extractEventByType(e1, EventType.WRITE),
+                        extractEventByType(e2, EventType.READ)));
     }
 
     @Test
-    public void simpleReadWriteRace() throws Exception {
+    public void simpleReadWriteSynchronizedRace() throws Exception {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;
@@ -221,7 +230,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertTrue(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertTrue(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     @Test
@@ -246,7 +256,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertFalse(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     @Test
@@ -267,7 +278,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertFalse(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     @Test
@@ -288,7 +300,8 @@ public class JavaHappensBeforeRaceDetectorTest {
                 tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
                 tu.extractRawTrace(events, THREAD_2, NO_SIGNAL));
 
-        Assert.assertFalse(hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
+        Assert.assertFalse(
+                hasRace(Collections.singletonList(rawTraces), extractSingleEvent(e1), extractSingleEvent(e2)));
     }
 
     private boolean hasRace(List<List<RawTrace>> rawTracesList, ReadonlyEventInterface e1, ReadonlyEventInterface e2) {

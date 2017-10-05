@@ -5,6 +5,8 @@ import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 
 /**
  * {@see OrderedRaceDetector} implementing the {@see JavaHappensBefore} ordering
+ *
+ * @author TraianSF
  */
 public class JavaHappensBeforeRaceDetector extends OrderedRaceDetector {
 

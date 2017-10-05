@@ -5,7 +5,15 @@ import com.google.common.annotations.VisibleForTesting;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * A Vector of clocks. Supports clock increment, update and comparison.
+ *
+ * @author TraianSF
+ */
 public class VectorClock {
+    /**
+     * The result of a vector clock comparison.
+     */
     public enum Comparison {
         BEFORE,
         AFTER,
@@ -21,6 +29,9 @@ public class VectorClock {
             return NOT_COMPARABLE;
         }
 
+        /**
+         * Combines the effect of this comparison with a given one.
+         */
         public Comparison and(Comparison c) {
             if (c == EQUAL) return this;
             if (this == EQUAL) return c;

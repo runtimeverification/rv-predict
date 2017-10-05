@@ -10,6 +10,8 @@ import java.util.Map;
  * Implementation of the happens-before ordering.
  * Should implement the ordering described by the Java memory model.
  * https://docs.oracle.com/javase/specs/jls/se7/html/jls-17.html#jls-17.4.5
+ *
+ * @author TraianSF
  */
 public class JavaHappensBefore implements VectorClockOrderInterface {
     private Map<Long, Map<Integer,VectorClock>> unlocks = new HashMap<>();

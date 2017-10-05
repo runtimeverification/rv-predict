@@ -10,8 +10,14 @@ import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.PriorityQueue;
 
+/**
+ * Class for reading a trace from disk in the order given by event ids
+ *
+ * @author TraianSF
+ */
 public class OrderedLoggedTraceReader implements IEventReader {
     private final Configuration config;
     private ReadonlyEventInterface lastEvent;
@@ -46,9 +52,11 @@ public class OrderedLoggedTraceReader implements IEventReader {
 
     @Override
     public void close() throws IOException {
-        readers.forEach(reader -> {
-            try { reader.close(); } catch (IOException ignored) {}
-        });
+        Optional<IOException> exception = readers.stream().map(reader -> {
+            try { reader.close(); } catch (IOException ex) { return Optional.of(ex); }
+            return Optional.<IOException>empty();
+        }).reduce(Optional.empty(), (e1,e2) -> e2.isPresent() ? e2 : e1);
+        if (exception.isPresent()) throw exception.get();
     }
 
     class OrderedEventReader implements IEventReader, Comparable<OrderedEventReader> {

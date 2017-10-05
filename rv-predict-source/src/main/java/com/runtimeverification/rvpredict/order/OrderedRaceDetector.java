@@ -13,6 +13,11 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * Race detector based on a sound partial ordering:  If two conflicting accesses are unordered there is a race.
+ *
+ * @author TraianSF
+ */
 public class OrderedRaceDetector implements RaceDetector {
     protected final List<String> reports;
     protected final Configuration config;

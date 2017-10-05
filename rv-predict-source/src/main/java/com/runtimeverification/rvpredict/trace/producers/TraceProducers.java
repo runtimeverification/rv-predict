@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
+import com.runtimeverification.rvpredict.trace.producers.base.SharedLibraries;
 import com.runtimeverification.rvpredict.trace.producers.base.InterThreadSyncEvents;
 import com.runtimeverification.rvpredict.trace.producers.base.MinEventIdForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.OtidToMainTtid;
@@ -56,6 +57,8 @@ public class TraceProducers extends ProducerModule {
     private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsFinishedAtWindowEnd =
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
 
+    public final ComputingProducerWrapper<SharedLibraries> sharedLibraries =
+            new ComputingProducerWrapper<>(new SharedLibraries(rawTraces), this);
     public final ComputingProducerWrapper<InterThreadSyncEvents> interThreadSyncEvents =
             new ComputingProducerWrapper<>(new InterThreadSyncEvents(rawTraces), this);
     public final ComputingProducerWrapper<TtidToStartAndJoinEventsForWindow> startAndJoinEventsForWindow =

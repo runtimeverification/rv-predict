@@ -4,7 +4,7 @@
 # Mac OS X by installing a Pkgsrc bootstrap kit from pkgsrc.org.
 #
 
-PROGS=eitherorboth fork pass_array raise sigcount
+PROGS=eitherorboth fork load_library pass_array raise sigcount
 
 CC=clang
 CFLAGS+=-std=c11
@@ -19,6 +19,7 @@ SRCS.sigcount=sigcount.c
 SRCS.raise=raise.c
 SRCS.fork=fork.c
 SRCS.pass_array=pass_array.c
+SRCS.load_library=load_library.c
 WARNS=4
 
 .include <mkc.prog.mk>

@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.log.compact;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.log.compact.datatypes.Address;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,6 +12,53 @@ import java.util.OptionalLong;
 
 public class CompactEventFactory {
     private static final List<ReadonlyEventInterface> NO_EVENTS = Collections.emptyList();
+
+    public List<ReadonlyEventInterface> sharedLibrary(Context context, long libraryId, String libraryName) {
+        return Collections.singletonList(
+                new CompactEvent(context, EventType.SHARED_LIBRARY) {
+                    @Override
+                    public long getSharedLibraryId() {
+                        return libraryId;
+                    }
+
+                    @Override
+                    public String getSharedLibraryName() {
+                        return libraryName;
+                    }
+
+                    @Override
+                    public String toString() {
+                        return super.toString() + " " + libraryId + " " + libraryName;
+                    }
+                }
+        );
+    }
+
+    public List<ReadonlyEventInterface> sharedLibrarySegment(
+            Context context, long libraryId, long start, long size) {
+        return Collections.singletonList(
+                new CompactEvent(context, EventType.SHARED_LIBRARY_SEGMENT) {
+                    @Override
+                    public long getSharedLibraryId() {
+                        return libraryId;
+                    }
+
+                    @Override
+                    public long getSharedLibrarySegmentStart() {
+                        return start;
+                    }
+                    @Override
+                    public long getSharedLibrarySegmentEnd() {
+                        return start + size;
+                    }
+
+                    @Override
+                    public String toString() {
+                        return super.toString() + " " + libraryId + ": " + start + " -> " + (start + size);
+                    }
+                }
+        );
+    }
 
     private enum LockReason {
         NORMAL,

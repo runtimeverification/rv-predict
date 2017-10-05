@@ -92,6 +92,9 @@ typedef enum _rvp_op {
 	, RVP_OP_SIGUNBLOCK	= 43	// unblock signals
 	, RVP_OP_SIGGETSETMASK	= 44	// get old mask, set new mask
 	, RVP_OP_SIGGETMASK	= 45	// get current mask
+	, RVP_OP_SHARED_LIBRARY = 46  // sets data for a shared library.
+	, RVP_OP_SHARED_LIBRARY_SEGMENT = 47  // data for a segment belonging
+	                                      // to a shared library.
 	, RVP_NOPS
 } rvp_op_t;
 
@@ -216,5 +219,19 @@ typedef struct {
 	rvp_addr_t deltop;
 	rvp_addr_t addr;
 } __packed __aligned(sizeof(uint32_t)) rvp_acquire_release_t;
+
+typedef struct {
+	rvp_addr_t deltop;
+	uint32_t id;
+	uint32_t name_length;  // The name does not include the string
+	uint32_t name[];       // terminator.
+} __packed __aligned(sizeof(uint32_t)) rvp_shared_library_t;
+
+typedef struct {
+	rvp_addr_t deltop;
+	uint32_t library_id;
+	rvp_addr_t start_address;
+	uint32_t size;
+} __packed __aligned(sizeof(uint32_t)) rvp_shared_library_segment_t;
 
 #endif /* _RVP_TRACEFMT_H_ */

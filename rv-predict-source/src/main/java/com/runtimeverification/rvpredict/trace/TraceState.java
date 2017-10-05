@@ -57,6 +57,8 @@ public class TraceState {
 
     private final ThreadInfos threadInfos = new ThreadInfos();
 
+    private final SharedLibraries sharedLibraries = new SharedLibraries();
+
     private final Map<Long, Map<Integer, Integer>> otidToSignalDepthToTtidAtWindowStartCache = new HashMap<>();
 
     private final Configuration config;
@@ -182,8 +184,10 @@ public class TraceState {
             if (locId != event.getLocationId()) {
                 throw new IllegalStateException("Unmatched method entry/exit events!" +
                         (Configuration.debug ?
-                        "\n\tENTRY:" + metadata.getLocationSig(locId) + " gid " + lastEvent.getEventId() +
-                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocationId()) + " gid " + event.getEventId() : ""));
+                        "\n\tENTRY:" + metadata.getLocationSig(locId, Optional.of(sharedLibraries))
+                                + " gid " + lastEvent.getEventId() +
+                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocationId(), Optional.of(sharedLibraries))
+                                + " gid " + event.getEventId() : ""));
             }
             break;
         default:
@@ -260,6 +264,7 @@ public class TraceState {
                 stateAtCurrentWindowStart.getFinishedThreads(),
                 stateAtCurrentWindowEnd.getFinishedThreads());
         stateAtCurrentWindowEnd.processSignalMasks(traceProducers.signalMaskForEvents.getComputed());
+        sharedLibraries.addAll(traceProducers.sharedLibraries.getComputed().getLibraries());
     }
 
     /**
@@ -290,7 +295,8 @@ public class TraceState {
      */
     private long findUserCallLocation(ReadonlyEventInterface e, int ttid) {
         long locId = e.getLocationId();
-        if (locId >= 0 && !config().isExcludedLibrary(metadata().getLocationSig(locId))) {
+        if (locId >= 0
+                && !config().isExcludedLibrary(metadata().getLocationSig(locId, Optional.of(sharedLibraries)))) {
             return locId;
         }
         Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(ttid);
@@ -301,7 +307,7 @@ public class TraceState {
         for (ReadonlyEventInterface event : stacktrace) {
             locId = event.getLocationId();
             if (locId != -1) {
-                sig = metadata().getLocationSig(locId);
+                sig = metadata().getLocationSig(locId, Optional.of(sharedLibraries));
                 if (!config().isExcludedLibrary(sig)) {
                     return locId;
                 }
@@ -394,5 +400,9 @@ public class TraceState {
 
     TraceProducers getTraceProducers() {
         return traceProducers;
+    }
+
+    public SharedLibraries getSharedLibraries() {
+        return sharedLibraries;
     }
 }

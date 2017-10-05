@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -103,7 +104,7 @@ public class RVPredict {
             } else {
                 reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
             }
-            traceCache.getLockGraph().runDeadlockDetection();
+            traceCache.getLockGraph().runDeadlockDetection(traceCache.getSharedLibraries());
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());

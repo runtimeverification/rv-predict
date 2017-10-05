@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.RawTrace;
+import com.runtimeverification.rvpredict.trace.SharedLibraries;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
@@ -24,9 +25,11 @@ import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractEventByType;
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.when;
 
@@ -61,7 +64,7 @@ public class JavaHappensBeforeRaceDetectorTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_3_VOLATILE)).thenReturn(4L);
         when(mockMetadata.isVolatile(anyLong())).
                 then(invocation -> invocation.getArguments()[0].equals(Long.valueOf(4L)));
-        when(mockMetadata.getLocationSig(anyLong())).thenReturn("unknown location");
+        when(mockMetadata.getLocationSig(anyLong(), any())).thenReturn("unknown location");
         Logger logger = new Logger();
         try {
             logger.setLogDir("/tmp");

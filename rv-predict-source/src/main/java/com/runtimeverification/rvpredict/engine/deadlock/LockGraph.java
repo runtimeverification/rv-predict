@@ -5,6 +5,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
+import com.runtimeverification.rvpredict.trace.SharedLibraries;
 import com.runtimeverification.rvpredict.util.Logger;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -48,13 +50,13 @@ public class LockGraph {
      *
      * @param event  a lock/unlock event
      */
-    public void handle(ReadonlyEventInterface event, int ttid) {
+    public void handle(ReadonlyEventInterface event, int ttid, SharedLibraries sharedLibraries) {
         assert event.isPreLock() || event.isLock() || event.isUnlock();
         long lockId = event.getLockId();
         Set<Long> locks = lockSet.get(ttid);
         if (event.isUnlock()) {
             if (locks == null) {
-                reportUnlockOfUnlockedMutex(event);
+                reportUnlockOfUnlockedMutex(event, sharedLibraries);
                 return;
             }
             locks.remove(lockId);
@@ -77,8 +79,8 @@ public class LockGraph {
      * existing lock acquisitions and new lock acquisitions.
      * @return the cycles in the lock aqusition graph
      */
-    public void runDeadlockDetection() {
-        getCycles().forEach(this::reportDeadlock);
+    public void runDeadlockDetection(SharedLibraries sharedLibraries) {
+        getCycles().forEach(cycle -> reportDeadlock(cycle, sharedLibraries));
     }
 
     private void addEdge(Long l1, Long l2) {
@@ -111,7 +113,8 @@ public class LockGraph {
     }
 
 
-    private void reportDeadlock(List<Pair<ReadonlyEventInterface, ReadonlyEventInterface>> cycle) {
+    private void reportDeadlock(
+            List<Pair<ReadonlyEventInterface, ReadonlyEventInterface>> cycle, SharedLibraries sharedLibraries) {
         signatureProcessor.reset();
         StringBuilder report = new StringBuilder();
         StringBuilder summary = new StringBuilder();
@@ -128,11 +131,11 @@ public class LockGraph {
                     "while holding M" + before.getLockId());
             details.append('\n');
             details.append(" ---->  at ");
-            locSig = metadata.getLocationSig(after.getLocationId());
+            locSig = metadata.getLocationSig(after.getLocationId(), Optional.of(sharedLibraries));
             signatureProcessor.process(locSig);
             details.append(locSig);
             details.append('\n');
-            locSig = metadata.getLocationSig(before.getLocationId());
+            locSig = metadata.getLocationSig(before.getLocationId(), Optional.of(sharedLibraries));
             signatureProcessor.process(locSig);
             details.append(String.format("        - locked %s at %s %n",
                     "M"+ before.getLockId(),
@@ -148,11 +151,11 @@ public class LockGraph {
         config.logger().report(signatureProcessor.simplify(report.toString()), Logger.MSGTYPE.REAL);
     }
 
-    private void reportUnlockOfUnlockedMutex(ReadonlyEventInterface event) {
+    private void reportUnlockOfUnlockedMutex(ReadonlyEventInterface event, SharedLibraries sharedLibraries) {
         assert(event.isUnlock());
         StringBuilder report = new StringBuilder();
         report.append("Unlock of an unlocked mutex: \n");
-        report.append("\t\t" + metadata.getLocationSig(event.getLocationId()));
+        report.append("\t\t" + metadata.getLocationSig(event.getLocationId(), Optional.of(sharedLibraries)));
         report.append("\n");
         config.logger().report(report.toString(), Logger.MSGTYPE.REAL);
     }

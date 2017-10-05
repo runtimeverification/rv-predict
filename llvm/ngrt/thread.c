@@ -12,6 +12,7 @@
 #include <string.h> /* for strerror(3), strcasecmp(3) */
 #include <unistd.h> /* for sysconf */
 
+#include "dynamic_library.h"
 #include "init.h"
 #include "interpose.h"
 #include "relay.h"
@@ -339,6 +340,7 @@ rvp_postfork_init(void)
 	 * to start.
 	 */
 	rvp_thread0_create();
+	rvpredict_log_shared_libraries();
 	rvp_relay_create();
 	rvp_serializer_create();
 

@@ -13,12 +13,14 @@ import com.runtimeverification.rvpredict.log.compact.readers.GetSetSignalMaskRea
 import com.runtimeverification.rvpredict.log.compact.readers.GetSignalMaskReader;
 import com.runtimeverification.rvpredict.log.compact.readers.LockManipulationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.NoDataReader;
+import com.runtimeverification.rvpredict.log.compact.readers.SharedLibraryReader;
+import com.runtimeverification.rvpredict.log.compact.readers.SharedLibrarySegment;
+import com.runtimeverification.rvpredict.log.compact.readers.SignalDepthReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalDisestablishReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalEnterReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalEstablishReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalMaskMemoizationReader;
 import com.runtimeverification.rvpredict.log.compact.readers.SignalMaskReader;
-import com.runtimeverification.rvpredict.log.compact.readers.SignalDepthReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadBeginReader;
 import com.runtimeverification.rvpredict.log.compact.readers.ThreadSyncReader;
 import com.runtimeverification.rvpredict.log.compact.readers.UnblockSignalsReader;
@@ -101,19 +103,23 @@ public class CompactEventReader implements IEventReader {
         BLOCK_SIGS(42, BlockSignalsReader.createReader()),
         UNBLOCK_SIGS(43, UnblockSignalsReader.createReader()),
         SIG_GETSET_MASK(44, GetSetSignalMaskReader.createReader()),
-        SIG_GET_MASK(45, GetSignalMaskReader.createReader());
+        SIG_GET_MASK(45, GetSignalMaskReader.createReader()),
+        SHARED_LIBRARY(46, SharedLibraryReader.createReader()),
+        SHARED_LIBRARY_SEGMENT(47, SharedLibrarySegment.createReader());
 
         private static int maxIntValue = 0;
         private static Map<Integer, Type> intToType;
 
         private final int intValue;
+        private final Reader reader;
         private byte[] buffer;
-        private Reader reader;
+
 
         Type(int intValue, Reader reader) {
             this.intValue = intValue;
             this.reader = reader;
         }
+
         public int intValue() {
             return intValue;
         }
@@ -126,17 +132,30 @@ public class CompactEventReader implements IEventReader {
                 Context context, CompactEventFactory compactEventFactory,
                 TraceHeader header, InputStream stream)
                 throws InvalidTraceDataException, IOException {
-            if (buffer == null) {
-                buffer = new byte[reader.size(header)];
+            boolean firstIteration = true;
+            reader.startReading(header);
+            while (reader.stillHasPartsToRead()) {
+                byte[] localBuffer;
+                if (firstIteration) {
+                    firstIteration = false;
+                    // The size of the first buffer cannot depend on the event data, so it must be constant,
+                    // so we can cache the buffer.
+                    if (buffer == null) {
+                        buffer = new byte[reader.nextPartSize(header)];
+                    }
+                    localBuffer = buffer;
+                } else {
+                    localBuffer = new byte[reader.nextPartSize(header)];
+                }
+                int readSize = stream.read(localBuffer);
+                if (localBuffer.length != readSize) {
+                    throw new InvalidTraceDataException(
+                            "Short read for " + this + ", expected " + localBuffer.length
+                                    + " bytes, got " + readSize + ".");
+                }
+                reader.addPart(ByteBuffer.wrap(localBuffer).order(header.getByteOrder()), header);
             }
-            int readSize = stream.read(buffer);
-            if (buffer.length != readSize) {
-                throw new InvalidTraceDataException(
-                        "Short read for " + this + ", expected " + buffer.length + " bytes, got " + readSize + ".");
-            }
-            return reader.readEvent(
-                    context, compactEventFactory, header,
-                    ByteBuffer.wrap(buffer).order(header.getByteOrder()));
+            return reader.build(context, compactEventFactory, header);
         }
 
         static {
@@ -175,13 +194,40 @@ public class CompactEventReader implements IEventReader {
         UNLOCK,
     }
 
+    /**
+     * Reads a kind of event.
+     */
     public interface Reader {
-        int size(TraceHeader header) throws InvalidTraceDataException;
-        List<ReadonlyEventInterface> readEvent(
-                Context context,
-                CompactEventFactory compactEventFactory,
-                TraceHeader header,
-                ByteBuffer buffer)
+        /**
+         * Must be called before starting to read an event.
+         */
+        void startReading(TraceHeader header) throws InvalidTraceDataException;
+
+        /**
+         * Returns true if the event whose state is passed does not have its entire data yet.
+         */
+        boolean stillHasPartsToRead();
+
+        /**
+         * Returns the size of the next event part to be read.
+         *
+         * Should be called only after {@link #addPart(ByteBuffer, TraceHeader)} was called
+         * for the previous part.
+         */
+        int nextPartSize(TraceHeader header) throws InvalidTraceDataException;
+
+        /**
+         * Adds to state a buffer containing data for the next part to be read.
+         */
+        void addPart(ByteBuffer buffer, TraceHeader header) throws InvalidTraceDataException;
+
+        /**
+         * Builds events.
+         *
+         * Should be called only when {@link #stillHasPartsToRead()} returns false.
+         */
+        List<ReadonlyEventInterface> build(
+                Context context, CompactEventFactory compactEventFactory, TraceHeader header)
                 throws InvalidTraceDataException;
     }
 
@@ -265,7 +311,7 @@ public class CompactEventReader implements IEventReader {
                 pcBuffer.rewind();
                 pc.read(pcBuffer);
                 DeltaAndEventType deltaAndEventType =
-                        DeltaAndEventType.parseFromPC(minDeltaAndEventType,maxDeltaAndEventType, pc.getAsLong());
+                        DeltaAndEventType.parseFromPC(minDeltaAndEventType, maxDeltaAndEventType, pc.getAsLong());
                 if (deltaAndEventType == null) {
                     events = factory.jump(context, pc.getAsLong());
                     continue;

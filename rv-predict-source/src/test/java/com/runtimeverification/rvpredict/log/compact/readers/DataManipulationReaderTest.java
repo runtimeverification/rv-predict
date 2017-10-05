@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.testutils.ReaderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +37,7 @@ public class DataManipulationReaderTest {
 
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -46,7 +47,7 @@ public class DataManipulationReaderTest {
 
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
-        Assert.assertEquals(6, reader.size(mockTraceHeader));
+        Assert.assertEquals(6, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -56,7 +57,7 @@ public class DataManipulationReaderTest {
 
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
-        Assert.assertEquals(12, reader.size(mockTraceHeader));
+        Assert.assertEquals(12, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -75,7 +76,7 @@ public class DataManipulationReaderTest {
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                ReaderUtils.readSimpleEvent(reader, mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

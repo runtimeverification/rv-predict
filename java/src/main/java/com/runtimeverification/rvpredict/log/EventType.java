@@ -5,6 +5,8 @@ import com.runtimeverification.rvpredict.log.printers.EstablishSignalPrinter;
 import com.runtimeverification.rvpredict.log.printers.InvokeMethodPrinter;
 import com.runtimeverification.rvpredict.log.printers.LockPrinter;
 import com.runtimeverification.rvpredict.log.printers.ReadWriteSignalMaskPrinter;
+import com.runtimeverification.rvpredict.log.printers.SharedLibraryPrinter;
+import com.runtimeverification.rvpredict.log.printers.SharedLibrarySegmentPrinter;
 import com.runtimeverification.rvpredict.log.printers.SignalHandlerPrinter;
 import com.runtimeverification.rvpredict.log.printers.SignalMaskPrinter;
 import com.runtimeverification.rvpredict.log.printers.SignalNumberPrinter;
@@ -111,7 +113,9 @@ public enum EventType {
     UNBLOCK_SIGNALS(new SignalMaskPrinter("unblocksignals", ReadonlyEventInterface::getPartialSignalMask)),
 
     ENTER_SIGNAL(new SignalHandlerPrinter("entersignal")),
-    EXIT_SIGNAL(new SignalNumberPrinter("exitsignal"));
+    EXIT_SIGNAL(new SignalNumberPrinter("exitsignal")),
+    SHARED_LIBRARY(new SharedLibraryPrinter()),
+    SHARED_LIBRARY_SEGMENT(new SharedLibrarySegmentPrinter());
 
     private final EventPrinter printer;
 

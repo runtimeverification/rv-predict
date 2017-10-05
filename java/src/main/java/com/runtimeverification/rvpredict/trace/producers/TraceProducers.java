@@ -15,6 +15,7 @@ import com.runtimeverification.rvpredict.trace.producers.base.OtidToSignalDepthT
 import com.runtimeverification.rvpredict.trace.producers.base.PreviousSignalsTraceMerger;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTraces;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
+import com.runtimeverification.rvpredict.trace.producers.base.SharedLibraries;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
 import com.runtimeverification.rvpredict.trace.producers.base.StackTraces;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
@@ -66,6 +67,8 @@ public class TraceProducers extends ProducerModule {
     private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsFinishedAtWindowEnd =
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
 
+    public final ComputingProducerWrapper<SharedLibraries> sharedLibraries =
+            new ComputingProducerWrapper<>(new SharedLibraries(rawTraces), this);
     public final ComputingProducerWrapper<InterThreadSyncEvents> interThreadSyncEvents =
             new ComputingProducerWrapper<>(new InterThreadSyncEvents(currentWindowRawTraces), this);
     public final ComputingProducerWrapper<TtidToStartAndJoinEventsForWindow> startAndJoinEventsForWindow =

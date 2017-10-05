@@ -122,7 +122,7 @@ public class RVPredict implements AutoCloseable {
             } else {
                 reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REPORT));
             }
-            traceCache.getLockGraph().runDeadlockDetection();
+            traceCache.getLockGraph().runDeadlockDetection(traceCache.getSharedLibraries());
         } catch (IOException e) {
             System.err.println("Error: I/O error during prediction.");
             System.err.println(e.getMessage());

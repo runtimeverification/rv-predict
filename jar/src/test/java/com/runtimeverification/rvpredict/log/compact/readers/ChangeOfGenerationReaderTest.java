@@ -34,7 +34,7 @@ public class ChangeOfGenerationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = ChangeOfGenerationReader.createReader();
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

@@ -2,22 +2,20 @@ package com.runtimeverification.rvpredict.metadata;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
-import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.trace.SharedLibraries;
 import com.runtimeverification.rvpredict.trace.Trace;
 import org.apache.commons.lang3.tuple.Pair;
+import sun.security.provider.SHA;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -138,13 +136,17 @@ public class Metadata implements MetadataInterface, Serializable {
         return locId;
     }
 
-    @Override
     public String getLocationSig(long locId) {
         String sig = locIdToLocSig[Math.toIntExact(locId)];
         if (Configuration.debug && sig == null) {
             System.err.println("getLocationSig(" + locId + ") -> null");
         }
         return sig;
+    }
+
+    @Override
+    public String getLocationSig(long locId, Optional<SharedLibraries> sharedLibraries) {
+        return getLocationSig(locId);
     }
 
     @Override

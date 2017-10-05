@@ -330,4 +330,8 @@ public class TraceCache {
         /* finish reading events and create the Trace object */
         return rawTraces.isEmpty() ? null : crntState.initNextTraceWindow(rawTraces);
     }
+
+    public SharedLibraries getSharedLibraries() {
+        return crntState.getSharedLibraries();
+    }
 }

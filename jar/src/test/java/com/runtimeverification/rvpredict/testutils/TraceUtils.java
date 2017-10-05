@@ -199,6 +199,16 @@ public class TraceUtils {
                 mockContext, Constants.INVALID_EVENT_ID);
     }
 
+    public List<ReadonlyEventInterface> sharedLibrary(int libraryId, String libraryName) {
+        prepareContextForEvent(threadId, signalDepth);
+        return compactEventFactory.sharedLibrary(mockContext, libraryId, libraryName);
+    }
+
+    public List<ReadonlyEventInterface> sharedLibrarySegment(int libraryId, long libraryStart, int librarySize) {
+        prepareContextForEvent(threadId, signalDepth);
+        return compactEventFactory.sharedLibrarySegment(mockContext, libraryId, libraryStart,  librarySize);
+    }
+
     public static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {
         Assert.assertEquals(1, events.size());
         return events.get(0);

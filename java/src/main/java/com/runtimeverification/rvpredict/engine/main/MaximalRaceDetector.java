@@ -46,7 +46,7 @@ public class MaximalRaceDetector implements RaceDetector {
     }
 
     private boolean isThreadSafeLocation(Trace trace, long locId) {
-        String locationSig = trace.metadata().getLocationSig(locId);
+        String locationSig = trace.metadata().getLocationSig(locId, Optional.of(trace.getSharedLibraries()));
         if (locationSig.startsWith("java.util.concurrent")
             || locationSig.startsWith("java.util.stream")) {
             return true;

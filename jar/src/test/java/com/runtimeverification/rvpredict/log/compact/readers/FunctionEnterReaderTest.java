@@ -37,7 +37,7 @@ public class FunctionEnterReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = FunctionEnterReader.createReader();
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        Assert.assertEquals(16, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

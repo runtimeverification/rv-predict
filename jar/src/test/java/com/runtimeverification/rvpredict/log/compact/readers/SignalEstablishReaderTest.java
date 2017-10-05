@@ -37,7 +37,7 @@ public class SignalEstablishReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = SignalEstablishReader.createReader();
-        Assert.assertEquals(12, reader.size(mockTraceHeader));
+        Assert.assertEquals(12, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -46,7 +46,7 @@ public class SignalEstablishReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = SignalEstablishReader.createReader();
-        Assert.assertEquals(24, reader.size(mockTraceHeader));
+        Assert.assertEquals(24, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -55,7 +55,7 @@ public class SignalEstablishReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = SignalEstablishReader.createReader();
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        Assert.assertEquals(16, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

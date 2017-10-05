@@ -36,8 +36,9 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
-        Assert.assertEquals(12, reader.size(mockTraceHeader));
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
+        Assert.assertEquals(12, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -45,8 +46,9 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(1);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -54,8 +56,9 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
+        Assert.assertEquals(16, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -71,7 +74,8 @@ public class AtomicReadModifyWriteReaderTest {
                 .putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
         List<ReadonlyEventInterface> events =
                 reader.readEvent(
                         mockContext, Constants.INVALID_EVENT_ID, mockCompactEventFactory, mockTraceHeader, buffer);

@@ -375,10 +375,11 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 }
 
 static inline void
-rvp_ring_put_buf(rvp_ring_t *r, rvp_buf_t b)
+rvp_ring_generic_put_buf(rvp_ring_t *r, rvp_generic_buf_t *b)
 {
-	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);
+       rvp_ring_put_multiple(r, &b->b_word[0], b->b_nwords);
 }
+#define rvp_ring_put_buf(r, b) rvp_ring_generic_put_buf(r, &b.buf)
 
 /* Return `true` if the interruption is unfinished, false otherwise. */
 static inline bool

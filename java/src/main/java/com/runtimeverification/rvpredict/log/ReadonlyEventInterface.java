@@ -25,6 +25,10 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     OptionalLong getCallSiteAddress();
     long unsafeGetDataInternalIdentifier();
     long unsafeGetDataValue();
+    long getSharedLibraryId();
+    String getSharedLibraryName();
+    long getSharedLibrarySegmentStart();
+    long getSharedLibrarySegmentEnd();
 
     LockRepresentation getLockRepresentation();
     ReadonlyEventInterface copy();
@@ -90,4 +94,5 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     boolean isSignalMaskRead();
 
     long getOriginalId();
+    boolean isSharedLibraryEvent();
 }

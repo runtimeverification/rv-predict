@@ -38,11 +38,11 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
 int
 rvp_ring_stdinit(rvp_ring_t *r)
 {
-	const size_t ringsz = pgsz;
+	const size_t ringsz = ((2 * PATH_MAX) / pgsz + 1) * pgsz;
 	const size_t items_per_ring = ringsz / sizeof(*r->r_items);
 	uint32_t *items;
 
-	assert(pgsz != 0);
+	assert(ringsz != 0);
 
 	items = calloc(items_per_ring, sizeof(*r->r_items));
 	if (items == NULL)

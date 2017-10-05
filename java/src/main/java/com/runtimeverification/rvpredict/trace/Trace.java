@@ -501,6 +501,8 @@ public class Trace {
                                 .computeIfAbsent(event.getSignalHandlerAddress(), k -> new ArrayList<>())
                                 .add(event);
                     }
+                } else if (event.isSharedLibraryEvent()) {
+                    // Do nothing.
                 } else {
 		    if (state.config().isDebug())
 		        System.err.println(event.getType());
@@ -757,7 +759,8 @@ public class Trace {
      */
     public void printEvents() {
         tidToEvents.values().stream().flatMap(List::stream).sorted().forEach(event -> logger()
-                .debug((event + " at " + metadata().getLocationSig(event.getLocationId()))));
+                .debug((event + " at " + metadata().getLocationSig(event.getLocationId(),
+                        Optional.of(getSharedLibraries())))));
     }
 
     public OptionalInt getMainTraceThreadForOriginalThread(long originalThreadId) {
@@ -918,5 +921,9 @@ public class Trace {
 
     public List<ReadonlyEventInterface> getInterThreadSyncEvents() {
         return state.getTraceProducers().interThreadSyncEvents.getComputed().getSyncEvents();
+    }
+
+    public SharedLibraries getSharedLibraries() {
+        return state.getSharedLibraries();
     }
 }

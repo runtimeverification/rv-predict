@@ -35,7 +35,7 @@ public class GetSetSignalMaskReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = GetSetSignalMaskReader.createReader();
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(8, reader.nextPartSize(mockTraceHeader));
     }
 
 
@@ -45,7 +45,7 @@ public class GetSetSignalMaskReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = GetSetSignalMaskReader.createReader();
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        Assert.assertEquals(16, reader.nextPartSize(mockTraceHeader));
     }
 
     @Test

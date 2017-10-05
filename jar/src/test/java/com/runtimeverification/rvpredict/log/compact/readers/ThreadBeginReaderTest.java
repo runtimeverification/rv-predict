@@ -36,7 +36,7 @@ public class ThreadBeginReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = ThreadBeginReader.createReader();
-        Assert.assertEquals(12, reader.size(mockTraceHeader));
+        Assert.assertEquals(12, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -45,7 +45,7 @@ public class ThreadBeginReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = ThreadBeginReader.createReader();
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        Assert.assertEquals(16, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

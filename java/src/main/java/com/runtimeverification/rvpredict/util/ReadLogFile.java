@@ -9,6 +9,7 @@ import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import java.io.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 /**
  * Debugging class for printing the contents of a log file to console.
@@ -42,7 +43,7 @@ public class ReadLogFile {
             }
             System.out.println("#program location section#");
             for (int locId = 1;; locId++) {
-                String locSig = metadata.getLocationSig(locId);
+                String locSig = metadata.getLocationSig(locId, Optional.empty());
                 if (locSig != null) {
                     System.out.printf("%s:%s%n", locId, locSig);
                 } else {
@@ -54,7 +55,8 @@ public class ReadLogFile {
                 System.out.println("Dumping events from " + file);
                 while (true) {
                     ReadonlyEventInterface event = reader.readEvent();
-                    String locSig = event.getLocationId() < 0 ? "n/a" : metadata.getLocationSig(event.getLocationId());
+                    String locSig = event.getLocationId() < 0 ?
+                            "n/a" : metadata.getLocationSig(event.getLocationId(), Optional.empty());
                     System.out.printf("%-60s %s%n", event.toString(), locSig);
                 }
             } catch (EOFException ignored) {

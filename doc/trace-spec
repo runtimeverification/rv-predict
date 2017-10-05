@@ -126,6 +126,8 @@ Right now I have in mind just 28 opcodes, which I assign these numbers:
 	unblock-sigs	43	// remove signals from the current mask
 	sig-getset-mask	44	// get old mask, set new mask
 	sig-get-mask	45	// get old mask
+        shared-library  46      // shared library data
+        shared-library-segment 47  // a shared library's segment
 
 The first trace helps the reader to establish an important fact that
 lets it interpret the following traces: PC = (0, begin).  That
@@ -605,6 +607,32 @@ trace ::= (delta, 'load[n]') addr value
                 `self.PC <- self.PC + delta`
                 `self <- tid`
 		`self.signal_depth <- 0`
+
+        | (delta, 'shared-library') libid namelen namechars
+
+                The current thread added `delta` to its program counter.
+                The program used a library with the given name.
+
+                `libid` begins on the first 32-bit boundary after the
+                deltop, and it is 32 bits wide.
+
+                `namelen` begins after `libid` and it is 32 bits wide.
+
+                `namechars` is an ASCII encoding of the library name. It
+                begins after `namelen` and it has `namelen` bytes, with 
+                padding added at the end to fill up to a 32 bit boundary. 
+
+        | (delta, 'shared-library-segment') libid start size
+
+                The current thread added `delta` to its program counter.
+                The library with id `libid` had a segment of `size` bytes,
+                starting at the `start` pointer.
+
+                `libid` begins on the first 32-bit boundary after the
+                deltop, and it is 32 bits wide.
+
+                `start` has the size of a pointer, while `size` is 32 bit
+                wide.
 
 # History
 

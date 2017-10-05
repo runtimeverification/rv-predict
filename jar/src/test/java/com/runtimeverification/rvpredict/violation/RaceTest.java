@@ -29,7 +29,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -60,7 +62,7 @@ public class RaceTest {
         nextIdDelta = 0;
         when(mockContext.newId()).then(invocation -> BASE_ID + nextIdDelta++);
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
-        when(mockMetadata.getLocationSig(anyLong())).thenReturn("");
+        when(mockMetadata.getLocationSig(anyLong(), any())).thenReturn("");
         when(mockMetadata.getVariableSig(anyLong())).thenReturn("");
         when(mockConfiguration.isCompactTrace()).thenReturn(true);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
@@ -144,9 +146,9 @@ public class RaceTest {
 
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
-        when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<call site address 1>");
-        when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_2)).thenReturn("<call site address 2>");
-        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_1)).thenReturn("<thread 2 creation address>");
+        when(mockMetadata.getLocationSig(eq(CALL_SITE_ADDRESS_1), any())).thenReturn("<call site address 1>");
+        when(mockMetadata.getLocationSig(eq(CALL_SITE_ADDRESS_2), any())).thenReturn("<call site address 2>");
+        when(mockMetadata.getLocationSig(eq(PROGRAM_COUNTER_1), any())).thenReturn("<thread 2 creation address>");
         when(mockMetadata.getParentOTID(THREAD_2)).thenReturn(THREAD_1);
         when(mockMetadata.getOriginalThreadCreationLocId(THREAD_2)).thenReturn(PROGRAM_COUNTER_1);
 
@@ -212,12 +214,12 @@ public class RaceTest {
 
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
-        when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<method 1 call site somewhere>");
-        when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_2)).thenReturn("<method 3 call site in method 2>");
-        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_1)).thenReturn("<method 1 start>");
-        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_2)).thenReturn("<method 2 start>");
-        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_3)).thenReturn("<method 3 start>");
-        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_4)).thenReturn("<instruction 4 in method 3>");
+        when(mockMetadata.getLocationSig(eq(CALL_SITE_ADDRESS_1), any())).thenReturn("<method 1 call site somewhere>");
+        when(mockMetadata.getLocationSig(eq(CALL_SITE_ADDRESS_2), any())).thenReturn("<method 3 call site in method 2>");
+        when(mockMetadata.getLocationSig(eq(PROGRAM_COUNTER_1), any())).thenReturn("<method 1 start>");
+        when(mockMetadata.getLocationSig(eq(PROGRAM_COUNTER_2), any())).thenReturn("<method 2 start>");
+        when(mockMetadata.getLocationSig(eq(PROGRAM_COUNTER_3), any())).thenReturn("<method 3 start>");
+        when(mockMetadata.getLocationSig(eq(PROGRAM_COUNTER_4), any())).thenReturn("<instruction 4 in method 3>");
 
         Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
         race.setFirstSignalStack(Collections.emptyList());
@@ -269,8 +271,8 @@ public class RaceTest {
 
         when(mockMetadata.getLockSig(extractSingleEvent(e3), trace))
                 .thenReturn("<mock lock representation>");
-        when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<call site address 1>");
-        when(mockMetadata.getLocationSig(PROGRAM_COUNTER_1)).thenReturn("<lock acquire address>");
+        when(mockMetadata.getLocationSig(eq(CALL_SITE_ADDRESS_1), any())).thenReturn("<call site address 1>");
+        when(mockMetadata.getLocationSig(eq(PROGRAM_COUNTER_1), any())).thenReturn("<lock acquire address>");
 
         Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
         race.setFirstSignalStack(Collections.emptyList());

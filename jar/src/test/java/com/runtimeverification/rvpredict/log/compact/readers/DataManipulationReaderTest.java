@@ -37,7 +37,7 @@ public class DataManipulationReaderTest {
 
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -47,7 +47,7 @@ public class DataManipulationReaderTest {
 
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
-        Assert.assertEquals(6, reader.size(mockTraceHeader));
+        Assert.assertEquals(6, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -57,7 +57,7 @@ public class DataManipulationReaderTest {
 
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
-        Assert.assertEquals(12, reader.size(mockTraceHeader));
+        Assert.assertEquals(12, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

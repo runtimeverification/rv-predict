@@ -36,7 +36,7 @@ public class LockManipulationReaderTest {
 
         CompactEventReader.Reader reader =
                 LockManipulationReader.createReader(CompactEventReader.LockManipulationType.LOCK);
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -46,7 +46,7 @@ public class LockManipulationReaderTest {
 
         CompactEventReader.Reader reader =
                 LockManipulationReader.createReader(CompactEventReader.LockManipulationType.LOCK);
-        Assert.assertEquals(4, reader.size(mockTraceHeader));
+        Assert.assertEquals(4, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

@@ -106,6 +106,25 @@ public abstract class CompactEvent extends ReadonlyEvent {
     }
 
     @Override
+    public long getSharedLibraryId() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
+    public String getSharedLibraryName() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
+    public long getSharedLibrarySegmentStart() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+    @Override
+    public long getSharedLibrarySegmentEnd() {
+        throw new UnsupportedOperationException("Unsupported operation for " + getType());
+    }
+
+    @Override
     public LockRepresentation getLockRepresentation() {
         throw new UnsupportedOperationException("Unsupported operation for " + getType());
     }

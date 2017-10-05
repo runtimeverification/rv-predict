@@ -35,7 +35,7 @@ public class SignalOutstandingDepthReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = SignalDepthReader.createReader();
-        Assert.assertEquals(4, reader.size(mockTraceHeader));
+        Assert.assertEquals(4, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -44,7 +44,7 @@ public class SignalOutstandingDepthReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = SignalDepthReader.createReader();
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

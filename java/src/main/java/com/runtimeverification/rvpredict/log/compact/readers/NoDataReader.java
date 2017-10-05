@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
@@ -29,7 +28,16 @@ public class NoDataReader implements CompactEventReader.Reader {
     }
 
     @Override
-    public int size(TraceHeader header) throws InvalidTraceDataException {
+    public void startReading(TraceHeader header) {
+    }
+
+    @Override
+    public boolean stillHasPartsToRead() {
+        return false;
+    }
+
+    @Override
+    public int nextPartSize(TraceHeader header) throws InvalidTraceDataException {
         return 0;
     }
 

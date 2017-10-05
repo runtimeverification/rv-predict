@@ -37,7 +37,7 @@ public class SignalEnterReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = SignalEnterReader.createReader();
-        Assert.assertEquals(20, reader.size(mockTraceHeader));
+        Assert.assertEquals(20, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -46,7 +46,7 @@ public class SignalEnterReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         CompactEventReader.Reader reader = SignalEnterReader.createReader();
-        Assert.assertEquals(24, reader.size(mockTraceHeader));
+        Assert.assertEquals(24, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

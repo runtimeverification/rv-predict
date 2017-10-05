@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.log.compact.readers;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.log.compact.CompactEvent;
 import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
@@ -16,7 +15,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -36,7 +34,7 @@ public class UnblockSignalsReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = UnblockSignalsReader.createReader();
-        Assert.assertEquals(4, reader.size(mockTraceHeader));
+        Assert.assertEquals(4, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
 
@@ -46,7 +44,7 @@ public class UnblockSignalsReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = UnblockSignalsReader.createReader();
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test

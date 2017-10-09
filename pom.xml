@@ -17,16 +17,26 @@
                 </property>
             </activation>
         </profile>
+        <profile>
+            <id>complete-build</id>
+            <modules>
+                <module>tests</module>
+                <module>installer</module>
+                <module>c-installer</module>
+                <module>c-installer-tools</module>
+            </modules>
+            <activation>
+                <property>
+                    <name>!onlyJar</name>
+                </property>
+            </activation>
+        </profile>
     </profiles>
     <modules>
         <module>native-z3</module>
         <module>rv-predict</module>
         <module>jar</module>
         <module>java</module>
-        <module>tests</module>
-        <module>installer</module>
-        <module>c-installer</module>
-        <module>c-installer-tools</module>
     </modules>
     <url>http://www.runtimeverification.com</url>
     <scm>

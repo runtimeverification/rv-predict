@@ -43,7 +43,7 @@
                 <executions>
                     <execution>
                         <id>unpack</id>
-                        <phase>install</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>unpack</goal>
                         </goals>
@@ -65,7 +65,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <phase>install</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>copy</goal>
                         </goals>
@@ -102,7 +102,7 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <phase>install</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>izpack</goal>
                         </goals>

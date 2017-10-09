@@ -321,6 +321,9 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 		next = prev + nitems;
 	} else {
 		const int ringsz = r->r_last + 1 - r->r_items;
+		// less-than because you cannot fill every slot in
+		// the ring without causing confusion.
+		assert(nitems < ringsz);
 		next = prev + (nitems - ringsz);
 	}
 

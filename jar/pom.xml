@@ -64,7 +64,7 @@
                 <executions>
                     <execution>
                         <id>jar-with-dlls</id>
-                        <phase>prepare-package</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>

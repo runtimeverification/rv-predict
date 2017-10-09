@@ -33,6 +33,32 @@
                     </execution>
                 </executions>
             </plugin>
+<!--
+            <plugin>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.runtimeverification.rvpredict</groupId>
+                                    <artifactId>java</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>/</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+-->
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <executions>
@@ -45,7 +71,6 @@
                         <configuration>
                             <descriptor>src/main/assembly/assembly.xml</descriptor>
                             <appendAssemblyId>false</appendAssemblyId>
-			    <finalName>rv-predict</finalName>
                             <archive>
                                 <manifest>
                                     <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>
@@ -124,7 +149,7 @@
                         <configuration>
                             <!-- Our application is so big that ProGuard had ran out of memory -->
                             <maxMemory>1024m</maxMemory>
-
+                            <silent>true</silent>
                             <!-- File with proguard configuration -->
                             <proguardInclude>${basedir}/proguard.conf</proguardInclude>
                             <exclusions>

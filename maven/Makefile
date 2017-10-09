@@ -16,22 +16,14 @@ MAVEN_OPTS=
 buildit: .PHONY
 .if $(PREBUILT:Uno) == "yes"
 	@echo rv-predict.jar is prebuilt.
-.elif $(RELEASE:Uno) == "no"
-	@cd $(.CURDIR)/../native-z3 && mvn -q -DskipTests -DskipDocs install
-	@cd $(.CURDIR)/../java && mvn -q -DskipTests -DskipDocs compile
-	@[ -d $(.CURDIR)/../target/release/rv-predict ] || mkdir -p $(.CURDIR)/../target/release/rv-predict
-	@cd $(.CURDIR)/../java/target/classes && jar cf $(.CURDIR)/../target/release/rv-predict/rv-predict.jar .
 .else
-	# I used to pass -DskipTests -DskipDocs here.
-	cd $(.CURDIR)/.. && mvn -Dobfuscate -U $(MAVEN_OPTS) package
+	cd $(.CURDIR)/.. && mvn -q -DonlyJar -DskipDocs -DskipTests -Dobfuscate -U $(MAVEN_OPTS) package
 .endif
 
 rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar
 	@$(INSTALL) -c -m 0644 $(.ALLSRC:Ncopyit) $(.OBJDIR)/$(.TARGET)
 .if $(PREBUILT:Uno) == "yes"
 	@echo Installed prebuilt rv-predict.jar.
-.elif $(RELEASE:Uno) == "no"
-	@$(.CURDIR)/add-metainfo.sh $(.OBJDIR) $(.TARGET)
 .endif
 
 $(.CURDIR)/../target/release/rv-predict/rv-predict.jar: buildit

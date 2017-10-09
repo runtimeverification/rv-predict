@@ -70,7 +70,7 @@
                         </goals>
                         <configuration>
                             <descriptor>src/main/assembly/assembly.xml</descriptor>
-                            <appendAssemblyId>false</appendAssemblyId>
+<!--                            <appendAssemblyId>false</appendAssemblyId> -->
                             <archive>
                                 <manifest>
                                     <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>

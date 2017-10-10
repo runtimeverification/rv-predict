@@ -353,7 +353,7 @@ public class TraceUtils {
     }
 
     @SafeVarargs
-    public final List<ReadonlyEventInterface> flatten(List<ReadonlyEventInterface>... events) {
+    public static List<ReadonlyEventInterface> flatten(List<ReadonlyEventInterface>... events) {
         List<ReadonlyEventInterface> flattened = new ArrayList<>();
         for (List<ReadonlyEventInterface> eventList : events) {
             flattened.addAll(eventList);

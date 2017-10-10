@@ -113,7 +113,9 @@ public class MaximalCausalModel {
     private final boolean detectInterruptedThreadRace;
 
     public static MaximalCausalModel create(
-            Trace trace, Z3Filter z3filter, Solver fastSolver, Solver soundSolver, boolean detectInterruptedThreadRace) {
+            Trace trace, Z3Filter z3filter,
+            Solver fastSolver, Solver soundSolver,
+            boolean detectInterruptedThreadRace) {
         MaximalCausalModel model = new MaximalCausalModel(
                 trace, z3filter, fastSolver, soundSolver, detectInterruptedThreadRace);
 
@@ -122,7 +124,8 @@ public class MaximalCausalModel {
     }
 
     private MaximalCausalModel(
-            Trace trace, Z3Filter z3filter, Solver fastSolver, Solver soundSolver, boolean detectInterruptedThreadRace) {
+            Trace trace, Z3Filter z3filter, Solver fastSolver, Solver soundSolver,
+            boolean detectInterruptedThreadRace) {
         this.trace = trace;
         this.z3filter = z3filter;
         this.fastSolver = fastSolver;
@@ -147,8 +150,11 @@ public class MaximalCausalModel {
                                 trace::getLastEvent))
                         .build();
 
+        ReadWriteOrderingInferences mnhb = new ReadWriteOrderingInferences(trace.eventsByThreadID());
+
         TransitiveClosure.Builder mhbClosureBuilder = TransitiveClosure.builder(trace.getSize());
         happensBeforeConstraints.forEach(source -> source.addToMhbClosure(mhbClosureBuilder));
+        mnhb.addToMhb(mhbClosureBuilder, Optional.of(mhbClosureBuilder.build()));
         mhbClosure = mhbClosureBuilder.build();
 
         trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> lockRegions.forEach(locksetEngine::add));
@@ -400,7 +406,8 @@ public class MaximalCausalModel {
                                 isRace = soundSolver.check() == Status.SATISFIABLE;
                                 atLeastOneRace |= isRace;
                                 if (isRace) {
-                                    Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution(soundSolver);
+                                    Map<Integer, List<EventWithOrder>> threadToExecution =
+                                            extractExecution(soundSolver);
                                     Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
                                     fillSignalStack(threadToExecution, signalParents, race);
                                     if (Configuration.debug) {

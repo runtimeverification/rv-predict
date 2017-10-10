@@ -3,6 +3,8 @@
 set -e
 set -u
 
+analyze_passthrough=
+symbolize_passthrough=
 sharedir=$(dirname $0)/../share/rv-predict-c
 
 usage()
@@ -63,19 +65,11 @@ trim_stack()
 
 symbolize()
 {
-	if ! [ ${filter_symbol:-yes} = yes ]
-	then
-		cat
-		return 0
-	fi
-
-	rvpsymbolize-json "$@" | \
+	rvpsymbolize-json ${symbolize_passthrough} "$@" | \
 	{ [ ${filter_trim:-yes} = yes ] && rvptrimframe || cat ; } | \
 	{ [ ${filter_shorten:-yes} = yes ] && rvpshortenpaths || cat ; } | \
 	rv-error ${sharedir}/${output_format:-console}-metadata.json
 }
-
-analyze_passthrough=
 
 if [ ${RVP_WINDOW_SIZE:-none} != none ]; then
 	if [ -n "$(echo -n "$RVP_WINDOW_SIZE" | sed 's/^[0-9]\+$//g')" ]; then
@@ -91,7 +85,11 @@ fi
 
 while [ $# -gt 1 ]; do
 	case $1 in
-	--no-shorten|--no-symbol|--no-trim)
+	--no-symbol)
+		symbolize_passthrough="${symbolize_passthrough:-} -S"
+		shift
+		;;
+	--no-shorten|--no-trim)
 		eval filter_${1##--no-}=no
 		shift
 		;;

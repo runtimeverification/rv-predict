@@ -5,5 +5,5 @@
 # -DpreparationGoals="clean install" 
 
 mvn -X -B release:prepare release:perform \
-    -Dusername=git -DskipTests -DskipDocs \
-    -Darguments="-DskipTests -DskipDocs"
+    -Dusername=git -DskipTests \
+    -Darguments="-DskipTests"

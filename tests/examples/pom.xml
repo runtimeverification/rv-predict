@@ -8,6 +8,7 @@
     <artifactId>examples</artifactId>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
     </properties>
     <build>
         <plugins>

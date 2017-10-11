@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# release:clean
-# -Dobfuscate
 # -DpreparationGoals="clean install" 
+# release:perform
+# -X
 
-mvn -X -B release:prepare release:perform \
-    -Dusername=git -DskipTests \
-    -Darguments="-DskipTests"
+mvn -B release:prepare release:clean \
+    -Dusername=git -DskipTests -DskipDocs -Dobfuscate \
+    -Darguments="-DskipTests -DskipDocs -Dobfuscate"

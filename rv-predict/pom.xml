@@ -7,6 +7,23 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>rv-predict</artifactId>
     <name>rv-predict</name>
+    <profiles>
+        <profile>
+            <id>generate-docs</id>
+            <dependencies>
+            <dependency>
+                <groupId>com.runtimeverification.rvpredict</groupId>
+                <artifactId>docs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            </dependencies>
+            <activation>
+                <property>
+                    <name>!skipDocs</name>
+                </property>
+            </activation>
+        </profile>
+    </profiles>
     <dependencies>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
@@ -36,11 +53,6 @@
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>SpringExample</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>docs</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

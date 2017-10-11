@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e
+set -x
+
+gcc -Wall -fPIC -c *.c
+gcc -g -shared -o libsharedlibrary.so shared_library.o
+clang-3.9 -g -fPIC -Xclang -load \
+    -Xclang ~/runtime-verification/install-runtime/lib/rvpinstrument.so \
+    -c shared_library_main.c
+clang-3.9 -o shared_library_main shared_library_main.o dump_shared_libraries.o \
+    -L/home/virgil/runtime-verification/install-runtime/lib \
+    -L/home/virgil/runtime-verification/tmp/examples/library-example \
+    -L. \
+    -lrvprt -ldl -lrt -lsharedlibrary -pthread -g
+LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH RVP_TRACE_ONLY=yes ./shared_library_main

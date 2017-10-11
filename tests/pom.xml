@@ -16,6 +16,7 @@
         <module>llvm-tests</module>
     </modules>
     <properties>
+        <maven.javadoc.skip>true</maven.javadoc.skip>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 </project>

@@ -131,7 +131,7 @@
                         </goals>
                         <configuration>
                             <serverId>rv-site</serverId>
-                            <url>scp://grigore@ftp.runtimeverification.com/</url>
+                            <url>scp://release@ftp.runtimeverification.com/</url>
                             <fromDir>target</fromDir>
                             <includes>rv-predict-installer*.jar</includes>
                             <toDir>/var/www/predict/${project.version}</toDir>

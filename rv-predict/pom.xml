@@ -33,6 +33,7 @@
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>java</artifactId>
+            <type>pom</type>
             <version>${project.version}</version>
         </dependency>
         <dependency>

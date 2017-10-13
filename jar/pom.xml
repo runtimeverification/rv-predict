@@ -9,13 +9,9 @@
     <dependencies>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>java</artifactId>
+            <artifactId>prejar</artifactId>
             <type>jar</type>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>native-z3</artifactId>
+            <classifier>assembly-with-dll</classifier>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
@@ -35,67 +31,68 @@
                 </executions>
             </plugin>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>jar-with-dlls</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <descriptor>src/main/assembly/assembly.xml</descriptor>
-<!--                            <appendAssemblyId>false</appendAssemblyId> -->
-                            <archive>
-                                <manifest>
-                                    <mainClass>com.runtimeverification.rvpredict.engine.main.Main</mainClass>
-                                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                                </manifest>
-                                <manifestEntries>
-                                    <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
-                                    <Boot-Class-Path>rv-predict.jar</Boot-Class-Path>
-                                    <Can-Retransform-Classes>true</Can-Retransform-Classes>
-                                </manifestEntries>
-                            </archive>
-                         </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>jarjar-maven-plugin</artifactId>
-                <version>1.9</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.1.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals>
-                            <goal>jarjar</goal>
+                            <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <excludes>
-                                <exclude>junit:junit</exclude>
-                                <exclude>org.hamcrest:*</exclude>
-                                <exclude>com.microsoft.z3:libz3</exclude>
-                            </excludes>
-
-                            <rules>
-                                <rule>
-                                    <pattern>org.objectweb.**.*</pattern>
-                                    <result>com.runtimeverification.rvpredict.internal.org.objectweb.@1.@2</result>
-                                </rule>
-                                <rule>
-                                    <pattern>com.beust.**.*</pattern>
-                                    <result>com.runtimeverification.rvpredict.internal.com.beust.@1.@2</result>
-                                </rule>
-                                <rule>
-                                    <pattern>org.apache.**.*</pattern>
-                                    <result>com.runtimeverification.rvpredict.internal.org.apache.@1.@2</result>
-                                </rule>
-                                <rule>
-                                    <pattern>com.google.**.*</pattern>
-                                    <result>com.runtimeverification.rvpredict.internal.com.google.@1.@2</result>
-                                </rule>
-                            </rules>
+                            <!-- prevent "java.lang.SecurityException:
+                                Invalid signature file digest for Manifest
+                                main attributes" when module `rv-predict`
+                                runs tests -->
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+    <!--
+                                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+    -->
+                                        <Main-Class>com.runtimeverification.rvpredict.engine.main.Main</Main-Class>
+                                        <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
+                                        <Boot-Class-Path>rv-predict.jar</Boot-Class-Path>
+                                        <Can-Retransform-Classes>true</Can-Retransform-Classes>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>junit:junit</exclude>
+                                    <exclude>org.hamcrest:*</exclude>
+                                    <exclude>com.microsoft.z3:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.objectweb</pattern>
+                                    <shadedPattern>com.runtimeverification.rvpredict.internal.org.objectweb</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.beust</pattern>
+                                    <shadedPattern>com.runtimeverification.rvpredict.internal.com.beust</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache</pattern>
+                                    <shadedPattern>com.runtimeverification.rvpredict.internal.org.apache</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.google</pattern>
+                                    <shadedPattern>com.runtimeverification.rvpredict.internal.com.google</shadedPattern>
+                                </relocation>
+                            </relocations>
                         </configuration>
                     </execution>
                 </executions>
@@ -130,7 +127,7 @@
                             <exclusions>
                                 <exclusion>
                                     <groupId>com.runtimeverification.rvpredict</groupId>
-                                    <artifactId>java</artifactId>
+                                    <artifactId>prejar</artifactId>
                                 </exclusion>
                                 <exclusion>
                                     <groupId>com.runtimeverification.rv_match</groupId>

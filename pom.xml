@@ -35,6 +35,7 @@
     <modules>
         <module>native-z3</module>
         <module>rv-predict</module>
+        <module>prejar</module>
         <module>jar</module>
         <module>java</module>
     </modules>

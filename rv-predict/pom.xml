@@ -33,7 +33,7 @@
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>java</artifactId>
-            <type>pom</type>
+            <type>jar</type>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -151,7 +151,6 @@
                     </descriptors>
                 </configuration>
             </plugin>
-<!--
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -164,6 +163,9 @@
                     </dependency>
                 </dependencies>
                 <configuration>
+                    <dependenciesToScan>
+                        <dependency>com.runtimeverification.rvpredict:java</dependency>
+                    </dependenciesToScan>
                     <includes>
                         <include>**/*.class</include>
                     </includes>
@@ -181,6 +183,9 @@
                     </dependency>
                 </dependencies>
                 <configuration>
+                    <dependenciesToScan>
+                        <dependency>com.runtimeverification.rvpredict:java</dependency>
+                    </dependenciesToScan>
                     <groups>com.runtimeverification.rvpredict.IntegrationTest</groups>
                     <systemPropertyVariables>
                         <rvPath>${project.parent.build.directory}/release/${project.artifactId}</rvPath>
@@ -202,7 +207,6 @@
                     </execution>
                 </executions>
             </plugin>
--->
         </plugins>
     </build>
 </project>

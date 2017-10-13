@@ -24,6 +24,7 @@
                 <module>installer</module>
                 <module>c-installer</module>
                 <module>c-installer-tools</module>
+                <module>rv-predict</module>
             </modules>
             <activation>
                 <property>
@@ -34,7 +35,6 @@
     </profiles>
     <modules>
         <module>native-z3</module>
-        <module>rv-predict</module>
         <module>prejar</module>
         <module>jar</module>
         <module>java</module>

@@ -7,6 +7,8 @@ FILESMODE_rv-predict.jar.copy=0644
 
 FILESDIR_rv-predict.jar.copy=$(DATADIR)/rv-predict-c
 
+MAVEN_VERSION!=cd $(.CURDIR)/.. && mvn -q -Dexec.executable="echo" -Dexec.args='$${project.version}' --non-recursive org.codehaus.mojo:exec-maven-plugin:1.3.1:exec
+
 .if ${NOISY:Uno} == "no"
 MAVEN_OPTS=-q
 .else
@@ -20,13 +22,13 @@ buildit: .PHONY
 	cd $(.CURDIR)/.. && mvn -q -DonlyJar -DskipDocs -DskipTests -Dobfuscate -U $(MAVEN_OPTS) package
 .endif
 
-rv-predict.jar.copy: $(.CURDIR)/../target/release/rv-predict/rv-predict.jar
+rv-predict.jar.copy: $(.CURDIR)/../jar/target/jar-${MAVEN_VERSION}.jar
 	@$(INSTALL) -c -m 0644 $(.ALLSRC:Ncopyit) $(.OBJDIR)/$(.TARGET)
 .if $(PREBUILT:Uno) == "yes"
 	@echo Installed prebuilt rv-predict.jar.
 .endif
 
-$(.CURDIR)/../target/release/rv-predict/rv-predict.jar: buildit
+$(.CURDIR)/../jar/target/jar-${MAVEN_VERSION}.jar: buildit
 
 clean cleandir distclean:
 	@cd $(.CURDIR)/.. && mvn -q clean

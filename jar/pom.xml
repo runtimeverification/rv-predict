@@ -87,6 +87,8 @@
                                     <exclude>com.microsoft.z3:*:dll:*</exclude>
                                     <exclude>com.microsoft.z3:*:dylib:*</exclude>
                                     <exclude>com.microsoft.z3:*:so:*</exclude>
+                                    <!-- Exclude main jar to avoid error 'Failed to create shaded artifact, project main artifact does not exist' -->
+                                    <exclude>${project.groupId}:${project.artifactId}</exclude>
                                 </excludes>
                             </artifactSet>
                             <relocations>

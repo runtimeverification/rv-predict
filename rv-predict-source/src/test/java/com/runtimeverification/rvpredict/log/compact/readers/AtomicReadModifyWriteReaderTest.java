@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.testutils.ReaderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,8 +36,9 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
-        Assert.assertEquals(12, reader.size(mockTraceHeader));
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
+        Assert.assertEquals(12, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -44,8 +46,9 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(1);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
-        Assert.assertEquals(8, reader.size(mockTraceHeader));
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
+        Assert.assertEquals(8, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -53,8 +56,9 @@ public class AtomicReadModifyWriteReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
+        Assert.assertEquals(16, ReaderUtils.firstPartSize(reader, mockTraceHeader));
     }
 
     @Test
@@ -69,9 +73,10 @@ public class AtomicReadModifyWriteReaderTest {
                 .putLong(Long.MAX_VALUE);
         buffer.rewind();
 
-        CompactEventReader.Reader reader = AtomicReadModifyWriteReader.createReader(2);
+        CompactEventReader.Reader reader =
+                AtomicReadModifyWriteReader.createReader(2);
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                ReaderUtils.readSimpleEvent(reader, mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

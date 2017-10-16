@@ -146,8 +146,9 @@ public class Race {
             sb.append(String.format("Data race on %s:%n", locSig));
             boolean reportableRace;
     
-            if (trace.metadata().getLocationSig(e1.getLocationId())
-                    .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
+            if (trace.metadata().getLocationSig(e1.getLocationId(), Optional.of(trace.getSharedLibraries()))
+                    .compareTo(trace.metadata().getLocationSig(
+                            e2.getLocationId(), Optional.of(trace.getSharedLibraries()))) <= 0) {
                 reportableRace = generateMemAccReport(e1, getFirstSignalStack(), trace.metadata(), sb);
                 sb.append(StandardSystemProperty.LINE_SEPARATOR.value());
                 reportableRace |= generateMemAccReport(e2, getSecondSignalStack(), trace.metadata(), sb);
@@ -162,7 +163,7 @@ public class Race {
         }
     }
 
-    public Optional<RawStackError> generateErrorData(MetadataInterface metadata) {
+    Optional<RawStackError> generateErrorData(MetadataInterface metadata) {
         RawStackError error = new RawStackError();
         error.description_format = "Data race on %s";
         RawField f = new RawField();
@@ -174,8 +175,9 @@ public class Race {
         boolean reportableRace = fillStackTraceData(t1, metadata, e1, getFirstSignalStack());
         reportableRace |= fillStackTraceData(t2, metadata, e2, getSecondSignalStack());
         error.stack_traces = new ArrayList<>();
-        if (trace.metadata().getLocationSig(e1.getLocationId())
-                .compareTo(trace.metadata().getLocationSig(e2.getLocationId())) <= 0) {
+        if (trace.metadata().getLocationSig(e1.getLocationId(), Optional.of(trace.getSharedLibraries()))
+                .compareTo(trace.metadata().getLocationSig(
+                        e2.getLocationId(), Optional.of(trace.getSharedLibraries()))) <= 0) {
             error.stack_traces.add(t1);
             error.stack_traces.add(t2);
         } else {
@@ -263,7 +265,8 @@ public class Race {
     }
 
     private boolean fillStackTraceData(
-            RawStackTrace t, MetadataInterface metadata, ReadonlyEventInterface e, List<SignalStackEvent> signalStackEvents) {
+            RawStackTrace t, MetadataInterface metadata, ReadonlyEventInterface e,
+            List<SignalStackEvent> signalStackEvents) {
         long otid = e.getOriginalThreadId();
         t.components = new ArrayList<>();
         RawStackTraceComponent primaryComponent = generatePrimaryComponentData(metadata, e, otid);
@@ -279,7 +282,7 @@ public class Race {
             t.thread_created_by = Long.toString(parentOTID);
             long locId = trace.metadata().getOriginalThreadCreationLocId(otid);
             if (locId >= 0) {
-                t.thread_created_at = generateFrameData(metadata, locId).orElse(null);
+                t.thread_created_at = generateFrameData(locId).orElse(null);
             }
         }
         return primaryComponent.frames.size() > 0;
@@ -325,7 +328,8 @@ public class Race {
             interrupting.description_fields = new ArrayList<>();
         }
         if (trace.getThreadType(ttid) == ThreadType.THREAD) {
-            interrupting.description_format = "Interrupting thread " + trace.getOriginalThreadIdForTraceThreadId(ttid) + descriptionSuffix;
+            interrupting.description_format =
+                    "Interrupting thread " + trace.getOriginalThreadIdForTraceThreadId(ttid) + descriptionSuffix;
         } else {
             interrupting.description_format = "Interrupting signal %s" + descriptionSuffix;
             RawComponentField field = new RawComponentField();
@@ -388,7 +392,6 @@ public class Race {
             List<ReadonlyEventInterface> heldLocks) {
         RawStackTraceComponent c = new RawStackTraceComponent();
         c.description_fields = new ArrayList<>();
-        long otid = e.getOriginalThreadId();
         List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         stacktrace.sort((e1, e2) -> -e1.compareTo(e2));
@@ -406,7 +409,7 @@ public class Race {
                     continue;
                 } 
             } else {
-                Optional<RawFrame> frame = generateFrameData(metadata, locId);
+                Optional<RawFrame> frame = generateFrameData(locId);
                 if (frame.isPresent()) {
                     lastFrame = frame.get();
                     c.frames.add(lastFrame);
@@ -447,7 +450,7 @@ public class Race {
                 long locId = metadata.getOriginalThreadCreationLocId(otid);
                 sb.append(String.format("    Thread %s created by thread %s%n", otid, parentOTID));
                 if (locId >= 0) {
-                    String locationSig = metadata.getLocationSig(locId);
+                    String locationSig = metadata.getLocationSig(locId, Optional.of(trace.getSharedLibraries()));
                     signatureProcessor.process(locationSig);
                     sb.append(String.format("        %s%s%n", metadata.getLocationPrefix(), locationSig));
                 } else {
@@ -485,11 +488,11 @@ public class Race {
         return locId.getAsLong();
     }
 
-    private Optional<RawFrame> generateFrameData(
-            MetadataInterface metadata, long locId) {
+    private Optional<RawFrame> generateFrameData(long locId) {
         RawFrame f = new RawFrame();
         f.locks = new ArrayList<>();
-        String locSig = locId >= 0 ? trace.metadata().getLocationSig(locId)
+        String locSig = locId >= 0
+                ? trace.metadata().getLocationSig(locId, Optional.of(trace.getSharedLibraries()))
                 : "... not available ...";
         f.address = locSig;
         if (config.isExcludedLibrary(locSig)) {
@@ -504,13 +507,13 @@ public class Race {
     private Optional<RawLock> generateLockData(
             MetadataInterface metadata,
             ReadonlyEventInterface event, long locId) {
-        String locSig = locId >= 0 ? metadata.getLocationSig(locId)
+        String locSig = locId >= 0 ? metadata.getLocationSig(locId, Optional.of(trace.getSharedLibraries()))
                 : "... not available ...";
         RawLock l = new RawLock();
         RawField field = new RawField();
         field.address = metadata.getLockSig(event, trace);
         l.id = field;
-        l.locked_at = metadata.getLocationSig(locId);
+        l.locked_at = metadata.getLocationSig(locId, Optional.of(trace.getSharedLibraries()));
         if (config.isExcludedLibrary(locSig)) {
             return Optional.empty();
         }
@@ -523,10 +526,11 @@ public class Race {
     private boolean displayOneStackLocation(
             StringBuilder sb, MetadataInterface metadata,
             boolean isTopmostStack, ReadonlyEventInterface event, long locId) {
-        String locSig = locId >= 0 ? metadata.getLocationSig(locId)
+        String locSig = locId >= 0 ? metadata.getLocationSig(locId, Optional.of(trace.getSharedLibraries()))
                 : "... not available ...";
         if (config.isExcludedLibrary(locSig)) {
-            assert !event.isLock() : "Locations for locks should have been handled in TraceState::updateLockLocToUserLoc";
+            assert !event.isLock()
+                    : "Locations for locks should have been handled in TraceState::updateLockLocToUserLoc";
             return false;
         }
         if (locId >= 0) {

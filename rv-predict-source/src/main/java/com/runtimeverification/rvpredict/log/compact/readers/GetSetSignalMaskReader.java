@@ -11,7 +11,7 @@ import java.util.Arrays;
 public class GetSetSignalMaskReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
-                header -> new TraceElement(header),
+                TraceElement::new,
                 (context, compactEventFactory, element) -> compactEventFactory.getSetSignalMask(
                         context,
                         element.readMask.getAsLong(),

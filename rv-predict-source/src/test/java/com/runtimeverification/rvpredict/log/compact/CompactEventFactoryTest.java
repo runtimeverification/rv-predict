@@ -37,8 +37,12 @@ public class CompactEventFactoryTest {
     private static final long SIGNAL_MASK2 = 1006;
     private static final long CANONICAL_FRAME_ADDRESS = 1007;
     private static final long CALL_SITE_ADDRESS = 1008;
+    private static final long LIBRARY_ID = 1009;
+    private static final long LIBRARY_SEGMENT_START = 1010;
+    private static final long LIBRARY_SEGMENT_SIZE = 1011;
     private static final int SIGNAL_DEPTH = 3;
     private static final long ORIGIN_BIT_COUNT = 4;
+    private static final String LIBRARY_NAME = "/library/name.so.1";
 
     private static final List<CompactEventMethod> ALL_METHODS = new ArrayList<>();
 
@@ -72,6 +76,14 @@ public class CompactEventFactoryTest {
             new CompactEventMethod<>(ALL_METHODS, "getCanonicalFrameAddress", CompactEvent::getCanonicalFrameAddress);
     private static final CompactEventMethod<OptionalLong> GET_CALL_SITE_ADDRESS =
             new CompactEventMethod<>(ALL_METHODS, "getCallSiteAddress", CompactEvent::getCallSiteAddress);
+    private static final CompactEventMethod<Long> GET_SHARED_LIBRARY_ID =
+            new CompactEventMethod<>(ALL_METHODS, "getSharedLibaryId", CompactEvent::getSharedLibraryId);
+    private static final CompactEventMethod<String> GET_SHARED_LIBRARY_NAME =
+            new CompactEventMethod<>(ALL_METHODS, "getSharedLibaryName", CompactEvent::getSharedLibraryName);
+    private static final CompactEventMethod<Long> GET_SHARED_LIBRARY_START =
+            new CompactEventMethod<>(ALL_METHODS, "getSharedLibaryId", CompactEvent::getSharedLibrarySegmentStart);
+    private static final CompactEventMethod<Long> GET_SHARED_LIBRARY_END =
+            new CompactEventMethod<>(ALL_METHODS, "getSharedLibaryId", CompactEvent::getSharedLibrarySegmentEnd);
 
     @Mock private Context mockContext;
 
@@ -911,6 +923,58 @@ public class CompactEventFactoryTest {
         );
 
         verify(mockContext, times(1)).joinThread(OTHER_THREAD_ID);
+    }
+
+    @Test
+    public void sharedLibrary() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+
+        CompactEventFactory eventFactory = new CompactEventFactory();
+        List<ReadonlyEventInterface> events = eventFactory.sharedLibrary(
+                mockContext,
+                LIBRARY_ID,
+                LIBRARY_NAME);
+
+        Assert.assertEquals(1, events.size());
+        ReadonlyEventInterface event = events.get(0);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.SHARED_LIBRARY, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(LIBRARY_ID, GET_SHARED_LIBRARY_ID),
+                        new ReturnValueTest<>(LIBRARY_NAME, GET_SHARED_LIBRARY_NAME),
+                }
+        );
+    }
+
+    @Test
+    public void sharedLibrarySegment() throws InvalidTraceDataException {
+        when(mockContext.newId()).thenReturn(NEW_ID);
+        when(mockContext.getThreadId()).thenReturn(THREAD_ID);
+
+        CompactEventFactory eventFactory = new CompactEventFactory();
+        List<ReadonlyEventInterface> events = eventFactory.sharedLibrarySegment(
+                mockContext,
+                LIBRARY_ID,
+                LIBRARY_SEGMENT_START,
+                LIBRARY_SEGMENT_SIZE);
+
+        Assert.assertEquals(1, events.size());
+        ReadonlyEventInterface event = events.get(0);
+        testImplementedMethods(
+                event,
+                new ReturnValueTest[] {
+                        new ReturnValueTest<>(NEW_ID, GET_ID),
+                        new ReturnValueTest<>(THREAD_ID, GET_THREAD_ID),
+                        new ReturnValueTest<>(EventType.SHARED_LIBRARY_SEGMENT, GET_COMPACT_TYPE),
+                        new ReturnValueTest<>(LIBRARY_ID, GET_SHARED_LIBRARY_ID),
+                        new ReturnValueTest<>(LIBRARY_SEGMENT_START, GET_SHARED_LIBRARY_START),
+                        new ReturnValueTest<>(LIBRARY_SEGMENT_START + LIBRARY_SEGMENT_SIZE, GET_SHARED_LIBRARY_END),
+                }
+        );
     }
 
     private void testImplementedMethods(ReadonlyEventInterface event, ReturnValueTest[] tests) {

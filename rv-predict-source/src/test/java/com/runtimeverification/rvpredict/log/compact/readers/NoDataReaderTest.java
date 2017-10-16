@@ -6,6 +6,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.testutils.ReaderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,7 +32,7 @@ public class NoDataReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
         NoDataReader reader = new NoDataReader((factory, context) -> Collections.singletonList(mockCompactEvent));
-        Assert.assertEquals(0, reader.size(mockTraceHeader));
+        Assert.assertEquals(0, reader.nextPartSize(mockTraceHeader));
     }
 
     @Test
@@ -39,7 +40,7 @@ public class NoDataReaderTest {
         ByteBuffer buffer = ByteBuffer.allocate(0);
         NoDataReader reader = new NoDataReader((factory, context) -> Collections.singletonList(mockCompactEvent));
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                ReaderUtils.readSimpleEvent(reader, mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

@@ -102,6 +102,30 @@ public class Event extends ReadonlyEvent {
         return 0;
     }
 
+    @Override
+    public long getSharedLibraryId() {
+        assert false;
+        return 0;
+    }
+
+    @Override
+    public String getSharedLibraryName() {
+        assert false;
+        return "";
+    }
+
+    @Override
+    public long getSharedLibrarySegmentStart() {
+        assert false;
+        return 0;
+    }
+
+    @Override
+    public long getSharedLibrarySegmentEnd() {
+        assert false;
+        return 0;
+    }
+
     public void setOriginalThreadId(long tid) {
         originalThreadId = tid;
     }

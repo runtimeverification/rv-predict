@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.testutils.ReaderUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +37,7 @@ public class SignalMaskMemoizationReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = SignalMaskMemoizationReader.createReader();
-        Assert.assertEquals(16, reader.size(mockTraceHeader));
+        Assert.assertEquals(16, reader.nextPartSize(mockTraceHeader));
     }
 
     @Test
@@ -45,7 +46,7 @@ public class SignalMaskMemoizationReaderTest {
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(4);
 
         CompactEventReader.Reader reader = SignalMaskMemoizationReader.createReader();
-        Assert.assertEquals(24, reader.size(mockTraceHeader));
+        Assert.assertEquals(24, reader.nextPartSize(mockTraceHeader));
     }
 
     @Test
@@ -61,7 +62,7 @@ public class SignalMaskMemoizationReaderTest {
 
         CompactEventReader.Reader reader = SignalMaskMemoizationReader.createReader();
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                ReaderUtils.readSimpleEvent(reader, mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

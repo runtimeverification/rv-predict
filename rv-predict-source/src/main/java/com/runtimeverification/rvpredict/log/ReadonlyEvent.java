@@ -106,6 +106,11 @@ public abstract class ReadonlyEvent implements ReadonlyEventInterface {
     }
 
     @Override
+    public boolean isSharedLibraryEvent() {
+        return getType() == EventType.SHARED_LIBRARY || getType() == EventType.SHARED_LIBRARY_SEGMENT;
+    }
+
+    @Override
     public long getLockId() {
         assert isPreLock() || isLock() ||  isUnlock();
         return getSyncObject();

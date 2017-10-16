@@ -1,12 +1,17 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
 
 public class ReadableAggregateData implements ReadableData {
     private List<ReadableData> childData;
     private int size;
-    
+
+    public void setData(ReadableData... childData) {
+        setData(Arrays.asList(childData));
+    }
+
     public void setData(List<ReadableData> childData) {
         this.childData = childData;
         this.size = childData.stream().mapToInt(ReadableData::size).sum();

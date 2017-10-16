@@ -8,6 +8,7 @@ import com.runtimeverification.rvpredict.order.VectorClockTraceReader;
 import com.runtimeverification.rvpredict.trace.OrderedLoggedTraceReader;
 
 import java.io.IOException;
+import java.util.Optional;
 
 public class ReadTrace {
     public static void main(String args[]) {
@@ -19,7 +20,7 @@ public class ReadTrace {
                     ReadonlyOrderedEvent event = reader.readEvent();
                     String locSig = event.getEvent().getLocationId() < 0 ?
                             "n/a" :
-                            metadata.getLocationSig(event.getEvent().getLocationId());
+                            metadata.getLocationSig(event.getEvent().getLocationId(), Optional.empty());
                     System.out.printf("%s %s%n", event.toString(), locSig);
                 }
         }

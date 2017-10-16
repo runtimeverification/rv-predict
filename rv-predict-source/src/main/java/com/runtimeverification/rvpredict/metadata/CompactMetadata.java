@@ -3,6 +3,7 @@ package com.runtimeverification.rvpredict.metadata;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.trace.SharedLibraries;
 import com.runtimeverification.rvpredict.trace.Trace;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -19,8 +20,14 @@ public class CompactMetadata implements MetadataInterface {
     private final Map<Long, Pair<Long, Long>> otidToCreationInfo = new ConcurrentHashMap<>();
 
     @Override
-    public String getLocationSig(long locationId) {
-        return String.format("{0x%016x}", locationId);
+    public String getLocationSig(long locationId, Optional<SharedLibraries> sharedLibraries) {
+        Optional<String> defaultLibraryName = Optional.empty();
+        if (sharedLibraries.isPresent()) {
+            defaultLibraryName = sharedLibraries.get().getSharedLibraryNameFromAddress(locationId);
+        }
+        return defaultLibraryName
+                .map(name -> String.format("{0x%016x|%s}", locationId, name))
+                .orElse(String.format("{0x%016x}", locationId));
     }
 
     @Override

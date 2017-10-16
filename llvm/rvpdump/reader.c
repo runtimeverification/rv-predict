@@ -43,7 +43,9 @@ typedef union {
 	rvp_rmw4_t ub_rmw4;
 	rvp_rmw8_t ub_rmw8;
 	rvp_enterfn_t ub_enterfn;
-	char ub_bytes[4096];
+	rvp_shared_library_t ub_shared_library;
+	rvp_shared_library_segment_t ub_shared_library_segment;
+	char ub_bytes[4096 + PATH_MAX];
 } rvp_ubuf_t;
 
 typedef struct {
@@ -222,6 +224,10 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	    OP_INFO_INIT(rvp_sigmask_access_t, "block signals")
 	, [RVP_OP_SIGUNBLOCK] =
 	    OP_INFO_INIT(rvp_sigmask_access_t, "unblock signals")
+	, [RVP_OP_SHARED_LIBRARY] =
+	    OP_INFO_INIT(rvp_shared_library_t, "shared library")
+	, [RVP_OP_SHARED_LIBRARY_SEGMENT] =
+	    OP_INFO_INIT(rvp_shared_library_segment_t, "segment of shared library")
 };
 
 static const rvp_emitters_t binary = {
@@ -949,14 +955,24 @@ reemit_binary_nop(const rvp_pstate_t *ps __unused, const rvp_ubuf_t *ub)
 		err(EXIT_FAILURE, "%s: write", __func__);
 }
 
+int get_ub_length(const rvp_ubuf_t *ub, rvp_op_t op) {
+	const op_info_t *oi = &op_to_info[op];
+	if (op == RVP_OP_SHARED_LIBRARY) {
+		int name_length = ub->ub_shared_library.name_length;
+		int name_length_normalized = 4 * ((name_length + 3) / 4);
+		return oi->oi_reclen + name_length_normalized;
+	}
+	return oi->oi_reclen;
+}
+
 static void
 reemit_binary_op(const rvp_pstate_t *ps __unused, const rvp_ubuf_t *ub,
     rvp_op_t op, bool is_load __unused, int field_width __unused)
 {
-	const op_info_t *oi = &op_to_info[op];
-	const ssize_t nwritten = write(STDOUT_FILENO, ub, oi->oi_reclen);
+	const int size = get_ub_length(ub, op);
+	const ssize_t nwritten = write(STDOUT_FILENO, ub, size);
 
-	if (nwritten != oi->oi_reclen)
+	if (nwritten != size)
 		err(EXIT_FAILURE, "%s: write", __func__);
 }
 
@@ -1263,6 +1279,26 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		    ub->ub_sigmask_rmw.omasknum,
 		    ub->ub_sigmask_rmw.masknum);
 		break;
+	case RVP_OP_SHARED_LIBRARY: {
+		char* name = malloc(ub->ub_shared_library.name_length + 1);
+		memcpy(name, ub->ub_shared_library.name, ub->ub_shared_library.name_length);
+		name[ub->ub_shared_library.name_length] = 0;
+		printf("%s %s #%" PRIu32 " '%s'\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
+		    oi->oi_descr,
+		    ub->ub_shared_library.id,
+			name);
+		free(name);
+		break;
+	}
+	case RVP_OP_SHARED_LIBRARY_SEGMENT:
+		printf("%s %s #%" PRIu32 ": #%" PRIxPTR " -> #%" PRIxPTR "\n",
+			preamble_string(ps, prebuf, sizeof(prebuf)),
+			oi->oi_descr,
+			ub->ub_shared_library_segment.library_id,
+			ub->ub_shared_library_segment.start_address,
+			ub->ub_shared_library_segment.start_address + ub->ub_shared_library_segment.size);
+		break;
 	}
 }
 
@@ -1299,6 +1335,19 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	/* need to top off buffer? */
 	if (*nfullp < oi->oi_reclen)
 		return oi->oi_reclen - *nfullp;
+	// When consume_and_print_trace is called, there is no check that the
+	// buffer contains anything besides the pc, so we need to check that
+	// the current record was loaded, which we do with the above `if`.
+	// However, we also have dynamically sized events, and the above `if`
+	// checks only the static part of an event. The `if` below makes sure
+	// that we can also read its dynamic part. But we can't directly check
+	// the entire static+dynamic size, since the dynamic part size is
+	// computed from the static part, which might have not have been loaded
+	// yet. 
+	const int ub_length = get_ub_length(ub, op);
+	if (*nfullp < ub_length)
+		return ub_length - *nfullp;
+
 	/* If this is the first 'begin', then we won't have a valid
 	 * ps->ps_curthread until after the rvp_pstate_begin_thread()
 	 * call.
@@ -1403,7 +1452,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 		ps->ps_idepth = ub->ub_sigdepth.depth;
 	}
 
-	advance(&ub->ub_bytes[0], nfullp, oi->oi_reclen);
+	advance(&ub->ub_bytes[0], nfullp, ub_length);
 	return 0;
 }
 

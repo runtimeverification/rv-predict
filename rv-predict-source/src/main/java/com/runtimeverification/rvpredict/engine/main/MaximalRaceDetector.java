@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.microsoft.z3.Context;
 import com.microsoft.z3.Params;
@@ -62,7 +63,7 @@ public class MaximalRaceDetector implements RaceDetector {
     }
 
     private boolean isThreadSafeLocation(Trace trace, long locId) {
-        String locationSig = trace.metadata().getLocationSig(locId);
+        String locationSig = trace.metadata().getLocationSig(locId, Optional.of(trace.getSharedLibraries()));
         if (locationSig.startsWith("java.util.concurrent")
             || locationSig.startsWith("java.util.stream")) {
             return true;

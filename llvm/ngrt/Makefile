@@ -21,6 +21,7 @@ SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c sigutil.c
 SRCS+=supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c
+SRCS+=dynamic_library.c
 WARNS=4
 
 .include <mkc.lib.mk>

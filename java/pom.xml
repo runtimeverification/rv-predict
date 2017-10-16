@@ -3,7 +3,7 @@
     <parent>
         <artifactId>root</artifactId>
         <groupId>com.runtimeverification.rvpredict</groupId>
-        <version>1.8.18-SNAPSHOT</version>
+        <version>1.8.17-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>java</artifactId>
@@ -112,10 +112,6 @@
         </dependency>
 
     </dependencies>
-
-    <properties>
-        <maven.javadoc.skip>true</maven.javadoc.skip>
-    </properties>
 
     <build>
         <plugins>

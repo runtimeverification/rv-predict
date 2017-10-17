@@ -7,16 +7,6 @@
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <dependencySets>
-<!--
-        <dependencySet>
-            <useProjectArtifact>false</useProjectArtifact>
-            <outputDirectory>/</outputDirectory>
-            <includes>
-                <include>com.runtimeverification.rvpredict:java</include>
-            </includes>
-            <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
-        </dependencySet>
--->
         <dependencySet>
             <useProjectArtifact>false</useProjectArtifact>
             <outputDirectory>/native</outputDirectory>
@@ -27,26 +17,4 @@
             <outputFileNameMapping>${artifact.classifier}/${artifact.artifactId}.${artifact.type}</outputFileNameMapping>
         </dependencySet>
     </dependencySets>
-<!--
-    <moduleSets>
-        <moduleSet>
-
-            <useAllReactorProjects>true</useAllReactorProjects>
-
-            <includes>
-                <include>com.runtimeverification.rvpredict:java</include>
-            </includes>
-            <binaries>
-                <outputDirectory>/</outputDirectory>
-                <dependencySets>
-                    <dependencySet>
-                        <excludes>
-                            <exclude>*:*</exclude>
-                        </excludes>
-                    </dependencySet>
-                </dependencySets>
-            </binaries>
-        </moduleSet>
-    </moduleSets>
--->
 </assembly>

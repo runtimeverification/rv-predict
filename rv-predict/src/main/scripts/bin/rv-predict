@@ -1,12 +1,12 @@
-#!/usr/bin/env bash
+#!/bin/sh
+
 ulimit -s `ulimit -H -s`
 
-bindir=${RV_ROOT:-/usr/local}/bin
+_root=${RV_ROOT:-/usr/local}
+bindir=${_root}/bin
+libdir=${_root}/lib
 if [ "$1" = "--test" ]; then
-    shift
-    libdir="$RV_ROOT"
-else
-    libdir=${RV_ROOT:-/usr/local}/lib
+	shift
 fi
 
 ${bindir}/checkJava || exit 1

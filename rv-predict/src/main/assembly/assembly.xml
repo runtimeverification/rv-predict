@@ -22,7 +22,7 @@
                 <include>com.runtimeverification.rvpredict:jar</include>
             </includes>
             <binaries>
-                <outputDirectory>/</outputDirectory>
+                <outputDirectory>/lib</outputDirectory>
                 <outputFileNameMapping>rv-predict.jar</outputFileNameMapping>
                 <unpack>false</unpack>
                 <dependencySets>

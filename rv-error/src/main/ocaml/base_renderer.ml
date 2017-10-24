@@ -15,7 +15,8 @@ type renderer = {
   data : Error_t.metadata;
   previous_errors : (rv_error, unit) Hashtbl.t;
   render_impl : renderer -> rv_error -> out_channel -> unit;
-  streams :  (string, out_channel) Hashtbl.t
+  streams :  (string, out_channel) Hashtbl.t;
+  render_local_vars : bool;
 }
 
 
@@ -42,8 +43,8 @@ let add_previous_error (r : renderer) (e : rv_error) : unit =
   Hashtbl.add r.previous_errors e ()
 
 
-let create_instance (renderer : renderer) (impl : renderer -> rv_error -> out_channel -> unit) : renderer =
-  { renderer with render_impl = impl; }
+let create_instance (renderer : renderer) ?local_vars:(lv=false) (impl : renderer -> rv_error -> out_channel -> unit) : renderer =
+  { renderer with render_impl = impl; render_local_vars = lv }
 
 
 let string_of_error_category (category : error_category) : string =

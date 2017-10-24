@@ -18,4 +18,4 @@ let render_impl (this : renderer) (error : rv_error) (str : out_channel) : unit 
 
 
 let instance (renderer : renderer) : renderer =
-  Base_renderer.create_instance renderer render_impl
+  Base_renderer.create_instance renderer ~local_vars:true render_impl

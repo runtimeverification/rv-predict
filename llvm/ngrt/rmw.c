@@ -20,6 +20,20 @@ trace_atomic_rmw4(const void *retaddr, rvp_addr_t addr,
 	rvp_ring_put_buf(r, b);
 }
 
+static inline void
+trace_atomic_rmw8(const void *retaddr, rvp_addr_t addr,
+    uint64_t oval, uint64_t nval, int32_t memory_order __unused)
+{
+	rvp_ring_t *r = rvp_ring_for_curthr();
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_ATOMIC_RMW8);
+	rvp_buf_put_addr(&b, addr);
+	rvp_buf_put_u64(&b, oval);
+	rvp_buf_put_u64(&b, nval);
+	rvp_ring_put_buf(r, b);
+}
+
 void
 __rvpredict_atomic_fetch_add4(volatile _Atomic uint32_t *addr,
     uint32_t oval, uint32_t arg, int32_t memory_order __unused)
@@ -80,8 +94,19 @@ __rvpredict_atomic_cas8(volatile _Atomic uint64_t *addr __unused,
     int32_t memory_order_success __unused,
     int32_t memory_order_failure __unused)
 {
-	not_implemented(__func__);
-	return 0;
+	if (atomic_compare_exchange_strong_explicit(addr, &expected, desired,
+	    memory_order_success, memory_order_failure)) {
+		trace_atomic_rmw8(__builtin_return_address(0),
+		    (rvp_addr_t)addr, expected, desired, memory_order_success);
+	} else {
+		/* `expected` took the unexpected value that was found
+		 * at `addr`
+		 */
+		/* TBD pass memory_order_failure */
+		trace_load8(__builtin_return_address(0), RVP_OP_ATOMIC_LOAD8,
+		    (rvp_addr_t)addr, expected);
+	}
+	return expected;
 }
 
 rvp_uint128_t

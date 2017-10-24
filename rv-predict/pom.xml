@@ -2,20 +2,38 @@
     <parent>
         <groupId>com.runtimeverification.rvpredict</groupId>
         <artifactId>root</artifactId>
-        <version>1.8.2-SNAPSHOT</version>
+        <version>1.8.24-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>rv-predict</artifactId>
     <name>rv-predict</name>
+    <profiles>
+        <profile>
+            <id>generate-docs</id>
+            <dependencies>
+            <dependency>
+                <groupId>com.runtimeverification.rvpredict</groupId>
+                <artifactId>docs</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            </dependencies>
+            <activation>
+                <property>
+                    <name>!skipDocs</name>
+                </property>
+            </activation>
+        </profile>
+    </profiles>
     <dependencies>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-jar</artifactId>
+            <artifactId>jar</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>rv-predict-source</artifactId>
+            <artifactId>java</artifactId>
+            <type>jar</type>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -36,11 +54,6 @@
         <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>SpringExample</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.runtimeverification.rvpredict</groupId>
-            <artifactId>docs</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -71,10 +84,8 @@
                   </goals>
                   <configuration>
                     <target>
-                      <delete 
-                        file="${project.parent.relativePath}/../EVALUATION-LICENSE.md"/>   
-                      <delete 
-                        file="${project.parent.relativePath}/../LICENSE.md"/>
+                      <delete file="${project.parent.relativePath}/../EVALUATION-LICENSE.md" />   
+                      <delete file="${project.parent.relativePath}/../LICENSE.md" />
                     </target>
                   </configuration>
                 </execution>
@@ -152,6 +163,9 @@
                     </dependency>
                 </dependencies>
                 <configuration>
+                    <dependenciesToScan>
+                        <dependency>com.runtimeverification.rvpredict:java</dependency>
+                    </dependenciesToScan>
                     <includes>
                         <include>**/*.class</include>
                     </includes>
@@ -169,11 +183,14 @@
                     </dependency>
                 </dependencies>
                 <configuration>
+                    <dependenciesToScan>
+                        <dependency>com.runtimeverification.rvpredict:java</dependency>
+                    </dependenciesToScan>
                     <groups>com.runtimeverification.rvpredict.IntegrationTest</groups>
                     <systemPropertyVariables>
                         <rvPath>${project.parent.build.directory}/release/${project.artifactId}</rvPath>
-                        <examplesPath>${project.parent.basedir}/rv-predict-tests</examplesPath>
-                        <rvVersion>${version}</rvVersion>
+                        <examplesPath>${project.parent.basedir}/tests</examplesPath>
+                        <rvVersion>${project.version}</rvVersion>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

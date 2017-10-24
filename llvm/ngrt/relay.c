@@ -13,7 +13,7 @@ void
 rvp_wake_relay(void)
 {
 	int rc;
-	
+
 	nwake++;
 	rc = pthread_kill(relay_thread, relay_signum);
 	if (rc != 0) {

@@ -290,7 +290,7 @@ rvp_signal_ring_put(rvp_thread_t *t __unused, rvp_ring_t *r)
 }
 
 static void
-handler_wrapper(int signum, siginfo_t *info, void *ctx)
+__rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 {
 	/* XXX rvp_thread_for_curthr() calls pthread_getspecific(), which
 	 * is not guaranteed to be async signal-safe.  However, it is
@@ -768,7 +768,7 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 
 	act_copy = *act;
 	act_copy.sa_flags |= SA_SIGINFO;
-	act_copy.sa_sigaction = handler_wrapper;
+	act_copy.sa_sigaction = __rvpredict_handler_wrapper;
 	act = &act_copy;
 
 	rvp_signal_select_alternate(signum, s);
@@ -776,7 +776,7 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 out:
 	rc = real_sigaction(signum, act, oact);
 	if (oact == NULL || (oact->sa_flags & SA_SIGINFO) == 0 ||
-	    oact->sa_sigaction != handler_wrapper) {
+	    oact->sa_sigaction != __rvpredict_handler_wrapper) {
 		;	// old sigaction not requested, or wrapper not installed
 	} else if (s->s_handler != NULL) {
 		oact->sa_flags &= ~SA_SIGINFO;

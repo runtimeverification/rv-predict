@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+set -u
 
 usage()
 {
@@ -16,9 +17,9 @@ jarfile=$2
 (
 	echo "Main-Class: com.runtimeverification.rvpredict.engine.main.Main"
 	echo -n "Class-Path: "
-	cd ${progdir}/../rv-predict-source && \
+	cd ${progdir}/../java && \
 	mvn -q dependency:build-classpath -Dmdep.outputFile=/dev/stdout | \
-	sed 's/[^:]*rv-predict-source-[^:]*.jar://g' | sed 's/:/\n  /g' | grep -v '^[[:space:]]*$'
+	sed 's/:/\n  /g' | grep -v '^[[:space:]]*$'
 ) > ${objdir}/manifest
 jar ufm ${objdir}/$jarfile ${objdir}/manifest
 rm -f ${objdir}/manifest

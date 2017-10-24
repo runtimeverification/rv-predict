@@ -30,16 +30,8 @@ __rvpredict_load4(uint32_t *addr, uint32_t val)
 void
 __rvpredict_load8(uint64_t *addr, uint64_t val)
 {
-	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
-
-	rvp_buf_trace_load_cog(&b, &r->r_lgen);
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
-	    RVP_OP_LOAD8);
-	rvp_buf_put_voidptr(&b, addr);
-	rvp_buf_put_u64(&b, val);
-
-	rvp_ring_put_buf(r, b);
+	trace_load8(__builtin_return_address(0), RVP_OP_LOAD8,
+	    (rvp_addr_t)addr, val);
 }
 
 void
@@ -73,7 +65,7 @@ __rvpredict_atomic_load4(uint32_t *addr, uint32_t val, int32_t memory_order __un
 void
 __rvpredict_atomic_load8(uint64_t *addr, uint64_t val, int32_t memory_order __unused)
 {
-	trace_load(__builtin_return_address(0), RVP_OP_ATOMIC_LOAD8,
+	trace_load8(__builtin_return_address(0), RVP_OP_ATOMIC_LOAD8,
 	    (rvp_addr_t)addr, val);
 }
 
@@ -114,19 +106,18 @@ __rvpredict_atomic_store4(uint32_t *addr, uint32_t val, int32_t memory_order __u
 }
 
 void
+__rvpredict_atomic_store8(uint64_t *addr, uint64_t val,
+    int32_t memory_order __unused)
+{
+	trace_store8(__builtin_return_address(0), RVP_OP_ATOMIC_STORE8,
+	    (rvp_addr_t)addr, val);
+}
+
+void
 __rvpredict_store8(uint64_t *addr, uint64_t val)
 {
-	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
-	uint64_t gen;
-
-	gen = rvp_ggen_before_store();
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, __builtin_return_address(0),
-	    RVP_OP_STORE8);
-	rvp_buf_put_voidptr(&b, addr);
-	rvp_buf_put_u64(&b, val);
-	rvp_buf_trace_cog(&b, &r->r_lgen, gen);
-	rvp_ring_put_buf(r, b);
+	trace_store8(__builtin_return_address(0), RVP_OP_STORE8,
+	    (rvp_addr_t)addr, val);
 }
 
 void

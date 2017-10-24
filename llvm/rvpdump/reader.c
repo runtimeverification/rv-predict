@@ -182,10 +182,10 @@ static const op_info_t op_to_info[RVP_NOPS] = {
 	, [RVP_OP_LOAD8] = OP_INFO_INIT(rvp_load8_store8_t, "load 8")
 	, [RVP_OP_STORE8] = OP_INFO_INIT(rvp_load8_store8_t, "store 8")
 
-	, [RVP_OP_ATOMIC_RMW1] = OP_INFO_INIT(rvp_rmw1_2_t, "atomic RMW 1")
-	, [RVP_OP_ATOMIC_RMW2] = OP_INFO_INIT(rvp_rmw1_2_t, "atomic RMW 2")
-	, [RVP_OP_ATOMIC_RMW4] = OP_INFO_INIT(rvp_rmw4_t, "atomic RMW 4")
-	, [RVP_OP_ATOMIC_RMW8] = OP_INFO_INIT(rvp_rmw8_t, "atomic RMW 8")
+	, [RVP_OP_ATOMIC_RMW1] = OP_INFO_INIT(rvp_rmw1_2_t, "atomic rmw 1")
+	, [RVP_OP_ATOMIC_RMW2] = OP_INFO_INIT(rvp_rmw1_2_t, "atomic rmw 2")
+	, [RVP_OP_ATOMIC_RMW4] = OP_INFO_INIT(rvp_rmw4_t, "atomic rmw 4")
+	, [RVP_OP_ATOMIC_RMW8] = OP_INFO_INIT(rvp_rmw8_t, "atomic rmw 8")
 
 	, [RVP_OP_ATOMIC_LOAD1] = OP_INFO_INIT(rvp_load1_2_4_store1_2_4_t,
 					       "atomic load 1")
@@ -1134,6 +1134,14 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		    is_load ? "<-" : "->",
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_load8_store8.addr));
+		break;
+	case RVP_OP_ATOMIC_RMW8:
+		printf("%s %s %#.*" PRIx64 " <- %s <- %#.*" PRIx64 "\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)),
+		    oi->oi_descr, field_width, ub->ub_rmw8.oval,
+		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
+		        ub->ub_rmw8.addr),
+		    field_width, ub->ub_rmw8.nval);
 		break;
 	case RVP_OP_ATOMIC_RMW4:
 		printf("%s %s %#.*" PRIx32 " <- %s <- %#.*" PRIx32 "\n",

@@ -1,4 +1,5 @@
 #include <signal.h>	/* for pthread_sigmask(3) */
+#include <string.h>	/* for strerror(3) */
 #include <unistd.h>	/* for pause(2) */
 
 #include "relay.h"

@@ -8,6 +8,25 @@
 
 #ifndef __NetBSD__
 
+#define	_C_LABEL_STRING(x)	x
+
+#define	__weak_alias(alias,sym)                                         \
+    __asm(".weak " _C_LABEL_STRING(#alias) "\n"                 \
+            _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
+
+/* Macros for counting and rounding. */
+#ifndef howmany
+#define howmany(x, y)   (((x)+((y)-1))/(y))
+#endif
+#ifndef roundup
+#define roundup(x, y)   ((((x)+((y)-1))/(y))*(y))
+#endif
+#define rounddown(x,y)  (((x)/(y))*(y))
+#define roundup2(x, m)  (((x) + (m) - 1) & ~((m) - 1))
+#ifndef powerof2
+#define powerof2(x)     ((((x)-1)&(x))==0)
+#endif
+
 #ifndef __dead
 #define	__dead	__attribute__((__noreturn__))
 #endif

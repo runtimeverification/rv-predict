@@ -315,6 +315,7 @@ rvp_prefork_init(void)
 	rvp_assert_atomicity();
 	rvp_lock_prefork_init();	// needed by rvp_signal_init()
 	rvp_signal_prefork_init();
+	rvp_str_prefork_init();
 	rvp_thread_prefork_init();
 }
 

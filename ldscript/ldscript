@@ -14,7 +14,7 @@
  * the section.  The runtime declares both the pointers `extern const
  * char * const`, so it can "measure" the data-register section,
  * `ptrdiff_t register_section_size =
- *     __data_registers_begin - __data_registers_end;` 
+ *     __data_registers_begin - __data_registers_end;`
  *
  * It is useful to measure the data-register section so that the runtime
  * knows how much memory to allocate for register "metadata."
@@ -25,10 +25,20 @@
 SECTIONS
 {
 	__data_registers_begin = . ;
-	.data.registers : 
+	.data.registers :
 	{
 		*(.data.registers)
 	}
 	__data_registers_end = . ;
 }
 INSERT AFTER .data;
+SECTIONS
+{
+	__rvpredict_text_begin = . ;
+	.text.rvpredict :
+	{
+		librvprt.a(.text)
+	}
+	__rvpredict_text_end = . ;
+}
+INSERT AFTER .text;

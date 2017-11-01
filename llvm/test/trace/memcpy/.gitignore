@@ -2,5 +2,7 @@
 .depend
 .Makefile.tags
 memcpy
+memcpy.test.out
 *.o
 tags
+test.trace

@@ -24,8 +24,13 @@ __rvpredict_memmove1(const void *retaddr,
 	rvp_addr_t to, from;
 	size_t ncopied = 0;
 	int astep, width;
+	bool backwards = src < dst && src + n > dst;
 
-	if (src < dst) {
+	/* Copy from higher to lower address if the source precedes
+	 * the destination and the source and destination overlap.
+	 * Otherwise, copy from lower to higher address.
+	 */
+	if (backwards) {
 		from = src + n;
 		to = dst + n;
 	} else {
@@ -38,7 +43,7 @@ __rvpredict_memmove1(const void *retaddr,
 		if (to % width == 0 && from % width == 0)
 			break;
 	}
-	if (src < dst) {
+	if (backwards) {
 		from -= width;
 		to -= width;
 		astep = -width;
@@ -89,8 +94,7 @@ __rvpredict_memmove1(const void *retaddr,
 	else if (astep < 0)
 		(void)__rvpredict_memmove1(retaddr, dst, src, n - ncopied);
 	else {
-		(void)__rvpredict_memmove1(retaddr,
-		    to - astep, from - astep, n - ncopied);
+		(void)__rvpredict_memmove1(retaddr, to, from, n - ncopied);
 	}
 	return (void *)dst;
 }
@@ -150,8 +154,7 @@ __rvpredict_memcpy(void *dst, const void *src, size_t n)
 {
 	const void *retaddr = __builtin_return_address(0);
 
-	if ((uintptr_t)&__rvpredict_text_begin <= (uintptr_t)retaddr &&
-	    (uintptr_t)retaddr <= (uintptr_t)&__rvpredict_text_end)
+	if (instruction_is_in_rvpredict(retaddr))
 		return real_memcpy(dst, src, n);
 
 	return __rvpredict_memmove1(retaddr,
@@ -163,8 +166,7 @@ __rvpredict_memmove(void *dst, const void *src, size_t n)
 {
 	const void *retaddr = __builtin_return_address(0);
 
-	if ((uintptr_t)&__rvpredict_text_begin <= (uintptr_t)retaddr &&
-	    (uintptr_t)retaddr <= (uintptr_t)&__rvpredict_text_end)
+	if (instruction_is_in_rvpredict(retaddr))
 		return real_memmove(dst, src, n);
 
 	return __rvpredict_memmove1(retaddr,
@@ -176,8 +178,7 @@ __rvpredict_memset(void *dst, int c, size_t n)
 {
 	const void *retaddr = __builtin_return_address(0);
 
-	if ((uintptr_t)&__rvpredict_text_begin <= (uintptr_t)retaddr &&
-	    (uintptr_t)retaddr <= (uintptr_t)&__rvpredict_text_end)
+	if (instruction_is_in_rvpredict(retaddr))
 		return real_memset(dst, c, n);
 
 	return __rvpredict_memset1(retaddr, (rvp_addr_t)dst,

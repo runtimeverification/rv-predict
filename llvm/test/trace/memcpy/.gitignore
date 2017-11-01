@@ -1,5 +1,6 @@
 *.d
 .depend
 .Makefile.tags
+memcpy
 *.o
 tags

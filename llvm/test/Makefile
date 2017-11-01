@@ -16,6 +16,6 @@ lib/rvpinstrument.so:
 lib/rvprt.a:
 	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../ngrt install
 
-CLEANDIRS+=bin include lib share
+CLEANDIRS+=bin include lib man share
 
 .include <mkc.subdir.mk>

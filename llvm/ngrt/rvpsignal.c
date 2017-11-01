@@ -9,6 +9,7 @@
 #include "relay.h"
 #include "rvpsignal.h"
 #include "sigutil.h"
+#include "text.h"
 #include "trace.h"
 
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
@@ -714,8 +715,13 @@ __rvpredict_sigsuspend(const sigset_t *mask)
 int
 __rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
 {
+	const void *retaddr = __builtin_return_address(0);
+
+	if (instruction_is_in_rvpredict(retaddr))
+		return real_pthread_sigmask(how, set, oldset);
+
 	return rvp_change_sigmask(real_pthread_sigmask,
-	    __builtin_return_address(0), how, set, oldset);
+	    retaddr, how, set, oldset);
 }
 
 int

@@ -6,6 +6,7 @@ import json
 import uuid
 import argparse
 import os
+import urllib
 
 from jinja2 import Environment, FileSystemLoader
 from pygments import highlight
@@ -154,7 +155,7 @@ for ix, err in enumerate(errors):
     else:
         frame = err[u'loc']
         primary_component = {u'frames': [frame]}
-        err[u'stack_traces']={u'components': [primary_component]}
+        err[u'stack_traces']=[{u'components': [primary_component]}]
         if (u'loc' in frame):
             loc = frame[u'loc']
             if loc[u'rel_file'] != "<unknown>":
@@ -215,12 +216,16 @@ def render_template(filename):
         template = env.get_template(filename)
         target.write(template.render(output_dir="."))
 
+def json_stringify(d):
+    d = d or []
+    return urllib.quote(str(json.dumps(d)))
 
 env = Environment(
     autoescape=True,
     loader=FileSystemLoader(dirname + '/templates/')
 )
 env.filters[u'highlight'] = highlight_c
+env.filters[u'json_stringify'] = json_stringify
 
 env.globals.update(global_data)
 env.globals[u'files'] = sorted(files)

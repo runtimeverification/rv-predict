@@ -676,22 +676,22 @@
 <h2>{{err.description}}</h2>
 {% macro lock_lines(locks) %}{% for lock in locks %}{{lock.locked_at.loc.line}} {% endfor %}{% endmacro %}
 {% macro source_snippet(frame, initial, at) %}
-<li class="{{initial}}">{{at}}
- {{frame.symbol}} at {% if not frame.loc.missing %}<a href="{{output_dir}}{{frame.loc.abs_file}}.html?lineno={{frame.loc.line}}">{{frame.loc.rel_file}}</a><br>
-    <ul class="snippet details" data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}" data-locks="{{lock_lines(frame.locks)}}">
-      <li class="expand expand-up" onClick="expandUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
-      <li><div class="stack-frame pre"></div>
-      </li>
-      <li class="expand expand-down" onClick="expandDown('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);"><span class="lineno">&hellip;<span class="mono"> </span></span></li>
-    </ul>
-    {% if frame.locks %}
-    <div class="locks details">
-    <h3>Locks</h3>
-    <ol class="locks">
-    {% for lock in frame.locks %}
-      <li>{{lock.id}}</li>
-    {% endfor %}
-    </ol>
+<li class="{{initial}}" data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}" data-locks="{{lock_lines(frame.locks)}}" data-local-variables="{{frame.local_vars|json_stringify}}">
+  <div class="bar">
+    <span>{{at}} {{frame.symbol}} at {% if not frame.loc.missing %}
+      <a href="{{output_dir}}{{frame.loc.abs_file}}.html?lineno={{frame.loc.line}}" onclick="(function(){event.stopPropagation()})(event)">{{frame.loc.rel_file}}</a>
+    </span>
+    <div class="expand-btn">+</div>
+  </div>
+  <div class="snippet details">
+    <div class="stack-frame"></div>
+    <div class="btn-group top">
+        <div class="btn expand-up-btn" onClick="expandUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);" style="margin-right: 2px;">+</div>
+        <div class="btn disabled" onClick="collapseUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);">&#x2212</div>      
+      </div>
+    <div class="btn-group bottom">
+      <div class="btn expand-down-btn" onClick="expandDown('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);" style="margin-right: 2px;">+</div>
+      <div class="btn disabled" onClick="collapseDown('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);">&#x2212</div>      
     </div>
   </div>
   {% if frame.locks %}

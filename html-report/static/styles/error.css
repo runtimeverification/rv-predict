@@ -388,3 +388,34 @@ div.memory .variables::-webkit-scrollbar-thumb {
 .bottom-section .citation .cite {
   padding-left: 48px;
 }
+
+@media screen and (max-width: 40.063em) { /* mobile */
+  body {
+    padding: 0 12px 24px;
+  }
+
+  ul.exp-list {
+    padding: 0;
+  }
+
+  div.details.show-memory .memory,
+  div.details.show-memory .memory .variables {
+    width: 100%;
+  }
+
+  .bottom-section {
+    flex-direction: column;
+  }
+
+  .bottom-section .error-description {
+    width: 100%;
+    margin: 0;
+  }
+
+  .bottom-section .citation {
+    margin: 0;
+  }
+  .bottom-section .citation .cite {
+    padding-left: 24px;
+  }
+}

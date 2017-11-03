@@ -1,0 +1,390 @@
+/* Copyright (c) 2017 Runtime Verification, Inc. (RV-Match team). All Rights Reserved. */
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  background-color: #fff;
+  margin: 0;
+  padding: 0 24px 32px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-y: scroll;
+}
+
+/********************/
+/* EXPANDABLE LIST  */
+/********************/
+ul.exp-list {
+    margin-top: 0;
+    padding-left: 48px;
+}
+.exp-list ul, .exp-list li {
+    padding-left: 0;
+}
+
+.exp-list li * {
+    margin: 0;
+}
+.exp-list p {
+    margin:0;
+    display:block;
+}
+.exp-list p:hover {
+    background-color:#121212;
+}
+
+.exp-list li li {
+    list-style: none;
+}
+.exp-list li {
+    line-height:140%;
+    text-indent:0px;
+    background-position: 1px 8px;
+    background-repeat: no-repeat;
+}
+
+/* Collapsed state for list element */
+.exp-list > li {
+    list-style: none;
+}
+
+/* Expanded state for list element
+/* NOTE: This class must be located UNDER the collapsed one */
+.exp-list > li.expanded {
+    list-style: none;
+}
+
+.exp-list .dead,
+.exp-list .expanded.dead {
+    list-style: none;
+}
+.exp-list {
+    clear: both;
+}
+
+.exp-list .bar {
+  cursor: pointer;
+  padding: 4px;
+}
+.exp-list .bar span {
+  cursor: pointer;
+}
+.exp-list .bar a {
+  padding: 0 4px;
+}
+.exp-list .bar a:hover {
+  background-color: #dddcff;
+}
+.exp-list .bar.expanded {
+  padding: 4px 4px 0;
+}
+.exp-list .bar:hover {
+  transition: 0.3s;
+  background: linear-gradient(to right, #fff, #ebf0f3, #d3dee2);
+}
+
+
+.exp-list .expand-btn {
+  float: left;
+  margin-right: 12px;
+  padding: 0px 12px;
+  width: 12px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  background-color: #fff;
+  color: #222;
+  border-radius: 4px;
+  border: 1px solid #dedede;
+  cursor: pointer;    
+  background-color: #fbfbfb;
+  user-select: none;
+}
+
+.exp-list .expand-btn.expanded {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-top: 1px solid #dedede;
+  border-right: 1px solid #dedede;
+  border-left: 1px solid #dedede;
+  border-bottom: none;
+}
+
+div.stackContainer {
+  width: 100%;
+}
+
+div.memory, div.locks {
+  display: inline-block;
+}
+
+div.locks li {
+  list-style-type: decimal;
+}
+
+.snippet.details {
+  position: relative;
+  width: 100%;
+  float: left;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.snippet.details .btn-group {
+  display: flex;
+  position: absolute;
+  padding: 4px;
+  justify-content: left;
+}
+.snippet.details .btn-group.top {
+    position: absolute;
+    top: 0;
+}
+.snippet.details .btn-group.bottom {
+    bottom: 0;
+}
+.btn {
+  font-size: 11px;
+  padding: 0 4px;
+  background-color: #dddcff;
+  color: #0600ee;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: center;
+  user-select: none;
+}
+.btn:hover {
+  background-color: #d4d3ff;
+  box-shadow: 0px 2px 8px 0 rgba(109, 108, 138, 0.56);
+  transition: 0.2s;
+}
+.btn.disabled {
+  cursor: not-allowed;
+  color: #484848;
+  background-color: rgb(218, 218, 218);
+}
+.btn.disabled:hover {
+  box-shadow: none;
+}
+
+.btn.toggle-memory-panel-btn {
+  width: 74px;
+  margin-left: 12px;
+  font-size: 11px;
+  float: right;
+  cursor: pointer;
+}
+
+
+div.clear {
+  clear: both;
+}
+
+div.stack-frame > .pre {
+  position: relative;
+  margin: 0;
+  overflow: auto;
+  padding: 32px 0;
+  background-color: #f9f9f9;
+  box-shadow: 0px 2px 8px 0 rgba(0,0,0,0.2);
+  box-sizing: border-box;
+}
+div.stack-frame > .pre .lineno {
+  user-select: none;
+}
+
+div.details .memory {
+  position: absolute;
+  top: 0;
+  right: 0;
+  max-width: 100%;
+  overflow: auto;
+  display: block;
+  padding: 4px;
+  z-index: 99;
+}
+div.details .memory .variables {
+  display: none;
+}
+div.details.show-memory .memory .variables {
+  display: flex;
+  width: 700px;
+  flex-direction: column;
+  box-sizing: border-box;
+  background-color: #fff;
+}
+div.details.show-memory .memory > .variables {
+  overflow: auto;
+}
+
+/*
+div.details.show-memory .memory.dragging {
+  box-shadow: 0px 0px 6px 0px rgba(255, 152, 0, 0.8);
+}
+div.details.show-memory .memory.dragging table {
+  opacity: 0.4;
+}
+*/
+
+div.pre::-webkit-scrollbar,
+div.memory .variables::-webkit-scrollbar {
+  max-width: 8px;
+  max-height: 10px;
+}
+div.pre::-webkit-scrollbar-track,
+div.memory .variables::-webkit-scrollbar-track {
+    background-color: rgb(239, 239, 239);
+}
+div.pre::-webkit-scrollbar-thumb,
+div.memory .variables::-webkit-scrollbar-thumb {
+    background-color: rgba(150, 150, 150, .66);
+    border: 4px solid rgba(150, 150, 150, .66);
+    background-clip: content-box;
+}
+
+.memory .header {
+  width: 100%;
+  height: 26px;
+  box-sizing: border-box;
+  user-select: none;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+}
+
+.memory .variables {
+  width: 100%;
+  border-top: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  box-shadow: 0px 2px 8px 0 rgba(0,0,0,0.2)
+}
+.memory .variables.struct:after {
+  content: "}";
+}
+
+.memory .variables .variable {
+  position: relative;
+  background-color: #fff;
+  padding: 2px 0 2px 24px;
+  cursor: auto;
+  white-space: pre;
+  font-size: 13px;
+}
+
+/*
+.memory .variables .variable .value .value-pre,
+.memory .variables .variable .id .id-pre, */
+.memory .variables .variable pre {
+  display: inline;
+}
+
+.memory .variables .variable .pre-toggle-btn.btn {
+    float: right;
+    opacity: 0.6
+}
+.memory .variables .variable .pre-toggle-btn.btn:hover {
+  opacity: 1;
+  box-shadow: none;
+}
+
+.memory .variables.expanded-ul {
+    box-shadow: none;
+    border-bottom: none;
+}
+
+.memory .variables .variable:last-child {
+  border-bottom: none;
+}
+
+.memory .var-id {
+  font-weight: 600;
+  color: #383838;
+}
+.memory .var-struct {
+  color: #3F51B5;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.memory .var-enum {
+  color: #3F51B5;
+}
+.memory .repeats {
+  color: #9E9E9E;
+}
+.memory .nested {
+  display: none;
+}
+.memory .bracket {
+  color: #9E9E9E;
+}
+.memory .bracket.abbrev {
+  cursor: pointer;
+}
+.memory .bracket.abbrev:hover {
+  color: #6f6f6f;
+  font-weight: 800;
+}
+.memory .equal-sign.append-curly-bracket:after {
+    content: " {";
+    color: #000;
+}
+
+.memory .type-tooltip {
+  display: none;
+}
+.memory .type-tooltip.display {
+  display: block;
+  box-sizing: border-box;
+  background-color: #ececec;
+  padding: 8px;
+  width: 350px;
+  -webkit-logical-width: fit-content;
+  overflow: auto;
+}
+.memory .type-tooltip .var-struct {
+  cursor: auto;
+  text-decoration: none;
+}
+
+.memory-li-expand-btn.btn {
+    float: left;
+    position: absolute;
+    left: 4px;
+    top: 2px;
+}
+
+.bottom-section {
+  display: flex;
+  width: 100%;
+  flex-flow: row;
+  flex-direction: row;
+}
+
+.bottom-section > div {
+  flex: 1 1 0;
+}
+
+.bottom-section .error-description {
+  margin-right: 48px;
+  margin-left: 0;
+}
+
+
+.bottom-section .error-description p {
+  padding-left: 24px;
+  line-height: 1.4em;
+}
+
+.bottom-section .citation {
+  margin-left: 48px;
+  margin-right: 0;
+  line-height: 1.4em;
+}
+
+.bottom-section .citation .cite {
+  padding-left: 48px;
+}

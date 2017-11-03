@@ -142,91 +142,43 @@ ul.expList {
     padding-left: 20px;
     background-repeat: no-repeat;
 }
-
-/* Collapsed state for list element */
-.expList {
-   list-style-type: "►";
+table.dataTable thead .sorting_asc {
+    background-image: url("./images/sort_asc.png") !important;
 }
-/* Expanded state for list element
-/* NOTE: This class must be located UNDER the collapsed one */
-.expList .expanded {
-    list-style-type: "▼";
+table.dataTable thead .sorting_desc {
+    background-image: url("./images/sort_desc.png") !important;
 }
-
-.expList .dead,
-.expList .expanded.dead {
-    list-style: none;
+table.dataTable thead .sorting_asc_disabled {
+    background-image: url("./images/sort_asc_disabled.png") !important;
 }
-.expList {
-    clear: both;
+table.dataTable thead .sorting_desc_disabled {
+    background-image: url("./images/sort_desc_disabled.png") !important;
 }
 
-.listControl{
-  margin-bottom: 15px;
-}
-.listControl a {
-    border: 1px solid #555555;
-    color: #555555;
-    cursor: pointer;
-    height: 1.5em;
-    line-height: 1.5em;
-    margin-right: 5px;
-    padding: 4px 10px;
-}
-.listControl a:hover {
-    background-color:#555555;
-    color:#222222; 
-    font-weight:normal;
+/* Code Errors */
+div.errors a { color: red; background-color: #ffcccc }
+a:link span.lineno { text-decoration: none }
+
+#table-header #table-filter {
+    margin-top: 26px;
 }
 
-div.stackContainer {
-  width: 100%;
+#table-header #table-filter #table-search {
+    max-width: 100%;
+    width: 300px;
+    margin-right: 12px;
+    padding: 4px 6px;
+    box-sizing: border-box;
+    font-size: 14px;
+    outline: none;
+    border: 1px solid #9a9a9a;
 }
-
-div.memory, div.locks {
-    display: inline-block;
-}
-
-div.locks li {
-  list-style-type: decimal;
-}
-
-.memory .value {
-    display: inline-block;
-    margin-top: -1.25em;
+#table-header #table-filter #table-search:focus {
+    border: 1px solid #fea707;
 }
 
 div.clear {
     clear: both;
-}
-
-.snippet {
-    float: left;
-    margin-right: 5%;
-}
-
-.memory table, .memory th, .memory td {
-    border: 1px solid black;
-    border-collapse: collapse;
-}
-.memory th, .memory td {
-    padding: 5px;
-    margin: 0px;
-    text-align: left;
-}
-.memory tr.even {
-    background-color: #eee;
-}
-.memory tr {
-   background-color:#fff;
-}
-.memory th {
-    background-color: #bbb;
-    color: black;
-}
-
-.memory pre {
-  white-space: pre-wrap;
 }
 
 h1 {

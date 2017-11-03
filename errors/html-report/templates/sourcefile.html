@@ -35,9 +35,12 @@
 </style>
 <script type="text/javascript">
   $(function () {
+    /*
     $("div.line-with-errors").click(function() {
       $("div.errors", this).slideToggle(200)
     })
+    */
+    $('div.line-with-errors div.errors').show()
     
     // jump to `linno` if specified
     // for example: 2-buffer-overflow.c.html?lineno=148 will then jump to line 148

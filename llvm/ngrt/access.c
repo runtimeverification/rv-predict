@@ -5,6 +5,16 @@
 #include "thread.h"
 #include "trace.h"
 
+__weak_alias(__rvpredict_unaligned_load1, __rvpredict__load1)
+__weak_alias(__rvpredict_unaligned_load2, __rvpredict__load2)
+__weak_alias(__rvpredict_unaligned_load4, __rvpredict__load4)
+__weak_alias(__rvpredict_unaligned_load8, __rvpredict__load8)
+
+__weak_alias(__rvpredict_unaligned_store1, __rvpredict__store1)
+__weak_alias(__rvpredict_unaligned_store2, __rvpredict__store2)
+__weak_alias(__rvpredict_unaligned_store4, __rvpredict__store4)
+__weak_alias(__rvpredict_unaligned_store8, __rvpredict__store8)
+
 /* void fn(T *addr, T val) */
 void
 __rvpredict_load1(uint8_t *addr, uint8_t val)

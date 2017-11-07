@@ -8,6 +8,17 @@
 
 #ifndef __NetBSD__
 
+#define _C_LABEL(x)     x
+#define _C_LABEL_STRING(x)      x
+
+#define	__strong_alias(alias,sym)					\
+    __asm(".global " _C_LABEL_STRING(#alias) "\n"			\
+	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
+
+#define	__weak_alias(alias,sym)					\
+    __asm(".weak " _C_LABEL_STRING(#alias) "\n"			\
+	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
+
 #ifndef __dead
 #define	__dead	__attribute__((__noreturn__))
 #endif

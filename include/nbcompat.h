@@ -1,4 +1,10 @@
 /* Copyright (c) 2017 Runtime Verification, Inc.  All rights reserved. */
+/*
+ * NetBSD compatibility macros
+ *
+ * NetBSD provides a lot of handy macros that Linux does not.  Many
+ * of the macros even have documentation---see https://man-k.org/.
+ */
 
 #ifndef _RVP_NBCOMPAT_H_
 #define _RVP_NBCOMPAT_H_
@@ -14,7 +20,17 @@
     __asm(".weak " _C_LABEL_STRING(#alias) "\n"                 \
             _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
 
-/* Macros for counting and rounding. */
+/* Macros for counting and rounding from NetBSD.
+ *
+ * Documentation from the NetBSD manual page, roundup(9):
+ *
+ *   The roundup() and rounddown() macros return an integer from rounding x up
+ *   and down, respectively, to the next size.  The howmany() macro in turn
+ *   reveals how many times size fits into x, rounding the residual up.
+
+ *   The roundup2() macro also rounds up, but with the assumption that size is
+ *   a power of two.  If x is indeed a power of two, powerof2() return 1.
+ */
 #ifndef howmany
 #define howmany(x, y)   (((x)+((y)-1))/(y))
 #endif

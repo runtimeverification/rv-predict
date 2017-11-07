@@ -14,11 +14,16 @@
 
 #ifndef __NetBSD__
 
-#define	_C_LABEL_STRING(x)	x
+#define _C_LABEL(x)     x
+#define _C_LABEL_STRING(x)      x
 
-#define	__weak_alias(alias,sym)                                         \
-    __asm(".weak " _C_LABEL_STRING(#alias) "\n"                 \
-            _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
+#define	__strong_alias(alias,sym)					\
+    __asm(".global " _C_LABEL_STRING(#alias) "\n"			\
+	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
+
+#define	__weak_alias(alias,sym)					\
+    __asm(".weak " _C_LABEL_STRING(#alias) "\n"			\
+	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
 
 /* Macros for counting and rounding from NetBSD.
  *

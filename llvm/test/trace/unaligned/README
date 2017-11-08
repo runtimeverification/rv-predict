@@ -1,0 +1,2 @@
+expect.out isn't properly symbolized, now, due to a bug in rvsyms.
+So I will ned to fix rvsyms and then fix this test.

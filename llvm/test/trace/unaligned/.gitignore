@@ -1,0 +1,8 @@
+*.d
+.depend
+.Makefile.tags
+*.o
+tags
+test.trace
+unaligned
+unaligned.test.out

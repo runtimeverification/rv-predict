@@ -1,5 +1,49 @@
 ngrt/: next-generation runtime that is simpler and faster
     than the one derived from tsan
 
-	func.c: instrumentation for function entry/exit
-	thread.c: instrumentation for pthread_create/_join
+# Implementation
+ 
+        access.c: load/store instrumentation
+        const.c: provide global variables that the instrumentation uses
+            to get the value of each C11 memory-order constant
+        func.c: function entry/exit instrumentation
+        intr.c: code for establishing interrupt handlers "statically,"
+            like we do for our R&D sponsor in industry
+        lock.c: pthread_mutex instrumentation
+        notimpl.c: code for not_implemented(), which aborts an
+            instrumented program with an error if it calls a runtime
+            function that we haven't implemented, yet
+        register.c: nascent simulation of registers, for our R&D sponsor
+            in industry
+        relay.c: code for a thread that sleeps until it receives a
+            signal and then wakes the serialization thread.  This is
+            a helper for signal handlers, who cannot use condition
+            variables, but who can send signals
+        ring.c: circular buffers for trace events.  Also, ring
+            serialization.  This should be split in two, and some of
+            the code consolidated with thread.c and trace.c code in a
+            serialize.c
+        rmw.c: atomic read-modify-write instrumentation
+        rvpsignal.c: signal handler instrumentation
+        sigutil.c: utility functions for sigset_t
+        supervise.c: code that forks a child process for the application
+            code, waits for it to finish, and then invokes the analysis
+            with `rvpa`
+        thread.c: pthread_create/_join instrumentation.  Also,
+            serialization of ring buffers, and initialization code.
+            This should be split into three, and some of the code
+            consolidated with ring.c and trace.c code in a serialize.c
+        trace.c: helper functions for tracing.  Also, a bit of
+            serialization code.  This should be split in two, and some
+            of the code consolidated with thread.c and ring.c code in a
+            serialize.c
+
+# Important header files
+
+	interpose.h: macros and declarations for function interposition
+        intr_exports.h: macros for statically establishing interrupt
+            handlers and device registers, used by our R&D sponsor in
+            industry.  This header file is installed in $PREFIX/include/.
+	rvpint.h: definition for a 128-bit integer, since there isn't
+	    a C11 type for integers that wide
+	tracefmt.h: definitions for the trace format, used by `rvpdump`

@@ -384,7 +384,7 @@
 
           $expandBtn.toggleClass('expanded')
           if ($expandBtn.hasClass('expanded')) {
-            $expandBtn.text('\u2212')
+            $expandBtn.text('\u274C')
 
             function expandStruct() {
               if ($expandedUl) {
@@ -447,7 +447,7 @@
               $li.children('.equal-sign').addClass('append-curly-bracket') // show left curly bracket
             }
           } else {
-            $expandBtn.text('+')
+            $expandBtn.text('\u2795')
             if ($expandedUl) $expandedUl.hide();
 
             // show value 
@@ -618,12 +618,12 @@
         if ($detail.css('display') === 'none') {
           $bar.removeClass('expanded')
           $expandBtn.removeClass('expanded')
-          $expandBtn.text('+')
+          $expandBtn.text('\u2795') // plus sign
           EXPAND_STATE[index] = false
         } else { // expanded
           $bar.addClass('expanded')
           $expandBtn.addClass('expanded')
-          $expandBtn.text('\u2212') // minus sign
+          $expandBtn.text('\u274C') // times sign
           EXPAND_STATE[index] = true
         }
 
@@ -647,6 +647,8 @@
       window.addEventListener('scroll', function() {
         var detailElem = $detail[0],
             memoryElem = $('.memory', $detail)[0]
+        if (!memoryElem) return 
+
         var containerScrollTop = containerElem.scrollTop || window.pageYOffset
         
         if (memoryElem.offsetHeight > containerElem.offsetHeight) return
@@ -677,11 +679,13 @@
 {% macro lock_lines(locks) %}{% for lock in locks %}{{lock.locked_at.loc.line}} {% endfor %}{% endmacro %}
 {% macro source_snippet(frame, initial, at) %}
 <li class="{{initial}}" data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}" data-locks="{{lock_lines(frame.locks)}}" data-local-variables="{{frame.local_vars|json_stringify}}">
-  <div class="bar">
+  <div class="bar {{'disabled' if frame.loc.missing}}">
+    {% if not frame.loc.missing %}<div class="expand-btn">&#x2795</div>{% endif %}     
     <span>{{at}} {{frame.symbol}} at {% if not frame.loc.missing %}
-      <a href="{{output_dir}}{{frame.loc.abs_file}}.html?lineno={{frame.loc.line}}" onclick="(function(){event.stopPropagation()})(event)">{{frame.loc.rel_file}}</a>
+      <a href="{{output_dir}}{{frame.loc.abs_file}}.html?lineno={{frame.loc.line}}" onclick="(function(){event.stopPropagation()})(event)">
+        <span>{{frame.loc.rel_file}}</span>{% if frame.loc.line %}<span class="line">:{{frame.loc.line}}</span>{% endif %}{% if frame.loc.column %}<span class="column">:{{frame.loc.column}}</span>{% endif %}        
+      </a>
     </span>
-    <div class="expand-btn">+</div>
   </div>
   <div class="snippet details">
     <div class="stack-frame"></div>
@@ -717,7 +721,7 @@ Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
 {% endif %}
 {% for component in trace.components %}
 {% if component.description %}
-<h3 class="component">{{component.description}}</h3>
+<h3 class="component-header">{{component.description}}</h3>
 {% endif %}
 <div class="list-container">
   <ul class="exp-list">

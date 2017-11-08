@@ -13,6 +13,11 @@ body {
   overflow-y: scroll;
 }
 
+h3.component-header {
+  margin-left: 102px;
+  margin-bottom: 16px;
+}
+
 /********************/
 /* EXPANDABLE LIST  */
 /********************/
@@ -68,8 +73,14 @@ ul.exp-list {
   cursor: pointer;
   padding: 4px;
 }
+.exp-list .bar.disabled {
+  cursor: default;
+}
 .exp-list .bar span {
   cursor: pointer;
+}
+.exp-list .bar.disabled span {
+  cursor: default;
 }
 .exp-list .bar a {
   padding: 0 4px;
@@ -84,6 +95,9 @@ ul.exp-list {
   transition: 0.3s;
   background: linear-gradient(to right, #fff, #ebf0f3, #d3dee2);
 }
+.exp-list .bar.disabled:hover {
+  background: inherit;
+}
 
 
 .exp-list .expand-btn {
@@ -92,8 +106,8 @@ ul.exp-list {
   padding: 0px 12px;
   width: 12px;
   text-align: center;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 400;
   background-color: #fff;
   color: #222;
   border-radius: 4px;
@@ -387,4 +401,39 @@ div.memory .variables::-webkit-scrollbar-thumb {
 
 .bottom-section .citation .cite {
   padding-left: 48px;
+}
+
+@media screen and (max-width: 40.063em) { /* mobile */
+  body {
+    padding: 0 12px 24px;
+  }
+
+  h3.component-header {
+    margin-left: 0;
+  }
+
+  ul.exp-list {
+    padding: 0;
+  }
+
+  div.details.show-memory .memory,
+  div.details.show-memory .memory .variables {
+    width: 100%;
+  }
+
+  .bottom-section {
+    flex-direction: column;
+  }
+
+  .bottom-section .error-description {
+    width: 100%;
+    margin: 0;
+  }
+
+  .bottom-section .citation {
+    margin: 0;
+  }
+  .bottom-section .citation .cite {
+    padding-left: 24px;
+  }
 }

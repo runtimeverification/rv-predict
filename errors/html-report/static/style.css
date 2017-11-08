@@ -125,11 +125,6 @@ h3 {
     font-size: 1em;
 }
 
-h3.component {
-    margin-bottom: 0;
-    margin-left: 40px;
-}
-
 .dataTables_filter {
   float: right;
 }

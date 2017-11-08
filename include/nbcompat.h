@@ -14,13 +14,38 @@
 
 #ifndef __NetBSD__
 
+/* On some systems, for assembly language to refer to a C symbol,
+ * you have to add an underscore (_) to the name.  _C_LABEL() and
+ * _C_LABEL_STRING() change a C symbol to the proper convention for
+ * assembly.
+ */
 #define _C_LABEL(x)     x
 #define _C_LABEL_STRING(x)      x
 
+/* In the object file for this module, introduce a new symbol, `alias`,
+ * that is an alias for the C symbol `sym`.  The alias is "strong," so
+ * the linker will use it in preference to any "weak" symbol by the name
+ * `alias`.
+ *
+ * The C compiler emits strong symbols by default.
+ *
+ * Strong aliases can be used to make the same function available by two
+ * or more names.
+ */
 #define	__strong_alias(alias,sym)					\
     __asm(".global " _C_LABEL_STRING(#alias) "\n"			\
 	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));
 
+/* In the object file for this module, introduce a new symbol, `alias`,
+ * that is an alias for the C symbol `sym`.  The alias is "weak," so a
+ * strong symbol will override.
+ *
+ * The C compiler emits strong symbols by default.
+ *
+ * Oftentimes weak aliases are used to provide a default implementation
+ * of a C function.  By linking in an object file with a specialized
+ * implementation, the default implementation can be overridden.
+ */
 #define	__weak_alias(alias,sym)					\
     __asm(".weak " _C_LABEL_STRING(#alias) "\n"			\
 	    _C_LABEL_STRING(#alias) " = " _C_LABEL_STRING(#sym));

@@ -152,14 +152,15 @@ let render_trace (buffer : rv_buffer) (trace : stack_trace) : unit =
     | None ->
       add_line buffer   "    Thread " ;
       add_string buffer thread_id ;
-      add_string buffer " is the main thread"
+      add_string buffer " is the main thread" ;
+      add_line buffer ""
     | Some by ->
       add_line buffer   "    Thread " ;
       add_string buffer thread_id ;
       add_string buffer " created by thread ";
       add_string buffer by ;
       match trace.thread_created_at with
-      | None -> ()
+      | None -> add_line buffer ""
       | Some frame ->
         let start_state = { numElided = 0; start = "  > in" } in
         ignore (render_frame buffer start_state frame) ;

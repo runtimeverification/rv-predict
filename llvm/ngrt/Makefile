@@ -18,6 +18,7 @@ CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS=access.c const.c func.c lock.c notimpl.c
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c sigutil.c
+SRCS+=str.c
 SRCS+=supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c

@@ -335,15 +335,15 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 	        void_type, memory_order_type, nullptr));
 
 	memmovefn = checkSanitizerInterfaceFunction(
-	    m.getOrInsertFunction("memmove",
+	    m.getOrInsertFunction("__rvpredict_memmove",
 	        int8_ptr_type, int8_ptr_type,
 		int8_ptr_type, intptr_type, nullptr));
 	memcpyfn = checkSanitizerInterfaceFunction(
-	    m.getOrInsertFunction("memcpy",
+	    m.getOrInsertFunction("__rvpredict_memmove",
 	        int8_ptr_type, int8_ptr_type,
 		int8_ptr_type, intptr_type, nullptr));
 	memsetfn = checkSanitizerInterfaceFunction(
-	    m.getOrInsertFunction("memset",
+	    m.getOrInsertFunction("__rvpredict_memset",
 	        int8_ptr_type, int8_ptr_type,
 		builder.getInt32Ty(), intptr_type, nullptr));
 }

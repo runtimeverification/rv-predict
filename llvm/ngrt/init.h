@@ -7,6 +7,7 @@
 
 void rvp_lock_prefork_init(void);
 void rvp_signal_prefork_init(void);
+void rvp_str_prefork_init(void);
 void rvp_thread_prefork_init(void);
 
 void __rvpredict_init(void);

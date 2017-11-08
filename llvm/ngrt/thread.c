@@ -39,11 +39,12 @@ static uint32_t next_id = 0;
 
 static pthread_t serializer;
 static pthread_cond_t wakecond;
+static pthread_cond_t stopcond;
 static int nwake = 0;
 static bool forked = false;
 static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
-static bool transmit = true;
+static bool stopping = false;
 bool rvp_trace_only = true;
 
 pthread_key_t rvp_thread_key;
@@ -149,22 +150,21 @@ rvp_wake_transmitter_locked(void)
 static void
 rvp_stop_transmitter(void)
 {
-#if 1
-	return;
-#else
 	int rc;
 	sigset_t oldmask;
 
 	thread_lock(&oldmask);
-	transmit = false;
 	rvp_wake_transmitter_locked();
-	thread_unlock(&oldmask);
-
-	if ((rc = real_pthread_join(serializer, NULL)) != 0) {
-		errx(EXIT_FAILURE, "%s: pthread_join: %s",
-		    __func__, strerror(rc));
+	stopping = true;
+	while (nwake > 0) {
+		rc = pthread_cond_wait(&stopcond, &thread_mutex);
+		if (rc != 0) {
+			errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",
+			    __func__, strerror(rc));
+		}
 	}
-#endif
+	stopping = false;
+	thread_unlock(&oldmask);
 }
 
 static void *
@@ -182,11 +182,20 @@ serialize(void *arg __unused)
 	real_pthread_sigmask(SIG_BLOCK, &maskall, NULL);
 
 	thread_lock(&oldmask);
-	while (transmit || nwake > 0) {
+	for (;;) {
 		bool any_emptied;
 
 		while (nwake == 0) {
-			int rc = pthread_cond_wait(&wakecond, &thread_mutex);
+			int rc;
+
+			if (stopping &&
+			    (rc = pthread_cond_broadcast(&stopcond)) != 0) {
+				errx(EXIT_FAILURE,
+				    "%s: pthread_cond_broadcast: %s",
+				    __func__, strerror(rc));
+			}
+
+			rc = pthread_cond_wait(&wakecond, &thread_mutex);
 			if (rc != 0) {
 				errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",
 				    __func__, strerror(rc));
@@ -315,6 +324,7 @@ rvp_prefork_init(void)
 	rvp_assert_atomicity();
 	rvp_lock_prefork_init();	// needed by rvp_signal_init()
 	rvp_signal_prefork_init();
+	rvp_str_prefork_init();
 	rvp_thread_prefork_init();
 }
 
@@ -331,7 +341,9 @@ rvp_postfork_init(void)
 	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
 	if (pthread_cond_init(&wakecond, NULL) != 0)
-		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
+		err(EXIT_FAILURE, "%s: pthread_cond_init", __func__);
+	if (pthread_cond_init(&stopcond, NULL) != 0)
+		err(EXIT_FAILURE, "%s: pthread_cond_init", __func__);
 	/* The 'begin' op for the first thread (tid 1) has to be
 	 * written directly after the header, and it is by virtue of
 	 * rvp_serializer_create() being called directly after

@@ -3,6 +3,8 @@
 #ifndef _RVP_NOTIMPL_H_
 #define _RVP_NOTIMPL_H_
 
-void not_implemented(const char *);
+#include "nbcompat.h"
+
+void not_implemented(const char *) __dead;
 
 #endif /* _RVP_NOTIMPL_H_ */

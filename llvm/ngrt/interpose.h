@@ -1,15 +1,23 @@
 #ifndef _RVP_INTERPOSE_H_
 #define _RVP_INTERPOSE_H_
 
-#include <dlfcn.h> /* for dlsym(3) */
-#include <pthread.h>
-#include <signal.h>
+#include <dlfcn.h>	/* for dlsym(3) */
+#include <pthread.h>	/* for pthread_{join,create,exit}(3),
+			 * pthread_mutex_{init,lock,trylock,unlock}(3), etc.
+			 */
+#include <signal.h>	/* for sigprocmask(3), sigaction(3), sigsuspend(3),
+			 * etc.
+			 */
+#include <string.h>	/* for memcpy(3), memmove(3), memset(3) */
 
 #define	REAL_DECL(__rettype, __func, ...)				\
 	extern __rettype (*real_##__func)(__VA_ARGS__)
 
 #define	REAL_DEFN(__rettype, __func, ...)				\
 	__rettype (*real_##__func)(__VA_ARGS__)
+
+#define	INTERPOSE_DEFN(__rettype, __func, ...)				\
+__rettype __rvpredict_##__func(__VA_ARGS__)
 
 #define	INTERPOSE_DECLS(__rettype, __func, ...)				\
 extern __rettype (*real_##__func)(__VA_ARGS__);				\
@@ -42,5 +50,9 @@ INTERPOSE_DECLS(int, sigaction, int, const struct sigaction *,
     struct sigaction *);
 
 INTERPOSE_DECLS(int, sigsuspend, const sigset_t *);
+
+INTERPOSE_DECLS(void *, memset, void *, int, size_t);
+INTERPOSE_DECLS(void *, memcpy, void *, const void *, size_t);
+INTERPOSE_DECLS(void *, memmove, void *, const void *, size_t);
 
 #endif /* _RVP_INTERPOSE_H_ */

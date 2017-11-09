@@ -11,11 +11,13 @@ INCS=lpcq.h nbcompat.h signals.h spcq.h
 FILES=Makefile
 FILES+=README.lpcq README.raceless-signal
 FILES+=$(SRCS.dot-product) $(SRCS.square-sum) $(SRCS.memcpy)
+FILES+=$(SRCS.simple-state-machine)
 FILES+=$(SRCS.simplerace) $(SRCS.lpcq) $(SRCS.spcq) $(SRCS.raceless-signal)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
-PROGS=	dot-product lpcq memcpy raceless-signal simplerace spcq square-sum
+PROGS=	dot-product lpcq memcpy raceless-signal
+PROGS+=	simple-state-machine simplerace spcq square-sum
 #PROGS+=	stolz-queue
 .endif
 
@@ -27,6 +29,7 @@ WARNS=4
 
 SRCS.dot-product=dot-product.c
 SRCS.square-sum=square-sum.c
+SRCS.simple-state-machine=simple-state-machine.c
 SRCS.memcpy=memcpy.c
 SRCS.simplerace=simplerace.c
 SRCS.lpcq=lpcq.c lpcq_main.c signals.c

@@ -11,6 +11,7 @@ _mkc_*
 raceless-signal
 rvpredict.trace
 simplerace
+simple-state-machine
 spcq
 square-sum
 stolz-queue

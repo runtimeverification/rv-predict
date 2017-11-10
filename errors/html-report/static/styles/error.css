@@ -13,8 +13,22 @@ body {
   overflow-y: scroll;
 }
 
-h3.component-header {
-  margin-left: 102px;
+.trace {
+  padding: 6px 48px 6px 0;
+  background-color: #e6e6e6;
+  background: radial-gradient(#eaeaea, #e6e6e6);
+  margin-bottom: 24px;
+  box-shadow: 0px 1px 4px 0px rgba(69, 69, 69, 0.76);
+}
+.trace.disabled {
+  padding: 0;
+  background-color: inherit;
+  background: inherit;
+  box-shadow: none;
+}
+
+h3.component {
+  margin-left: 48px;
   margin-bottom: 16px;
 }
 
@@ -53,6 +67,7 @@ ul.exp-list {
 /* Collapsed state for list element */
 .exp-list > li {
     list-style: none;
+    margin-bottom: 1px;
 }
 
 /* Expanded state for list element
@@ -72,6 +87,8 @@ ul.exp-list {
 .exp-list .bar {
   cursor: pointer;
   padding: 4px;
+  background-color: #fff;
+  box-shadow: 0px 1px 2px 1px rgba(0,0,0,0.2);
 }
 .exp-list .bar.disabled {
   cursor: default;
@@ -88,36 +105,33 @@ ul.exp-list {
 .exp-list .bar a:hover {
   background-color: #dddcff;
 }
-.exp-list .bar.expanded {
-  padding: 4px 4px 0;
-}
 .exp-list .bar:hover {
   transition: 0.3s;
-  background: linear-gradient(to right, #fff, #ebf0f3, #d3dee2);
+  background: linear-gradient(to right, #c7e2f3, #9fcfe2, #83bcd2);
 }
-.exp-list .bar.disabled:hover {
-  background: inherit;
-}
-
 
 .exp-list .expand-btn {
   float: left;
+  width: 22px;
+  height: 22px;
   margin-right: 12px;
-  padding: 0px 12px;
-  width: 12px;
+  padding: 0;
+  border-radius: 50%;
   text-align: center;
-  font-size: 14px;
-  font-weight: 400;
-  background-color: #fff;
-  color: #222;
-  border-radius: 4px;
-  border: 1px solid #dedede;
-  cursor: pointer;    
-  background-color: #fbfbfb;
+  font-size: 20px;
+  font-weight: 600;
+  color: #29688a;
+  cursor: pointer;
   user-select: none;
+  transition: 0.1s;
+}
+
+.exp-list .bar.disabled .expand-btn {
+  visibility: hidden;
 }
 
 .exp-list .expand-btn.expanded {
+  /*
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
   border-bottom-left-radius: 0;
@@ -125,7 +139,17 @@ ul.exp-list {
   border-top: 1px solid #dedede;
   border-right: 1px solid #dedede;
   border-left: 1px solid #dedede;
-  border-bottom: none;
+  border-bottom: none; 
+  */
+}
+.exp-list .expand-btn.times {
+  transform-origin: 50% 50%;  
+  transform: rotate(45deg);
+  transition: 0.1s;  
+}
+
+.exp-list h3.header {
+  margin-bottom: 16px;
 }
 
 div.stackContainer {
@@ -204,7 +228,7 @@ div.stack-frame > .pre {
   overflow: auto;
   padding: 32px 0;
   background-color: #f9f9f9;
-  box-shadow: 0px 2px 8px 0 rgba(0,0,0,0.2);
+  box-shadow: 0px 2px 2px 1px rgba(0,0,0,0.2);
   box-sizing: border-box;
 }
 div.stack-frame > .pre .lineno {
@@ -369,6 +393,15 @@ div.memory .variables::-webkit-scrollbar-thumb {
     position: absolute;
     left: 4px;
     top: 2px;
+    transition: 0.1s;    
+}
+.memory-li-expand-btn div {
+  transition: 0.1s;
+}
+.memory-li-expand-btn.times div {
+  transform-origin: 50% 50%;  
+  transform: rotate(45deg);
+  transition: 0.1s;
 }
 
 .bottom-section {
@@ -408,7 +441,8 @@ div.memory .variables::-webkit-scrollbar-thumb {
     padding: 0 12px 24px;
   }
 
-  h3.component-header {
+  h3.component,
+  h3.header {
     margin-left: 0;
   }
 
@@ -419,6 +453,13 @@ div.memory .variables::-webkit-scrollbar-thumb {
   div.details.show-memory .memory,
   div.details.show-memory .memory .variables {
     width: 100%;
+  }
+
+  .trace {
+    padding: 6px;
+  }
+  .trace.disabled {
+    padding: 0;
   }
 
   .bottom-section {

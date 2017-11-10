@@ -29,7 +29,7 @@
       background-color: #ffcccc;
     }
   }
-  .line-with-errors.highlight .hll {
+  .highlight {
     animation: highlight 1.5s;
   }
 </style>
@@ -47,7 +47,8 @@
     var match = window.location.search.match(/\?lineno=(\d+)/)
     if (match) {
       var lineno = match[1]
-      var $el = $('.line-with-errors.line-' + lineno)
+      // var $el = $('.line-with-errors.line-' + lineno)
+      var $el = $('.line-' + lineno)
       if ($el.length) {
         $el.addClass('highlight')
         var el = $el[0]

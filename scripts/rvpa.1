@@ -98,10 +98,22 @@ from eliding all stack frames under
 all frames under a thread's
 .Fn start_routine ,
 and all frames under a signal handler.
-.It Fl Fl output=console|csv|json
+.It Fl Fl output=console|csv|json|raw
 indicates the desired output format.
 .Dq console
 is the default.
+.Dq json
+produces output in JSON format that is suitable for
+.Xr rv-html-report
+to read.
+.Dq csv
+produces a table of comma-separated values, CSV, suitable
+for import into spreadsheets and relational databases.
+.Dq raw
+produces unrefined JSON:
+.Nm
+performs no symbolization, no eliding of system frames, no trimming of
+pathnames, regardless of the other settings on the command line.
 .It Fl -
 indicates the last option
 for

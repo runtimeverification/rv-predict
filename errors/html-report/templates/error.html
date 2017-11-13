@@ -554,7 +554,7 @@
     }
 
     $("[data-fileid]").each(function(index){
-      var obj = this,
+      var obj=this,
           $obj = $(obj)
       var dat = this.dataset.fileid
       var path=dat+".html ."+dat
@@ -564,53 +564,52 @@
 
       // cast to integer
       var line = +this.dataset.line
-      var $stackFrame = $('.stack-frame', this)
-      
-      // format code snippet
-      // highlight the line that has error.  
-      var size = $(".line", $stackFrame).length
-      $(".expand span.lineno", obj).width($(".line span.lineno", obj).width())
-      $(".line", $stackFrame).hide()
-      $obj.attr("size", size)
-      var locks = obj.dataset.locks.split(" ")
-      for (var i = 0; i < locks.length; i++) {
-        $(".line-"+locks[i] + " .after", $stackFrame).append((i+1))
-        $(".line-"+locks[i], $stackFrame).addClass("hll3")
-      }
-      $highlightLine = $(".line-"+line, $stackFrame) 
-      $highlightLine.addClass("hll")        
-      showNLines(7, line-3, $stackFrame)
+      $(".stack-frame", this).load(path, function() {
+        var size = $(".line", this).length
+        $(".expand span.lineno", obj).width($(".line span.lineno", obj).width())
+        $(".line", this).hide()
+        $obj.attr("size", size)
+        var locks = obj.dataset.locks.split(" ")
+        for (var i = 0; i < locks.length; i++) {
+          $(".line-"+locks[i] + " .after", this).append((i+1))
+          $(".line-"+locks[i], this).addClass("hll3")
+        }
+        $highlightLine = $(".line-"+line, this) 
+        $highlightLine.addClass("hll")        
+        showNLines(7, line-3, this)
 
-      if (size <= parseInt($obj.attr('data-context-end'))) 
-        $('.expand-down-btn', $obj).addClass('disabled')
-      if ($obj.attr('data-context-start') < 0)
-        $('.expand-up-btn', $obj).addClass('disabled')
+        if (size <= parseInt($obj.attr('data-context-end'))) 
+          $('.expand-down-btn', $obj).addClass('disabled')
+        if ($obj.attr('data-context-start') < 0)
+          $('.expand-up-btn', $obj).addClass('disabled')
 
-      // create memory table for local variables
-      var $memory = $('<div class="memory"><div class="header"></div></div>')
-      if (localVariables.length) {
-        $memory.append(generateMemoryTable(localVariables))
+        // create memory table for local variables
+        var $memory = $('<div class="memory"><div class="header"></div></div>')
+        if (localVariables.length) {
+          $memory.append(generateMemoryTable(localVariables))
 
-        var $toggleMemoryPanelBtn = $('<div class="btn toggle-memory-panel-btn">show variables</div>')
-        $toggleMemoryPanelBtn.on('click', function() {
-          var $detail = $('.details', obj) 
-          $detail.toggleClass('show-memory')
+          var $toggleMemoryPanelBtn = $('<div class="btn toggle-memory-panel-btn">show variables</div>')
+          $toggleMemoryPanelBtn.on('click', function() {
+            var $detail = $('.details', obj) 
+            $detail.toggleClass('show-memory')
 
-          if ($detail.hasClass('show-memory')) {
-            $toggleMemoryPanelBtn.text('hide variables')
+            if ($detail.hasClass('show-memory')) {
+              $toggleMemoryPanelBtn.text('hide variables')
 
-            var $memory = $('.memory', $detail)
-            $('.pre', $detail).css('min-height', $memory.height())
-          } else {
-            $toggleMemoryPanelBtn.text('show variables')
-            $('.pre', $detail).css('min-height', 'inherit')
-          }
-        })
+              var $memory = $('.memory', $detail)
+              $('.pre', $detail).css('min-height', $memory.height())
+            } else {
+              $toggleMemoryPanelBtn.text('show variables')
+              $('.pre', $detail).css('min-height', 'inherit')
+            }
+          })
 
-        $('.header', $memory).append($toggleMemoryPanelBtn)
-      }
-      $($stackFrame).append($memory)
-      $($stackFrame).append('<div class="clear"></div>')
+          $('.header', $memory).append($toggleMemoryPanelBtn)
+        }
+
+        $(this).append($memory)
+        $(this).append('<div class="clear"></div>')
+      })
 
       var $detail = $('.details', this)
       var $bar = $('.bar', this)
@@ -692,7 +691,7 @@
     </span>
   </div>
   <div class="snippet details" style="display: none">
-    <div class="stack-frame">{{frame.loc.abs_file | read_file | highlight({}, fileids[frame.loc.abs_file]) | safe}}</div>
+    <div class="stack-frame"></div>
     <div class="btn-group top">
         <div class="btn expand-up-btn" onClick="expandUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);" style="margin-right: 2px;">+</div>
         <div class="btn disabled" onClick="collapseUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);">&#x2212</div>      

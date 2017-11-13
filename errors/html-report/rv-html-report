@@ -220,17 +220,12 @@ def json_stringify(d):
     d = d or []
     return urllib.quote(str(json.dumps(d)))
 
-def read_file(abs_path):
-    with open(abs_path, 'r') as f:
-        return f.read()
-
 env = Environment(
     autoescape=True,
     loader=FileSystemLoader(dirname + '/templates/')
 )
 env.filters[u'highlight'] = highlight_c
 env.filters[u'json_stringify'] = json_stringify
-env.filters[u'read_file'] = read_file 
 
 env.globals.update(global_data)
 env.globals[u'files'] = sorted(files)

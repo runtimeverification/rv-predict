@@ -1,0 +1,13 @@
+tid 1.0 {} begin thread generation 0
+tid 1.0 in main at .../unaligned/unaligned.c:19 enter function cfa . return {}
+tid 1.0 in main at .../unaligned/unaligned.c:20 load 4 0x00000500 <- [0x0000000040fcb4]
+tid 1.0 in main at .../unaligned/unaligned.c:20 store 4 0x00000500 -> p.misalign at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:20 load 4 0x00000700 <- [0x0000000040fcb8]
+tid 1.0 in main at .../unaligned/unaligned.c:20 store 4 0x00000700 -> p.a at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:20 load 1 00 <- [0x0000000040fcbc]
+tid 1.0 in main at .../unaligned/unaligned.c:20 store 1 00 -> p.b at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:23 load 4 0x00000005 <- p.a at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:23 load 4 0x00000007 <- p.b at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:23 load 4 0x00000005 <- p.a at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:23 load 4 0x00000007 <- p.b at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:19 exit function

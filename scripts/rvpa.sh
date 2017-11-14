@@ -65,6 +65,10 @@ trim_stack()
 
 symbolize()
 {
+	if [ ${raw:-no} = yes ]; then
+		cat
+		return
+	fi
 	rvpsymbolize-json ${symbolize_passthrough} "$@" | \
 	{ [ ${filter_trim:-yes} = yes ] && rvptrimframe || cat ; } | \
 	{ [ ${filter_shorten:-yes} = yes ] && rvpshortenpaths || cat ; } | \
@@ -91,6 +95,10 @@ while [ $# -gt 1 ]; do
 		;;
 	--no-shorten|--no-trim)
 		eval filter_${1##--no-}=no
+		shift
+		;;
+	--output=raw)
+		raw=yes
 		shift
 		;;
 	--output=*)

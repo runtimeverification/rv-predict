@@ -7,6 +7,7 @@ import uuid
 import argparse
 import os
 import urllib
+import re
 
 from jinja2 import Environment, FileSystemLoader
 from pygments import highlight
@@ -207,8 +208,8 @@ if (typeof(window['CODES']) === 'undefined') {
     window['CODES'] = {}
 }
 window['CODES']['%s'] = '%s'
-""" % (path, highlight_c(code, errorlines, path).replace('\n', '\\n\' + \n\'')) 
-            target.write(js)
+""" % (path, highlight_c(code, errorlines, path).replace('\\', '\\\\').replace('\n', '\\n\' + \n\'')) 
+            target.write(js.encode('utf-8'))
         else:
             template = env.get_template('sourcefile.html')
             target.write(template.render(filename=filename,

@@ -549,9 +549,11 @@
   $(document).ready(function() {
     // load expand states history
     var EXPAND_STATE = {"0": true} // key is index, value is boolean
-    if (typeof(Storage) !== 'undefined' && localStorage['EXPAND_STATE_' + window.location.pathname]) {
-      EXPAND_STATE = JSON.parse(localStorage['EXPAND_STATE_' + window.location.pathname])
-    }
+    try { // Safari will cause error, so wrap it inside `try...catch...`
+      if (typeof(Storage) !== 'undefined' && localStorage['EXPAND_STATE_' + window.location.pathname]) {
+        EXPAND_STATE = JSON.parse(localStorage['EXPAND_STATE_' + window.location.pathname])
+      }
+    } catch(error) {}
 
     // save loaded scripts
     // key is `fileid`, value is true/false
@@ -648,9 +650,11 @@
             EXPAND_STATE[index] = true
           }
 
-          if (typeof(Storage) !== 'undefined') { // store expand state to localStorage.  
-            localStorage['EXPAND_STATE_' + window.location.pathname] = JSON.stringify(EXPAND_STATE)
-          }
+          try {
+            if (typeof(Storage) !== 'undefined') { // store expand state to localStorage.  
+              localStorage['EXPAND_STATE_' + window.location.pathname] = JSON.stringify(EXPAND_STATE)
+            }
+          } catch(error) {}
         }
         $expandBtn.on('click', function(event) {
           event.preventDefault()

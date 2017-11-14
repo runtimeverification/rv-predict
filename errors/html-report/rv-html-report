@@ -7,7 +7,6 @@ import uuid
 import argparse
 import os
 import urllib
-import re
 
 from jinja2 import Environment, FileSystemLoader
 from pygments import highlight
@@ -255,8 +254,8 @@ for template in ['index.html', 'error-descriptions.html']:
     render_template(template)
 for abs,rel in files.iteritems():
     fileids[abs] = str(uuid.uuid4())
-    render_code(rel,abs,abs,True, False)
-    render_code(rel,abs,fileids[abs], False, True)
+    render_code(rel, abs, abs, True, False)
+    render_code(rel, abs, fileids[abs], False, True)
 for err in errors:
     render_error(err)
 with open(args.output + "/errors.json.js", "w") as file:

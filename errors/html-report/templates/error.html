@@ -553,30 +553,53 @@
       EXPAND_STATE = JSON.parse(localStorage['EXPAND_STATE_' + window.location.pathname])
     }
 
+    // save loaded scripts
+    // key is `fileid`, value is true/false
+    var SCRIPTS = {} 
+    function loadJavaScript(scriptPath) {
+      return new Promise(function(resolve, reject) {
+        if (SCRIPTS[scriptPath]) { // script already loaded 
+          return resolve()
+        } else {
+          var script = document.createElement('script')
+          script.setAttribute('type', 'text/javascript')
+          script.setAttribute('src', scriptPath)
+          script.onload = function() {
+            SCRIPTS[scriptPath] = true 
+            return resolve()
+          }
+          document.getElementsByTagName('head')[0].appendChild(script)
+        }
+      })
+    }
+
+
     $("[data-fileid]").each(function(index){
       var obj=this,
           $obj = $(obj)
       var dat = this.dataset.fileid
-      var path=dat+".html ."+dat
-      
-      // local variables
-      var localVariables = JSON.parse(decodeURIComponent(this.getAttribute("data-local-variables") || "[]"))
+      if (!dat) return // no source file found
 
-      // cast to integer
-      var line = +this.dataset.line
-      $(".stack-frame", this).load(path, function() {
-        var size = $(".line", this).length
+      var line = +this.dataset.line // cast to integer       
+      var localVariables = JSON.parse(decodeURIComponent(this.getAttribute("data-local-variables") || "[]")) // local variables
+      var $stackFrame = $('.stack-frame', this)
+
+      var scriptPath = dat + '.js'
+      loadJavaScript(scriptPath).then(function() {
+        $stackFrame.html(window['CODES'][dat] || '')
+
+        var size = $(".line", $stackFrame).length
         $(".expand span.lineno", obj).width($(".line span.lineno", obj).width())
-        $(".line", this).hide()
+        $(".line", $stackFrame).hide()
         $obj.attr("size", size)
         var locks = obj.dataset.locks.split(" ")
         for (var i = 0; i < locks.length; i++) {
-          $(".line-"+locks[i] + " .after", this).append((i+1))
-          $(".line-"+locks[i], this).addClass("hll3")
+          $(".line-"+locks[i] + " .after", $stackFrame).append((i+1))
+          $(".line-"+locks[i], $stackFrame).addClass("hll3")
         }
-        $highlightLine = $(".line-"+line, this) 
+        $highlightLine = $(".line-"+line, $stackFrame) 
         $highlightLine.addClass("hll")        
-        showNLines(7, line-3, this)
+        showNLines(7, line-3, $stackFrame)
 
         if (size <= parseInt($obj.attr('data-context-end'))) 
           $('.expand-down-btn', $obj).addClass('disabled')
@@ -606,71 +629,69 @@
 
           $('.header', $memory).append($toggleMemoryPanelBtn)
         }
-
-        $(this).append($memory)
-        $(this).append('<div class="clear"></div>')
-      })
-
-      var $detail = $('.details', this)
-      var $bar = $('.bar', this)
-      var $expandBtn = $('.expand-btn', $bar)
-      function setExpandBtnStatus() {
-        if (!$detail.hasClass('displayed')) {
-          $bar.removeClass('expanded')
-          $expandBtn.removeClass('expanded')
-          $expandBtn.removeClass('times') // plus sign
-          EXPAND_STATE[index] = false
-        } else { // expanded
-          $bar.addClass('expanded')
-          $expandBtn.addClass('expanded')
-          $expandBtn.addClass('times') // times sign
-          EXPAND_STATE[index] = true
-        }
-
-        if (typeof(Storage) !== 'undefined') { // store expand state to localStorage.  
-          localStorage['EXPAND_STATE_' + window.location.pathname] = JSON.stringify(EXPAND_STATE)
-        }
-      }
-      $expandBtn.on('click', function(event) {
-        event.preventDefault()
-        event.stopPropagation()
-        $detail.toggle('fast')
-        $detail.toggleClass('displayed')
-        setExpandBtnStatus()
-      })
-      $bar.on('click', function(event) { $expandBtn.click() })
-
-      if (EXPAND_STATE[index]) {
-        $expandBtn.click()
-      }
-
-      // Window scroll event. We should always make the memory table stick to the top.
-      var containerElem = document.documentElement
-      window.addEventListener('scroll', function() {
-        var detailElem = $detail[0],
-            memoryElem = $('.memory', $detail)[0]
-        if (!memoryElem) return 
-
-        var containerScrollTop = containerElem.scrollTop || window.pageYOffset
+        $($stackFrame).append($memory)
+        $($stackFrame).append('<div class="clear"></div>')
         
-        if (memoryElem.offsetHeight > containerElem.offsetHeight) return
-        if (containerScrollTop >= detailElem.offsetTop + detailElem.offsetHeight) return
+        var $detail = $('.details', $obj)
+        var $bar = $('.bar', $obj)
+        var $expandBtn = $('.expand-btn', $bar)
+        function setExpandBtnStatus() {
+          if (!$detail.hasClass('displayed')) {
+            $bar.removeClass('expanded')
+            $expandBtn.removeClass('expanded')
+            $expandBtn.removeClass('times') // plus sign
+            EXPAND_STATE[index] = false
+          } else { // expanded
+            $bar.addClass('expanded')
+            $expandBtn.addClass('expanded')
+            $expandBtn.addClass('times') // times sign
+            EXPAND_STATE[index] = true
+          }
 
-        if (containerScrollTop + memoryElem.offsetHeight >= detailElem.offsetTop + detailElem.offsetHeight) {
-          memoryElem.style.position = 'absolute'
-          memoryElem.style.right ='0'
-          memoryElem.style.top = (detailElem.offsetHeight - memoryElem.offsetHeight) + 'px' 
-        } else if (containerScrollTop > detailElem.offsetTop) {
-          memoryElem.style.position = 'fixed'
-          memoryElem.style.top = '0'
-          memoryElem.style.right = '24px'
-        } else {
-          memoryElem.style.position = 'absolute'
-          memoryElem.style.right = '0'  
-          memoryElem.style.top = '0'
+          if (typeof(Storage) !== 'undefined') { // store expand state to localStorage.  
+            localStorage['EXPAND_STATE_' + window.location.pathname] = JSON.stringify(EXPAND_STATE)
+          }
         }
-      })
+        $expandBtn.on('click', function(event) {
+          event.preventDefault()
+          event.stopPropagation()
+          $detail.toggle('fast')
+          $detail.toggleClass('displayed')
+          setExpandBtnStatus()
+        })
+        $bar.on('click', function(event) { $expandBtn.click() })
 
+        if (EXPAND_STATE[index]) {
+          $expandBtn.click()
+        }
+
+        // Window scroll event. We should always make the memory table stick to the top.
+        var containerElem = document.documentElement
+        window.addEventListener('scroll', function() {
+          var detailElem = $detail[0],
+              memoryElem = $('.memory', $detail)[0]
+          if (!memoryElem) return 
+
+          var containerScrollTop = containerElem.scrollTop || window.pageYOffset
+          
+          if (memoryElem.offsetHeight > containerElem.offsetHeight) return
+          if (containerScrollTop >= detailElem.offsetTop + detailElem.offsetHeight) return
+
+          if (containerScrollTop + memoryElem.offsetHeight >= detailElem.offsetTop + detailElem.offsetHeight) {
+            memoryElem.style.position = 'absolute'
+            memoryElem.style.right ='0'
+            memoryElem.style.top = (detailElem.offsetHeight - memoryElem.offsetHeight) + 'px' 
+          } else if (containerScrollTop > detailElem.offsetTop) {
+            memoryElem.style.position = 'fixed'
+            memoryElem.style.top = '0'
+            memoryElem.style.right = '24px'
+          } else {
+            memoryElem.style.position = 'absolute'
+            memoryElem.style.right = '0'  
+            memoryElem.style.top = '0'
+          }
+        })
+      })
     })
   })
 </script>

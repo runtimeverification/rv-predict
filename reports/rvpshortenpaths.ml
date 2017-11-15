@@ -14,22 +14,27 @@ let common_prefix (s1:string) (s2:string) =
   let i = first_differing_index s1 s2 in
   String.sub s1 0 i
 
-
-let update_prefix_frame (prefix:string option) (frame: frame) =
+let rec update_prefix_frame (prefix:string option) (frame: frame) =
   match frame.loc with
-  | None -> prefix
+  | None -> List.fold_left update_prefix_lock prefix frame.locks
   | Some loc ->
-      match prefix with
+      List.fold_left update_prefix_lock (match prefix with
         | None -> Some loc.abs_file
-        | Some p -> Some (common_prefix p loc.abs_file)
+        | Some p -> Some (common_prefix p loc.abs_file)) frame.locks
+and update_prefix_lock (prefix:string option) (lock: lock) =
+  update_prefix_frame prefix lock.locked_at
+;;
 
-let remove_prefix_frame (prefix:int) (frame: frame) =
-  match frame.loc with
-  | None -> frame
-  | Some loc ->
-    let abs_file = loc.abs_file in
-    let no_prefix = String.sub abs_file prefix (String.length abs_file - prefix) in
-    {frame with loc=Some {loc with rel_file= "..." ^ no_prefix}}
+let rec remove_prefix_frame (prefix:int) (frame: frame) =
+    match frame.loc with
+    | None -> frame
+    | Some loc ->
+        let abs_file = loc.abs_file in
+        let no_prefix = String.sub abs_file prefix (String.length abs_file - prefix) in
+        {frame with loc=Some {loc with rel_file= "..." ^ no_prefix}; locks=List.map (remove_prefix_lock prefix) frame.locks}
+and remove_prefix_lock (prefix: int) (lock: lock) =
+  {lock with locked_at=remove_prefix_frame prefix lock.locked_at}
+;;
 
 let update_prefix_component (prefix:string option) (c: stack_trace_component) : string option =
   List.fold_left update_prefix_frame prefix c.frames

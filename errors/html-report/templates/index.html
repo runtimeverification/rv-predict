@@ -122,9 +122,11 @@
           orders.push([i, direction])
         }
         table.order(orders).draw()
-        if (typeof(Storage) !== "undefined") {
-          sessionStorage.myTable_columnOrders = JSON.stringify(orders)
-        }
+        try {
+          if (typeof(Storage) !== "undefined") {
+            sessionStorage.myTable_columnOrders = JSON.stringify(orders)
+          }
+        } catch(error) {}
       }
       /**
        * Load and set `data-direction` attributes to table headers
@@ -133,12 +135,11 @@
         var $header = $(table.header()[0])
         var $ths = $('th', $header)
         var orders = [] 
-        if (typeof(Storage) !== "undefined") {
-          try {
+        try {
+          if (typeof(Storage) !== "undefined") {
             orders = JSON.parse(sessionStorage.myTable_columnOrders)
-          } catch(err) {
-          }
-        } 
+          } 
+        } catch(error) {}
 
         for (var i = 0; i < $ths.length; i++) {
           if (i < orders.length) {
@@ -161,20 +162,24 @@
   });
 
   $(window).bind('beforeunload', function() {
-    if (typeof(Storage) !== "undefined") {
-      sessionStorage.myTable_searchValue = $("#table-search").val();
-      sessionStorage.myTable_scrollTop = $(window).scrollTop();
-    }
-  });
+    try {
+      if (typeof(Storage) !== "undefined") {
+        sessionStorage.myTable_searchValue = $("#table-search").val();
+        sessionStorage.myTable_scrollTop = $(window).scrollTop();
+      }
+    } catch(error) {}
+  })
 
-  if (typeof(Storage) !== "undefined") {
-    if (sessionStorage.myTable_searchValue) {
-      $("#table-search").val(sessionStorage.myTable_searchValue);
+  try {
+    if (typeof(Storage) !== "undefined") {
+      if (sessionStorage.myTable_searchValue) {
+        $("#table-search").val(sessionStorage.myTable_searchValue);
+      }
+      if (sessionStorage.myTable_scrollTop) {
+        $(window).scrollTop(sessionStorage.myTable_scrollTop);
+      }
     }
-    if (sessionStorage.myTable_scrollTop) {
-      $(window).scrollTop(sessionStorage.myTable_scrollTop);
-    }
-  }
+  } catch(error) {}
 
   $("#table-search")
     .on("keyup", function() { // filter according to key pressed

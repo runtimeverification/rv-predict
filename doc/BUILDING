@@ -18,9 +18,11 @@ Configuring a build environment:
         libarchive
         yacc
 
+    Configure an object directory if you're going to use one.
+
     At the top level of the RV-Predict sources, configure OCaml by running
 
-        ./opam-setup.sh (in the rv-predict 
+        ./opam-setup.sh
 
 Make sure that you have Clang 3.9 in your PATH.
 

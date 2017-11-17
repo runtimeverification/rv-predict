@@ -7,10 +7,11 @@ type renderer = {
   data : Error_t.metadata;
   previous_errors : (rv_error, unit) Hashtbl.t;
   render_impl : renderer -> rv_error -> out_channel -> unit;
-  streams :  (string, out_channel) Hashtbl.t
+  streams :  (string, out_channel) Hashtbl.t;
+  render_local_vars : bool;
 }
 
-val create_instance : renderer -> (renderer -> rv_error -> out_channel -> unit) -> renderer
+val create_instance : renderer -> ?local_vars:bool -> (renderer -> rv_error -> out_channel -> unit) -> renderer
 
 val render_citation_url : Error_t.citation -> string
 val string_of_error_category : Error_t.error_category -> string

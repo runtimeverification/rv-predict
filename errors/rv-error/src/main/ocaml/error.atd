@@ -42,11 +42,56 @@ type raw_frame = {
   locks: raw_lock list;
 }
 
+type local_var_value_bitfield = {
+  value: sized_byte_value list;
+  padding: sized_byte_value list;
+}
+
+type storage_duration = [
+| Allocated
+| Static
+| Thread
+| Auto
+| Unknown of string
+]
+
+type pointer_value = {
+  base: base_id;
+  ?duration: storage_duration option;
+  ?offset: int option;
+}
+
+type base_id = [
+| Reference of string
+| Base of int
+]
+
+type local_var_value = [
+| Bytes of sized_byte_value list
+| Int of int
+| Float of string
+| Pointer of pointer_value
+| NullPointer
+| FileDescriptor of string
+| Function
+| Array of local_var_value list
+| Struct of fields_info
+| Union of fields_info
+| EnumConstant of string
+| Bitfield of local_var_value_bitfield
+]
+
+type field_value = {
+  offset: int;
+  value: local_var;
+}
+
 type local_var = {
   id: string;
   vtype: value_type;
+  vtype_str: string;
   size: int;
-  bytes: byte_value list;
+  value: local_var_value;
 }
 
 type byte_value = [
@@ -63,7 +108,7 @@ type sized_byte_value = {
 }
 
 type encoded_value = {
-  value: string;
+  value: local_var_value;
   bstart: int;
   bend: int;
 }
@@ -71,6 +116,34 @@ type encoded_value = {
 type sized_type = {
   vtype: value_type;
   size : int;
+}
+
+type array_type = {
+  vtype: value_type;
+  element_bitsize: int;
+  ?length : int option;
+}
+
+type tag_info = {
+  tag_name: string;
+  ?active_variant: string option;
+  ?field_info: fields_info option;
+}
+
+type enum_info = {
+  enum_name: string;
+  type_alias: value_type;
+  ?enum_id: string option;
+}
+
+type padding = {
+  offset: int;
+  value: sized_byte_value;
+}
+
+type fields_info = {
+  fields: field_value list;
+  paddings: padding list;
 }
 
 type value_type = [
@@ -93,12 +166,12 @@ type value_type = [
 | UnsignedChar
 | Char
 | Pointer of value_type
-| Enum of string
-| Union of string
-| Struct of string
-| Array of sized_type
-| IncompleteArray of value_type
-| VariableArray of value_type
+| Enum of enum_info
+| Union of tag_info
+| Struct of tag_info
+| Array of array_type
+| IncompleteArray of array_type
+| VariableArray of array_type
 | Function
 ]
 

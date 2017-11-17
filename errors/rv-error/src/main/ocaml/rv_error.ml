@@ -262,7 +262,14 @@ let render_stack_error (this : renderer) (error : stack_error * (rv_error -> rv_
   if suppress this error.category error_id top_frame (StackError error)
   then false
   else
-    let StackError error = update_error (StackError error) in
+    let error =
+      if this.render_local_vars
+      then
+        match update_error (StackError error) with
+        | StackError error -> error
+        | _ -> failwith "update_error: expected StackError output"
+      else error
+    in
     let rendered_error = { error with
                            error_id = error_id;
                            citations = citations;
@@ -283,7 +290,14 @@ let render_location_error (this : renderer) (error : location_error * (rv_error 
   if suppress this error.category error_id (Some error.loc) (LocationError error)
   then false
   else
-    let LocationError error = update_error (LocationError error) in
+    let error =
+      if this.render_local_vars
+      then
+        match update_error (LocationError error) with
+        | LocationError error -> error
+        | _ -> failwith "update_error: expected LocationError output"
+      else error
+    in
     let rendered_error = { error with
                            error_id = error_id;
                            citations = citations;
@@ -346,6 +360,7 @@ let create (metadata : metadata) : renderer =
       previous_errors = Hashtbl.create 256;
       render_impl = (fun _ -> failwith "not implemented");
       streams = Hashtbl.create 256;
+      render_local_vars = false;
     }
   in
   List.iter (fun e -> add_previous_error renderer (rv_error_of_string e)) data.previous_errors ;

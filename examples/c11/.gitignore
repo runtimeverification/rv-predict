@@ -1,6 +1,7 @@
 *.d
 .depend
 dot-product
+double-checked-locking
 intr_driver
 *.ll
 lpcq
@@ -11,7 +12,9 @@ _mkc_*
 raceless-signal
 rvpredict.trace
 simplerace
+simple-state-machine
 spcq
+spinning-loop
 square-sum
 stolz-queue
 stolz-queue.plain

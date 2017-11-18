@@ -13,7 +13,8 @@ RVP_BUF_GENERIC_INITIALIZER(rvp_buf_with_one_path_t)
 static uint32_t shared_library_count = 0;
 
 static int
-log_shared_library(struct dl_phdr_info *info, size_t size, void *data)
+log_shared_library(struct dl_phdr_info *info,
+    size_t size __unused, void *data __unused)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_with_one_path_t b_library = RVP_BUF_WITH_ONE_PATH_INITIALIZER;

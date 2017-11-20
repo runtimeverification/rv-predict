@@ -33,6 +33,13 @@ dataptr_to_string(char *buf, size_t buflen,
 	return buf;
 }
 
+#define	MATCH_ELT(__e, __n)	{	\
+	  .ptr = &(__e)		\
+	, .name = __n		\
+}
+
+#define	SIMPLE_MATCH_ELT(__e)	MATCH_ELT(__e, #__e)
+
 void
 foo(void)
 {
@@ -40,20 +47,39 @@ foo(void)
 	xyz_t xyz = {.x = {3, 4, 5}, .y = {6, 7, 8}, .z = {9, 10, 11}};
 	xyz_t array[3][4];
 	int iarray[7][5][2] = {{{1}}};
+	struct {
+		struct {
+			int a, b;
+		} t[13];
+	} s[11];
+	struct {
+		int a;
+		struct {
+			int x[13];
+		} b;
+	} p[11];
 	char buf[sizeof("[0x0123456789abcdef : 0x0123456789abcdef/0x0123456789abcdef 0x0123456789abcdef/0x0123456789abcdef]")];
 	void *cfa = __builtin_dwarf_cfa(); 
-	const void *ptr[] = {
-		  &xyz.x.p
-		, &array[1][2].y.q
-		, &iarray[0][0][0]
-		, &xyz
-		, &array[0]
-		, &iarray[0]
-		, &cfa
+	struct {
+		const void *ptr;
+		const char *name;
+	} elt[] = {
+		  SIMPLE_MATCH_ELT(xyz.x.p)
+		, SIMPLE_MATCH_ELT(array[1][2].y.q)
+		, SIMPLE_MATCH_ELT(s[7].t[5].b)
+		, SIMPLE_MATCH_ELT(s[7].t[5].a)
+		, SIMPLE_MATCH_ELT(p[5].a)
+		, SIMPLE_MATCH_ELT(p[5].b.x[9])
+		, SIMPLE_MATCH_ELT(iarray[0][0][0])
+		, MATCH_ELT(xyz, "xyz.x.p")
+		, MATCH_ELT(array[0], "array[0][0].x.p")
+		, MATCH_ELT(iarray[0], "iarray[0][0][0]")
+		, SIMPLE_MATCH_ELT(cfa)
 	};
 
-	for (i = 0; i < __arraycount(ptr); i++) {
+	for (i = 0; i < __arraycount(elt); i++) {
 		printf("%s\n", dataptr_to_string(buf, sizeof(buf),
-		    ptr[i], program_counter(), cfa));
+		    elt[i].ptr, program_counter(), cfa));
+		printf("%s at %s;%s\n", elt[i].name, __FILE__, __func__);
 	}
 }

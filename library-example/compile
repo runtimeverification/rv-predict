@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+set -x
+
+gcc -Wall -fPIC -c *.c
+gcc -g -shared -o libsharedlibrary.so shared_library.o
+rvpc -g -fPIC -c shared_library_main.c
+rvpc -g -o shared_library_main shared_library_main.o dump_shared_libraries.o \
+    -L. \
+    -lsharedlibrary
+LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH RVP_TRACE_ONLY=yes ./shared_library_main

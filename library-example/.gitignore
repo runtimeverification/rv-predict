@@ -1,0 +1,3 @@
+*.o
+shared_library_main
+*.so

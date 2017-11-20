@@ -104,7 +104,7 @@ let render_loc (buffer : rv_buffer) (loc : location option) : unit =
 
 
 let render_lock (buffer : rv_buffer) (lock : lock) : unit =
-  add_line buffer   "   - locked " ;
+  add_line buffer   "      - locked " ;
   add_string buffer lock.id ;
   add_char buffer   ' ' ;
   add_string buffer lock.locked_at.symbol ;

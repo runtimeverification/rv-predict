@@ -766,6 +766,29 @@ locdesc_to_regnum(Dwarf_Locdesc *ld)
 	}
 }
 
+static void
+get_subrange_dimension(Dwarf_Die child, Dwarf_Unsigned *countp)
+{
+	Dwarf_Unsigned lower, upper;
+	if (get_unsigned_attribute(child, DW_AT_lower_bound, &lower) &&
+	    lower != 0) {
+		errx(EXIT_FAILURE,
+		    "%s: a non-zero lower-bound attribute "
+		    "is not expected in C/C++ programs",
+		    __func__);
+	}
+
+	/* TBD handle lower/upper bound */
+	if (get_unsigned_attribute(child, DW_AT_count, countp))
+		;	// do nothing
+	else if (get_unsigned_attribute(child, DW_AT_upper_bound, &upper))
+		*countp = upper + 1;
+	else {
+		errx(EXIT_FAILURE,
+		    "%s: no count or upper-bound attribute", __func__);
+	}
+}
+
 static ssize_t
 dwarf_array_type_size(Dwarf_Debug dbg, Dwarf_Die typedie)
 {
@@ -802,11 +825,7 @@ dwarf_array_type_size(Dwarf_Debug dbg, Dwarf_Die typedie)
 		if (tag != DW_TAG_subrange_type)
 			goto next;
 
-		/* TBD handle lower/upper bound */
-		if (!get_unsigned_attribute(child, DW_AT_count, &count)) {
-			errx(EXIT_FAILURE, "%s: no count attribute",
-			    __func__);
-		}
+		get_subrange_dimension(child, &count);
 
 		/* TBD try for the subrange's DW_AT_byte_size, which
 		 * overrides the type's size
@@ -866,11 +885,7 @@ walk_elements(Dwarf_Debug dbg, Dwarf_Die typedie, dwarf_walk_ctx_t *ctx)
 		if (tag != DW_TAG_subrange_type)
 			goto next;
 
-		/* TBD handle lower/upper bound */
-		if (!get_unsigned_attribute(child, DW_AT_count, &count)) {
-			errx(EXIT_FAILURE, "%s: no count attribute",
-			    __func__);
-		}
+		get_subrange_dimension(child, &count);
 
 		if (ndims++ == __arraycount(dim)) {
 			errx(EXIT_FAILURE, "%s: array dimensions > %zu",

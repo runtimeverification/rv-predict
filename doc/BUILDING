@@ -32,9 +32,9 @@ Other notes:
 
         Probably NOT needed: zarith mlgmp 
 
-        Definitely needed: csv uri ocamlbuild-atdgen ocp-ocamlres
+	Definitely needed: atdgen atdj csv ocamlbuild-atdgen ocp-ocamlres uri
 
-        Maybe needed: uuidm camomile atdgen atdj ctypes ctypes-foreign
+	Maybe needed: camomile ctypes ctypes-foreign uuidm
 
         Install with `opam install -y <packages here>`.
 

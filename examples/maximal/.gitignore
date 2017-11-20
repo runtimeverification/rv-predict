@@ -1,3 +1,5 @@
+a.out
 example1
 example2
 *.o
+*.trace

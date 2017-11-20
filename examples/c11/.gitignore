@@ -1,3 +1,4 @@
+a.out
 *.d
 .depend
 dot-product
@@ -22,3 +23,4 @@ stolz-queue.rvp
 stolz-queue.tsan
 .*.swp
 tags
+*.trace

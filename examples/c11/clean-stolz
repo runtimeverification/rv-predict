@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rm -f stolz-queue.plain stolz-queue.rvp stolz-queue.tsan

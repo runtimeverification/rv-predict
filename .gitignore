@@ -7,6 +7,7 @@ EVALUATION-LICENSE.md
 *.iml
 .metadata
 _mkc_*
+.opam
 .project
 .recommenders
 .settings/

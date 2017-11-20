@@ -1,37 +1,40 @@
-Make sure that you have Clang 3.9 in your PATH.
-
-Here are some programs that must be available:
-
-	awk
-	clang+llvm-3.9.0 with development components (.h, .a/.so files)
-	gmake
-	grep
-	JDK 1.8
-	lex
-	libarchive
-	m4
-	mk-configure
-	opam
-	pandoc
-	sed
-	yacc
-
-OPAM packages required by the unified error reporting in errors/:
-
-	Probably NOT needed: zarith mlgmp 
-
-	Definitely needed: csv uri ocamlbuild-atdgen ocp-ocamlres
-
-	Maybe needed: uuidm camomile atdgen atdj ctypes ctypes-foreign
-
-	Install with `opam install -y <packages here>`.
-
 Configuring a build environment:
 
-	sudo apt install maven openjdk-8-jdk-headless
-	sudo apt install opam m4
-	opam init
-	opam update
-	opam switch 4.03.0
-	eval `opam config env`
-	opam install ocp-ocamlres ocamlbuild-atdgen csv uri atdgen atdj
+    On Ubuntu, install prerequisite packages:
+ 
+        sudo apt install m4
+        sudo apt install make # GNU make
+        sudo apt install maven mk-configure
+        sudo apt install opam openjdk-8-jdk-headless
+        sudo apt install pandoc
+        sudo apt install sed
+
+    Here are some other programs that must be available:
+
+        awk
+        clang+llvm-3.9.0 with development components (.h, .a/.so files)
+        grep
+        lex
+        libarchive
+        yacc
+
+    Configure an object directory if you're going to use one.
+
+    At the top level of the RV-Predict sources, configure OCaml by running
+
+        ./opam-setup.sh
+
+Make sure that you have Clang 3.9 in your PATH.
+
+Other notes:
+
+   OPAM packages required by the unified error reporting in errors/:
+
+        Probably NOT needed: zarith mlgmp 
+
+        Definitely needed: csv uri ocamlbuild-atdgen ocp-ocamlres
+
+        Maybe needed: uuidm camomile atdgen atdj ctypes ctypes-foreign
+
+        Install with `opam install -y <packages here>`.
+

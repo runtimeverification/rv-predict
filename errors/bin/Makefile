@@ -9,6 +9,10 @@ BUILD_DIR_OPT=-build-dir $(.OBJDIR)
 
 SRCDIR=$(.CURDIR)/../rv-error/src/main/ocaml
 
+_TOPOBJDIR!=$(MAKE) -C $(.CURDIR)/../.. -V "$(.OBJDIR)"
+OPAMROOT=$(_TOPOBJDIR)/.opam
+.export OPAMROOT
+
 cleandir distclean:
 	cd $(SRCDIR) && $(MAKE) clean
 
@@ -29,8 +33,5 @@ $(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:
 $(SRCDIR)/rv-error: .PHONY
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) native
-
-#rv-error: $(.CURDIR)/../errors/rv-error/src/main/ocaml/rv_error_native.ml
-#	ocamlfind opt -g $(.ALLSRC) -o $(.OBJDIR)/rv-error -package atdgen -package rv_error -linkpkg -package unix
 
 .include <mkc.files.mk>

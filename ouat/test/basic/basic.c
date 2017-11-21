@@ -19,8 +19,12 @@ main(int argc __unused, char **argv __unused)
 	void *cfa = __builtin_dwarf_cfa();
 
 	foo();
-	printf("&pqr = %p\n", (const void *)&pqr);
-	printf("&xyz = %p\n", (const void *)&xyz);
+	printf("[%p]\n", (const void *)&pqr);
+	printf("pqr.p at %s\n", __FILE__);
+	printf("[%p]\n", (const void *)&xyz);
+	printf("xyz.x.p at %s\n", __FILE__);
+#if 0
 	printf("DWARF Canonical Frame Address (CFA) %p\n", cfa);
+#endif
 	return EXIT_SUCCESS;
 }

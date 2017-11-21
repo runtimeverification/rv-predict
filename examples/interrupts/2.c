@@ -1,4 +1,5 @@
 #include <err.h>
+#include <libgen.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -30,13 +31,13 @@ handler(int signum __unused)
 }
 
 int
-main(void)
+main(int argc __unused, char **argv)
 {
 	int i;
 	sigset_t oldset;
 
 	pthread_sigmask(SIG_SETMASK, NULL, &oldset);
-	establish(handler);
+	establish(handler, basename(argv[0])[0] == 'r');
 
 	for (i = 1; i <= 10; i++) {
 		shared.count = i;

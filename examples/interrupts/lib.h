@@ -1,6 +1,8 @@
 #ifndef _RV_INTERRUPT_LIB_H_
 #define _RV_INTERRUPT_LIB_H_
 
-void establish(void (*)(int));
+#include <stdbool.h>
+
+void establish(void (*)(int), bool);
 
 #endif /* _RV_INTERRUPT_LIB_H_ */

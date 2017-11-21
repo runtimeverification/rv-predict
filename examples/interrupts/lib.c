@@ -1,3 +1,5 @@
+#include <features.h>
+
 #include <err.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -21,13 +23,15 @@ setalarm(void)
 }
 
 void
-establish(void (*handler)(int))
+establish(void (*handler)(int), bool recursive)
 {
 	sigset_t blockset;
 	struct sigaction sa;
 
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = handler;
+	if (recursive)
+		sa.sa_flags = SA_NODEFER;
 	sigemptyset(&sa.sa_mask);
 
 	sigemptyset(&blockset);

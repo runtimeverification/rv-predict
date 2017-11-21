@@ -15,11 +15,11 @@ RVP_TRACE_ONLY:=yes
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
 
-PROG=unaligned
+PROG=memcpy
 
 CC?=rvpc
-CPPFLAGS+=-I$(.CURDIR)/../../../../include
-SRCS.unaligned=unaligned.c
+CPPFLAGS+=-I$(.CURDIR)/../../../include
+SRCS.memcpy=memcpy.c
 WARNS=4
 STRIPFLAG=
 
@@ -29,10 +29,10 @@ LDADD+=-pthread
 .PHONY: test_output
 
 test.trace:
-	@$(.OBJDIR)/unaligned > /dev/null
+	@$(.OBJDIR)/memcpy > /dev/null
 
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/unaligned | $(.CURDIR)/../normalize
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/memcpy | $(.CURDIR)/../normalize
 
 CLEANFILES+=test.trace
 

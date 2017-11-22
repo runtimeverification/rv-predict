@@ -15,11 +15,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 
+import static com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
 public class EventsEnabledForSignalIteratorTest {
     private static final long SIGNAL_NUMBER = 3;
+    private static final long SIGNAL_NUMBER_2 = 4;
     private static final int NO_SIGNAL = 0;
     private static final long PC_BASE = 100L;
     private static final long THREAD_ID = 200L;
@@ -559,6 +561,79 @@ public class EventsEnabledForSignalIteratorTest {
                 e2 = tu.nonAtomicStore(ADDRESS, VALUE_1),
                 e3 = tu.nonAtomicStore(ADDRESS, VALUE_2),
                 e4 = tu.atomicStore(ADDRESS, VALUE_3),
+                e5 = tu.nonAtomicStore(ADDRESS, VALUE_4),
+                e6 = tu.disableSignal(SIGNAL_NUMBER)
+        );
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(last(e4), first(e5)),
+                stop(first(e5), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithNoInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e2)),
+                stop(first(e2), first(e3)),
+                stop(first(e3), first(e4)),
+                stop(last(e4), first(e5)),
+                stop(first(e5), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionStrictMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), first(e4)),
+                stop(last(e4), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e3)),
+                stop(first(e2), first(e4)),
+                stop(last(e4), first(e6)));
+
+        assertIteratorStops(
+                EventsEnabledForSignalIterator.createWithInterruptedThreadRaceDetectionFastUnsoundMode(
+                        events, SIGNAL_NUMBER,
+                        false,  // enabledAtStart
+                        false  // stopAtFirstMaskChangeEvent
+                ),
+                stop(first(e1), first(e4)),
+                stop(last(e4), first(e6)));
+    }
+
+    @Test
+    public void iterationSkipsSignalLockedEvents()
+            throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID, NO_SIGNAL, PC_BASE);
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+        List<ReadonlyEventInterface> e3;
+        List<ReadonlyEventInterface> e4;
+        List<ReadonlyEventInterface> e5;
+        List<ReadonlyEventInterface> e6;
+        List<ReadonlyEventInterface> events = tu.flatten(
+                e1 = tu.enableSignal(SIGNAL_NUMBER),
+                e2 = tu.nonAtomicStore(ADDRESS, VALUE_1),
+                e3 = tu.nonAtomicStore(ADDRESS, VALUE_2),
+                e4 = tu.disestablishSignal(SIGNAL_NUMBER_2),
                 e5 = tu.nonAtomicStore(ADDRESS, VALUE_4),
                 e6 = tu.disableSignal(SIGNAL_NUMBER)
         );

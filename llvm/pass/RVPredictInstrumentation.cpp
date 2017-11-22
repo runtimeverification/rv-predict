@@ -325,11 +325,10 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 	}
 	vptr_update = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction("__rvpredict_vptr_update",
-	        void_type, int8_ptr_type,
-		int8_ptr_type, nullptr));
+	        void_type, int8_ptr_type, int8_ptr_type, nullptr));
 	vptr_load = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction("__rvpredict_vptr_load",
-	        void_type, int8_ptr_type, nullptr));
+	        void_type, int8_ptr_type, int8_ptr_type, nullptr));
 	atomic_thread_fence = checkSanitizerInterfaceFunction(
 	    m.getOrInsertFunction("__rvpredict_atomic_thread_fence",
 	        void_type, memory_order_type, nullptr));
@@ -745,7 +744,7 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
                                             const DataLayout &DL)
 {
   IRBuilder<> IRB(I);
-  bool IsWrite = isa<StoreInst>(*I);
+  const bool IsWrite = isa<StoreInst>(*I);
   Value *Addr;
   Value *Val;
   if (IsWrite) {
@@ -802,6 +801,11 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
     if (isVtableAccess(I)) {
       DEBUG(dbgs() << "  VPTR : " << *I << "\n");
       // Call vptr_update.
+      // XXX
+      // XXX The vptr_update call should be inserted *before* the
+      // XXX store so that we don't log the store Val -> [Addr]
+      // XXX before a subsequent load, [Addr] -> Val.
+      // XXX
       IRB.CreateCall(vptr_update,
                      {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
                       IRB.CreatePointerCast(Val, IRB.getInt8PtrTy())});
@@ -810,8 +814,9 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
     }
   }
   if (!IsWrite && isVtableAccess(I)) {
-    IRB.CreateCall(vptr_load,
-                   IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
+      IRB.CreateCall(vptr_load,
+                     {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                      IRB.CreatePointerCast(Val, IRB.getInt8PtrTy())});
     NumInstrumentedVtableReads++;
     return true;
   }

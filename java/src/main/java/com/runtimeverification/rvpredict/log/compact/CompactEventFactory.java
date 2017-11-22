@@ -174,7 +174,7 @@ public class CompactEventFactory {
 
             @Override
             public boolean isAtomic() {
-                return lockReason == LockReason.ATOMIC;
+                return lockReason == LockReason.ATOMIC || lockReason == LockReason.SIGNAL;
             }
 
             @Override

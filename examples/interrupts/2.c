@@ -9,11 +9,13 @@
 #include "lib.h"
 #include "nbcompat.h"
 
-/* Interrupt data-race category 2: a low-priority thread is interrupted
- * during a store; the interrupt handler performs a load; the interrupt
- * handler potentially reads a value that is different both from the
- * original value and from the value the low-priority thread was
- * writing.
+/* Interrupt data-race category 2:
+ *
+ * A low-priority thread is interrupted during a store on a shared
+ * memory location, L; the interrupt handler performs a load that
+ * overlaps L; the interrupt handler potentially observes a value that
+ * is different both from the original value and from the value the
+ * low-priority thread was storing.
  */
 
 struct {

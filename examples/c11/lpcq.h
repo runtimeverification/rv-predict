@@ -3,6 +3,10 @@
 #ifndef _LPCQ_H_
 #define _LPCQ_H_
 
+#ifndef lpcq_atomic
+#error "lpcq_atomic is not defined; it should be _Atomic or the empty string"
+#endif /* lpcq_atomic */
+
 /* lpcq: (l)inked (p)roducer-(c)onsumer (q)ueue
  *
  * lpcq is a library for keeping a first-in-first-out (FIFO) queues as
@@ -29,15 +33,15 @@
  *     return NULL if no items remain.   
  */
 typedef struct _lpcq {
-	void * volatile head;
-	void * volatile * volatile tailp;
+	void * lpcq_atomic volatile head;
+	void * lpcq_atomic volatile * lpcq_atomic volatile tailp;
 	int nextofs;
 } lpcq_t;
 
 typedef struct _lpcq_iter {
 	void *item;
 	int nextofs;
-	void * volatile *lastnextp;
+	void * lpcq_atomic volatile * lpcq_atomic lastnextp;
 } lpcq_iter_t;
 
 void lpcq_init(lpcq_t *, int);

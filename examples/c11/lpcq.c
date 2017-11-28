@@ -4,12 +4,15 @@
 #include <sys/param.h>	/* for MAX */
 #include <limits.h>	/* for INT_MAX */
 #include <stdlib.h>	/* for NULL */
+#ifndef lpcq_atomic 
+#define lpcq_atomic
+#endif /* lpcq_atomic */
 #include "lpcq.h"
 
-static inline void * volatile *
+static inline void * lpcq_atomic volatile *
 lpcq_nextp(int nextofs, void *item)
 {
-	return (void * volatile *)((char *)item + nextofs);
+	return (void * lpcq_atomic volatile *)((char *)item + nextofs);
 }
 
 void
@@ -23,14 +26,17 @@ lpcq_init(lpcq_t *q, int nextofs)
 void *
 lpcq_get(lpcq_t *q)
 {
-	if (q->tailp == &q->head)
-		return NULL;
-
 	void *item;
 
 	item = q->head;
 
-	void * volatile *nextp = lpcq_nextp(q->nextofs, item);
+	if (item == NULL)
+		return NULL;
+
+	if (q->tailp == &q->head)
+		return NULL;
+
+	void * lpcq_atomic volatile *nextp = lpcq_nextp(q->nextofs, item);
 	q->head = *nextp;
 	if (q->tailp == nextp) {
 		q->tailp = &q->head;
@@ -41,10 +47,10 @@ lpcq_get(lpcq_t *q)
 void
 lpcq_put(lpcq_t *q, void *item)
 {
-	void * volatile *nextp = lpcq_nextp(q->nextofs, item);
+	void * lpcq_atomic volatile *nextp = lpcq_nextp(q->nextofs, item);
 
 	*nextp = NULL;
-	void * volatile *otailp = q->tailp;
+	void * lpcq_atomic volatile *otailp = q->tailp;
 	q->tailp = nextp;
 	*otailp = item;
 }
@@ -57,7 +63,7 @@ lpcq_getall(lpcq_t *q)
 
 	void *item = q->head;
 
-	void * volatile *otailp = q->tailp;
+	void * lpcq_atomic volatile *otailp = q->tailp;
 	q->tailp = &q->head;
 
 	return (lpcq_iter_t){.item = item,
@@ -73,7 +79,7 @@ lpcq_next(lpcq_iter_t *i)
 	if (head == NULL)
 		return NULL;
 
-	void * volatile *nextp = lpcq_nextp(i->nextofs, head);
+	void * lpcq_atomic volatile *nextp = lpcq_nextp(i->nextofs, head);
 	if (nextp == i->lastnextp) {
 		i->item = NULL;
 		return head;

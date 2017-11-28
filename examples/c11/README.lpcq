@@ -28,26 +28,26 @@ That produces an executable binary, `lpcq`.
 If you run `lpcq` like this, RV-Predict will detect races, and `lpcq`
 may even crash because of queue corruption or a timeout:
 
-	rvpx ./lpcq
+	./lpcq
 
 Run `lpcq` like this to protect the queue with a POSIX Threads (pthreads)
 mutex.  No data races will be detected, and the program will run to
 completion every time:
 
-	rvpx ./lpcq -l
+	./lpcq -l
 
 RV-Predict is capable of detecting data races that involve a thread and
 a signal handler.  Run `lpcq` with the `-s` option to make it add items
 to the queue in a signal handler instead of in a thread.  Run this, and
 RV-Predict will detect a race between a thread and signal:
 
-	rvpx ./lpcq -s -n 15
+	./lpcq -s -n 15
 
 Add the `-m` option to tell `lpcq` to mask the signal that adds queue
 items while it consumes queue items.  That protects against data races.
 RV-Predict will detect no races when you run this:
 
-	rvpx ./lpcq -s -n 15 -m
+	./lpcq -s -n 15 -m
 
 # Other lpcq options
 
@@ -59,7 +59,7 @@ RV-Predict will detect no races when you run this:
 ## When a mutex synchronizes the producer and consumer threads'
 ## access to the queue, RV-Predict detects no races.
 
-	$ rvpx ./lpcq -l
+	$ ./lpcq -l
 	locking enabled
 	read item 0
 	read item 1
@@ -71,7 +71,7 @@ RV-Predict will detect no races when you run this:
 ## Without synchronization, the producer and consumer thread race
 ## to update queue elements.  Sometimes the race is harmless.
 
-	$ rvpx ./lpcq 
+	$ ./lpcq 
 	read item 0
 	read item 1
 	read item 2
@@ -112,7 +112,7 @@ RV-Predict will detect no races when you run this:
 ## Sometimes the race corrupts the queue.  `lpcq` eventually crashes.
 Ordinarily, races are still reported.
 
-	$ rvpx ./lpcq 
+	$ ./lpcq 
 	read item 0
 	read item 2
 	read item 3
@@ -124,7 +124,7 @@ Ordinarily, races are still reported.
 
 ## `lpcq` reports races with a signal handler 
 
-	$ rvpx ./lpcq -n 15 -s 
+	$ ./lpcq -n 15 -s 
 	read item 0
 	read item 1
 	read item 2

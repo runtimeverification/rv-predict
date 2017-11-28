@@ -30,34 +30,34 @@ That produces an executable binary, `raceless-signal`.
 
 If you run `raceless-signal` like this, RV-Predict/C will detect races:
 
-	rvpx ./raceless-signal
+	./raceless-signal
 
 Run `raceless-signal` like this to protect the shared variable with an
 atomic flag variable.  Data races still will be detected, because there
 are execution orderings where the atomic flag is not protective:
 
-	rvpx ./raceless-signal -v
+	./raceless-signal -v
 
 Add the command-line option `-s` to make `raceless-signal` run a signal
 handler that modifies the shared variable, instead of running a second
 thread.  Now, the atomic flag variable protects the shared variable,
 and no races will be reported:
 
-	rvpx ./raceless-signal -s -v
+	./raceless-signal -s -v
 
 Pass `-m` to make the thread block signals while it modifies the
 shared variable, using the signal mask.  No races will be found
 in that case, either:
 
-	rvpx ./raceless-signal -s -m
+	./raceless-signal -s -m
 
 Finally, you can use `-m` and `-v` together with `-s`, and no races
 will be detected:
 
-	rvpx ./raceless-signal -s -m -v
+	./raceless-signal -s -m -v
 
 Or, supply only the `-m` option---i.e., no `-s` option.  Two threads
 will run, and setting of the signal mask will not stop them from racing:
 
-	rvpx ./raceless-signal -m
+	./raceless-signal -m
 

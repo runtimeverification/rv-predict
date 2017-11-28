@@ -80,7 +80,7 @@ public class Configuration implements Constants {
             "__tsan",
             "<null>",
             "/usr/lib/",
-            "/usr/bin/../lib/",	// TBD normalize paths, instead?
+            "/usr/bin/../lib/", // TBD normalize paths, instead?
             "llvm/projects/compiler-rt"
     });
 
@@ -554,7 +554,7 @@ public class Configuration implements Constants {
             setLogDir(Paths.get(predict_dir).toAbsolutePath().normalize().toString());
             prediction = OFFLINE_PREDICTION;
         }  else if (llvm_predict != null) {     /* only llvm_predict */
-            setLogDir(Paths.get(llvm_predict).toAbsolutePath().normalize().toString());
+            setLogDir(Paths.get(llvm_predict).toAbsolutePath().getParent().normalize().toString());
             prediction = LLVM_PREDICTION;
         } else {                                /* log then predict */
             log = true;
@@ -762,7 +762,7 @@ public class Configuration implements Constants {
     }
 
     public Path getCompactTraceFilePath() {
-        return Paths.get(logDir, COMPACT_TRACE_FILE_NAME);
+        return Paths.get(llvm_predict);
     }
 
     public boolean isProfiling() {

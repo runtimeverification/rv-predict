@@ -9,7 +9,11 @@ sharedir=$(dirname $0)/../share/rv-predict-c
 
 usage()
 {
-	echo "usage: $(basename $0) [--prompt-for-license] [--window size] [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--] program" 1>&2
+cat 1>&2 <<EOF
+usage: $(basename $0) [--prompt-for-license] [--window size]
+    [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--]
+    program [trace-file]
+EOF
 	exit 1
 }
 
@@ -137,7 +141,17 @@ while [ $# -gt 1 ]; do
 	esac
 done
 
-[ $# -eq 1 ] || usage
+if [ $# -gt 2 ]; then
+	echo "$(basename $0): too many arguments" 1>&2
+	usage
+elif [ $# -lt 1 ]; then
+	echo "$(basename $0): too few arguments" 1>&2
+	usage
+fi
+
+if [ $# -eq 2 ]; then
+	trace_file=$2
+fi
 
 progname=$1
 if [ ${progname##/} != ${progname} ]; then
@@ -154,5 +168,5 @@ fi
 rvpredict --offline ${analyze_passthrough:-} ${window:---window 2000} \
     --json-report \
     --detect-interrupted-thread-race \
-    --compact-trace --llvm-predict . 3>&2 2>&1 1>&3 3>&- | \
+    --compact-trace --llvm-predict ${trace_file:-./rvpredict.trace} 3>&2 2>&1 1>&3 3>&- | \
     symbolize $progpath 2>&1

@@ -77,6 +77,35 @@ Otherwise, the program writes its trace file to
 the default location.
 .Ev RVP_TRACE_FILE
 must name a file, not a directory.
+The custom path may interpolate a value from the program using
+a
+.Dq \&%
+followed by a formatting character:
+.Bl -tag -width 4n -offset indent -compact
+.It Sy n
+the last pathname component of the executable file that is running
+.It Sy p
+the PID of the process, in decimal
+.It Sy t
+the approximate time when the program created its trace file, in seconds
+since 00:00:00 on January 1, 1970, in decimal
+.It Sy u
+the username returned by
+.Xr getlogin 2
+.El
+.Pp
+.Po
+These format characters are chosen to match the ones used by core name
+templates in NetBSD.
+See
+.Xr core 5
+in the NetBSD manual.
+.Pc
+.Pp
+Use
+.Dq \&%%
+to interpolate a literal percent sign.
+.Pp
 .It Ev RVP_TRACE_ONLY
 Finding
 .Ev RVP_TRACE_ONLY

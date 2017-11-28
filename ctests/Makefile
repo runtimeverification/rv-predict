@@ -1,8 +1,11 @@
-SUBDIR=rvsyms trace
+SUBDIR=rvpa rvsyms trace
 
 MKINSTALL=no
 
-depend all: share/rv-predict-c/ldscript bin/rvpc lib/rvpinstrument.so lib/rvprt.a
+depend all: share/rv-predict-c/rv-predict.jar share/rv-predict-c/ldscript bin/rvpc lib/rvpinstrument.so lib/rvprt.a
+
+share/rv-predict-c/rv-predict.jar:
+	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../maven install
 
 share/rv-predict-c/ldscript:
 	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= -C $(.CURDIR)/../ldscript install

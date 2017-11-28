@@ -1,3 +1,3 @@
-SUBDIR=	cpp11 c11 maximal top
+SUBDIR=	cpp11 c11 interrupts maximal top
 
 .include <mkc.subdir.mk>

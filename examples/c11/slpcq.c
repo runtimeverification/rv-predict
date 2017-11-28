@@ -99,7 +99,7 @@ lpcq_next(lpcq_iter_t *i)
 	if (head == NULL)
 		return NULL;
 
-	void * volatile *nextp = lpcq_nextp(i->nextofs, head);
+	void * lpcq_atomic volatile *nextp = lpcq_nextp(i->nextofs, head);
 	if (nextp == i->lastnextp) {
 		i->item = NULL;
 		return head;

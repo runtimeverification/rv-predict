@@ -23,12 +23,11 @@ cleandir distclean:
 tags:
 	@touch $(.CURDIR)/tags
 
-uninstall:
-	@echo "Nothing to do for $(.TARGET)"
+test uninstall:
 
 install: all
 
-$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags):
+$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Ntest):
 	cd $(SRCDIR) && unset DESTDIR && \
 	LD_LIBRARY_PATH=$(HOME)/pkg/lib:/usr/lib/x86_64-linux-gnu \
 	C_INCLUDE_PATH=$(HOME)/pkg/include \

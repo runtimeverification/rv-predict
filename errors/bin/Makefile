@@ -20,13 +20,12 @@ cleandir distclean:
 tags:
 	@touch $(.CURDIR)/tags
 
-uninstall:
-	@echo "Nothing to do for $(.TARGET)"
+test uninstall:
 
 rv-error: $(SRCDIR)/rv-error
 	@cp $(.ALLSRC) $(.OBJDIR)/.
 
-$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Nall:Ndepend):
+$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Nall:Ndepend:Ntest):
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) $(.TARGET)
 

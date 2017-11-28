@@ -14,4 +14,6 @@ SUBPRJ+=rvsyms
 SUBPRJ+=maven
 .endif
 
+SUBPRJ+=llvm:ctests maven:ctests rvsyms:ctests scripts:ctests
+
 .include <mkc.subprj.mk>

@@ -14,17 +14,19 @@ FILES+=$(SRCS.dot-product) $(SRCS.double-checked-locking)
 FILES+=$(SRCS.spinning-loop) $(SRCS.square-sum) $(SRCS.memcpy)
 FILES+=$(SRCS.simple-state-machine)
 FILES+=$(SRCS.simplerace) $(SRCS.lpcq) $(SRCS.spcq) $(SRCS.raceless-signal)
+FILES+=$(SRCS.slpcq)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
 PROGS=	dot-product double-checked-locking lpcq memcpy raceless-signal
-PROGS+=	simple-state-machine simplerace spcq spinning-loop square-sum
+PROGS+=	simple-state-machine simplerace slpcq spcq spinning-loop square-sum
 #PROGS+=	stolz-queue
 .endif
 
 CC=clang
 CFLAGS+=-std=c11
 CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
+#CPPFLAGS+=-Dlpcq_atomic=_Atomic
 #CPPFLAGS.spcq+=-D__STDC_NO_ATOMICS__
 WARNS=4
 
@@ -36,6 +38,7 @@ SRCS.simple-state-machine=simple-state-machine.c
 SRCS.memcpy=memcpy.c
 SRCS.simplerace=simplerace.c
 SRCS.lpcq=lpcq.c lpcq_main.c signals.c
+SRCS.slpcq=slpcq.c slpcq_main.c signals.c
 SRCS.spcq=spcq.c spcq_main.c
 SRCS.raceless-signal=raceless-signal.c signals.c
 SRCS.stolz-queue=stolz-queue.c

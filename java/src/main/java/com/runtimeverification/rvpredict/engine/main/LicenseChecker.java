@@ -10,6 +10,8 @@ import static com.runtimeverification.licensing.Licensing.LICENSE_URL;
 
 public class LicenseChecker {
     public static void validateOrDie(boolean promptForLicense) {
+        return; 
+        /* @rv: Disable licensing check.  
         Licensing licensingSystem = Licensing.fromLocations(
                 "predict",
                 Licensing.LicenseLocation.USER_DIRECTORY,
@@ -28,6 +30,7 @@ public class LicenseChecker {
         if (licensingSystem.getLicenseStatus() != Licensing.LicenseStatus.VALID) {
             System.exit(1);
         }
+        */
     }
 
     private static String errorMessage(Licensing.LicenseStatus licenseStatus) {

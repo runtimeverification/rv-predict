@@ -14,10 +14,13 @@ struct _pair {
 	uint32_t b;
 } __packed;
 
+static const pair_t initial = {.a = 5, .b = 7};
+
+#line 17
 int
 main(void)
 {
-	volatile pair_t p = {.a = 5, .b = 7};
+	volatile pair_t p = initial;
 
 	printf("%" PRIu32 " * %" PRIu32 " = %" PRIu32 "\n",
 	    p.a, p.b, p.a * p.b);

@@ -321,7 +321,8 @@ public class TraceCache {
     private int windowCount = 0;
     public Trace getTraceWindow() throws IOException {
         windowCount++;
-        config.logger().report("-- Window " + windowCount + " --", Logger.MSGTYPE.PROGRESS);
+        config.logger().report("-- Window " + windowCount + " --",
+            Logger.MSGTYPE.PROGRESS);
         crntState.preStartWindow();
 
         List<RawTrace> rawTraces = readEventWindow();

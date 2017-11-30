@@ -751,6 +751,8 @@ public class Configuration implements Constants {
 
     private void setLogDir(String logDir) {
         this.logDir = logDir;
+        if (compact_trace != null && !debug)
+            return;
         try {
             logger.setLogDir(logDir);
         } catch (FileNotFoundException e) {

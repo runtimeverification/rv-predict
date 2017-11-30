@@ -57,8 +57,12 @@ public class Logger {
             System.err.println(RV_PREDICT_CONSOLE_PREFIX + msg);
             break;
         case PHASE:
-        case REAL:
+        case PROGRESS:
             System.err.println(msg);
+            break;
+        case REPORT:
+        case VERBOSE:
+            System.out.println(msg);
             break;
         default:
             break;
@@ -66,7 +70,7 @@ public class Logger {
     }
 
     public enum MSGTYPE {
-        REAL, INFO, PHASE, ERROR
+        ERROR, INFO, PHASE, PROGRESS, REPORT, VERBOSE
     }
 
 }

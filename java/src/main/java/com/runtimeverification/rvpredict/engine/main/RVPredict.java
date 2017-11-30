@@ -99,9 +99,9 @@ public class RVPredict {
 
             List<String> reports = detector.getRaceReports();
             if (reports.isEmpty()) {
-                config.logger().report("No races found.", Logger.MSGTYPE.INFO);
+                config.logger().report("No races found.", Logger.MSGTYPE.VERBOSE);
             } else {
-                reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
+                reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REPORT));
             }
             traceCache.getLockGraph().runDeadlockDetection();
         } catch (IOException e) {

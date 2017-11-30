@@ -165,8 +165,7 @@ if ! test -e ${progpath}; then
 	exit 1
 fi
 
-rvpredict --offline ${analyze_passthrough:-} ${window:---window 2000} \
+rvpredict ${analyze_passthrough:-} ${window:---window 2000} \
     --json-report \
-    --detect-interrupted-thread-race \
-    --compact-trace --llvm-predict ${trace_file:-./rvpredict.trace} 3>&2 2>&1 1>&3 3>&- | \
+    --compact-trace ${trace_file:-./rvpredict.trace} | \
     symbolize $progpath 2>&1

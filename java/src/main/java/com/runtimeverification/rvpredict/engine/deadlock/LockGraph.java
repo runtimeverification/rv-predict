@@ -145,7 +145,7 @@ public class LockGraph {
         report.append("\n");
         report.append(details);
         report.append("}}}\n");
-        config.logger().report(signatureProcessor.simplify(report.toString()), Logger.MSGTYPE.REAL);
+        config.logger().report(signatureProcessor.simplify(report.toString()), Logger.MSGTYPE.REPORT);
     }
 
     private void reportUnlockOfUnlockedMutex(ReadonlyEventInterface event) {
@@ -154,7 +154,7 @@ public class LockGraph {
         report.append("Unlock of an unlocked mutex: \n");
         report.append("\t\t" + metadata.getLocationSig(event.getLocationId()));
         report.append("\n");
-        config.logger().report(report.toString(), Logger.MSGTYPE.REAL);
+        config.logger().report(report.toString(), Logger.MSGTYPE.REPORT);
     }
 
 }

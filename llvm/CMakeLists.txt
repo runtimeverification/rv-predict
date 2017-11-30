@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.3)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS -std=c++11)
@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CMAKE_BUILD_TYPE Debug)
 
-find_package(LLVM 3.9 REQUIRED CONFIG)
+find_package(LLVM 4.0 REQUIRED CONFIG)
 
 #
 # The following couple of lines are necessary for cmake

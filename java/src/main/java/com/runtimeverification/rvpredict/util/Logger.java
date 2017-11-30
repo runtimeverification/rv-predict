@@ -2,6 +2,8 @@ package com.runtimeverification.rvpredict.util;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Paths;
 
@@ -20,6 +22,18 @@ public class Logger {
     private PrintStream debug = System.err;
     private PrintStream result;
 
+    public Logger() {
+        PrintStream blackhole = new PrintStream(new OutputStream() {
+            public void write(int b) throws IOException {
+            }
+            public void write(byte[] b) throws IOException {
+            }
+            public void write(byte[] b, int off, int len) throws IOException {
+            }
+        });
+        debug = blackhole;
+        result = blackhole;
+    }
     public void setLogDir(String logDir) throws FileNotFoundException {
         // TODO(YilongL): make sure this log file doesn't grow out of control
         debug = new PrintStream(new FileOutputStream(Paths.get(logDir, "debug.log").toFile()));

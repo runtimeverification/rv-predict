@@ -72,13 +72,11 @@ public class Logger {
             break;
         case PHASE:
         case PROGRESS:
+        case VERBOSE:
             System.err.println(msg);
             break;
         case REPORT:
-        case VERBOSE:
             System.out.println(msg);
-            break;
-        default:
             break;
         }
     }

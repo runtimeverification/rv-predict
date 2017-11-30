@@ -1,0 +1,9 @@
+tid 1.0 {} begin thread generation 0
+tid 1.0 in main at .../add/add.c:17 enter function cfa . return {}
+tid 1.0 in main at .../add/add.c:18 store 4 0x00000041 -> u32 at add.c;main
+tid 1.0 in main at .../add/add.c:19 store 8 0x0000000000000043 -> u64 at add.c;main
+tid 1.0 in main at .../add/add.c:21 atomic rmw 4 0x00000041 <- u32 at add.c;main <- 0x00000100
+tid 1.0 in main at .../add/add.c:22 atomic rmw 8 0x0000000000000043 <- u64 at add.c;main <- 0x0000000f00000000
+tid 1.0 in main at .../add/add.c:23 atomic load 4 0x00000100 <- u32 at add.c;main
+tid 1.0 in main at .../add/add.c:24 atomic load 8 0x0000000f00000000 <- u64 at add.c;main
+tid 1.0 in main at .../add/add.c:17 exit function

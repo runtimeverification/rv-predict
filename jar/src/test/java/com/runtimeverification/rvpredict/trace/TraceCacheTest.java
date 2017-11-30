@@ -78,6 +78,8 @@ public class TraceCacheTest {
         eventId = FIRST_EVENT_ID;
         locationId = FIRST_LOCATION_ID;
         when(mockTraceState.getThreadInfos()).thenReturn(mockThreadInfos);
+        Logger logger = new Logger();
+        when(mockConfiguration.logger()).thenReturn(logger);
     }
 
     @Test

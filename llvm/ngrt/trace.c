@@ -1,15 +1,19 @@
 #include <assert.h>
-#include <sys/types.h>	/* for open(2) */
+#include <sys/types.h>	/* for open(2), getpid(2) */
 #include <sys/stat.h>	/* for open(2) */
 #include <fcntl.h>	/* for open(2) */
 #include <sys/uio.h>	/* for writev(2) */
+#include <stdio.h>	/* for snprintf(3) */
 #include <stdlib.h>	/* for getenv(3) */
+#include <time.h>	/* for time(3) */
+#include <unistd.h>	/* for getlogin(3) */
 
 #include "access.h"
 #include "nbcompat.h"
 #include "notimpl.h"
 #include "ring.h"
 #include "rvpint.h"
+#include "supervise.h"
 #include "thread.h"
 #include "trace.h"
 #include "tracefmt.h"
@@ -45,19 +49,115 @@ writeall(int fd, const void *buf, size_t nbytes)
 	return nwritten;
 }
 
+static char *
+rvp_expand_template(const char *template)
+{
+	const char *addition, *next, *percent = "%";
+	char *exename, *username;
+	time_t tm;
+	char *out;
+	char pidbuf[sizeof("18446744073709551616")],
+	     secs_since_epoch[sizeof("18446744073709551616")];
+	char buf[PATH_MAX] = "";
+	const size_t buflen = sizeof(buf);
+	int rc;
+	size_t nleft;
+
+	if (template == NULL)
+		return strdup("./rvpredict.trace");
+	if (strchr(template, '%') == NULL)
+		return strdup(template);
+
+	if ((username = getlogin()) == NULL)
+		err(EXIT_FAILURE, "%s: could not get username", __func__);
+
+	if ((tm = time(NULL)) == (time_t)-1) {
+		err(EXIT_FAILURE, "%s: could not read the current time",
+		    __func__);
+	}
+
+	rc = snprintf(secs_since_epoch, sizeof(secs_since_epoch), "%ju",
+	    (intmax_t)tm);
+	if (rc < 0 || rc >= sizeof(secs_since_epoch)) {
+		err(EXIT_FAILURE,
+		    "%s: seconds since epoch exceeds %zu characters",
+		    __func__, sizeof(secs_since_epoch) - 1);
+	}
+
+	rc = snprintf(pidbuf, sizeof(pidbuf), "%ju", (intmax_t)getpid());
+	if (rc < 0 || rc >= sizeof(pidbuf)) {
+		err(EXIT_FAILURE, "%s: PID exceeds %zu characters",
+		    __func__, sizeof(pidbuf) - 1);
+	}
+
+	exename = get_binary_path();
+
+	for (out = buf, next = template;
+	     *next != '\0' && (nleft = buflen - (out - buf) - 1) > 0;
+	     next++) {
+		if (*next != '%') {
+			*out++ = *next;
+			continue;
+		}
+		++next;
+		switch (*next) {
+		case 'n':
+			addition = basename(exename);
+			break;
+		case 'p':
+			addition = pidbuf;
+			break;
+		case 'u':
+			addition = username;
+			break;
+		case 't':
+			addition = secs_since_epoch;
+			break;
+		case '%':
+			addition = percent;
+			break;
+		case '\0':
+			err(EXIT_FAILURE,
+			    "%s: %% at end of template", __func__);
+			break;
+		default:
+			err(EXIT_FAILURE,
+			    "%s: string interpolation %%%c not understood",
+			    __func__, *next);
+		}
+		rc = snprintf(out, nleft, "%s", addition);
+		if (rc < 0 || rc >= nleft) {
+			err(EXIT_FAILURE,
+			    "%s: filled & terminated template did not fit in "
+			    "%zu characters", __func__, buflen);
+		}
+		out += rc;
+	}
+	*out = '\0';
+	return strdup(buf);
+}
+
 int
 rvp_trace_open(void)
 {
-	const char *envfile = getenv("RVP_TRACE_FILE");
-	const char *tracefn = (envfile != NULL) ? envfile : "./rvpredict.trace";
+	const char *template = getenv("RVP_TRACE_FILE");
+	char *tracefn = rvp_expand_template(template);
 
-	int fd = open(tracefn, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	if (tracefn == NULL) {
+		err(EXIT_FAILURE,
+		    "%s: could not expand trace-file template \"%s\"", __func__,
+		        template);
+	}
+
+	const int fd = open(tracefn, O_WRONLY|O_CREAT|O_TRUNC, 0600);
 
 	if (fd == -1)
 		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
 
 	if (writeall(fd, &header, sizeof(header)) == -1)
 		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
+
+	free(tracefn);
 
 	return fd;
 }

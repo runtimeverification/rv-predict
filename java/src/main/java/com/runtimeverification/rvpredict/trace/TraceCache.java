@@ -11,6 +11,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -320,7 +321,8 @@ public class TraceCache {
     private int windowCount = 0;
     public Trace getTraceWindow() throws IOException {
         windowCount++;
-        System.out.println("-- Window " + windowCount + " --");
+        config.logger().report("-- Window " + windowCount + " --",
+            Logger.MSGTYPE.PROGRESS);
         crntState.preStartWindow();
 
         List<RawTrace> rawTraces = readEventWindow();

@@ -80,7 +80,7 @@ public class Configuration implements Constants {
             "__tsan",
             "<null>",
             "/usr/lib/",
-            "/usr/bin/../lib/",	// TBD normalize paths, instead?
+            "/usr/bin/../lib/",         // TBD normalize paths, instead?
             "llvm/projects/compiler-rt"
     });
 
@@ -371,7 +371,7 @@ public class Configuration implements Constants {
 
     public final static String opt_compact_trace = "--compact-trace";
     @Parameter(names = opt_compact_trace, description = "Whether to use the compact trace format.", hidden = true, descriptionKey = "1700")
-    private boolean compactTrace;
+    private String compact_trace = null;
 
     public final static String opt_json_report = "--json-report";
     @Parameter(names = opt_json_report, description = "Whether to use the json output format.", hidden = true, descriptionKey = "1750")
@@ -409,7 +409,7 @@ public class Configuration implements Constants {
     private String suppress = "";
 
     private final static String opt_detect_interrupted_thread_race = "--detect-interrupted-thread-race";
-    @Parameter(names = opt_detect_interrupted_thread_race, description = "Detect races between a data access event in a signal/interrupt and a data access event in the interrupted thread.", descriptionKey = "2450")
+    @Parameter(names = opt_detect_interrupted_thread_race, description = "Detect races between a data access event in a signal/interrupt and a data access event in the interrupted thread.", descriptionKey = "2450", arity = 1)
     private boolean detectInterruptedThreadRace = true;
 
     /*
@@ -516,7 +516,7 @@ public class Configuration implements Constants {
         initSuppressPattern();
 
         /* Carefully handle the interaction between options:
-         * 1) 5 different modes: only_profile, only_log, only_predict, only_llvm_predict, and log_then_predict;
+         * 1) 5 different modes: only_profile, only_log, only_predict, llvm_predict, compact_trace, and log_then_predict;
          * 2) 2 types of prediction: online and offline;
          * 3) log directory can be specified or not.
          *
@@ -533,6 +533,9 @@ public class Configuration implements Constants {
             if (llvm_predict != null) {
                 exclusiveOptionsFailure(opt_event_profile, opt_llvm_predict);
             }
+            if (compact_trace != null) {
+                exclusiveOptionsFailure(opt_event_profile, opt_compact_trace);
+            }
             if (offline) {
                 exclusiveOptionsFailure(opt_event_profile, opt_offline);
             }
@@ -543,6 +546,9 @@ public class Configuration implements Constants {
             if (llvm_predict != null) {
                 exclusiveOptionsFailure(opt_only_log, opt_llvm_predict);
             }
+            if (compact_trace != null) {
+                exclusiveOptionsFailure(opt_only_log, opt_compact_trace);
+            }
             if (offline) {
                 exclusiveOptionsFailure(opt_only_log, opt_offline);
             }
@@ -551,8 +557,17 @@ public class Configuration implements Constants {
             if (llvm_predict != null) {
                 exclusiveOptionsFailure(opt_only_predict, opt_llvm_predict);
             }
+            if (compact_trace != null) {
+                exclusiveOptionsFailure(opt_only_predict, opt_compact_trace);
+            }
             setLogDir(Paths.get(predict_dir).toAbsolutePath().normalize().toString());
             prediction = OFFLINE_PREDICTION;
+        }  else if (compact_trace != null) {        /* only compact_trace */
+            if (llvm_predict != null) {
+                exclusiveOptionsFailure(opt_compact_trace, opt_llvm_predict);
+            }
+            setLogDir(Paths.get(compact_trace).toAbsolutePath().getParent().normalize().toString());
+            prediction = LLVM_PREDICTION;
         }  else if (llvm_predict != null) {     /* only llvm_predict */
             setLogDir(Paths.get(llvm_predict).toAbsolutePath().normalize().toString());
             prediction = LLVM_PREDICTION;
@@ -703,10 +718,6 @@ public class Configuration implements Constants {
         return logger;
     }
 
-    public String getBaseDirName() {
-        return baseLogDir;
-    }
-
     /**
      * Returns the directory to read and/or write log files.
      */
@@ -740,6 +751,8 @@ public class Configuration implements Constants {
 
     private void setLogDir(String logDir) {
         this.logDir = logDir;
+        if (compact_trace != null && !debug)
+            return;
         try {
             logger.setLogDir(logDir);
         } catch (FileNotFoundException e) {
@@ -762,7 +775,7 @@ public class Configuration implements Constants {
     }
 
     public Path getCompactTraceFilePath() {
-        return Paths.get(logDir, COMPACT_TRACE_FILE_NAME);
+        return Paths.get(compact_trace);
     }
 
     public boolean isProfiling() {
@@ -793,7 +806,7 @@ public class Configuration implements Constants {
     }
 
     public boolean isCompactTrace() {
-        return compactTrace;
+        return compact_trace != null;
     }
 
     public boolean isJsonReport() {

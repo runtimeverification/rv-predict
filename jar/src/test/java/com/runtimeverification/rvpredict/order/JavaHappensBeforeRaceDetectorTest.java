@@ -63,11 +63,6 @@ public class JavaHappensBeforeRaceDetectorTest {
                 then(invocation -> invocation.getArguments()[0].equals(Long.valueOf(4L)));
         when(mockMetadata.getLocationSig(anyLong())).thenReturn("unknown location");
         Logger logger = new Logger();
-        try {
-            logger.setLogDir("/tmp");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
         when(mockConfiguration.logger()).thenReturn(logger);
     }
 

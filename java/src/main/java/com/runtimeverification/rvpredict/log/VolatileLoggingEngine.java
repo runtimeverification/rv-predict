@@ -147,9 +147,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
 
         List<String> reports = detector.getRaceReports();
         if (reports.isEmpty()) {
-            config.logger().report("No races found.", Logger.MSGTYPE.INFO);
+            config.logger().report("No races found.", Logger.MSGTYPE.VERBOSE);
         } else {
-            reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REAL));
+            reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REPORT));
         }
     }
 

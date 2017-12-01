@@ -11,6 +11,7 @@ import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.testutils.MoreAsserts;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.util.Constants;
+import com.runtimeverification.rvpredict.util.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -78,6 +79,8 @@ public class TraceCacheTest {
         eventId = FIRST_EVENT_ID;
         locationId = FIRST_LOCATION_ID;
         when(mockTraceState.getThreadInfos()).thenReturn(mockThreadInfos);
+        Logger logger = new Logger();
+        when(mockConfiguration.logger()).thenReturn(logger);
     }
 
     @Test

@@ -198,7 +198,7 @@ public class TestHelper {
 
         @VisibleForTesting
         String output() throws IOException {
-            return Files.toString(stderrFile, Charset.defaultCharset());
+            return Files.toString(stdoutFile, Charset.defaultCharset());
         }
 
     }

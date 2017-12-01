@@ -7,7 +7,7 @@
 
     <!-- General Application Information -->
     <info>
-        <appname>RV-Predict-C</appname>
+        <appname>RV-Predict/C</appname>
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
@@ -18,7 +18,7 @@
     <variables>
         <variable name="TargetPanel.dir.windows" value="C:\$APP_NAME"/>
         <!-- Variables required for adding RV key to installer -->
-        <variable name="rvFullProductName" value="RV-Predict-C"/>
+        <variable name="rvFullProductName" value="RV-Predict/C"/>
         <variable name="rvProductId" value="predict"/>
         <variable name="rvProductVersion" value="@{info.appVersion}"/>
         <variable name="rvLicensePath" value="lib"/>
@@ -89,6 +89,7 @@
                 <os family="unix"/>
             </file>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="never"/>
+<!--
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.bat" />
                 <os family="windows"/>
@@ -99,6 +100,7 @@
                 <exclude name="native"/>
                 <os family="windows"/>
             </fileset>
+-->
         </pack>
     </packs>
 

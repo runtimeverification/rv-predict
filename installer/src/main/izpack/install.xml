@@ -7,7 +7,7 @@
 
     <!-- General Application Information -->
     <info>
-        <appname>RV-Predict</appname>
+        <appname>RV-Predict/Java</appname>
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
@@ -17,7 +17,7 @@
     <variables>
         <variable name="TargetPanel.dir.windows" value="C:\$APP_NAME"/>
         <!-- Variables required for adding RV key to installer -->
-        <variable name="rvFullProductName" value="RV-Predict"/>
+        <variable name="rvFullProductName" value="RV-Predict/Java"/>
         <variable name="rvProductId" value="predict"/>
         <variable name="rvLicensePath" value="."/>
     </variables>

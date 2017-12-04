@@ -3,21 +3,26 @@
 #include <sched.h>	/* for sched_yield() */
 #include <sys/param.h>	/* for MAX */
 #include <limits.h>	/* for INT_MAX */
+#include <stdatomic.h>
 #include <stdlib.h>	/* for NULL */
-#ifndef lpcq_atomic 
-#define lpcq_atomic
+#ifndef lpcq_atomic
+#define lpcq_atomic _Atomic
 #endif /* lpcq_atomic */
 #include "lpcq.h"
 
-/* lpcq: (l)inked (p)roducer-(c)onsumer (q)ueue
+/* slpcq: (s)ynchronized (l)inked (p)roducer-(c)onsumer (q)ueue
  *
- * lpcq is a library for keeping a first-in-first-out (FIFO) queues as
+ * slpcq is a library for keeping a first-in-first-out (FIFO) queues as
  * singly-linked lists.  Items on a queue are linked through internal
  * pointers.
  *
- * `lpcq` producer and consumer threads must arrange to synchronize
- * their calls to `lpcq_put` and `lpcq_get`.  Otherwise, the queue will
- * be corrupted.
+ * `slpcq` types and functions use the same prefix as `lpcq` so that
+ * they are interchangeable in data-race detection tests.
+ *
+ * It is safe for multiple producers and a single consumer to
+ * concurrently access a single `slpcq`: the `lpcq_put` and `lpcq_get`
+ * routines synchronize through careful use of atomic compare-and-set
+ * operations.
  *
  * lpcq_t: storage type for a queue head
  *
@@ -39,10 +44,10 @@
  *     return NULL if no items remain.   
  */
 
-static inline void * lpcq_atomic volatile *
+static inline void * _Atomic volatile *
 lpcq_nextp(int nextofs, void *item)
 {
-	return (void * lpcq_atomic volatile *)((char *)item + nextofs);
+	return (void * _Atomic volatile *)((char *)item + nextofs);
 }
 
 void
@@ -57,44 +62,63 @@ void *
 lpcq_get(lpcq_t *q)
 {
 	void *item;
+	void * _Atomic volatile *tailp;
+	void * _Atomic volatile *nextp;
 
 	item = q->head;
+
+	/* TBD read barrier */
 
 	if (item == NULL)
 		return NULL;
 
-	if (q->tailp == &q->head)
-		return NULL;
+	do {
+		nextp = lpcq_nextp(q->nextofs, item);
 
-	void * lpcq_atomic volatile *nextp = lpcq_nextp(q->nextofs, item);
-	q->head = *nextp;
-	if (q->tailp == nextp) {
-		q->tailp = &q->head;
-	}
+		/* TBD read barrier */
+
+		tailp = q->tailp;
+
+		if (tailp == &q->head)
+			return NULL;
+
+		q->head = *nextp;
+		if (tailp != nextp)
+			return item;
+
+	} while (!atomic_compare_exchange_strong(&q->tailp, &nextp, &q->head));
+
 	return item;
 }
 
 void
 lpcq_put(lpcq_t *q, void *item)
 {
-	void * lpcq_atomic volatile *nextp = lpcq_nextp(q->nextofs, item);
+	void * _Atomic volatile *nextp = lpcq_nextp(q->nextofs, item);
 
 	*nextp = NULL;
-	void * lpcq_atomic volatile *otailp = q->tailp;
-	q->tailp = nextp;
+	void * _Atomic volatile *otailp = q->tailp;
+	while (!atomic_compare_exchange_strong(&q->tailp, &otailp, nextp))
+		;	// TBD backoff
 	*otailp = item;
 }
 
+#if 1
 lpcq_iter_t
 lpcq_getall(lpcq_t *q)
 {
-	if (q->tailp == &q->head)
-		return (lpcq_iter_t){.item = NULL, .nextofs = 0, .lastnextp = NULL};
-
 	void *item = q->head;
 
-	void * lpcq_atomic volatile *otailp = q->tailp;
-	q->tailp = &q->head;
+	if (item == NULL)
+		return (lpcq_iter_t){.item = NULL, .nextofs = 0, .lastnextp = NULL};
+
+	void * _Atomic volatile *otailp = q->tailp;
+
+	if (otailp == &q->head)
+		return (lpcq_iter_t){.item = NULL, .nextofs = 0, .lastnextp = NULL};
+
+	while (!atomic_compare_exchange_strong(&q->tailp, &otailp, &q->head))
+		;	// TBD backoff
 
 	return (lpcq_iter_t){.item = item,
 	        .nextofs = q->nextofs,
@@ -118,3 +142,4 @@ lpcq_next(lpcq_iter_t *i)
 	i->item = *nextp;
 	return head;
 }
+#endif

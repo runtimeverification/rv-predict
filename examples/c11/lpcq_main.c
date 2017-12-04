@@ -19,6 +19,9 @@
 #include <sys/time.h>	/* getitimer(2) */
 
 #include "nbcompat.h"
+#ifndef lpcq_atomic
+#define lpcq_atomic
+#endif /* lpcq_atomic */
 #include "lpcq.h"
 #include "signals.h"
 
@@ -160,6 +163,7 @@ produce(void *arg)
 
 	for (i = 0; i < nitems; i++) {
 		sigset_t omask;
+
 		acquire_queue(&omask);
 		lpcq_put(q, &items[i]);
 		release_queue(&omask);

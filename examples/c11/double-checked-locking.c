@@ -41,5 +41,7 @@ main(void)
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
+	if (resource_ptr != NULL)
+		free(resource_ptr);
 }
 

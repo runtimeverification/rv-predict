@@ -33,24 +33,34 @@ using namespace llvm;
 namespace RVPredict {
 
 	class DiagnosticInfoFatalError : public DiagnosticInfoOptimizationBase {
+		std::string msg;
 	public:
 		DiagnosticInfoFatalError(
-		    const Function &Fn, const DebugLoc &DLoc,
+		    StringRef pass_name, const Function &Fn, const DebugLoc &DLoc,
 		    const Twine &Msg) :
 		DiagnosticInfoOptimizationBase(DK_OptimizationFailure, DS_Error,
-		    getPassName(), Fn, DLoc, Msg) {
+		    pass_name.str().c_str(), "RvPredictInternal", Fn, DLoc) {
+			msg = Msg.getSingleStringRef().str();
+		}
+		virtual std::string getMsg(void) const {
+			return msg;
 		}
 		virtual bool isEnabled(void) const {
 			return true;
 		}
 	};
 	class DiagnosticInfoRemark : public DiagnosticInfoOptimizationBase {
+		std::string msg;
 	public:
 		DiagnosticInfoRemark(
-		    const Function &Fn, const DebugLoc &DLoc,
+		    StringRef pass_name, const Function &Fn, const DebugLoc &DLoc,
 		    const Twine &Msg) :
 		DiagnosticInfoOptimizationBase(DK_OptimizationRemark, DS_Remark,
-		    getPassName(), Fn, DLoc, Msg) {
+		    pass_name.str().c_str(), "RvPredictInternal", Fn, DLoc) {
+			msg = Msg.getSingleStringRef().str();
+		}
+		virtual std::string getMsg(void) const {
+			return msg;
 		}
 		virtual bool isEnabled(void) const {
 			return true;

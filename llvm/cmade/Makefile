@@ -1,4 +1,4 @@
-LLVMDIR?=/usr/lib/llvm-3.9/cmake
+LLVMDIR?=/usr/lib/llvm-4.0/cmake
 
 CLEANABLE_FILES=rvpinstrument.so
 .if $(RELEASE:Uno) != "yes" && $(BUILD_TSAN:Uno) == "yes"

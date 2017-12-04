@@ -189,7 +189,7 @@ InterruptAnnotation::runOnModule(Module &M)
 			if (debug_loc) {
 				debug_loc.print(sstr);
 				builder.getContext().diagnose(
-					DiagnosticInfoFatalError(*f, debug_loc, sstr.str()));
+					DiagnosticInfoFatalError(getPassName(), *f, debug_loc, sstr.str()));
 			}
 #endif
 			builder.getContext().emitError(

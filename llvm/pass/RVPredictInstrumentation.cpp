@@ -91,7 +91,7 @@ namespace RVPredict {
 class RVPredictInstrument : public FunctionPass {
 public:
   RVPredictInstrument() : FunctionPass(ID) {}
-  const char *getPassName() const override;
+  StringRef getPassName() const override;
   bool runOnFunction(Function &F) override;
   bool doInitialization(Module &M) override;
   GlobalVariable *createOrderingPointer(IRBuilder<> *, AtomicOrdering);
@@ -165,10 +165,10 @@ static RegisterStandardPasses ___(PassManagerBuilder::EP_EnabledOnOptLevel0,
 
 
 
-const char *
+StringRef
 RVPredictInstrument::getPassName() const
 {
-	return "RVPredictInstrument";
+	return StringRef("RVPredictInstrument");
 }
 
 void
@@ -676,7 +676,7 @@ RVPredictInstrument::runOnFunction(Function &F)
 			F.getFunctionType()->print(sstr);
 
 			builder.getContext().diagnose(
-			    DiagnosticInfoFatalError(F,
+			    DiagnosticInfoFatalError(getPassName(), F,
 				F.getEntryBlock().getFirstNonPHI()->getDebugLoc(),
 				sstr.str()));
 			builder.getContext().emitError(

@@ -1,3 +1,3 @@
-SUBPRJ=mask memcpy unaligned
+SUBPRJ=mask memcpy rmw unaligned
 
 .include <mkc.subprj.mk>

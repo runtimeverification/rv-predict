@@ -1,0 +1,1 @@
+According to ISO C11, the generic association list in a generic selection should have no more than one default. In practice, this is a compiler error that can prevent the application from being built. To fix this issue, remove the extra defaults from the association list for this generic selection.

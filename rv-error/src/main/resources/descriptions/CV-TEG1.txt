@@ -1,0 +1,1 @@
+According to ISO C11, the controlling expression in a generic selection should have a type compatible with exactly one type in the generic association list. In practice, this is a compiler error that can prevent the application from being built. To fix this issue, ensure no two types in the generic association list are compatible with each other.

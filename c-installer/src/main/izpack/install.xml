@@ -89,18 +89,6 @@
                 <os family="unix"/>
             </file>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="never"/>
-<!--
-            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
-                <include name="*.bat" />
-                <os family="windows"/>
-            </fileset>
-            <fileset dir="lib" targetdir="$INSTALL_PATH/lib">
-                <exclude name="libclang_rt.*"/>
-                <exclude name="native/**"/>
-                <exclude name="native"/>
-                <os family="windows"/>
-            </fileset>
--->
         </pack>
     </packs>
 

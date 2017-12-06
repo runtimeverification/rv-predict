@@ -40,7 +40,7 @@ static uint32_t next_id = 0;
 static pthread_t serializer;
 static pthread_cond_t wakecond;
 static pthread_cond_t stopcond;
-static int nwake = 0;
+static _Atomic int nwake = 0;
 static bool forked = false;
 static int serializer_fd;
 static rvp_lastctx_t serializer_lc;

@@ -46,6 +46,7 @@ static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
 static bool stopping = false;
 bool rvp_trace_only = true;
+ssize_t rvp_trace_size_limit;
 
 pthread_key_t rvp_thread_key;
 static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
@@ -227,6 +228,15 @@ serialize(void *arg __unused)
 #endif
 		} while (any_emptied);
 
+		if (rvp_trace_size_limit <= rvp_trace_size) {
+			warnx("trace-file size %zd %s limit (%zd)",
+			    rvp_trace_size,
+			    (rvp_trace_size_limit < rvp_trace_size)
+			        ? "exceeded"
+				: "reached",
+			    rvp_trace_size_limit);
+			abort();
+		}
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
 			next_t = t->t_next;
 			rvp_thread_destroy(t);
@@ -243,6 +253,50 @@ rvp_serializer_create(void)
 {
 	int rc;
 	sigset_t oldmask;
+	const char *s;
+
+	if ((s = getenv("RVP_TRACE_SIZE_LIMIT")) != NULL) {
+		const uintmax_t k = 1024, M = k * k, G = k * k * k;
+		uintmax_t factor, limit;
+		char *end;
+
+		limit = strtoumax(s, &end, 10);
+		switch (*end) {
+		case 'k':
+			factor = k;
+			end++;
+			break;
+		case 'M':
+			factor = M;
+			end++;
+			break;
+		case 'G':
+			factor = G;
+			end++;
+			break;
+		default:
+			factor = 1;
+			break;
+		}
+
+		if (*end != '\0') {
+			errx(EXIT_FAILURE,
+			    "RVP_TRACE_SIZE_LIMIT (%s) ends with "
+			    "extraneous characters (%s)", s, end);
+		}
+
+		if ((limit == INTMAX_MIN || limit == INTMAX_MAX) &&
+		    errno == ERANGE) {
+			err(EXIT_FAILURE, "RVP_TRACE_SIZE_LIMIT (%s)", s);
+		}
+
+		if (SSIZE_MAX / factor < limit) {
+			errx(EXIT_FAILURE,
+			    "RVP_TRACE_SIZE_LIMIT (%s) too large", s);
+		}
+
+		rvp_trace_size_limit = limit * factor;
+	}
 
 	serializer_fd = rvp_trace_open();
 

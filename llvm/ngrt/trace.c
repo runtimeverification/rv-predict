@@ -18,6 +18,8 @@
 #include "trace.h"
 #include "tracefmt.h"
 
+ssize_t rvp_trace_size = 0;
+
 static __section(".text") deltops_t deltops = { .matrix = { { 0 } } };
 
 typedef struct _threadswitch {
@@ -217,6 +219,8 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	nwritten = writev(fd, iov, iovp - &iov[0]);
 	if (nwritten == -1)
 		err(EXIT_FAILURE, "%s: writev", __func__);
+
+	rvp_trace_size += nwritten;
 
 	for (iiov = &iov[0]; iiov < first_ring_iov; iiov++)
 		nwritten -= iiov->iov_len;

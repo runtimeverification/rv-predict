@@ -43,6 +43,33 @@ __rvpredict_atomic_fetch_add4(volatile _Atomic uint32_t *addr,
 	    memory_order);
 }
 
+void
+__rvpredict_atomic_fetch_sub4(volatile _Atomic uint32_t *addr,
+    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw4(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval - arg,
+	    memory_order);
+}
+
+void
+__rvpredict_atomic_fetch_add8(volatile _Atomic uint64_t *addr,
+    uint64_t oval, uint64_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw8(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval + arg,
+	    memory_order);
+}
+
+void
+__rvpredict_atomic_fetch_sub8(volatile _Atomic uint64_t *addr,
+    uint64_t oval, uint64_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw8(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval - arg,
+	    memory_order);
+}
+
 /* T fn(T *addr, T expected, T desired,
  *      int32_t memory_order_success,
  *      int32_t memory_order_failure)

@@ -70,7 +70,6 @@
             </fileset>
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="checkJava" />
-                <!-- <include name="rvplicense" /> -->
                 <include name="rv-predict" />
                 <os family="unix"/>
             </fileset>
@@ -81,7 +80,6 @@
                 <os family="windows" arch="amd64"/>
             </fileset>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/checkJava" type="bin" keep="true" stage="never"/>
-            <!-- <executable os="unix" targetfile="$INSTALL_PATH/bin/rvplicense" type="bin" keep="true" stage="never"/> -->
             <executable os="unix" targetfile="$INSTALL_PATH/bin/rv-predict" type="bin" keep="true" stage="never"/>
         </pack>
         <pack name="Examples" required="no" installGroups="New Application" >

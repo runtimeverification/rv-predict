@@ -11,7 +11,7 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
+        <run-privileged condition="izpack.linuxinstall|izpack.windowsinstall|izpack.macinstall" />
     </info>
 
     <variables>
@@ -50,10 +50,6 @@
     <!-- Installer Panel Sequence -->
     <panels>
         <panel classname="TargetPanel"/>
-        <!-- Check RV key and make sure it validates properly -->
-        <panel classname="UserInputPanel" id="rvkey">
-            <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
-        </panel>
         <panel classname="LicencePanel"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>

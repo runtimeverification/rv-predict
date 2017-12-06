@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?>
+<!-- Copyright (c) 2015-2017 Runtime Verification, Inc. (RV-Predict team). All Rights Reserved. -->
 
 <installation version="5.0">
 
@@ -11,7 +12,7 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.windowsinstall|izpack.macinstall"/>
+        <run-privileged condition="izpack.linuxinstall|izpack.windowsinstall|izpack.macinstall" />
         <tempdir variablename="INSTALL_PATH"/>
     </info>
 
@@ -46,7 +47,6 @@
         <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/rv-predict-finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
-        <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec.xml"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
     </resources>
 
@@ -63,16 +63,8 @@
         <!-- There is a long-standing izpack problem that a TargetPanel is required. We don't need one,
              so we're filtering it out using a condition -->
         <panel classname="TargetPanel" id="targetPanelId" condition="false"/>
-        <!-- Check RV key and make sure it validates properly -->
-        <panel classname="UserInputPanel" id="rvkey">
-            <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
-        </panel>
         <panel classname="LicencePanel"/>
         <panel classname="InstallPanel"/>
-        <panel classname="UserInputPanel" id="sudo">
-            <validator classname="com.izforge.izpack.panels.sudo.SudoPasswordValidator"/>
-        </panel>
-        <panel classname="ProcessPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>
 
@@ -80,15 +72,15 @@
     <packs>
         <pack name="RV-Predict" required="yes" installGroups="New Application" >
             <description>Required RV-Predict libraries and executables.</description>
-            <file src="rv-predict-c-@{info.appVersion}.deb" targetdir="$INSTALL_PATH">
+            <singlefile src="rv-predict-c-@{info.appVersion}.deb" target="$INSTALL_PATH/rv-predict-c.deb">
                 <os family="unix"/>
-            </file>
+            </singlefile>
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="EVALUATION-LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="install-scripts/install.sh" targetdir="$INSTALL_PATH/bin">
                 <os family="unix"/>
             </file>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="postinstall"/>
 <!--
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
                 <include name="*.bat" />

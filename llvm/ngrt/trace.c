@@ -18,7 +18,7 @@
 #include "trace.h"
 #include "tracefmt.h"
 
-ssize_t rvp_trace_size = 0;
+int64_t rvp_trace_size = 0;
 
 static __section(".text") deltops_t deltops = { .matrix = { { 0 } } };
 

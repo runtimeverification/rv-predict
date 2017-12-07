@@ -15,11 +15,15 @@ MAVEN_OPTS=-q
 MAVEN_OPTS=
 .endif
 
+.if ${DEBUG:Uno} == "no"
+MAVEN_OPTS+=-Dobfuscate
+.endif
+
 buildit: .PHONY
 .if $(PREBUILT:Uno) == "yes"
 	@echo rv-predict.jar is prebuilt.
 .else
-	cd $(.CURDIR)/.. && mvn -q -DonlyJar -DskipDocs -DskipTests -Dobfuscate -U $(MAVEN_OPTS) package
+	cd $(.CURDIR)/.. && mvn -q -DonlyJar -DskipDocs -DskipTests -U $(MAVEN_OPTS) package
 .endif
 
 rv-predict.jar.copy: $(.CURDIR)/../jar/target/jar-${MAVEN_VERSION}.jar

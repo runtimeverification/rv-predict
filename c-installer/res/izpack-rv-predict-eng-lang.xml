@@ -5,7 +5,7 @@
     <str id="TargetPanel.info" txt="Select the temporary files path:"/>
     <str id="TargetPanel.warn" txt="The directory already exists! Are you sure you want to write the temporary files here and possibly overwrite existing files?"/>
 
-    <str id="UserInputPanel.headline" txt="License" />
+    <str id="UserInputPanel.headline" txt="Enter password" />
     <str id="LicencePanel.headline" txt="License" />
     <str id="DependencyPanel.headline" txt="Dependencies" />
     <str id="PacksPanel.headline" txt="Packages" />

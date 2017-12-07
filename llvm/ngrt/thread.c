@@ -257,10 +257,11 @@ rvp_size_limit_init(void)
 		return;
 
 	const uintmax_t k = 1024, M = k * k, G = k * k * k;
-	uintmax_t factor, limit;
+	int32_t factor;
+	intmax_t limit;
 	char *end;
 
-	limit = strtoumax(s, &end, 10);
+	limit = strtoimax(s, &end, 10);
 	switch (*end) {
 	case 'k':
 		factor = k;
@@ -288,6 +289,11 @@ rvp_size_limit_init(void)
 	if ((limit == INTMAX_MIN || limit == INTMAX_MAX) &&
 	    errno == ERANGE) {
 		err(EXIT_FAILURE, "RVP_TRACE_SIZE_LIMIT (%s)", s);
+	}
+
+	if (limit < 0) {
+		errx(EXIT_FAILURE,
+		    "RVP_TRACE_SIZE_LIMIT (%s) is negative", s);
 	}
 
 	if (INT64_MAX / factor < limit) {

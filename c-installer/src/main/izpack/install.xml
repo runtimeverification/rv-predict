@@ -11,7 +11,7 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
+        <run-privileged condition="izpack.windowsinstall|izpack.macinstall"/>
         <tempdir variablename="INSTALL_PATH"/>
     </info>
 
@@ -46,7 +46,7 @@
         <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/rv-predict-finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
-         <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec.xml"/>
+        <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec.xml"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
     </resources>
 
@@ -65,9 +65,9 @@
         <panel classname="TargetPanel" id="targetPanelId" condition="false"/>
         <panel classname="LicencePanel"/>
         <panel classname="InstallPanel"/>
-        <panel classname="UserInputPanel" id="sudo">		
-            <validator classname="com.izforge.izpack.panels.sudo.SudoPasswordValidator"/>		
-        </panel>		
+        <panel classname="UserInputPanel" id="sudo">
+            <validator classname="com.izforge.izpack.panels.sudo.SudoPasswordValidator"/>
+        </panel>
         <panel classname="ProcessPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>

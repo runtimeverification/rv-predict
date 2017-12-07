@@ -3,6 +3,7 @@ core
 *.core
 *.d
 .depend
+.Makefile.tags
 *.o
 .*.swp
 *.test.out

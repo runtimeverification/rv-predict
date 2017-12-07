@@ -12,7 +12,7 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.windowsinstall|izpack.macinstall"/>
+        <run-privileged condition="izpack.linuxinstall|izpack.windowsinstall|izpack.macinstall" />
         <tempdir variablename="INSTALL_PATH"/>
     </info>
 
@@ -64,9 +64,6 @@
              so we're filtering it out using a condition -->
         <panel classname="TargetPanel" id="targetPanelId" condition="false"/>
         <panel classname="LicencePanel"/>
-        <panel classname="UserInputPanel" id="sudo">
-            <validator classname="com.izforge.izpack.panels.sudo.SudoPasswordValidator"/>
-        </panel>
         <panel classname="InstallPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>
@@ -83,11 +80,7 @@
             <file src="install-scripts/install.sh" targetdir="$INSTALL_PATH/bin">
                 <os family="unix"/>
             </file>
-            <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="postinstall">
-                <args>
-                    <arg value="$sudoPassword" />
-                </args>
-            </executable>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="postinstall"/>
         </pack>
     </packs>
 

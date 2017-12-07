@@ -23,5 +23,6 @@ SRCS+=supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c
 WARNS=4
+LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
 
 .include <mkc.lib.mk>

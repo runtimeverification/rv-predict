@@ -7,33 +7,8 @@ NOMAN=
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
-PATH:=$(.OBJDIR)/../../../bin:$(PATH)
-RVP_TRACE_FILE:=/dev/null
-RVP_TRACE_ONLY:=yes
 RVP_TRACE_SIZE_LIMIT:=10G
-
-.export PATH
-.export RVP_TRACE_FILE
-.export RVP_TRACE_ONLY
-.export RVP_TRACE_SIZE_LIMIT
-
+LIMIT:=10737418240
 PROG=G
 
-CC?=rvpc
-CPPFLAGS+=-I$(.CURDIR)/../../../../include
-SRCS.$(PROG)=$(PROG).c
-WARNS=4
-STRIPFLAG=
-
-COPTS+=-O3 -g -O0
-LDADD+=-pthread
-
-.PHONY: test_output
-
-test_output:
-	@$(.OBJDIR)/$(PROG) 2>&1 | grep -v "^$(PROG): trace-file size [0-9]\+ [^ ]\+ limit (10737418240)" || true
-
-CLEANFILES+=core
-
-.include <mkc.prog.mk>
-.include <mkc.minitest.mk>
+.include "../limits.mk"

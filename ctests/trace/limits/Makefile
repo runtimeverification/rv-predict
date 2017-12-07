@@ -1,3 +1,3 @@
-SUBPRJ=k M G
+SUBPRJ=k M G negative
 
 .include <mkc.subprj.mk>

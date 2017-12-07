@@ -11,7 +11,7 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.linuxinstall|izpack.windowsinstall|izpack.macinstall" />
+        <run-privileged condition="izpack.windowsinstall|izpack.macinstall" />
     </info>
 
     <variables>

@@ -23,7 +23,7 @@ SRCS.unaligned=unaligned.c
 WARNS=4
 STRIPFLAG=
 
-COPTS+=-O3 -g -O0
+COPTS+=-g -O0
 LDADD+=-pthread
 
 .PHONY: test_output

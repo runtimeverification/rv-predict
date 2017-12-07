@@ -1,2 +1,7 @@
-expect.out isn't properly symbolized, now, due to a bug in rvsyms.
-So I will ned to fix rvsyms and then fix this test.
+It seems that with Clang 4.0 the DWARF information may have changed for
+the worse, so line 22 is emitted as line 0.  I'm not sure why rvsyms is
+producing line 0 column 22, but it is probably a bug in rvsyms.
+
+expect.out isn't properly symbolized, now, due to a bug in rvsyms'
+treatment of variable width (which we do not even supply!) and variable
+alignment.  So I will need to fix rvsyms and then fix this test.

@@ -10,9 +10,12 @@
     <str id="DependencyPanel.headline" txt="Dependencies" />
     <str id="PacksPanel.headline" txt="Packages" />
 
-    <str id="InstallPanel.headline" txt="Installing"/>
+    <str id="InstallPanel.headline" txt="Copy temporary files"/>
     <str id="InstallPanel.tip" txt="Overall progress"/>
     <str id="InstallPanel.progress" txt="Packages progress"/>
+
+    <str id="ProcessPanel.headline" txt="Installation"/>
+    <str id="ProcessPanel.heading" txt="Installing"/>
 
     <str id="HTMLFinishInfoPanel.headline" txt="Complete" />
 </langpack>

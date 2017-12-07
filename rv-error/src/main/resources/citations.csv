@@ -220,6 +220,7 @@
 "IMPL-EIO6","C11","J.3.13","1 item 2"
 "L-CCVE1","CERT-C","INT30-C",""
 "L-CCVE2","CERT-C","INT31-C",""
+"L-CEE6","MISRA-C","8.22","5"
 "L-CEIE1","CERT-C","MEM31-C",""
 "L-CEIE1","MISRA-C","8.22","1"
 "L-CMRE1","CERT-C","EXP33-C",""

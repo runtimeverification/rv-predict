@@ -29,10 +29,17 @@ int
 __rvpredict_pthread_mutex_init(pthread_mutex_t *restrict mtx,
    const pthread_mutexattr_t *restrict attr)
 {
+#if 0
+	/* TBD check an environment variable (RVP_STRICT=warn, say) and
+	 * print this warning when it is set.
+	 *
+	 * Possibly quit if RVP_STRICT=abort.
+	 */
 	if (attr != NULL) {
 		warnx("%s: not all pthread mutex attributes are supported",
 		    __func__);
 	}
+#endif
 	return real_pthread_mutex_init(mtx, attr);
 }
 

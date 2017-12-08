@@ -16,7 +16,6 @@ struct _pair {
 
 static const pair_t initial = {.a = 5, .b = 7};
 
-#line 17
 int
 main(void)
 {

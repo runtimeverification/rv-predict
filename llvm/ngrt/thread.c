@@ -40,12 +40,13 @@ static uint32_t next_id = 0;
 static pthread_t serializer;
 static pthread_cond_t wakecond;
 static pthread_cond_t stopcond;
-static int nwake = 0;
+static _Atomic int nwake = 0;
 static bool forked = false;
 static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
 static bool stopping = false;
 bool rvp_trace_only = true;
+int64_t rvp_trace_size_limit = INT64_MAX;
 
 pthread_key_t rvp_thread_key;
 static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
@@ -227,6 +228,15 @@ serialize(void *arg __unused)
 #endif
 		} while (any_emptied);
 
+		if (rvp_trace_size_limit <= rvp_trace_size) {
+			warnx("trace-file size %zd %s limit (%zd)",
+			    rvp_trace_size,
+			    (rvp_trace_size_limit < rvp_trace_size)
+			        ? "exceeded"
+				: "reached",
+			    rvp_trace_size_limit);
+			abort();
+		}
 		for (t = rvp_collect_garbage(); t != NULL; t = next_t) {
 			next_t = t->t_next;
 			rvp_thread_destroy(t);
@@ -236,6 +246,62 @@ serialize(void *arg __unused)
 	if (close(fd) == -1)
 		warn("%s: close", __func__);
 	return NULL;
+}
+
+static void
+rvp_size_limit_init(void)
+{
+	const char *s;
+
+	if ((s = getenv("RVP_TRACE_SIZE_LIMIT")) == NULL)
+		return;
+
+	const uintmax_t k = 1024, M = k * k, G = k * k * k;
+	int32_t factor;
+	intmax_t limit;
+	char *end;
+
+	limit = strtoimax(s, &end, 10);
+	switch (*end) {
+	case 'k':
+		factor = k;
+		end++;
+		break;
+	case 'M':
+		factor = M;
+		end++;
+		break;
+	case 'G':
+		factor = G;
+		end++;
+		break;
+	default:
+		factor = 1;
+		break;
+	}
+
+	if (*end != '\0') {
+		errx(EXIT_FAILURE,
+		    "RVP_TRACE_SIZE_LIMIT (%s) ends with "
+		    "extraneous characters (%s)", s, end);
+	}
+
+	if ((limit == INTMAX_MIN || limit == INTMAX_MAX) &&
+	    errno == ERANGE) {
+		err(EXIT_FAILURE, "RVP_TRACE_SIZE_LIMIT (%s)", s);
+	}
+
+	if (limit < 0) {
+		errx(EXIT_FAILURE,
+		    "RVP_TRACE_SIZE_LIMIT (%s) is negative", s);
+	}
+
+	if (INT64_MAX / factor < limit) {
+		errx(EXIT_FAILURE,
+		    "RVP_TRACE_SIZE_LIMIT (%s) too large", s);
+	}
+
+	rvp_trace_size_limit = limit * factor;
 }
 
 static void
@@ -350,6 +416,7 @@ rvp_postfork_init(void)
 	 * rvp_thread0_create(), before any other thread has an opportunity
 	 * to start.
 	 */
+	rvp_size_limit_init();
 	rvp_thread0_create();
 	rvp_relay_create();
 	rvp_serializer_create();

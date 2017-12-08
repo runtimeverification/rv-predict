@@ -106,6 +106,20 @@ Use
 .Dq \&%%
 to interpolate a literal percent sign.
 .Pp
+.It Ev RVP_TRACE_SIZE_LIMIT
+.Ar program
+exits by calling
+.Xr abort 3
+when its trace-file size reaches or exceeds
+the decimal number
+.Ev RVP_TRACE_SIZE_LIMIT .
+A suffix
+.Dq k ,
+.Dq M ,
+or
+.Dq G
+indicates multiplication by
+1024, 1024 * 1024, or 1024 * 1024 * 1024, respectively.
 .It Ev RVP_TRACE_ONLY
 Finding
 .Ev RVP_TRACE_ONLY

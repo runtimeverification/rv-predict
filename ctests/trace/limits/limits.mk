@@ -7,34 +7,31 @@ NOMAN=
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
-PATH:=$(.OBJDIR)/../../bin:$(PATH)
-RVP_TRACE_FILE:=$(.OBJDIR)/test.trace 
+PATH:=$(.OBJDIR)/../../../bin:$(PATH)
+RVP_TRACE_FILE:=/dev/null
 RVP_TRACE_ONLY:=yes
 
 .export PATH
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
-
-PROG=unaligned
+.export RVP_TRACE_SIZE_LIMIT
 
 CC?=rvpc
-CPPFLAGS+=-I$(.CURDIR)/../../../include
-SRCS.unaligned=unaligned.c
+CPPFLAGS+=-I$(.CURDIR)/../../../../include
+SRCS.$(PROG)=$(PROG).c
 WARNS=4
 STRIPFLAG=
 
-COPTS+=-g -O0
+COPTS+=-O3 -g -O0
 LDADD+=-pthread
 
 .PHONY: test_output
 
-test.trace:
-	@$(.OBJDIR)/unaligned > /dev/null
+test_output:
+	@$(.OBJDIR)/$(PROG) 2>&1 | grep -v "^$(PROG): trace-file size [0-9]\+ [^ ]\+ limit ($(LIMIT))" || true
 
-test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/unaligned | $(.CURDIR)/../normalize
-
-CLEANFILES+=test.trace
+CLEANFILES+=core
 
 .include <mkc.prog.mk>
 .include <mkc.minitest.mk>
+

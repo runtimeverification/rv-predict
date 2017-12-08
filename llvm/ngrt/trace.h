@@ -14,4 +14,7 @@ void rvp_ring_put_begin(rvp_ring_t *, uint32_t, uint64_t);
 void rvp_ring_put_pc_and_op(rvp_ring_t *, const char *, rvp_op_t);
 void rvp_ring_put_u64(rvp_ring_t *, uint64_t);
 
+extern int64_t rvp_trace_size_limit;
+extern int64_t rvp_trace_size;
+
 #endif /* _RVP_TRACE_H_ */

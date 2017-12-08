@@ -7,7 +7,7 @@
 
     <!-- General Application Information -->
     <info>
-        <appname>RV-Predict-C</appname>
+        <appname>RV-Predict/C</appname>
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
@@ -18,7 +18,7 @@
     <variables>
         <variable name="TargetPanel.dir.windows" value="C:\$APP_NAME"/>
         <!-- Variables required for adding RV key to installer -->
-        <variable name="rvFullProductName" value="RV-Predict-C"/>
+        <variable name="rvFullProductName" value="RV-Predict/C"/>
         <variable name="rvProductId" value="predict"/>
         <variable name="rvProductVersion" value="@{info.appVersion}"/>
         <variable name="rvLicensePath" value="lib"/>
@@ -63,10 +63,6 @@
         <!-- There is a long-standing izpack problem that a TargetPanel is required. We don't need one,
              so we're filtering it out using a condition -->
         <panel classname="TargetPanel" id="targetPanelId" condition="false"/>
-        <!-- Check RV key and make sure it validates properly -->
-        <panel classname="UserInputPanel" id="rvkey">
-            <validator classname="com.izforge.izpack.panels.rvkey.RVKeyValidator"/>
-        </panel>
         <panel classname="LicencePanel"/>
         <panel classname="InstallPanel"/>
         <panel classname="UserInputPanel" id="sudo">
@@ -89,16 +85,6 @@
                 <os family="unix"/>
             </file>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/install.sh" type="bin" keep="true" stage="never"/>
-            <fileset dir="bin" targetdir="$INSTALL_PATH/bin">
-                <include name="*.bat" />
-                <os family="windows"/>
-            </fileset>
-            <fileset dir="lib" targetdir="$INSTALL_PATH/lib">
-                <exclude name="libclang_rt.*"/>
-                <exclude name="native/**"/>
-                <exclude name="native"/>
-                <os family="windows"/>
-            </fileset>
         </pack>
     </packs>
 

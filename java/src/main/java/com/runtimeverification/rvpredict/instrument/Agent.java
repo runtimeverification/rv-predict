@@ -125,7 +125,7 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void printStartupInfo() {
-        LicenseChecker.validateOrDie(config.prompt_for_license);
+        // LicenseChecker.validateOrDie(config.prompt_for_license);
         config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {
             config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);

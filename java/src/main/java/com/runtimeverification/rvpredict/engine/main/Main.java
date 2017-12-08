@@ -28,7 +28,7 @@ public class Main {
     public static void main(String[] args) {
         config = Configuration.instance(args);
 
-        LicenseChecker.validateOrDie(config.prompt_for_license);
+        // LicenseChecker.validateOrDie(config.prompt_for_license);
 
         if (config.isLogging() || config.isProfiling()) {
             if (config.getJavaArguments().isEmpty()) {

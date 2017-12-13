@@ -52,10 +52,18 @@ OPAM packages required by the unified error reporting in errors/:
 
 ```bash
 cd rv-predict
+mkcmake depend
+mkcmake
+```
+
+## Creating the RV-Predict distribution
+
+```bash
+cd rv-predict
 mvn package
 ```
 
-the distribution is packaged at `target/release/rv-predict`
+The distribution is packaged at `target/release/rv-predict`
 
 Below are a few useful options:  
 
@@ -67,7 +75,6 @@ Below are a few useful options:
 
 ```bash
 cd rv-predict
-mvn package
 mkcmake depend
 mkcmake PREFIX=$HOME install
 ```
@@ -86,7 +93,7 @@ mvn clean install  # the installer will be placed in `c-installer/target`
 
 ### Modifying rv-install 
 
-Installer for rv-predcit is based on [rv-install](https://github.com/runtimeverification/rv-install). It is included in `installer/pom.xml` and `c-installer/pom.xml`. 
+Installer for rv-predict is based on [rv-install](https://github.com/runtimeverification/rv-install). It is included in `installer/pom.xml` and `c-installer/pom.xml`. 
 
 Sometimes, you may want to modify `rv-install`, then build installer. 
 To do this, run the following commands:
@@ -146,6 +153,6 @@ ssh-keyscan -t rsa ftp.runtimeverification.com >> ~/.ssh/known_hosts
 4. Deploy installer:
 
 ```bash
-sh mvn_release.sh
+sh mvn-release.sh
 ```
 

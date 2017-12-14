@@ -26,7 +26,7 @@ public class SignalMask {
     SignalMask unblock(long signalMask) {
         SignalMask unblocked = new SignalMask(this);
         for (int i = 0; i < Constants.SIGNAL_NUMBER_COUNT; i++) {
-            if (!Signals.signalIsEnabled(i, signalMask)) {
+            if (Signals.signalIsEnabled(i, signalMask)) {
                 unblocked.maskBits[i] = SignalMaskBit.ENABLED;
             }
         }
@@ -36,7 +36,7 @@ public class SignalMask {
     SignalMask block(long signalMask) {
         SignalMask blocked = new SignalMask(this);
         for (int i = 0; i < Constants.SIGNAL_NUMBER_COUNT; i++) {
-            if (!Signals.signalIsEnabled(i, signalMask)) {
+            if (Signals.signalIsEnabled(i, signalMask)) {
                 blocked.maskBits[i] = SignalMaskBit.DISABLED;
             }
         }
@@ -78,6 +78,8 @@ public class SignalMask {
                     assert Signals.signalIsEnabled(i, mask);
                     break;
                 case DISABLED:
+                    if (Signals.signalIsEnabled(i, mask))
+                        System.err.println("expected signal #" + i + " disabled");
                     assert !Signals.signalIsEnabled(i, mask);
                     break;
                 case UNKNOWN:

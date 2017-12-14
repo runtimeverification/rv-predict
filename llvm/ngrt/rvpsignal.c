@@ -639,11 +639,17 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
     const sigset_t *set, sigset_t *oldset)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
-	uint64_t actual_omask, mask, omask;
+	uint64_t maskchg, nmask, omask;
 	int rc;
 
 	/* TBD trace a read from `set` and, if `oldset` is not NULL,
 	 * a write to it.
+	 */
+
+	/* TBD optionally change generation number before loading
+	 * and after storing the signal mask
+	 *
+	 * TBD freeze generation number across a mask get-and-set.
 	 */
 #if 0
 	uint64_t gen;
@@ -654,42 +660,49 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		gen = rvp_ggen_before_store();
 #endif
 
+	omask = t->t_intrmask;
+
+	maskchg = sigset_to_mask(set);
+
+	switch (how) {
+	case SIG_BLOCK:
+		nmask = omask | maskchg;
+		break;
+	case SIG_UNBLOCK:
+		nmask = omask & ~maskchg;
+		break;
+	case SIG_SETMASK:
+		nmask = maskchg;
+		break;
+	}
+
+	if (set == NULL)
+		;
+	else if (oldset != NULL)
+		rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
+	else {
+                /* It's ok we're passing `maskchg` instead of
+                 * the absolute mask, `t->t_intrmask`, because
+		 * _trace_setmask() expects it.  Note that we pass
+		 * the operation, `how`, too.
+		 */
+		rvp_thread_trace_setmask(t, how, maskchg, retaddr);
+	}
+
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
-	omask = t->t_intrmask;
-
-	actual_omask = sigset_to_mask(oldset);
+	t->t_intrmask = nmask;
 
 #if 0
+	const uint64_t actual_omask = sigset_to_mask(oldset);
+
 	if (actual_omask != 0 && omask != actual_omask)
 		raise(SIGTRAP);
 #endif
 
-	if (set == NULL) {
-		if (oldset != NULL)
-			rvp_thread_trace_getmask(t, omask, retaddr);
-		return 0;
-	}
-
-	mask = sigset_to_mask(set);
-
-	switch (how) {
-	case SIG_BLOCK:
-		t->t_intrmask |= mask;
-		break;
-	case SIG_UNBLOCK:
-		t->t_intrmask &= ~mask;
-		break;
-	case SIG_SETMASK:
-		t->t_intrmask = mask;
-		break;
-	}
-
-	if (oldset != NULL)
-		rvp_thread_trace_getsetmask(t, omask, t->t_intrmask, retaddr);
-	else
-		rvp_thread_trace_setmask(t, how, mask, retaddr);
+	if (set == NULL && oldset != NULL)
+		rvp_thread_trace_getmask(t, omask, retaddr);
 
 #if 0
 	if (how != SIG_BLOCK)

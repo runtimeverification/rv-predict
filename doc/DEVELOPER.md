@@ -95,7 +95,7 @@ mvn clean install  # the installer will be placed in `c-installer/target`
 
 Installer for rv-predict is based on [rv-install](https://github.com/runtimeverification/rv-install). It is included in `installer/pom.xml` and `c-installer/pom.xml`. 
 
-Sometimes, you may want to modify `rv-install`, then build installer. 
+Sometimes, you may want to modify `rv-install`, then build the installer. 
 To do this, run the following commands:
 
 ```bash
@@ -119,7 +119,7 @@ Then you can start building installer for RV-Predict (See previous section).
     * [How to generate SSH key](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
     * [How to add SSH key to GitHub account](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/)
 
-2. Configure `~/.m2/settings.xml` to make sure that your computer can connect to company server. Ask administrator for `username` and `password`.  
+2. Configure `~/.m2/settings.xml` to make sure that your computer can connect to company server. Ask the administrator for `username` and `password`.  
 
 ```xml
 <!-- replace `***` with real username and password  -->

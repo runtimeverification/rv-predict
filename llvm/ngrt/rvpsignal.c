@@ -694,12 +694,12 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 
 	t->t_intrmask = nmask;
 
-#if 0
-	const uint64_t actual_omask = sigset_to_mask(oldset);
+	if (oldset != NULL) {
+		const uint64_t actual_omask = sigset_to_mask(oldset);
 
-	if (actual_omask != 0 && omask != actual_omask)
-		raise(SIGTRAP);
-#endif
+		if (actual_omask != 0 && omask != actual_omask)
+			raise(SIGTRAP);
+	}
 
 	if (set == NULL && oldset != NULL)
 		rvp_thread_trace_getmask(t, omask, retaddr);
@@ -729,9 +729,6 @@ int
 __rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
 {
 	const void *retaddr = __builtin_return_address(0);
-
-	if (instruction_is_in_rvpredict(retaddr))
-		return real_pthread_sigmask(how, set, oldset);
 
 	return rvp_change_sigmask(real_pthread_sigmask,
 	    retaddr, how, set, oldset);

@@ -1,7 +1,7 @@
 Welcome!
 ========
 
-RV-Predict[C] is the only dynamic data race detector that is both sound and
+RV-Predict/C is the only dynamic data race detector that is both sound and
 maximal. *Dynamic* means that it executes the program in order to extract
 an execution trace to analyze. *Sound* means that it only reports races
 which are real (i.e., no false positives). And *maximal* means that it finds

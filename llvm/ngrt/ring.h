@@ -397,6 +397,7 @@ rvp_interruption_close(rvp_interruption_t *it, int eidx)
 
 void rvp_rings_init(void);
 int rvp_ring_stdinit(rvp_ring_t *);
+bool rvp_ring_drop_empties(rvp_ring_t *, rvp_interruption_t *);
 int rvp_ring_get_iovs(rvp_ring_t *, rvp_interruption_t *, struct iovec **,
     const struct iovec *, uint32_t *);
 int rvp_ring_discard_iovs(rvp_ring_t *, rvp_interruption_t *,

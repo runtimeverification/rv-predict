@@ -598,6 +598,15 @@ out:
 /* Discard leading empty rings.
  *
  * Return true if no non-empty rings were found, false otherwise.
+ *
+ * I believe that empty interruptions come about when the serializer
+ * has written out all of an interruption's words but it has not
+ * read it_interruptor_eidx == -1, yet.  Expecting more words,
+ * rvp_ring_discard_iovs() leaves the interruption on its parent ring.
+ *
+ * Really, either rvp_ring_get_iovs() or rvp_ring_discard_iovs() should
+ * drop empty interruptions, but the logic in those routines is already
+ * way too complicated.
  */
 bool
 rvp_ring_drop_empties(rvp_ring_t *r, rvp_interruption_t *bracket)

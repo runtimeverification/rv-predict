@@ -56,19 +56,19 @@ using namespace llvm;
 
 static cl::opt<bool>  ClInstrumentMemoryAccesses(
     "rvpredict-instrument-memory-accesses", cl::init(true),
-    cl::desc("Instrument memory accesses"), cl::Hidden);
+    cl::desc("Instrument memory accesses"));
 static cl::opt<bool>  ClInstrumentFuncEntryExit(
     "rvpredict-instrument-func-entry-exit", cl::init(true),
-    cl::desc("Instrument function entry and exit"), cl::Hidden);
+    cl::desc("Instrument function entry and exit"));
+static cl::opt<bool>  ClInstrumentPthreads(
+    "rvpredict-instrument-pthreads", cl::init(false),
+    cl::desc("Instrument pthreads"));
 static cl::opt<bool>  ClInstrumentAtomics(
     "rvpredict-instrument-atomics", cl::init(true),
-    cl::desc("Instrument atomics"), cl::Hidden);
+    cl::desc("Instrument atomics"));
 static cl::opt<bool>  ClInstrumentMemIntrinsics(
     "rvpredict-instrument-memintrinsics", cl::init(true),
-    cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"), cl::Hidden);
-static cl::opt<bool> ClAutoAnalyze(
-    "rvpredict-auto-analyze", cl::init(true),
-    cl::desc("Automatically invoke analysis"));
+    cl::desc("Instrument memintrinsics (memset/memcpy/memmove)"));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -168,7 +168,7 @@ static RegisterStandardPasses ___(PassManagerBuilder::EP_EnabledOnOptLevel0,
 StringRef
 RVPredictInstrument::getPassName() const
 {
-	return StringRef("RVPredictInstrument");
+	return StringRef("rvpinstrument");
 }
 
 void
@@ -564,7 +564,6 @@ RVPredictInstrument::runOnFunction(Function &F)
 		chooseInstructionsToInstrument(LocalLoadsAndStores,
 		    AllLoadsAndStores, DL);
 	}
-
 	for (auto ci : fncalls) {
 		/* TBD:
 		 *
@@ -597,7 +596,7 @@ RVPredictInstrument::runOnFunction(Function &F)
 		} else if (calledfn == pthreads.unlockfn) {
 			replacefn = pthreads.unlockstubfn;
 		}
-		if (replacefn != nullptr) {
+		if (replacefn != nullptr && ClInstrumentPthreads) {
 			auto nargs = ci->getNumArgOperands();
 			Value **args = new Value *[nargs];
 			for (auto i = 0; i < nargs; i++) {

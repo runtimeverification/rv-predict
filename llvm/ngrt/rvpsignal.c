@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <inttypes.h>	/* for PRIu32 */
 #include <signal.h>
 #include <stdatomic.h>
@@ -716,12 +717,15 @@ __rvpredict_sigsuspend(const sigset_t *mask)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	const void *retaddr = __builtin_return_address(0);
-	uint64_t omask = t->t_intrmask;
+	uint64_t omask = t->t_intrmask, nmask = sigset_to_mask(mask);
+	rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
+	t->t_intrmask = nmask;
 	/* TBD record read of `mask` */
-	int rc = real_sigsuspend(mask);
-	/* TBD save errno here; restore before return */
-	rvp_thread_trace_getsetmask(t, omask, sigset_to_mask(mask), retaddr);
+	const int rc = real_sigsuspend(mask);
+	t->t_intrmask = omask;
+	const int errno_copy = errno;
 	rvp_thread_trace_setmask(t, SIG_SETMASK, omask, retaddr);
+	errno = errno_copy;
 	return rc;
 }
 

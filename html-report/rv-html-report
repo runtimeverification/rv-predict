@@ -177,14 +177,18 @@ for ix, err in enumerate(errors):
     errorsByFile[err[u'file']][err[u'line']].append(err)
 
 
-def render_code(rel, abs, path, errors):
+def render_code(rel, abs, path, errors, to_js):
     filename = abs
     directory = os.path.dirname(path)
+    extension = ".html"
+    if to_js:
+        extension = ".js"
+
     if not os.path.exists(args.output + '/' + directory):
         os.makedirs(args.output + '/' + directory)
     if not os.path.exists(filename):
         return
-    with open(filename, 'r') as f, open(args.output + '/' + path + '.html', 'w') as target:
+    with open(filename, 'r') as f, open(args.output + '/' + path + extension, 'w') as target:
         code = f.read()
         if args.encoding:
           try:
@@ -192,17 +196,27 @@ def render_code(rel, abs, path, errors):
           except UnicodeDecodeError:
               print "Error in " + abs
               raise
-        template = env.get_template('sourcefile.html')
         if errors:
             errorlines = errorsByFile[rel]
         else:
             errorlines = {}
-        target.write(template.render(filename=filename,
-                                     errorlines=errorlines,
-                                     code=code,
-                                     info=rel,
-                                     output_dir=os.path.relpath(args.output, os.path.dirname(args.output + '/' + path)),
-                                     fileid=path).encode('utf-8'))
+        
+        if to_js:
+            js = """
+if (typeof(window['CODES']) === 'undefined') {
+    window['CODES'] = {}
+}
+window['CODES']['%s'] = '%s'
+""" % (path, highlight_c(code, errorlines, path).replace('\\', '\\\\').replace('\n', '\\n\' + \n\'')) 
+            target.write(js.encode('utf-8'))
+        else:
+            template = env.get_template('sourcefile.html')
+            target.write(template.render(filename=filename,
+                                        errorlines=errorlines,
+                                        code=code,
+                                        info=rel,
+                                        output_dir=os.path.relpath(args.output, os.path.dirname(args.output + '/' + path)),
+                                        fileid=path).encode('utf-8'))
 
 
 def render_error(err):
@@ -239,9 +253,9 @@ shutil.copytree(dirname + '/static/', args.output + '/static/')
 for template in ['index.html', 'error-descriptions.html']:
     render_template(template)
 for abs,rel in files.iteritems():
-    render_code(rel,abs,abs,True)
     fileids[abs] = str(uuid.uuid4())
-    render_code(rel,abs,fileids[abs], False)
+    render_code(rel, abs, abs, True, False)
+    render_code(rel, abs, fileids[abs], False, True)
 for err in errors:
     render_error(err)
 with open(args.output + "/errors.json.js", "w") as file:

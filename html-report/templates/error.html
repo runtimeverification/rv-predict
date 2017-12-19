@@ -370,7 +370,7 @@
       // TODO: support pointer type in the future.  
       if (type instanceof Array && (type[0] === 'Union' || type[0] === 'Struct' /*|| type[0] === 'Pointer'*/ || type[0] === 'Array')) {
         $li.addClass('can-expand')
-        var $expandBtn = $('<div class="memory-li-expand-btn btn">+</div>')
+        var $expandBtn = $('<div class="memory-li-expand-btn btn"><div>+</div></div>')
         $li.append($expandBtn)
 
         var $expandedUl = null,
@@ -384,7 +384,7 @@
 
           $expandBtn.toggleClass('expanded')
           if ($expandBtn.hasClass('expanded')) {
-            $expandBtn.text('\u2212')
+            $expandBtn.addClass('times') // times sign
 
             function expandStruct() {
               if ($expandedUl) {
@@ -447,7 +447,7 @@
               $li.children('.equal-sign').addClass('append-curly-bracket') // show left curly bracket
             }
           } else {
-            $expandBtn.text('+')
+            $expandBtn.removeClass('times') // plus sign
             if ($expandedUl) $expandedUl.hide();
 
             // show value 
@@ -549,34 +549,59 @@
   $(document).ready(function() {
     // load expand states history
     var EXPAND_STATE = {"0": true} // key is index, value is boolean
-    if (typeof(Storage) !== 'undefined' && localStorage['EXPAND_STATE_' + window.location.pathname]) {
-      EXPAND_STATE = JSON.parse(localStorage['EXPAND_STATE_' + window.location.pathname])
+    try { // Safari will cause error, so wrap it inside `try...catch...`
+      if (typeof(Storage) !== 'undefined' && localStorage['EXPAND_STATE_' + window.location.pathname]) {
+        EXPAND_STATE = JSON.parse(localStorage['EXPAND_STATE_' + window.location.pathname])
+      }
+    } catch(error) {}
+
+    // save loaded scripts
+    // key is `fileid`, value is true/false
+    var SCRIPTS = {} 
+    function loadJavaScript(scriptPath) {
+      return new Promise(function(resolve, reject) {
+        if (SCRIPTS[scriptPath]) { // script already loaded 
+          return resolve()
+        } else {
+          var script = document.createElement('script')
+          script.setAttribute('type', 'text/javascript')
+          script.setAttribute('src', scriptPath)
+          script.onload = function() {
+            SCRIPTS[scriptPath] = true 
+            return resolve()
+          }
+          document.getElementsByTagName('head')[0].appendChild(script)
+        }
+      })
     }
+
 
     $("[data-fileid]").each(function(index){
       var obj=this,
           $obj = $(obj)
       var dat = this.dataset.fileid
-      var path=dat+".html ."+dat
-      
-      // local variables
-      var localVariables = JSON.parse(decodeURIComponent(this.getAttribute("data-local-variables") || "[]"))
+      if (!dat) return // no source file found
 
-      // cast to integer
-      var line = +this.dataset.line
-      $(".stack-frame", this).load(path, function() {
-        var size = $(".line", this).length
+      var line = +this.dataset.line // cast to integer       
+      var localVariables = JSON.parse(decodeURIComponent(this.getAttribute("data-local-variables") || "[]")) // local variables
+      var $stackFrame = $('.stack-frame', this)
+
+      var scriptPath = dat + '.js'
+      loadJavaScript(scriptPath).then(function() {
+        $stackFrame.html(window['CODES'][dat] || '')
+
+        var size = $(".line", $stackFrame).length
         $(".expand span.lineno", obj).width($(".line span.lineno", obj).width())
-        $(".line", this).hide()
+        $(".line", $stackFrame).hide()
         $obj.attr("size", size)
         var locks = obj.dataset.locks.split(" ")
         for (var i = 0; i < locks.length; i++) {
-          $(".line-"+locks[i] + " .after", this).append((i+1))
-          $(".line-"+locks[i], this).addClass("hll3")
+          $(".line-"+locks[i] + " .after", $stackFrame).append((i+1))
+          $(".line-"+locks[i], $stackFrame).addClass("hll3")
         }
-        $highlightLine = $(".line-"+line, this) 
+        $highlightLine = $(".line-"+line, $stackFrame) 
         $highlightLine.addClass("hll")        
-        showNLines(7, line-3, this)
+        showNLines(7, line-3, $stackFrame)
 
         if (size <= parseInt($obj.attr('data-context-end'))) 
           $('.expand-down-btn', $obj).addClass('disabled')
@@ -606,67 +631,71 @@
 
           $('.header', $memory).append($toggleMemoryPanelBtn)
         }
-
-        $(this).append($memory)
-        $(this).append('<div class="clear"></div>')
-      })
-
-      var $detail = $('.details', this)
-      var $bar = $('.bar', this)
-      var $expandBtn = $('.expand-btn', $bar)
-      function setExpandBtnStatus() {
-        if ($detail.css('display') === 'none') {
-          $bar.removeClass('expanded')
-          $expandBtn.removeClass('expanded')
-          $expandBtn.text('+')
-          EXPAND_STATE[index] = false
-        } else { // expanded
-          $bar.addClass('expanded')
-          $expandBtn.addClass('expanded')
-          $expandBtn.text('\u2212') // minus sign
-          EXPAND_STATE[index] = true
-        }
-
-        if (typeof(Storage) !== 'undefined') { // store expand state to localStorage.  
-          localStorage['EXPAND_STATE_' + window.location.pathname] = JSON.stringify(EXPAND_STATE)
-        }
-      }
-      $expandBtn.on('click', function(event) {
-        event.preventDefault()
-        event.stopPropagation()
-        $detail.toggle('fast', setExpandBtnStatus)
-      })
-      $bar.on('click', function(event) { $expandBtn.click() })
-      if (!EXPAND_STATE[index]) {
-        $expandBtn.click() 
-      } else {
-        setExpandBtnStatus()
-      }
-      // Window scroll event. We should always make the memory table stick to the top.
-      var containerElem = document.documentElement
-      window.addEventListener('scroll', function() {
-        var detailElem = $detail[0],
-            memoryElem = $('.memory', $detail)[0]
-        var containerScrollTop = containerElem.scrollTop || window.pageYOffset
+        $($stackFrame).append($memory)
+        $($stackFrame).append('<div class="clear"></div>')
         
-        if (memoryElem.offsetHeight > containerElem.offsetHeight) return
-        if (containerScrollTop >= detailElem.offsetTop + detailElem.offsetHeight) return
+        var $detail = $('.details', $obj)
+        var $bar = $('.bar', $obj)
+        var $expandBtn = $('.expand-btn', $bar)
+        function setExpandBtnStatus() {
+          if (!$detail.hasClass('displayed')) {
+            $bar.removeClass('expanded')
+            $expandBtn.removeClass('expanded')
+            $expandBtn.removeClass('times') // plus sign
+            EXPAND_STATE[index] = false
+          } else { // expanded
+            $bar.addClass('expanded')
+            $expandBtn.addClass('expanded')
+            $expandBtn.addClass('times') // times sign
+            EXPAND_STATE[index] = true
+          }
 
-        if (containerScrollTop + memoryElem.offsetHeight >= detailElem.offsetTop + detailElem.offsetHeight) {
-          memoryElem.style.position = 'absolute'
-          memoryElem.style.right ='0'
-          memoryElem.style.top = (detailElem.offsetHeight - memoryElem.offsetHeight) + 'px' 
-        } else if (containerScrollTop > detailElem.offsetTop) {
-          memoryElem.style.position = 'fixed'
-          memoryElem.style.top = '0'
-          memoryElem.style.right = '24px'
-        } else {
-          memoryElem.style.position = 'absolute'
-          memoryElem.style.right = '0'  
-          memoryElem.style.top = '0'
+          try {
+            if (typeof(Storage) !== 'undefined') { // store expand state to localStorage.  
+              localStorage['EXPAND_STATE_' + window.location.pathname] = JSON.stringify(EXPAND_STATE)
+            }
+          } catch(error) {}
         }
-      })
+        $expandBtn.on('click', function(event) {
+          event.preventDefault()
+          event.stopPropagation()
+          $detail.toggle('fast')
+          $detail.toggleClass('displayed')
+          setExpandBtnStatus()
+        })
+        $bar.on('click', function(event) { $expandBtn.click() })
 
+        if (EXPAND_STATE[index]) {
+          $expandBtn.click()
+        }
+
+        // Window scroll event. We should always make the memory table stick to the top.
+        var containerElem = document.documentElement
+        window.addEventListener('scroll', function() {
+          var detailElem = $detail[0],
+              memoryElem = $('.memory', $detail)[0]
+          if (!memoryElem) return 
+
+          var containerScrollTop = containerElem.scrollTop || window.pageYOffset
+          
+          if (memoryElem.offsetHeight > containerElem.offsetHeight) return
+          if (containerScrollTop >= detailElem.offsetTop + detailElem.offsetHeight) return
+
+          if (containerScrollTop + memoryElem.offsetHeight >= detailElem.offsetTop + detailElem.offsetHeight) {
+            memoryElem.style.position = 'absolute'
+            memoryElem.style.right ='0'
+            memoryElem.style.top = (detailElem.offsetHeight - memoryElem.offsetHeight) + 'px' 
+          } else if (containerScrollTop > detailElem.offsetTop) {
+            memoryElem.style.position = 'fixed'
+            memoryElem.style.top = '0'
+            memoryElem.style.right = '24px'
+          } else {
+            memoryElem.style.position = 'absolute'
+            memoryElem.style.right = '0'  
+            memoryElem.style.top = '0'
+          }
+        })
+      })
     })
   })
 </script>
@@ -675,15 +704,18 @@
 <h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/></a>{% if not err.primary_component.frames[0].loc.missing %} &raquo; <a href="{{output_dir}}{{err.primary_component.frames[0].loc.abs_file}}.html">{{err.primary_component.frames[0].loc.rel_file}}</a>{% endif %} &raquo; Error {{err.index}}</h1>
 <h2>{{err.description}}</h2>
 {% macro lock_lines(locks) %}{% for lock in locks %}{{lock.locked_at.loc.line}} {% endfor %}{% endmacro %}
-{% macro source_snippet(frame, initial, at) %}
+{% macro source_snippet(frame, initial, at, header) %}
 <li class="{{initial}}" data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}" data-locks="{{lock_lines(frame.locks)}}" data-local-variables="{{frame.local_vars|json_stringify}}">
-  <div class="bar">
-    <span>{{at}} {{frame.symbol}} at {% if not frame.loc.missing %}
-      <a href="{{output_dir}}{{frame.loc.abs_file}}.html?lineno={{frame.loc.line}}" onclick="(function(){event.stopPropagation()})(event)">{{frame.loc.rel_file}}</a>
+  {% if header %} <h3 class="header">{{header}}</h3> {% endif %}
+  <div class="bar {{'disabled' if frame.loc.missing}}">
+    <div class="expand-btn">&#x002b</div>
+    <span> {{at}} {{frame.symbol}} at {% if not frame.loc.missing %}
+      <a href="{{output_dir}}{{frame.loc.abs_file}}.html?lineno={{frame.loc.line}}" onclick="(function(){event.stopPropagation()})(event)">
+        <span>{{frame.loc.rel_file}}</span>{% if frame.loc.line %}<span class="line">:{{frame.loc.line}}</span>{% endif %}{% if frame.loc.column %}<span class="column">:{{frame.loc.column}}</span>{% endif %}        
+      </a>
     </span>
-    <div class="expand-btn">+</div>
   </div>
-  <div class="snippet details">
+  <div class="snippet details" style="display: none">
     <div class="stack-frame"></div>
     <div class="btn-group top">
         <div class="btn expand-up-btn" onClick="expandUp('{{fileids[frame.loc.abs_file]}}', {{frame.loc.line}}, this);" style="margin-right: 2px;">+</div>
@@ -712,9 +744,12 @@
 Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
 {% endmacro %}
 {% for trace in err.stack_traces %}
+<div class="trace {{'disabled' if err.stack_traces|length <= 1}}">
+<!--
 {% if not loop.first %}
 <div class="skip"></div>
 {% endif %}
+-->
 {% for component in trace.components %}
 {% if component.description %}
 <h3 class="component">{{component.description}}</h3>
@@ -724,15 +759,15 @@ Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
   {% for frame in component.frames %}
     {% if loop.first %}
       {% if frame.loc.missing %}
-        {{source_snippet(frame, "dead", "in")}}
+        {{source_snippet(frame, "dead", "in", "")}}
       {% else %}
-        {{source_snippet(frame, "expanded", "in")}}
+        {{source_snippet(frame, "expanded", "in", "")}}
       {% endif %}
     {% else %}
       {% if frame.loc.missing %}
-        {{source_snippet(frame, "dead", "called by")}}
+        {{source_snippet(frame, "dead", "called by", "")}}
       {% else %}
-        {{source_snippet(frame, "collapsed", "called by")}}
+        {{source_snippet(frame, "collapsed", "called by", "")}}
       {% endif %}
     {% endif %}
   {% endfor %}
@@ -743,13 +778,14 @@ Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
 <div class="list-container">
   <ul class="exp-list">
   {% if trace.thread_created_by %}
-    {{source_snippet(trace.thread_created_at,"collapsed",created_by(trace))}}
+    {{source_snippet(trace.thread_created_at,"collapsed", "in", created_by(trace))}}
   {% else %}
     <li class="dead">Thread {{trace.thread_id}} is the main thread</li>
   {% endif %}
   </ul>
 </div>
 {% endif %}
+</div>
 {% endfor %}
 <div class="bottom-section">
   <div class="error-description">

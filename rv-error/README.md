@@ -1,17 +1,31 @@
-RV-Error tool
--------------
+<!-- Copyright (c) 2017 Runtime Verification, Inc. (RV-Match team). All Rights Reserved. -->
+
+# RV-Error tool
+
+## Dependencies
+
+```bash
+sudo apt install opam m4
+opam init
+opam update
+opam switch 4.03.0
+eval `opam config env`
+opam install ocp-ocamlres ocamlbuild-atdgen csv uri atdgen
+```
+
+## Description
 
 This tool is designed to handle logic to generate error reports
 for RV-Match and RV-Predict. You can build it with `mvn package`.
 The `bin` directory should be added to your path in your shell profile.
 
 It can be invoked in the following way manually:
-```
+```bash
 cat error.json | rv-error metadata.json
 ```
 
 Where error.json and metadata.json are json files containing json matching
-the specification in `c-semantics-plugin/src/main/ocaml/common/error.atd`.
+the specification in `src/main/ocaml/common/error.atd`.
 error.json can contain either a location\_error or a stack\_error, and
 metadata.json contains a metadata. You can construct these objects
 with the code generated using atdgen for ocaml and atdj for Java.

@@ -1,1 +1,1 @@
-true: package(csv), package(uri), package(atdgen), package(pprint), package(str), package(unix), package(ocplib-ocamlres)
+true: package(csv), package(uri), package(atdgen), package(pprint), package(str), package(unix), package(ocplib-ocamlres), debug

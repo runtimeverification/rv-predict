@@ -2,7 +2,7 @@
 
 ## Configuring a build environment
 
-On Ubuntu, install prerequisite packages:
+On Ubuntu, install the prerequisite packages:
 
 ```
 sudo apt install m4
@@ -93,7 +93,7 @@ mvn clean install  # the installer will be placed in `c-installer/target`
 
 ### Modifying rv-install 
 
-Installer for rv-predict is based on [rv-install](https://github.com/runtimeverification/rv-install). It is included in `installer/pom.xml` and `c-installer/pom.xml`. 
+The installer for rv-predict is based on [rv-install](https://github.com/runtimeverification/rv-install). It is included in `installer/pom.xml` and `c-installer/pom.xml`. 
 
 Sometimes, you may want to modify `rv-install`, then build the installer. 
 To do this, run the following commands:
@@ -111,11 +111,12 @@ ant # build rv-install
 mvn install:install-file -DgroupId=com.runtimeverification.install -DartifactId=rv-install -Dversion=1.5.2-SNAPSHOT -Dpackaging=jar -Dfile=../rv-install/dist/rv-install-1.5.2-SNAPSHOT.jar
 ```
 
-Then you can start building installer for RV-Predict (See previous section).  
+Then you can start building the installer for RV-Predict (see the previous
+section).
 
 ## Deploying installer 
 
-1. Generate a new SSH key and add it to your GitHub account.  
+1. Generate a new SSH key and add it to your GitHub account.
     * [How to generate SSH key](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
     * [How to add SSH key to GitHub account](https://help.github.com/articles/adding-a-new-ssh-key-to-your-github-account/)
 
@@ -144,11 +145,39 @@ Then you can start building installer for RV-Predict (See previous section).
 </settings>
 ```
 
-3. Add `ftp.runtimeverification.com` to `known_hosts` by command:
+3. Add `ftp.runtimeverification.com` to your `known_hosts` file.
+
+Advice on the web suggests adding a remote host's public key to
+`known_hosts` like this:
 
 ```bash 
 ssh-keyscan -t rsa ftp.runtimeverification.com >> ~/.ssh/known_hosts
 ```
+
+The `ssh-keyscan` manual page warns that by adding keys in this way,
+you are susceptible to man-in-the-middle (MITM) attacks.  After adding a
+key to your `known_hosts` in that way, always use a trustworthy secondary
+source to verify a host key.
+
+For example, examine the fingerprint of the key added by `ssh-keyscan`
+by running this command:
+
+```bash
+ssh-keygen -l -F ftp.runtimeverification.com -f ~/.ssh/known_hosts 
+```
+
+If you are confident that this manual has not been tampered with, then you
+can verify the `ftp.runtimeverification.com` host key by comparing the
+fingerprint printed by `ssh-keygen` with one of these fingerprints---it
+should match one:
+
+```
+MD5 fingerprint:       86:0d:6b:d3:91:95:f0:45:b6:26:7c:13:81:65:a6:f1 
+SHA256 fingerprint:    4kbAX2bLe5oHofL0sUqyPDuaAiKgt0JGXTodWiVnGdM 
+```
+
+If there is no match, then immediately delete the key from your
+`known_hosts` file.
 
 4. Deploy installer:
 

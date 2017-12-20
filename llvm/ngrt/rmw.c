@@ -35,6 +35,24 @@ trace_atomic_rmw8(const void *retaddr, rvp_addr_t addr,
 }
 
 void
+__rvpredict_atomic_fetch_and4(volatile _Atomic uint32_t *addr,
+    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw4(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval & arg,
+	    memory_order);
+}
+
+void
+__rvpredict_atomic_fetch_or4(volatile _Atomic uint32_t *addr,
+    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw4(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval | arg,
+	    memory_order);
+}
+
+void
 __rvpredict_atomic_fetch_add4(volatile _Atomic uint32_t *addr,
     uint32_t oval, uint32_t arg, int32_t memory_order __unused)
 {

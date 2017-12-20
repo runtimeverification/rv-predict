@@ -211,6 +211,11 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	first_ring_iov = iovp;
 
 	idepth0 = idepth1 = (lc == NULL) ? 0 : r->r_idepth;
+	/* TBD drop empties after rvp_ring_discard_iovs(), or *in*
+	 * rvp_ring_discard_iovs()?  That didn't actually work when
+	 * I tried it, so more analysis is necessary.
+	 */
+	(void)rvp_ring_drop_empties(r, NULL);
 	(void)rvp_ring_get_iovs(r, NULL, &iovp, lastiov, &idepth0);
 
 	if (iovp == first_ring_iov)

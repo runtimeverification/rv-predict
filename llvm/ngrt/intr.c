@@ -95,10 +95,14 @@ __rvpredict_isr_fire(void (*isr)(void))
 void
 rvp_static_intrs_reinit(void)
 {
-	int i;
+	int i, rc;
+	sigset_t omask;
 
 	if (rvp_static_nintrs > _POSIX_RTSIG_MAX)
 		errx(EXIT_FAILURE, "too many interrupt priorities");
+
+	if (nassigned == rvp_static_nintrs)
+		return;
 
 	long nsec = 1000 * 1000;	// 1 millisecond
 	const char *ivalenv = getenv("RVP_INTR_INTERVAL");
@@ -128,7 +132,42 @@ rvp_static_intrs_reinit(void)
 		  }
 	};
 
+	/* extend the mask */
 	for (i = nassigned; i < rvp_static_nintrs; i++) {
+		int signum = SIGRTMIN + i;
+		if (intr_debug) {
+			fprintf(stderr, "DI masks %d\n", signum);
+		}
+		if (sigaddset(&intr_mask, signum) != 0)
+			errx(EXIT_FAILURE, "%s: sigaddset", __func__);
+	}
+	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, &omask)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+	for (i = nassigned; i < rvp_static_nintrs; i++) {
+		int signum = SIGRTMIN + i;
+		if (sigismember(&omask, signum) == 1) {
+			errx(EXIT_FAILURE,
+			    "%s: did not expect signal %d to be masked",
+			    __func__, signum);
+		}
+	}
+	/* update the mask on the previously established signals */
+	for (i = 0; i < nassigned; i++) {
+		struct sigaction sa;
+		int signum = SIGRTMIN + i;
+		memset(&sa, 0, sizeof(sa));
+
+		sa.sa_mask = intr_mask;
+
+		sa.sa_handler = rvp_static_intr_handler;
+		if (sigaction(signum, &sa, NULL) == -1)
+			err(EXIT_FAILURE, "%s: sigaction", __func__);
+	}
+	/* establish new signals */
+	for (i = nassigned; i < rvp_static_nintrs; i++) {
+		timer_t timerid;
 		struct sigaction sa;
 		int signum = SIGRTMIN + i;
 		rvp_static_intr[i].si_signum = signum;
@@ -145,7 +184,7 @@ rvp_static_intrs_reinit(void)
 			  .sigev_notify = SIGEV_SIGNAL
 			, .sigev_signo = signum
 		};
-		timer_t timerid;
+
 		if (timer_create(CLOCK_MONOTONIC, &sigev, &timerid) == -1)
 			err(EXIT_FAILURE, "%s: timer_create", __func__);
 		timer_settime(timerid, 0, &it, NULL);
@@ -156,9 +195,6 @@ rvp_static_intrs_reinit(void)
 void
 rvp_static_intrs_init(void)
 {
-	int i, rc;
-	sigset_t original_mask;
-
 	const char *debugenv = getenv("RVP_INTR_DEBUG");
 
 	intr_debug = debugenv != NULL && strcmp(debugenv, "yes") == 0;
@@ -168,32 +204,8 @@ rvp_static_intrs_init(void)
 		    rvp_static_nintrs);
 	}
 
-	rc = pthread_sigmask(SIG_BLOCK, NULL, &original_mask);
-	if (rc != 0) {
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
-
 	if (sigemptyset(&intr_mask) != 0)
 		errx(EXIT_FAILURE, "%s: sigemptyset", __func__);
-
-	for (i = 0; i < _POSIX_RTSIG_MAX; i++) {
-		int signum = SIGRTMIN + i;
-		if (sigismember(&original_mask, signum) == 1) {
-			errx(EXIT_FAILURE,
-			    "%s: did not expect signal %d to be masked",
-			    __func__, signum);
-		}
-		if (intr_debug) {
-			fprintf(stderr, "DI masks %d\n", signum);  
-		}
-		if (sigaddset(&intr_mask, signum) != 0)
-			errx(EXIT_FAILURE, "%s: sigaddset", __func__);
-	}
-	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
 }
 
 void

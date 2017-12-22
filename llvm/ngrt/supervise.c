@@ -242,6 +242,15 @@ rvp_supervision_start(void)
 		    product_name);
 	}
 
+	if (WIFSIGNALED(status)) {
+		fprintf(stderr, "%s", strsignal(WTERMSIG(status)));
+#ifdef WCOREDUMP
+		if (WCOREDUMP(status))
+			fprintf(stderr, " (core dumped)");
+#endif /* WCOREDUMP */
+		fputc('\n', stderr);
+	}
+
 	if ((pid = fork()) == -1) {
 		err(EXIT_FAILURE,
 		    "%s could not fork an analysis process", product_name);

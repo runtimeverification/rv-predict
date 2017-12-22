@@ -16,8 +16,10 @@
 #define	REAL_DEFN(__rettype, __func, ...)				\
 	__rettype (*real_##__func)(__VA_ARGS__)
 
+#define	INTERPOSITION_ATTRIBUTE	__attribute__((visibility("default")))
+
 #define	INTERPOSE_DEFN(__rettype, __func, ...)				\
-__rettype __rvpredict_##__func(__VA_ARGS__)
+INTERPOSITION_ATTRIBUTE __rettype __rvpredict_##__func(__VA_ARGS__)
 
 #define	INTERPOSE_DECLS(__rettype, __func, ...)				\
 extern __rettype (*real_##__func)(__VA_ARGS__);				\

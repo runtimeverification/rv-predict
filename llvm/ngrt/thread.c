@@ -102,12 +102,17 @@ rvp_thread0_create(void)
 {
 	rvp_thread_t *t;
 	rvp_ring_t *r;
+	sigset_t oset;
 
 	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
 
 	if (pthread_setspecific(rvp_thread_key, t) != 0)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
+
+	if (real_pthread_sigmask(SIG_BLOCK, NULL, &oset) != 0)
+		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
+	t->t_intrmask = sigset_to_mask(&oset);
 
 	t->t_pthread = pthread_self();
 

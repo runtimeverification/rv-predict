@@ -594,3 +594,78 @@ out:
 	    __func__, __LINE__, (void *)r, residue);
 	return unfinished ? -1 : residue;
 }
+
+/* Discard leading empty rings.
+ *
+ * Return true if no non-empty rings were found, false otherwise.
+ *
+ * I believe that empty interruptions come about when the serializer
+ * has written out all of an interruption's words but it has not
+ * read it_interruptor_eidx == -1, yet.  Expecting more words,
+ * rvp_ring_discard_iovs() leaves the interruption on its parent ring.
+ *
+ * Really, either rvp_ring_get_iovs() or rvp_ring_discard_iovs() should
+ * drop empty interruptions, but the logic in those routines is already
+ * way too complicated.
+ */
+bool
+rvp_ring_drop_empties(rvp_ring_t *r, rvp_interruption_t *bracket)
+{
+	rvp_interruption_t *it = NULL;
+	const int pidx = r->r_producer - r->r_items;
+	const int cidx = r->r_consumer - r->r_items;
+	int first = (bracket != NULL)
+	    ? bracket->it_interruptor_sidx
+	    : r->r_consumer - r->r_items;
+	bool unfinished = false;
+	const int last = (bracket != NULL)
+	    ? rvp_interruption_get_end(bracket, &unfinished)
+	    : pidx;
+
+	assert(bracket == NULL ||
+	       rvp_ring_cp_arc_contains_lr_arc(r, cidx,
+	           bracket->it_interruptor_sidx));
+
+	rvp_debugf("%s.%d: r %p enter cidx %d first %d last %d pidx %d\n",
+	    __func__, __LINE__, (void *)r, cidx, first, last, pidx);
+
+	for (it = rvp_ring_first_interruption(r);
+	     it != NULL;
+	     it = rvp_ring_drop_interruption(r)) {
+		const int intr = it->it_interrupted_idx;
+
+		rvp_debugf(
+		    "%s.%d: r %p it %p first %d intr %d last %d\n",
+		    __func__, __LINE__, (void *)r, (const void *)it,
+		    first, intr, last);
+
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, intr, first)) {
+			rvp_debugf("%s.%d: r %p it %p is before first; "
+			    "should have been dropped already\n",
+			    __func__, __LINE__, (void *)r, (const void *)it);
+			assert(false);
+		}
+
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, last, intr)) {
+			rvp_debugf("%s.%d: r %p it %p is beyond last\n",
+			    __func__, __LINE__, (void *)r, (const void *)it);
+			return false;
+		}
+
+		if (rvp_ring_cp_arc_contains_proper_lr_arc(r, first, intr))
+			return false;
+
+		assert(r->r_idepth != it->it_interruptor->r_idepth);
+
+		first = intr;
+
+		rvp_debugf("%s.%d: r %p\n", __func__, __LINE__, (void *)r);
+
+		if (!rvp_ring_drop_empties(it->it_interruptor, it))
+			return false;
+
+		rvp_debugf("%s.%d: r %p dropping it %p\n",
+		    __func__, __LINE__, (void *)r, (void *)it);
+	}
+	return first == last && !unfinished;
+}

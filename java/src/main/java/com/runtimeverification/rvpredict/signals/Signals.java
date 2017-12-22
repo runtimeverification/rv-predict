@@ -58,7 +58,7 @@ public class Signals {
         return Optional.empty();
     }
 
-    private static boolean signalInMask(long signalNumber, long mask) {
+    public static boolean signalInMask(long signalNumber, long mask) {
         return (mask & (1L << signalNumber)) != 0;
     }
 

@@ -4,7 +4,7 @@
     <groupId>com.runtimeverification.rvpredict</groupId>
     <artifactId>root</artifactId>
     <packaging>pom</packaging>
-    <version>1.8.31-SNAPSHOT</version>
+    <version>1.8.33-SNAPSHOT</version>
     <profiles>
         <profile>
             <id>JDK 8 Build</id>
@@ -54,16 +54,16 @@
     </scm>
     <repositories>
         <repository>
-            <id>runtime-verification</id>
+            <id>runtime.verification</id>
             <name>Runtime Verification Repository</name>
-            <url>http://office.runtimeverification.com:8888/repository/internal</url>
+            <url>https://s3.amazonaws.com/repo.runtime.verification/repository/internal</url>
             <snapshots><enabled>false</enabled></snapshots>
             <releases><enabled>true</enabled></releases>
         </repository>
         <repository>
-            <id>runtime-verification.snapshots</id>
+            <id>runtime.verification.snapshots</id>
             <name>Runtime Verification Snapshot Repository</name>
-            <url>http://office.runtimeverification.com:8888/repository/snapshots</url>
+            <url>https://s3.amazonaws.com/repo.runtime.verification/repository/snapshots</url>
             <snapshots>
                 <updatePolicy>daily</updatePolicy>
                 <enabled>true</enabled>
@@ -73,17 +73,24 @@
     </repositories>
     <distributionManagement>
         <repository>
-            <id>runtime-verification</id>
+            <id>runtime.verification</id>
             <name>Runtime Verification Repository</name>
-            <url>http://office.runtimeverification.com:8888/repository/internal</url>
+            <url>s3://repo.runtime.verification/repository/internal</url>
         </repository>
         <snapshotRepository>
-            <id>runtime-verification.snapshots</id>
+            <id>runtime.verification.snapshots</id>
             <name>Runtime Verification Snapshot Repository</name>
-            <url>http://office.runtimeverification.com:8888/repository/snapshots</url>
+            <url>s3://repo.runtime.verification/repository/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
     <build>
+        <extensions>
+            <extension>
+                <groupId>org.springframework.build</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>5.0.0.RELEASE</version>
+            </extension>
+        </extensions>
         <pluginManagement>
             <plugins>
                 <plugin>

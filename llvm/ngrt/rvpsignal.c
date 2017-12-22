@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <inttypes.h>	/* for PRIu32 */
 #include <signal.h>
 #include <stdatomic.h>
@@ -639,11 +640,17 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
     const sigset_t *set, sigset_t *oldset)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
-	uint64_t actual_omask, mask, omask;
+	uint64_t maskchg, nmask, omask;
 	int rc;
 
 	/* TBD trace a read from `set` and, if `oldset` is not NULL,
 	 * a write to it.
+	 */
+
+	/* TBD optionally change generation number before loading
+	 * and after storing the signal mask
+	 *
+	 * TBD freeze generation number across a mask get-and-set.
 	 */
 #if 0
 	uint64_t gen;
@@ -654,42 +661,49 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		gen = rvp_ggen_before_store();
 #endif
 
-	if ((rc = (*changefn)(how, set, oldset)) != 0)
-		return rc;
-
 	omask = t->t_intrmask;
 
-	actual_omask = sigset_to_mask(oldset);
-
-#if 0
-	if (actual_omask != 0 && omask != actual_omask)
-		raise(SIGTRAP);
-#endif
-
-	if (set == NULL) {
-		if (oldset != NULL)
-			rvp_thread_trace_getmask(t, omask, retaddr);
-		return 0;
-	}
-
-	mask = sigset_to_mask(set);
+	maskchg = sigset_to_mask(set);
 
 	switch (how) {
 	case SIG_BLOCK:
-		t->t_intrmask |= mask;
+		nmask = omask | maskchg;
 		break;
 	case SIG_UNBLOCK:
-		t->t_intrmask &= ~mask;
+		nmask = omask & ~maskchg;
 		break;
 	case SIG_SETMASK:
-		t->t_intrmask = mask;
+		nmask = maskchg;
 		break;
 	}
 
-	if (oldset != NULL)
-		rvp_thread_trace_getsetmask(t, omask, t->t_intrmask, retaddr);
-	else
-		rvp_thread_trace_setmask(t, how, mask, retaddr);
+	if (set == NULL)
+		;
+	else if (oldset != NULL)
+		rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
+	else {
+                /* It's ok we're passing `maskchg` instead of
+                 * the absolute mask, `t->t_intrmask`, because
+		 * _trace_setmask() expects it.  Note that we pass
+		 * the operation, `how`, too.
+		 */
+		rvp_thread_trace_setmask(t, how, maskchg, retaddr);
+	}
+
+	if ((rc = (*changefn)(how, set, oldset)) != 0)
+		return rc;
+
+	t->t_intrmask = nmask;
+
+	if (oldset != NULL) {
+		const uint64_t actual_omask = sigset_to_mask(oldset);
+
+		if (actual_omask != 0 && omask != actual_omask)
+			raise(SIGTRAP);
+	}
+
+	if (set == NULL && oldset != NULL)
+		rvp_thread_trace_getmask(t, omask, retaddr);
 
 #if 0
 	if (how != SIG_BLOCK)
@@ -703,12 +717,15 @@ __rvpredict_sigsuspend(const sigset_t *mask)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	const void *retaddr = __builtin_return_address(0);
-	uint64_t omask = t->t_intrmask;
+	uint64_t omask = t->t_intrmask, nmask = sigset_to_mask(mask);
+	rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
+	t->t_intrmask = nmask;
 	/* TBD record read of `mask` */
-	int rc = real_sigsuspend(mask);
-	/* TBD save errno here; restore before return */
-	rvp_thread_trace_getsetmask(t, omask, sigset_to_mask(mask), retaddr);
+	const int rc = real_sigsuspend(mask);
+	t->t_intrmask = omask;
+	const int errno_copy = errno;
 	rvp_thread_trace_setmask(t, SIG_SETMASK, omask, retaddr);
+	errno = errno_copy;
 	return rc;
 }
 
@@ -716,9 +733,6 @@ int
 __rvpredict_pthread_sigmask(int how, const sigset_t *set, sigset_t *oldset)
 {
 	const void *retaddr = __builtin_return_address(0);
-
-	if (instruction_is_in_rvpredict(retaddr))
-		return real_pthread_sigmask(how, set, oldset);
 
 	return rvp_change_sigmask(real_pthread_sigmask,
 	    retaddr, how, set, oldset);

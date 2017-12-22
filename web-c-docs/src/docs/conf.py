@@ -33,7 +33,7 @@ extensions = [
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['templates/']
+templates_path = ['../../target/rv-docs/templates/']
 
 # The suffix of source filenames.
 source_suffix = '.rst'
@@ -261,7 +261,7 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-highlight_language = 'java'
+highlight_language = 'c'
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {}

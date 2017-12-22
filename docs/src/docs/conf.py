@@ -114,7 +114,7 @@ html_theme_path = ["themes",]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "Runtime Verification Predict Documentation"
+html_title = "Runtime Verification - RV-Predict Documentation"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #html_short_title = None
@@ -180,7 +180,7 @@ html_show_sphinx = False
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'RV-Predictdoc'
+htmlhelp_basename = 'RV-Predict[Java]doc'
 
 
 # -- Options for LaTeX output ---------------------------------------------

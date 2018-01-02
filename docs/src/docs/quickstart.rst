@@ -49,7 +49,7 @@ The ``rv-predict`` script is itself just a wrapper for the Java command:
 
 .. code-block:: none
 
-    java -jar ${rvPath}/rv-predict.jar
+    java -jar ${rvPath}/lib/rv-predict.jar
 
 and they can be used interchangeably.  The benefit of the script is that
 if ${rvPath}/bin is added to the environment ``PATH``, ${rvPath} does not need
@@ -59,10 +59,10 @@ As an agent
 ~~~~~~~~~~~
 
 Running RV-Predict as an agent along with your Java application simply
-requires adding the ``-javaagent:${rvPath}/rv-predict.jar`` option to
+requires adding the ``-javaagent:${rvPath}/lib/rv-predict.jar`` option to
 your Java command line.
 Passing options to the agent can be done as standard for agents:
-using ``-javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``.
+using ``-javaagent:${rvPath}/lib/rv-predict.jar="${rvOptions}"``.
 
 Integration with Maven
 ``````````````````````
@@ -80,7 +80,7 @@ similar to the following:
           <artifactId>maven-surefire-plugin</artifactId>
           <version>${surefire-version}</version>
           <configuration>
-              <argLine> ${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}" </argLine>
+              <argLine> ${jvmOptions} -javaagent:${rvPath}/lib/rv-predict.jar="${rvOptions}" </argLine>
           </configuration>
           </plugin>
       ...
@@ -101,14 +101,14 @@ Eclipse
   (then you select the configuration that you are running) ->
   select **Arguments** tab -> enter into the **VM arguments** field
 
-  - ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
+  - ``${jvmOptions} -javaagent:${rvPath}/lib/rv-predict.jar="${rvOptions}"``
 
 IntelliJ IDEA
   From the menu select **Run** -> **Edit Configurations** ->
   (then you select the configuration that you are running) -> enter
   into the **VM options** field
 
-  - ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
+  - ``${jvmOptions} -javaagent:${rvPath}/lib/rv-predict.jar="${rvOptions}"``
 
 Using RV-Predict for all Java apps
 ``````````````````````````````````
@@ -117,7 +117,7 @@ If one wants to run RV-Predict for any invocation of the ``java`` tool,
 one can simply update the environment variable ``JAVA_TOOL_OPTIONS``
 to include the line
 
-- ``${jvmOptions} -javaagent:${rvPath}/rv-predict.jar="${rvOptions}"``
+- ``${jvmOptions} -javaagent:${rvPath}/lib/rv-predict.jar="${rvOptions}"``
 
 RV-Predict options
 ------------------

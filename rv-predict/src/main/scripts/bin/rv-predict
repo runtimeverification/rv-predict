@@ -4,10 +4,11 @@ ulimit -s `ulimit -H -s`
 
 _root=$(dirname "$0")/..
 bindir=${_root}/bin
+libdir=${_root}/lib
 if [ "$1" = "--test" ]; then
 	shift
 fi
 
 ${bindir}/checkJava || exit 1
 
-java -ea -jar ${_root}/rv-predict.jar "$@"
+java -ea -jar ${libdir}/rv-predict.jar "$@"

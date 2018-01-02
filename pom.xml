@@ -19,6 +19,7 @@
             <id>generate-docs</id>
             <modules>
                 <module>docs</module>
+                <module>web-c-docs</module>
             </modules>
             <activation>
                 <property>

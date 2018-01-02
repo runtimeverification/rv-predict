@@ -2,9 +2,9 @@
 
 ulimit -s `ulimit -H -s`
 
-_root=${RV_ROOT:-/usr/local}
+_root=$(dirname "$0")/..
 bindir=${_root}/bin
-libdir=${_root}/lib
+libdir=${_root}
 if [ "$1" = "--test" ]; then
 	shift
 fi

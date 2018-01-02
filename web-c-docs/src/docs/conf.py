@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# RV-Predict documentation build configuration file, created by
+# RV-Predict[C] documentation build configuration file, created by
 # sphinx-quickstart on Wed Jul  2 18:03:41 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -45,7 +45,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'RV-Predict'
+project = u'RV-Predict[C]'
 copyright = u'Runtime Verification Inc.'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -180,7 +180,7 @@ html_show_sphinx = False
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'RV-Predict[Java]doc'
+htmlhelp_basename = 'RV-Predict[C]doc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -200,7 +200,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'RV-Predict.tex', u'RV-Predict Documentation',
+  ('index', 'RV-Predict-C.tex', u'RV-Predict[C] Documentation',
    u'Runtime Verification Inc.', 'manual'),
 ]
 
@@ -230,7 +230,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'rv-predict', u'RV-Predict Documentation',
+    ('index', 'rv-predict-c', u'RV-Predict[C] Documentation',
      [u'Runtime Verification Inc.'], 1)
 ]
 
@@ -244,8 +244,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'RV-Predict', u'RV-Predict Documentation',
-   u'Runtime Verification Inc.', 'RV-Predict', 'One line description of project.',
+  ('index', 'RV-Predict[C]', u'RV-Predict[C] Documentation',
+   u'Runtime Verification Inc.', 'RV-Predict[C]', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -261,7 +261,7 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
-highlight_language = 'java'
+highlight_language = 'c'
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {}

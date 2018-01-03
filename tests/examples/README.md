@@ -17,13 +17,13 @@ them normally, run the following commands:
 To execute them with RV-Predict, either replace `java` with `rv-predict`
 (make sure you already added the `bin` directory under the RV-Predict
 installation directory to your `PATH`) or add the option
-`-javaagent:../rv-predict.jar`, e.g:
+`-javaagent:../lib/rv-predict.jar`, e.g:
 
     rv-predict -cp examples.jar account.Account
 
 or
 
-    java -javaagent:../rv-predict.jar -cp examples.jar account.Account
+    java -javaagent:../lib/rv-predict.jar -cp examples.jar account.Account
 
 Read the RV-Predict documentation and blog articles reachable from the
 [RV-Predict website](http://runtimeverification.com/predict).

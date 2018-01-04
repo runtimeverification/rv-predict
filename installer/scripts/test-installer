@@ -4,6 +4,8 @@ set -e
 container="rv-predict-installer-test"
 source_container="ubuntu-14.04-java"
 
+echo "lxc-copy -s -e -B overlay -m bind=`pwd`:/mnt/jenkins:rw -n ${source_container} -N ${container}"
+
 function stopLxc {
   lxc-stop -n ${container}
 }

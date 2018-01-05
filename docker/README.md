@@ -10,7 +10,7 @@ docker build -t rv-predict-ubuntu -f ./docker/Dockerfile ./docker
 ## Run a docker container in bash
 
 ```bash
-docker run -it --rm rv-predict-ubuntu
+docker run -it rv-predict-ubuntu
 ```
 
 ## References

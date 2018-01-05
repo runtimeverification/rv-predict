@@ -1,17 +1,10 @@
 #!/bin/bash
 set -e
 
-container="rv-predict-installer-test"
-source_container="ubuntu-14.04-java"
+image="rv-predict-ubuntu"
 
-echo "lxc-copy -s -e -B overlay -m bind=`pwd`:/mnt/jenkins:rw -n ${source_container} -N ${container}"
+# build the docker image 
+docker build -t $image -f  `pwd`/docker/Dockerfile `pwd`/docker
 
-function stopLxc {
-  lxc-stop -n ${container}
-}
-unset XDG_SESSION_ID
-unset XDG_RUNTIME_DIR
-unset XDG_SESSION_COOKIE
-lxc-copy -s -e -B overlay -m bind=`pwd`:/mnt/jenkins:ro -n ${source_container} -N ${container} \
-&& trap stopLxc EXIT
-lxc-attach -n ${container} -- su -l -c /mnt/jenkins/installer/scripts/install-in-container
+# run install-in-container script
+docker run -v `pwd`:/root/rv-predict $image /root/rv-predict/installer/scripts/install-in-container

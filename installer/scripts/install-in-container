@@ -1,17 +1,22 @@
 #!/bin/bash
 set -e
-RV_ROOT=${HOME}/RV-Predict/Java # installation directory
-PATH=${RV_ROOT}/bin:${PATH}
-rm -rf ${RV_ROOT}
-cat /mnt/jenkins/installer/scripts/installer-stdin.txt | java -jar /mnt/jenkins/installer/target/rv-predict-installer-*.jar -console
-cd ${RV_ROOT}/examples
-java -javaagent:../lib/rv-predict.jar -cp examples.jar account.Account
-java -javaagent:../lib/rv-predict.jar -cp examples.jar airlinetickets.Airlinetickets
-java -javaagent:../lib/rv-predict.jar -cp examples.jar benchmarks.JGFRayTracerBenchSizeA
-java -javaagent:../lib/rv-predict.jar -cp examples.jar benchmarks.JGFMolDynBenchSizeA
-java -javaagent:../lib/rv-predict.jar -cp examples.jar demo.BrokenSpinningLoop
-java -javaagent:../lib/rv-predict.jar -cp examples.jar demo.RaceOnSynchronizedMap
-java -javaagent:../lib/rv-predict.jar -cp examples.jar demo.DoubleCheckedLocking
-java -javaagent:../lib/rv-predict.jar -cp examples.jar demo.WriteUnderReadLock
-java -javaagent:../lib/rv-predict.jar -cp examples.jar demo.SimpleRace
-java -javaagent:../lib/rv-predict.jar -cp examples.jar demo.RaceOnArrayList
+
+RV_ROOT=/root/RV-Predict/Java # installation directory
+PATH=$RV_ROOT/bin:$PATH
+
+# run installer 
+cat /root/rv-predict/installer/scripts/installer-stdin.txt | java -jar /root/rv-predict/installer/target/rv-predict-installer-*.jar -console
+
+cd $RV_ROOT/examples
+
+# run examples 
+rv-predict -cp examples.jar account.Account
+rv-predict -cp examples.jar airlinetickets.Airlinetickets
+rv-predict -cp examples.jar benchmarks.JGFRayTracerBenchSizeA
+rv-predict -cp examples.jar benchmarks.JGFMolDynBenchSizeA
+rv-predict -cp examples.jar demo.BrokenSpinningLoop
+rv-predict -cp examples.jar demo.RaceOnSynchronizedMap
+rv-predict -cp examples.jar demo.DoubleCheckedLocking
+rv-predict -cp examples.jar demo.WriteUnderReadLock
+rv-predict -cp examples.jar demo.SimpleRace
+rv-predict -cp examples.jar demo.RaceOnArrayList

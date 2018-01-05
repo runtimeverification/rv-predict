@@ -84,11 +84,11 @@ mkcmake PREFIX=$HOME install
 ```bash
 # Installer for RV-Predict/Java
 cd rv-predict/installer
-mvn clean install # the installer will be placed in `installer/target`
+mvn clean package # the installer will be placed in `installer/target`
 
 # Installer for RV-Predict/C
 cd rv-predict/c-installer
-mvn clean install  # the installer will be placed in `c-installer/target`
+mvn clean package  # the installer will be placed in `c-installer/target`
 ```
 
 ### Modifying rv-install 

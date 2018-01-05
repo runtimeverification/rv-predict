@@ -7,4 +7,4 @@ image="rv-predict-ubuntu"
 docker build -t $image -f  `pwd`/docker/Dockerfile `pwd`/docker
 
 # run install-in-container script
-docker run -v `pwd`:/root/rv-predict $image /root/rv-predict/installer/scripts/install-in-container
+docker run -v `pwd`:/root/rv-predict --rm $image /root/rv-predict/installer/scripts/install-in-container

@@ -338,6 +338,10 @@ This will be fixed in the 2.1 release.
 
 ## Support
 
+Users are invited to discuss RV-Predict/C with Runtime Verification,
+Inc., and members of the public on the
+[https://groups.google.com/a/runtimeverification.com/d/forum/predict-users](predict-users) mailing list.
+
 For support and bug reports please visit
 [Runtime Verification Support](http://runtimeverification.com/support).
 

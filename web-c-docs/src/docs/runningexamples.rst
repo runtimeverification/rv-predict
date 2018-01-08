@@ -547,7 +547,7 @@ And it is a common pattern to use a while loop that repeatedly checks that condi
           return 0;
   }
 
-As shown below, RV-Predict/C detect the data race on ``condition`` variable. 
+As shown below, RV-Predict/C detects a data race on ``condition``. 
 
 .. code-block:: none
 

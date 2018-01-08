@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+cat /mnt/jenkins/c-installer/scripts/installer-stdin.txt | java -jar /mnt/jenkins/c-installer/target/rv-predict-c-installer-*.jar -console
+
+# install packages for testing
+apt-get install -y mk-configure
+
+# test rvpc and rvpc++ command
+cd /usr/share/examples/rv-predict-c
+mkcmake

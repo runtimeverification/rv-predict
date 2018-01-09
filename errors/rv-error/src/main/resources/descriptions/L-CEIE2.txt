@@ -1,0 +1,1 @@
+Not explicitly closing files when they are no longer needed risks causing a possible failure by exhausting system resources. Call fclose to close files when they are no longer being used.

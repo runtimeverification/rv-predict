@@ -1,10 +1,19 @@
+#
+# For RV-Predict, we run this makefile with BSD make, which sets the variable .OBJDIR
+# to the directory that should receive the build products (the "object directory" or "objdir").
+#
+# For RV-Match, we run this makefile with GNU make, which does not set .OBJDIR.
+# So that we don't try to write `rv-error` to `/rv-error` when .OBJDIR is unset/empty,
+# but we write to `./rv-error`, instead, we set a default value for .OBJDIR.
+#
+.OBJDIR ?= .
+
 OCB := ocamlbuild $(BUILD_DIR_OPT) -use-ocamlfind -plugin-tag "package(ocamlbuild_atdgen)"
 NAME := rv_error
 ARCHIVE  = $(NAME).cma
 LIBRARY  = $(NAME).a
 XARCHIVE = $(NAME).cmxa
 SARCHIVE = $(NAME).cmxs
-
 
 all: resources
 	$(OCB) $(LIBRARY)

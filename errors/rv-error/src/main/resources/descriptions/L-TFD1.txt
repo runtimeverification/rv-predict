@@ -1,0 +1,1 @@
+When the tool encounters a language construct (such as inline assembly) that it currently does not support during analysis, it will fall back on using a natively-compiled version of the function containing the unsupported construct when interpreting calls to this function. No analysis will be done to the body of this function during execution.

@@ -145,12 +145,12 @@ public class BoundedBuffer {
      * args[7] = (Optional) consumer priority
      */
     public static void main(String[] args) {
-    	
- 	    args = new String[2];
-	    args[0] = "output.txt";
-	    args[1] = "1";
-	    new BoundedBuffer().go(args);
-    	
+        
+        args = new String[2];
+        args[0] = "output.txt";
+        args[1] = "1";
+        new BoundedBuffer().go(args);
+        
     }
     public void go(String[] args)
     {
@@ -305,17 +305,17 @@ public class BoundedBuffer {
                   ", notify instead notifyAll>";
             quitMe=true;
             try{
-          	 throw new RuntimeException(_tuple);
+             throw new RuntimeException(_tuple);
              //output.write(str2.getBytes());
          } catch (Exception e) {
-        	 e.printStackTrace();
-        		"leap_Crashed_with".equals(e);
-           		
-           		System.exit(-1);
+             e.printStackTrace();
+                "leap_Crashed_with".equals(e);
+                
+                System.exit(-1);
          }
         }
         else{
-            _tuple="<BoundedBuffer,Programs succesfuly excecuted,none>";
+            _tuple="<BoundedBuffer,Programs successfully executed,none>";
         }
         return quitMe;
   }

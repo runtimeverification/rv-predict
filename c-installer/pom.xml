@@ -2,7 +2,7 @@
     <parent>
         <groupId>com.runtimeverification.rvpredict</groupId>
         <artifactId>root</artifactId>
-        <version>1.8.33-SNAPSHOT</version>
+        <version>1.8.34-SNAPSHOT</version>
     </parent>
     <!-- Based on guide at http://docs.codehaus.org/display/IZPACK/Compiling+Using+Maven -->
     <modelVersion>4.0.0</modelVersion>
@@ -200,7 +200,21 @@
                 <version>1.0</version>
                 <executions>
                     <execution>
-                        <id>upload-docs</id>
+                        <id>upload-deb</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>upload</goal>
+                        </goals>
+                        <configuration>
+                            <serverId>rv-site</serverId>
+                            <url>scp://release@ftp.runtimeverification.com/</url>
+                            <fromDir>${staging.dir.app}</fromDir>
+                            <includes>rv-predict-c-${info.appVersion}.deb</includes>
+                            <toDir>/var/www/predict/${project.version}/c</toDir>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>upload-jar</id>
                         <phase>deploy</phase>
                         <goals>
                             <goal>upload</goal>
@@ -210,7 +224,7 @@
                             <url>scp://release@ftp.runtimeverification.com/</url>
                             <fromDir>target</fromDir>
                             <includes>rv-predict-c-installer*.jar</includes>
-                            <toDir>/var/www/predict/${project.version}</toDir>
+                            <toDir>/var/www/predict/${project.version}/c</toDir>
                         </configuration>
                     </execution>
                 </executions>

@@ -210,7 +210,7 @@
                             <url>scp://release@ftp.runtimeverification.com/</url>
                             <fromDir>target</fromDir>
                             <includes>rv-predict-c-installer*.jar</includes>
-                            <toDir>/var/www/predict/${project.version}</toDir>
+                            <toDir>/var/www/predict/${project.version}/c</toDir>
                         </configuration>
                     </execution>
                 </executions>

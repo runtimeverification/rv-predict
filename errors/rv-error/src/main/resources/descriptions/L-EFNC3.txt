@@ -1,0 +1,1 @@
+A function has called itself, either directly or indirectly from another function. Unless it is tightly and carefully controlled, recursion risks exceeding an implementation's stack space and makes calculating the worst-case stack usage difficult.

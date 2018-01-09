@@ -21,6 +21,7 @@ tags:
 	@touch $(.CURDIR)/tags
 
 test uninstall:
+	@echo "Nothing to do for $(.TARGET)"
 
 rv-error: $(SRCDIR)/rv-error
 	@cp $(.ALLSRC) $(.OBJDIR)/.

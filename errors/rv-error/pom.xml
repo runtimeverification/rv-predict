@@ -33,6 +33,22 @@
               </target>
             </configuration>
           </execution>
+          <execution>
+            <id>clean-c-semantics-plugin</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target name="clean-rv-error">
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" classpathref="maven.plugin.classpath"/>
+                <exec executable="make" failonerror="true" dir="${project.basedir}/src/main/ocaml">
+                  <arg line="clean" />
+                  <env key="PATH" value="${k.bin}:${opam.home}/4.03.0+k/bin/:${env.PATH}"/>
+                </exec>
+              </target>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
     </plugins>

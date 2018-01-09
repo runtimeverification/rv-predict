@@ -1,3 +1,5 @@
+<!-- Copyright (c) 2017 Runtime Verification, Inc. (RV-Match team). All Rights Reserved. -->
+
 # RV-Error tool
 
 ## Dependencies

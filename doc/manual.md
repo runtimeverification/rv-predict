@@ -22,22 +22,6 @@ Make sure that the RV-Predict/C `bin` directory is in your PATH.
 Ordinarily, the RV-Predict/C programs will be in `/usr/bin/`, and
 `/usr/bin/` will be part of the system's default PATH.
 
-If you used the GUI installer, then it installed a valid license key
-for you.  Otherwise, before you use RV-Predict/C for the first time,
-you *may* need to sign up for a license key.  Follow the instructions at
-[https://runtimeverification.com/licensing](https://runtimeverification.com/licensing).
-Then run `rvplicense` to fetch a new key.
-
-```
-$ rvplicense
-This product has no license on file.
-Please sign up for a license at https://runtimeverification.com/licensing.
-
-Once you obtain a valid license, please login with your RV account:
-Enter your e-mail: john@doe.com
-Enter your RV password:
-```
-
 ### Compiling and running programs with RV-Predict/C
 
 The first step in using RV-Predict/C to detect data races is to compile
@@ -112,9 +96,9 @@ read item 4
 Your program writes a trace of the program execution to the file
 `rvpredict.trace` in the current directory.
 
-You can analyze the trace using `rvpa`, which prints race reports to
-its standard error output.  `rvpa` requires one argument, the name of
-the binary.  It expects to find rvpredict.trace in the current directory.
+You can analyze the trace using `rvpa`, which prints race reports to its
+standard error output.  `rvpa` requires one argument, the name of the
+binary.  It expects to find `rvpredict.trace` in the current directory.
 
 ```
 $ rvpa ./lpcq
@@ -250,9 +234,8 @@ make CC=rvpc LD=rvpc
 ### GNU autoconf scripts (./configure)
 
 To configure a GNU autoconf project to compile with RV-Predict/C
-instrumentation,
-set CC and LD in the configure script's environment.  For example,
-in Bourne shell (and bash):
+instrumentation, set CC and LD in the configure script's environment.
+For example, in Bourne shell (and bash):
 
 ```
 CC=rvpc LD=rvpc ./configure
@@ -268,6 +251,7 @@ env CC=rvpc LD=rvpc ./configure
 
 The RV-Predict/C programs ordinarily are installed in `/usr`,
 especially when they are installed from the Debian binary package.
+(The Debian binary package is installed by the GUI installer.)
 `/usr/share/rv-predict-c/` is where files that support RV-Predict/C
 are installed.  Those files must be present for RV-Predict/C to work,
 but the user does not ordinarily need to do anything with them.
@@ -327,16 +311,15 @@ may not appear in subsequent releases of RV-Predict/C:
 
 ## Known issues
 
-RV-Predict/C may sometimes detect two or more races between a thread
-and a signal that interrupts it, when only one of the races is valid.
-This is the only instance where RV-Predict/C is known to report a false
-positive.  This will be fixed in the 2.1 release.
-
-RV-Predict/C does not filter system include files and libraries from
-data-race reports.  This is especially apparent in C++ programs.
+RV-Predict/C does not always filter system include files and libraries
+from data-race reports.  This is especially apparent in C++ programs.
 This will be fixed in the 2.1 release.
 
 ## Support
+
+Users are invited to discuss RV-Predict/C with Runtime Verification,
+Inc., and members of the public on the
+[https://groups.google.com/a/runtimeverification.com/d/forum/predict-users](predict-users) mailing list.
 
 For support and bug reports please visit
 [Runtime Verification Support](http://runtimeverification.com/support).

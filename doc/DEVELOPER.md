@@ -181,6 +181,9 @@ If there is no match, then immediately delete the key from your
 
 4. Deploy installer:
 
+First you will need to install credentials in `$HOME/.m2/settings.xml` for AWS
+and the `scp`ing to ftp.runtimeverification.com.  Then run:
+
 ```bash
 sh mvn-release.sh
 ```

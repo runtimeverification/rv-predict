@@ -166,7 +166,7 @@ rvp_ring_stats_dump_total(void)
 	    joined_rs.rs_iring_spins);
 }
 
-/* Must be called with thread lock held. */
+/* Caller must hold thread_mutex. */
 static void
 rvp_dump_info(void)
 {

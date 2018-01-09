@@ -9,6 +9,7 @@ lpcq
 .Makefile.tags
 memcpy
 _mkc_*
+nic
 *.o
 raceless-signal
 rvpredict.trace

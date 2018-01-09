@@ -36,6 +36,7 @@ static sigset_t allmask;
 static pthread_mutex_t thread_mutex;
 static rvp_thread_t * volatile thread_head = NULL;
 static uint32_t next_id = 0;
+static rvp_ring_stats_t joined_rs;
 
 static pthread_t serializer;
 static pthread_cond_t wakecond;
@@ -47,9 +48,11 @@ static rvp_lastctx_t serializer_lc;
 static bool stopping = false;
 bool rvp_trace_only = true;
 int64_t rvp_trace_size_limit = INT64_MAX;
+static _Atomic bool info_dump_requested = false;
 
 pthread_key_t rvp_thread_key;
 static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
+static pthread_once_t rvp_dump_info_once = PTHREAD_ONCE_INIT;
 static pthread_once_t rvp_prefork_init_once = PTHREAD_ONCE_INIT;
 
 static int rvp_thread_detach(rvp_thread_t *);
@@ -153,11 +156,39 @@ rvp_wake_transmitter_locked(void)
 		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
 }
 
+/* Caller must hold thread_mutex. */ 
+static void
+rvp_ring_stats_dump_total(void)
+{
+	fprintf(stderr, "joined threads: ring sleeps %" PRIu64
+	    " spins %" PRIu64 " i-ring spins %" PRIu64 "\n",
+	    joined_rs.rs_ring_sleeps, joined_rs.rs_ring_spins,
+	    joined_rs.rs_iring_spins);
+}
+
+/* Must be called with thread lock held. */
+static void
+rvp_dump_info(void)
+{
+	rvp_thread_t *t;
+
+	for (t = thread_head; t != NULL; t = t->t_next) {
+		rvp_ring_stats_t *rs = &t->t_stats;
+
+		fprintf(stderr, "t%" PRIu32 ": ring sleeps %" PRIu64
+		    " spins %" PRIu64 " i-ring spins %" PRIu64 "%s\n", t->t_id,
+		    rs->rs_ring_sleeps, rs->rs_ring_spins, rs->rs_iring_spins,
+		    t->t_garbage ? " destroyed" : "");
+	}
+	rvp_ring_stats_dump_total();
+}
+
 static void
 rvp_stop_transmitter(void)
 {
 	int rc;
 	sigset_t oldmask;
+	const char *s;
 
 	thread_lock(&oldmask);
 	rvp_wake_transmitter_locked();
@@ -170,7 +201,17 @@ rvp_stop_transmitter(void)
 		}
 	}
 	stopping = false;
+	if ((s = getenv("RVP_INFO_ATEXIT")) != NULL &&
+	    strcasecmp(s, "yes") == 0)
+		(void)pthread_once(&rvp_dump_info_once, rvp_dump_info);
 	thread_unlock(&oldmask);
+}
+
+void
+rvp_info_dump_request(void)
+{
+	info_dump_requested = true;
+	rvp_wake_relay();
 }
 
 static void *
@@ -196,6 +237,9 @@ serialize(void *arg __unused)
 
 			if (stopping &&
 			    (rc = pthread_cond_broadcast(&stopcond)) != 0) {
+                                // TBD detect in the runtime's exit
+                                // hooks that we're the lock holder
+				thread_unlock(&oldmask);
 				errx(EXIT_FAILURE,
 				    "%s: pthread_cond_broadcast: %s",
 				    __func__, strerror(rc));
@@ -203,11 +247,15 @@ serialize(void *arg __unused)
 
 			rc = pthread_cond_wait(&wakecond, &thread_mutex);
 			if (rc != 0) {
+				thread_unlock(&oldmask);
 				errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",
 				    __func__, strerror(rc));
 			}
 		}
 		nwake--;
+
+		if (info_dump_requested)
+			rvp_dump_info();
 
 		rvp_increase_ggen();
 
@@ -247,6 +295,7 @@ serialize(void *arg __unused)
 			rvp_thread_destroy(t);
 		}
 	}
+	rvp_dump_info();
 	thread_unlock(&oldmask);
 	if (close(fd) == -1)
 		warn("%s: close", __func__);
@@ -492,6 +541,15 @@ rvp_thread_attach(rvp_thread_t *t)
 }
 
 /* Caller must hold thread_mutex. */ 
+static void
+rvp_ring_stats_update_total(const rvp_ring_stats_t *rs)
+{
+	joined_rs.rs_ring_sleeps += rs->rs_ring_sleeps;
+	joined_rs.rs_ring_spins += rs->rs_ring_spins;
+	joined_rs.rs_iring_spins += rs->rs_iring_spins;
+}
+
+/* Caller must hold thread_mutex. */ 
 static rvp_thread_t *
 rvp_collect_garbage(void)
 {
@@ -502,6 +560,7 @@ rvp_collect_garbage(void)
 	for (tp = &thread_head; *tp != NULL;) {
 		rvp_thread_t *t = *tp;
 		if (t->t_garbage) {
+			rvp_ring_stats_update_total(&t->t_stats);
 			*tp = (*tp)->t_next;
 			*gtp = t;
 			gtp = &t->t_next;
@@ -563,6 +622,7 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 	}
 
 	t->t_intr_ring = &t->t_ring;
+	t->t_ring.r_stats = &t->t_stats;
 
 	rvp_thread_attach(t);
 

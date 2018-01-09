@@ -73,11 +73,16 @@ rvp_ring_wait_for_nempty(rvp_ring_t *r, int nempty)
 
 	for (i = 32; rvp_ring_nempty(r) < nempty; i = MIN(16384, i + 1)) {
 		if (r->r_idepth == 0) {
+			/* TBD Wait, why don't I use a condition variable
+			 * here?
+			 */
+			r->r_stats->rs_ring_sleeps++;
 			sched_yield();	/* not async-signal-safe */
 			continue;
 		}
 		for (j = 0; j < i; j++)
 			;
+		r->r_stats->rs_ring_spins += i;
 	}
 }
 

@@ -4,46 +4,184 @@
 {% block head %}
 <script type="text/javascript">
   $(document).ready(function() {
-  var table = $("#myTable").DataTable( {
-  fixedHeader: {
-    headerOffset: $("#myTableHeader").outerHeight(true),
-    header: true
-  },
-  paging: false,
-  dom: 'rtB',
-  stateSave: true,
-  stateDuration: -1,
-  buttons: [
-  {extend:'csv',filename:'errors'},
-  {extend:'excel',filename:'errors'},
-  {extend:'pdf',filename:'errors'},
-  ],
-  columns: [
-  {"name": "id"},
-  {"name": "error"},
-  {"name": "function", "className": "function"},
-  {"name": "file"},
-  {"name": "line"},
-  ]
-  } );
+  var table = $("#myTable").DataTable({
+    fixedHeader: {
+      headerOffset: $("#table-header").outerHeight(true),
+      header: true
+    },
+    paging: false,
+    ordering: true,
+    dom: 'rtB',
+    stateSave: true,
+    stateDuration: -1,
+    buttons: [
+      {extend:'csv',filename:'errors'},
+      {extend:'excel',filename:'errors'},
+      {extend:'pdf',filename:'errors'},
+    ],
+    columns: [
+      {"name": "id"},
+      {"name": "error"},
+      {"name": "function", "className": "function"},
+      {"name": "file"},
+      {"name": "line"},
+      {"name": "frequency"}
+    ],
+    initComplete: function(settings, json) {
+      var table = this.api()
 
-  $(window).bind('beforeunload', function() {
-    if (typeof(Storage) !== "undefined") {
-      sessionStorage.myTable_searchValue = $("#myTable_search").val();
-      sessionStorage.myTable_scrollTop = $(window).scrollTop();
+      // Hack: Hide the column when performing columns reorder.  
+      function displayColumnThatWasHidden() {
+        var $header = $(table.header()[0])
+        var $columns = $('th', $header)
+        window.$columns = $columns
+        for (var i = 0; i < $columns.length; i++) {
+          if ($columns[i].style.display === 'none') {
+            $columns[i].style.display = "table-cell"
+            var columnIndex = parseInt($columns[i].getAttribute('data-column-index'))
+            var trs = document.getElementsByTagName('tr')
+            for (var j = 0; j < trs.length; j++) {
+              var td = trs[j].children[columnIndex]
+              if (td && td.style.display === 'none')
+                td.style.display = "table-cell"
+            }
+            break
+          }
+        }
+      }
+
+      var colReorder = new $.fn.dataTable.ColReorder(table, {
+        realtime: false
+      })
+      var oldMouseMove = colReorder._fnMouseMove.bind(colReorder)
+      colReorder._fnMouseMove = function(e) {
+        oldMouseMove(e) // Call old _fnMouseMove function 
+
+        var draggingTarget = colReorder.s.mouse.target  
+        var columnIndex = parseInt(draggingTarget.getAttribute('data-column-index'))
+      
+        if (draggingTarget && colReorder.dom.drag) {
+          if (draggingTarget.style.display !== 'none') { // Hide column `columnIndex`
+            var trs = document.getElementsByTagName('tr')
+            for (var i = 0; i < trs.length; i++) {
+              var td = trs[i].children[columnIndex]
+              if (td && td.style.display !== 'none') {
+                td.style.display = "none"
+              }
+            }
+
+            // Reinitialize aoTargets, which is used to locate pointer
+            colReorder.s.aoTargets = []
+            colReorder._fnRegions()
+          }
+
+          draggingTarget.style.display = "none"
+
+          if (colReorder.dom.drag) {
+            $("th", colReorder.dom.drag).show()
+          }
+        }
+      }
+
+      var oldMouseUp = colReorder._fnMouseUp.bind(colReorder)
+      colReorder._fnMouseUp = function(e) {
+        if (colReorder.dom.drag) {
+          displayColumnThatWasHidden()
+        }
+        oldMouseUp(e)
+      }
+
+      // Hack: Disable default table header click event.  
+      function rebindTableHeaderClickEvents() {   
+        var $header = $(table.header()[0])
+        var $ths = $('th', $header)
+        for (var i = 0; i < $ths.length; i++) {
+          var $th = $($ths[i])
+          $th.off('click')
+          $th.on('click', function(event) {
+            var direction = event.target.getAttribute('data-direction') || 'asc'
+            if (direction === 'asc') {
+              direction = 'desc'
+            } else {
+              direction = 'asc'
+            }
+            event.target.setAttribute('data-direction', direction)
+            sortColumns()
+          })
+        }
+      }
+      /**
+       * Sort columns from left to right by attribute `data-direction`.  
+       */ 
+      function sortColumns() {
+        var $header = $(table.header()[0])
+        var $ths = $('th', $header)
+        var orders = []
+        for (var i = 0; i < $ths.length; i++) {
+          var direction = $ths[i].getAttribute('data-direction')
+          orders.push([i, direction])
+        }
+        table.order(orders).draw()
+        try {
+          if (typeof(Storage) !== "undefined") {
+            sessionStorage.myTable_columnOrders = JSON.stringify(orders)
+          }
+        } catch(error) {}
+      }
+      /**
+       * Load and set `data-direction` attributes to table headers
+       */ 
+      function initColumnsSorting() {
+        var $header = $(table.header()[0])
+        var $ths = $('th', $header)
+        var orders = [] 
+        try {
+          if (typeof(Storage) !== "undefined") {
+            orders = JSON.parse(sessionStorage.myTable_columnOrders)
+          } 
+        } catch(error) {}
+
+        for (var i = 0; i < $ths.length; i++) {
+          if (i < orders.length) {
+            $ths[i].setAttribute('data-direction', orders[i][1]) // [offset, direction]
+          } else {
+            $ths[i].setAttribute('data-direction', 'asc')
+          }
+        }
+        sortColumns()
+      }
+
+      table.on('column-reorder', function(e, settings, details) {
+        rebindTableHeaderClickEvents()
+        sortColumns()
+      })
+
+      initColumnsSorting()
+      rebindTableHeaderClickEvents()
     }
   });
 
-  if (typeof(Storage) !== "undefined") {
-    if (sessionStorage.myTable_searchValue) {
-      $("#myTable_search").val(sessionStorage.myTable_searchValue);
+  $(window).bind('beforeunload', function() {
+    try {
+      if (typeof(Storage) !== "undefined") {
+        sessionStorage.myTable_searchValue = $("#table-search").val();
+        sessionStorage.myTable_scrollTop = $(window).scrollTop();
+      }
+    } catch(error) {}
+  })
+
+  try {
+    if (typeof(Storage) !== "undefined") {
+      if (sessionStorage.myTable_searchValue) {
+        $("#table-search").val(sessionStorage.myTable_searchValue);
+      }
+      if (sessionStorage.myTable_scrollTop) {
+        $(window).scrollTop(sessionStorage.myTable_scrollTop);
+      }
     }
-    if (sessionStorage.myTable_scrollTop) {
-      $(window).scrollTop(sessionStorage.myTable_scrollTop);
-    }
-  }
-  
-  $("#myTable_search")
+  } catch(error) {}
+
+  $("#table-search")
     .on("keyup", function() { // filter according to key pressed
       var text = this.value.trim();
       var regex;
@@ -75,15 +213,19 @@
       table.search(global).draw();
     });
   });
+
+
 </script>
 {% endblock %}
 
 {% block content %}
-<div id="myTableHeader">
+<div id="table-header">
 <div class="float-left">
 <h1><img class="home-icon" src="static/rv_logo.png" alt="Runtime Verification"/> RV-Match Error Report</h1>
 </div>
-<div id="myTable_filter" class="dataTables_filter"><label>Search:<input id="myTable_search" class="" placeholder="" aria-controls="myTable" type="search"></label></div>
+<div id="table-filter" class="dataTables_filter">
+  <input id="table-search" class="" placeholder="Search" aria-controls="myTable" type="search">
+</div>
 </div>
 <table id="myTable" class="tablesorter myTable">
   <thead>
@@ -93,6 +235,7 @@
       <th class="dt-left">Function</th>
       <th class="dt-left">File</th>
       <th class="dt-right">Line</th>
+      <th class="dt-right">Error Frequency</th>
     </tr>
   </thead>
   <tbody>
@@ -103,16 +246,18 @@
       <td>{{err.function}}</td>
       <td>
       {% if not err.missing %}
-        <a href=".{{err.abs_file}}.html">{{err.file}}</a>
+        <a href=".{{err.abs_file}}.html?lineno={{err.line}}">{{err.file}}</a>
       {% else %}
         {{err.file}}
       {% endif %}
       </td>
       <td class="dt-right">{{err.line}}</td>
+      <td class="dt-right">{{err.frequency}}</td>
     </tr>
 {% endfor %}
   <tfoot>
     <tr>
+      <th></th>
       <th></th>
       <th></th>
       <th></th>

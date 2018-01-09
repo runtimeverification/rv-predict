@@ -6,6 +6,7 @@ import json
 import uuid
 import argparse
 import os
+import urllib
 
 from jinja2 import Environment, FileSystemLoader
 from pygments import highlight
@@ -38,7 +39,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                 yield 0, '<sup class="after"></sup>\n'
                 yield 0, '</span>'
                 continue
-            yield 0, '<div class="line-with-errors">'
+            yield 0, '<div class="line-%d line line-with-errors">' % lineno
             if len(self.hl_links[lineno]) == 1:
                 err = self.hl_links[lineno][0]
                 ix = err[u'index']
@@ -48,7 +49,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                 yield 0, '</a>'
             else:
                     yield i, txt
-            yield 0, '<div class="errors">'
+            yield 0, '<div class="errors" style="display:none;">'
             for err in self.hl_links[lineno]:
                 yield 0, '<span class="lineno">   </span>'
                 msg = '%s (%s)' % (err[u'description'], err[u'error_id'])
@@ -113,9 +114,18 @@ def null_frame():
     }
 
 errorsByFile = defaultdict(listdict)
+error_frequency_map = {}
+for ix, err in enumerate(errors): # build error frequency map
+    error_id = err[u'error_id']
+    if error_id in error_frequency_map:
+        error_frequency_map[error_id] += 1
+    else:
+        error_frequency_map[error_id] = 1
+
 for ix, err in enumerate(errors):
     err[u'index'] = ix
     err[u'errdesc'] = '%s (%s)' % (err[u'description'], err[u'error_id'])
+    err[u'frequency'] = error_frequency_map[err[u'error_id']]
     if (u'stack_traces' in err):
         traces = err[u'stack_traces']
         if traces:
@@ -145,7 +155,7 @@ for ix, err in enumerate(errors):
     else:
         frame = err[u'loc']
         primary_component = {u'frames': [frame]}
-        err[u'stack_traces']={u'components': [primary_component]}
+        err[u'stack_traces']=[{u'components': [primary_component]}]
         if (u'loc' in frame):
             loc = frame[u'loc']
             if loc[u'rel_file'] != "<unknown>":
@@ -167,14 +177,18 @@ for ix, err in enumerate(errors):
     errorsByFile[err[u'file']][err[u'line']].append(err)
 
 
-def render_code(rel, abs, path, errors):
+def render_code(rel, abs, path, errors, to_js):
     filename = abs
     directory = os.path.dirname(path)
+    extension = ".html"
+    if to_js:
+        extension = ".js"
+
     if not os.path.exists(args.output + '/' + directory):
         os.makedirs(args.output + '/' + directory)
     if not os.path.exists(filename):
         return
-    with open(filename, 'r') as f, open(args.output + '/' + path + '.html', 'w') as target:
+    with open(filename, 'r') as f, open(args.output + '/' + path + extension, 'w') as target:
         code = f.read()
         if args.encoding:
           try:
@@ -182,17 +196,27 @@ def render_code(rel, abs, path, errors):
           except UnicodeDecodeError:
               print "Error in " + abs
               raise
-        template = env.get_template('sourcefile.html')
         if errors:
             errorlines = errorsByFile[rel]
         else:
             errorlines = {}
-        target.write(template.render(filename=filename,
-                                     errorlines=errorlines,
-                                     code=code,
-                                     info=rel,
-                                     output_dir=os.path.relpath(args.output, os.path.dirname(args.output + '/' + path)),
-                                     fileid=path).encode('utf-8'))
+        
+        if to_js:
+            js = """
+if (typeof(window['CODES']) === 'undefined') {
+    window['CODES'] = {}
+}
+window['CODES']['%s'] = '%s'
+""" % (path, highlight_c(code, errorlines, path).replace('\\', '\\\\').replace('\n', '\\n\' + \n\'')) 
+            target.write(js.encode('utf-8'))
+        else:
+            template = env.get_template('sourcefile.html')
+            target.write(template.render(filename=filename,
+                                        errorlines=errorlines,
+                                        code=code,
+                                        info=rel,
+                                        output_dir=os.path.relpath(args.output, os.path.dirname(args.output + '/' + path)),
+                                        fileid=path).encode('utf-8'))
 
 
 def render_error(err):
@@ -206,12 +230,16 @@ def render_template(filename):
         template = env.get_template(filename)
         target.write(template.render(output_dir="."))
 
+def json_stringify(d):
+    d = d or []
+    return urllib.quote(str(json.dumps(d)))
 
 env = Environment(
     autoescape=True,
     loader=FileSystemLoader(dirname + '/templates/')
 )
 env.filters[u'highlight'] = highlight_c
+env.filters[u'json_stringify'] = json_stringify
 
 env.globals.update(global_data)
 env.globals[u'files'] = sorted(files)
@@ -225,9 +253,9 @@ shutil.copytree(dirname + '/static/', args.output + '/static/')
 for template in ['index.html', 'error-descriptions.html']:
     render_template(template)
 for abs,rel in files.iteritems():
-    render_code(rel,abs,abs,True)
     fileids[abs] = str(uuid.uuid4())
-    render_code(rel,abs,fileids[abs], False)
+    render_code(rel, abs, abs, True, False)
+    render_code(rel, abs, fileids[abs], False, True)
 for err in errors:
     render_error(err)
 with open(args.output + "/errors.json.js", "w") as file:

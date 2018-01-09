@@ -790,10 +790,15 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	if (act == NULL)
 		goto out;
 
+	/* XXX sigaction(2) is supposed to be async-signal-safe, so instead of
+	 * acquiring a lock here, I should use a signal-safe approach to
+	 * allocating & establishing a new rvp_signal_t, possibly copying
+	 * from intern_sigset().
+	 */
 	rvp_signal_lock(signum, &savedmask);
 
 	if ((s = rvp_signal_alternate_lookup(signum)) == NULL)
-		err(EXIT_FAILURE, "%s: malloc", __func__);
+		err(EXIT_FAILURE, "%s: rvp_signal_alternate_lookup", __func__);
 
 	if ((act->sa_flags & SA_SIGINFO) != 0) {
 		handler = (rvp_addr_t)(s->s_sigaction = act->sa_sigaction);

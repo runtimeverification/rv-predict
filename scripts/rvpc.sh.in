@@ -8,7 +8,7 @@ set -e
 set -u
 
 ldscript_dir=$(dirname $0)/../share/rv-predict-c
-pass_dir=$(dirname $0)/../libexec
+pass_dir=$(dirname $0)/../--LIBEXECDIR--
 runtime_dir=$(dirname $0)/../lib
 
 cplusplus=no

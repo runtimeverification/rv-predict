@@ -22,4 +22,11 @@ FILESDIR_json-metadata.json=$(DATADIR)/rv-predict-c
 LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
 MLINKS=rvpc.1 rvpc++.1
 
+#
+# I assume here and in rvpc.sh.in that there is only one directory
+# between PREFIX and BINDIR, and that may not always be the case.
+#
+rvpc.sh! rvpc.sh.in
+	sed "s,--LIBEXECDIR--,$(LIBEXECDIR:C,^$(PREFIX)/,,g),g" < $(.ALLSRC) > $(.OBJDIR)/$(.TARGET)
+
 .include <mkc.files.mk>

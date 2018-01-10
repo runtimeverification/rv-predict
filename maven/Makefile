@@ -3,11 +3,13 @@ FILES=$(CLEANABLE_FILES)
 
 FILESNAME_rv-predict.jar.copy=rv-predict.jar
 
+MVN?=mvn
+
 FILESMODE_rv-predict.jar.copy=0644
 
 FILESDIR_rv-predict.jar.copy=$(DATADIR)/rv-predict-c
 
-MAVEN_VERSION!=cd $(.CURDIR)/.. && mvn -q -Dexec.executable="echo" -Dexec.args='$${project.version}' --non-recursive org.codehaus.mojo:exec-maven-plugin:1.3.1:exec
+MAVEN_VERSION!=cd $(.CURDIR)/.. && $(MVN) -q -Dexec.executable="echo" -Dexec.args='$${project.version}' --non-recursive org.codehaus.mojo:exec-maven-plugin:1.3.1:exec
 
 .if ${NOISY:Uno} == "no"
 MAVEN_OPTS=-q
@@ -23,7 +25,7 @@ buildit: .PHONY
 .if $(PREBUILT:Uno) == "yes"
 	@echo rv-predict.jar is prebuilt.
 .else
-	cd $(.CURDIR)/.. && mvn -q -DonlyJar -DskipDocs -DskipTests -U $(MAVEN_OPTS) package
+	cd $(.CURDIR)/.. && $(MVN) -q -DonlyJar -DskipDocs -DskipTests -U $(MAVEN_OPTS) package
 .endif
 
 rv-predict.jar.copy: $(.CURDIR)/../jar/target/jar-${MAVEN_VERSION}.jar
@@ -35,7 +37,7 @@ rv-predict.jar.copy: $(.CURDIR)/../jar/target/jar-${MAVEN_VERSION}.jar
 $(.CURDIR)/../jar/target/jar-${MAVEN_VERSION}.jar: buildit
 
 clean cleandir distclean:
-	@cd $(.CURDIR)/.. && mvn -q clean
+	@cd $(.CURDIR)/.. && $(MVN) -q clean
 
 #CLEANDIRS+=$(.CURDIR)/../target $(.CURDIR)/../java/target
 CLEANFILES+=$(CLEANABLE_FILES)

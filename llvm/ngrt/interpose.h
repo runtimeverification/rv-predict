@@ -25,6 +25,10 @@ INTERPOSITION_ATTRIBUTE __rettype __rvpredict_##__func(__VA_ARGS__)
 extern __rettype (*real_##__func)(__VA_ARGS__);				\
 __rettype __rvpredict_##__func(__VA_ARGS__)
 
+#if defined(_FORTIFY_SOURCE) && _FORTIFY_SOURCE != 0
+#error "_FORTIFY_SOURCE != 0 is not compatible with RV-Predict/C"
+#endif
+
 #define	INTERPOSE(__rettype, __func, ...)				\
 __rettype __func(__VA_ARGS__) __attribute__((weak,			\
 			             alias("__rvpredict_" #__func),	\

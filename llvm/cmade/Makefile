@@ -8,7 +8,7 @@ CLEANABLE_FILES+=libclang_rt.tsan-x86_64.a
 .endif
 FILES=$(CLEANABLE_FILES)
 FILESMODE=0755
-FILESDIR=$(LIBDIR)
+FILESDIR=$(LIBEXECDIR)
 
 installit:	.USE
 	@$(INSTALL) -c -m 0755 $(.ALLSRC:Ninstallit) $(.OBJDIR)

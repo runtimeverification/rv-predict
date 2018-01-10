@@ -231,8 +231,6 @@ main(int argc, char **argv)
 	sigset_t oset;
 	signals_mask(SIGALRM, &oset);
 
-	pthread_create(&consumer, NULL, &consume, &q);
-
 	if (use_signal) {
 		struct itimerval it;
 
@@ -243,10 +241,12 @@ main(int argc, char **argv)
 		it.it_value.tv_usec++;
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
 			err(EXIT_FAILURE, "%s: setitimer", __func__);
+		consume(&q);
 	} else {
+		pthread_create(&consumer, NULL, &consume, &q);
 		produce(&q);
+		pthread_join(consumer, NULL);
 	}
-	pthread_join(consumer, NULL);
 	signals_restore(&oset);
 	(void)pthread_mutex_destroy(&mutex);
 }

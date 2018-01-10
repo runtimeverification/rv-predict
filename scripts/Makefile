@@ -6,15 +6,13 @@
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
-MAN=rvpa.1 rvpc.1 rvplicense.1 rvpsymbolize.1 rvpx.1
+MAN=rvpa.1 rvpc.1 rvpsymbolize.1
 FILESMODE=0755
-FILES=rvpa.sh rvpc.sh rvplicense.sh rvpsymbolize.sh rvpx.sh
+FILES=rvpa.sh rvpc.sh rvpsymbolize.sh
 FILES+=console-metadata.json csv-metadata.json json-metadata.json
 FILESNAME_rvpa.sh=rvpa
 FILESNAME_rvpc.sh=rvpc
-FILESNAME_rvplicense.sh=rvplicense
 FILESNAME_rvpsymbolize.sh=rvpsymbolize
-FILESNAME_rvpx.sh=rvpx
 FILESMODE_console-metadata.json=0644
 FILESMODE_csv-metadata.json=0644
 FILESMODE_json-metadata.json=0644

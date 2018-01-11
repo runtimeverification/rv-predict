@@ -76,7 +76,7 @@
     <packs>
         <pack name="RV-Predict" required="yes" installGroups="New Application" >
             <description>Required RV-Predict libraries and executables.</description>
-            <file src="rv-predict-c-@{info.appVersion}.deb" targetdir="$INSTALL_PATH">
+            <file src="rv-predict-c_@{info.appVersion}-1_amd64.deb" targetdir="$INSTALL_PATH">
                 <os family="unix"/>
             </file>
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>

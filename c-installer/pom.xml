@@ -139,7 +139,7 @@
                             <resources>
                                 <resource>
                                     <directory>..</directory>
-                                    <include>rv-predict-c-${info.appVersion}.deb</include>
+                                    <include>rv-predict-c_${info.appVersion}-1_amd64.deb</include>
                                 </resource>
                             </resources>
                             <outputDirectory>${staging.dir.app}</outputDirectory>

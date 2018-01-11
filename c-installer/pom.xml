@@ -106,7 +106,6 @@
                     <workingDirectory>${basedir}/..</workingDirectory>
                     <arguments>
                         <argument>${info.appVersion}</argument>
-                        <argument>${project.parent.artifactId}-${info.appVersion}</argument>
                     </arguments>
                 </configuration>
             </plugin>

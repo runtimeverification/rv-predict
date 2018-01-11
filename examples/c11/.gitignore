@@ -10,8 +10,8 @@ lpcq
 memcpy
 _mkc_*
 *.o
-raceless-signal
 rvpredict.trace
+signal
 simplerace
 simple-state-machine
 spcq

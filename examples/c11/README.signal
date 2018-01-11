@@ -1,6 +1,6 @@
 Copyright (c) 2016, 2017 Runtime Verification, Inc.  All rights reserved.
 
-`raceless-signal` is a POSIX Threads-using C program that modifies
+`signal` is a POSIX Threads-using C program that modifies
 a shared variable either in a couple of threads (the default
 mode) or else in a thread and in a signal handler (the mode when
 the option `-s` is provided on the command line).
@@ -14,50 +14,50 @@ otherwise two or more threads accessing the same queue will corrupt it.
 
 # Sources
 
-raceless-signal.c	the test program
-signal.c		sources for establishing signals and signal masks
-signal.h
+signal.c	the test program
+signals.c	sources for establishing signals and signal masks
+signals.h
 
 # Compilation
 
 Using rvpc, a wrapper for clang that adds RV-Predict/C instrumentation, run
 
-	rvpc -o raceless-signal raceless-signal.c signals.c
+	rvpc -o signal signal.c signals.c
 
-That produces an executable binary, `raceless-signal`.
+That produces an executable binary, `signal`.
 
-# Exploring RV-Predict/C with `raceless-signal`.
+# Exploring RV-Predict/C with `signal`.
 
-If you run `raceless-signal` like this, RV-Predict/C will detect races:
+If you run `signal` like this, RV-Predict/C will detect races:
 
-	./raceless-signal
+	./signal
 
-Run `raceless-signal` like this to protect the shared variable with an
+Run `signal` like this to protect the shared variable with an
 atomic flag variable.  Data races still will be detected, because there
 are execution orderings where the atomic flag is not protective:
 
-	./raceless-signal -v
+	./signal -v
 
-Add the command-line option `-s` to make `raceless-signal` run a signal
+Add the command-line option `-s` to make `signal` run a signal
 handler that modifies the shared variable, instead of running a second
 thread.  Now, the atomic flag variable protects the shared variable,
 and no races will be reported:
 
-	./raceless-signal -s -v
+	./signal -s -v
 
 Pass `-m` to make the thread block signals while it modifies the
 shared variable, using the signal mask.  No races will be found
 in that case, either:
 
-	./raceless-signal -s -m
+	./signal -s -m
 
 Finally, you can use `-m` and `-v` together with `-s`, and no races
 will be detected:
 
-	./raceless-signal -s -m -v
+	./signal -s -m -v
 
 Or, supply only the `-m` option---i.e., no `-s` option.  Two threads
 will run, and setting of the signal mask will not stop them from racing:
 
-	./raceless-signal -m
+	./signal -m
 

@@ -206,7 +206,7 @@
                             <serverId>rv-site</serverId>
                             <url>scp://release@ftp.runtimeverification.com/</url>
                             <fromDir>${staging.dir.app}</fromDir>
-                            <includes>rv-predict-c_${info.appVersion}-1_amd64.deb</includes>
+                            <includes>rv-predict-c_*-1_amd64.deb</includes>
                             <toDir>/var/www/predict/${project.version}/c</toDir>
                         </configuration>
                     </execution>

@@ -14,6 +14,8 @@ SUBPRJ+=rvsyms
 SUBPRJ+=maven
 .endif
 
+.if $(ONLY_TEST_DEPENDENCIES:Uno) == "no"
 SUBPRJ+=llvm:ctests maven:ctests rvsyms:ctests scripts:ctests
+.endif
 
 .include <mkc.subprj.mk>

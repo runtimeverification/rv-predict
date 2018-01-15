@@ -2,6 +2,9 @@ NOMAN=
 MKINSTALL=no
 .include "../../../compat.mk"
 
+PATH:=$(.OBJDIR)/../../bin:$(PATH)
+.export PATH
+
 CC?=clang
 PROG=basic
 SRCS=basic.c foo.c frame.c

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+container="rv-predict-c-installer-test"
+source_container="rvpredict-ubuntu-base"
+
+function stopLxc {
+  lxc-stop -n ${container}
+}
+unset XDG_SESSION_ID
+unset XDG_RUNTIME_DIR
+unset XDG_SESSION_COOKIE
+lxc-copy -s -e -B overlay -m bind=`pwd`:/mnt/jenkins:rw -n ${source_container} -N ${container} \
+&& trap stopLxc EXIT
+lxc-attach -n ${container} -- su -l -c /mnt/jenkins/c-installer/scripts/install-in-container

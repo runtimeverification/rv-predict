@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+RV_ROOT=/root/RV-Predict/Java # installation directory
+rm -rf $RV_ROOT
+PATH=$RV_ROOT/bin:$PATH
+cat /mnt/jenkins/installer/scripts/installer-stdin.txt | java -jar /mnt/jenkins/installer/target/rv-predict-installer-*.jar -console
+cd $RV_ROOT/examples
+rv-predict -cp examples.jar account.Account
+rv-predict -cp examples.jar airlinetickets.Airlinetickets
+rv-predict -cp examples.jar benchmarks.JGFRayTracerBenchSizeA
+rv-predict -cp examples.jar benchmarks.JGFMolDynBenchSizeA
+rv-predict -cp examples.jar demo.BrokenSpinningLoop
+rv-predict -cp examples.jar demo.RaceOnSynchronizedMap
+rv-predict -cp examples.jar demo.DoubleCheckedLocking
+rv-predict -cp examples.jar demo.WriteUnderReadLock
+rv-predict -cp examples.jar demo.SimpleRace
+rv-predict -cp examples.jar demo.RaceOnArrayList

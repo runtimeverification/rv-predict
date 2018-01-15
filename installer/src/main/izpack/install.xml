@@ -40,10 +40,11 @@
     <resources>
         <res id="CustomLangPack.xml_eng" src="res/izpack-rv-eng-lang.xml"/>
         <!-- User input spec defining RV key inputs -->
-        <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
+        <res id="userInputSpec.xml" src="res/userInputSpec_Java.xml"/>
         <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
+        <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec_Java.xml"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
     </resources>
 
@@ -53,6 +54,10 @@
         <panel classname="LicencePanel"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
+        <panel classname="UserInputPanel" id="sudo">
+            <validator classname="com.izforge.izpack.panels.sudo.SudoPasswordValidator"/>
+        </panel>
+        <panel classname="ProcessPanel"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>
 
@@ -79,8 +84,12 @@
             <fileset dir="lib/native/windows64" targetdir="$INSTALL_PATH/bin">
                 <os family="windows" arch="amd64"/>
             </fileset>
+            <file src="java-installer-scripts/install-deps.sh" targetdir="$INSTALL_PATH/bin">
+                <os family="unix"/>
+            </file>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/checkJava" type="bin" keep="true" stage="never"/>
             <executable os="unix" targetfile="$INSTALL_PATH/bin/rv-predict" type="bin" keep="true" stage="never"/>
+            <executable os="unix" targetfile="$INSTALL_PATH/bin/install-deps.sh" type="bin" keep="true" stage="never"/>
         </pack>
         <pack name="Examples" required="no" installGroups="New Application" >
             <description>Example Java programs illustrating RV-Predict's features.</description>

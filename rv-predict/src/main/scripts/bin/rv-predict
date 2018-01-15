@@ -2,7 +2,7 @@
 
 ulimit -s `ulimit -H -s`
 
-_root=$(dirname "$0")/..
+_root=${RV_ROOT:-$(dirname "$0")/..}
 bindir=${_root}/bin
 libdir=${_root}/lib
 if [ "$1" = "--test" ]; then

@@ -2,7 +2,7 @@ SUBDIR=rvpa rvsyms trace
 
 MKINSTALL=no
 
-depend all: share/rv-predict-c/rv-predict.jar share/rv-predict-c/ldscript bin/rvpc lib/rvpinstrument.so lib/rvprt.a
+depend all: share/rv-predict-c/rv-predict.jar share/rv-predict-c/ldscript bin/rvpc bin/rv-error bin/rvpsymbolize-json lib/rvpinstrument.so lib/rvprt.a
 
 #
 # The following rules set LIBDIR to lib for compatibility
@@ -18,6 +18,12 @@ share/rv-predict-c/ldscript:
 
 bin/rvpc:
 	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= LIBDIR=/lib -C $(.CURDIR)/../scripts install
+
+bin/rv-error:
+	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= LIBDIR=/lib -C $(.CURDIR)/../errors install
+
+bin/rvpsymbolize-json:
+	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= LIBDIR=/lib -C $(.CURDIR)/../reports install
 
 lib/rvpinstrument.so:
 	$(MAKE) DESTDIR=$(.OBJDIR) PREFIX= LIBDIR=/lib -C $(.CURDIR)/../llvm/cmade install

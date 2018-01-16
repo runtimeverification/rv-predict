@@ -5,5 +5,5 @@
 # for debug output, add -X
 mvn -U -B release:prepare release:perform \
     -DpreparationGoals="clean install" \
-    -Dusername=git -DskipTests -Dobfuscate \
+    -Dusername=git -DskipTests -Dobfuscate -Dskip_installer_test \
     -Darguments="-DskipTests -Dobfuscate" "$@"

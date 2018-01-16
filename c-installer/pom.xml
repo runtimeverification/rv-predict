@@ -230,7 +230,7 @@
     </build>
     <profiles>
         <profile>
-            <id>perform-installer-test</id>
+            <id>perform-c-installer-test</id>
             <activation>
                 <property>
                     <name>!skip_installer_test</name>
@@ -244,7 +244,7 @@
                         <version>1.5.0</version>
                         <executions>
                             <execution>
-                                <id>test-installer</id>
+                                <id>test-c-installer</id>
                                 <phase>verify</phase>
                                 <goals>
                                     <goal>exec</goal>

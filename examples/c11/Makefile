@@ -11,6 +11,7 @@ INCS=lpcq.h nbcompat.h signals.h spcq.h
 FILES=Makefile
 FILES+=README.lpcq README.raceless-signal
 FILES+=$(SRCS.dot-product) $(SRCS.double-checked-locking)
+FILES+=$(SRCS.nic)
 FILES+=$(SRCS.spinning-loop) $(SRCS.square-sum) $(SRCS.memcpy)
 FILES+=$(SRCS.simple-state-machine)
 FILES+=$(SRCS.simplerace) $(SRCS.lpcq) $(SRCS.spcq) $(SRCS.raceless-signal)
@@ -19,6 +20,7 @@ FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
 PROGS=	dot-product double-checked-locking lpcq memcpy raceless-signal
+PROGS+=nic
 PROGS+=	simple-state-machine simplerace slpcq spcq spinning-loop square-sum
 #PROGS+=	stolz-queue
 .endif
@@ -32,6 +34,7 @@ WARNS=4
 
 SRCS.dot-product=dot-product.c
 SRCS.double-checked-locking=double-checked-locking.c
+SRCS.nic=nic.c
 SRCS.spinning-loop=spinning-loop.c
 SRCS.square-sum=square-sum.c
 SRCS.simple-state-machine=simple-state-machine.c

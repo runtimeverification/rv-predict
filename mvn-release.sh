@@ -6,4 +6,4 @@
 mvn -U -B release:prepare release:perform \
     -DpreparationGoals="clean install" \
     -Dusername=git -DskipTests -Dobfuscate -Dskip_installer_test \
-    -Darguments="-DskipTests -Dobfuscate" "$@"
+    -Darguments="-DskipTests -Dobfuscate -Dskip_installer_test" "$@"

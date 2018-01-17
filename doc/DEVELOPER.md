@@ -11,6 +11,7 @@ sudo apt install maven mk-configure
 sudo apt install opam openjdk-8-jdk-headless
 sudo apt install pandoc
 sudo apt install sed
+sudo apt install devscripts
 ```
 
 Here are some other programs that must be available:

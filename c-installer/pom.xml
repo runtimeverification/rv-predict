@@ -142,6 +142,21 @@
                         </configuration>
                     </execution>
                     <execution>
+                        <id>copy-debian-directory</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/../debian</directory>
+                                </resource>
+                            </resources>
+                            <outputDirectory>${staging.dir.app}/debian</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>copy-scripts</id>
                         <phase>package</phase>
                         <goals>

@@ -43,7 +43,7 @@
         <res id="CustomLangPack.xml_eng" src="res/izpack-rv-predict-eng-lang.xml"/>
         <!-- User input spec defining RV key inputs -->
         <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
-        <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
+        <res id="LicencePanel.licence" src="debian/copyright"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/rv-predict-finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
         <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec.xml"/>
@@ -80,7 +80,7 @@
                 <os family="unix"/>
             </file>
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
-            <file src="EVALUATION-LICENSE.md" targetdir="$INSTALL_PATH"/>
+            <file src="debian/copyright" targetdir="$INSTALL_PATH"/>
             <file src="install-scripts/install.sh" targetdir="$INSTALL_PATH/bin">
                 <os family="unix"/>
             </file>

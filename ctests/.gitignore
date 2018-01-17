@@ -1,5 +1,6 @@
 bin
 include
 lib
+libexec
 man
 share

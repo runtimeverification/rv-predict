@@ -2,7 +2,7 @@
     <parent>
         <groupId>com.runtimeverification.rvpredict</groupId>
         <artifactId>root</artifactId>
-        <version>1.8.34-SNAPSHOT</version>
+        <version>1.8.37-SNAPSHOT</version>
     </parent>
     <!-- Based on guide at http://docs.codehaus.org/display/IZPACK/Compiling+Using+Maven -->
     <modelVersion>4.0.0</modelVersion>
@@ -99,10 +99,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <environmentVariables>
-                        <PREBUILT>yes</PREBUILT>
-                    </environmentVariables>
-                    <executable>${basedir}/../deb-release.sh</executable>
+                    <executable>${basedir}/../deb-new-release.sh</executable>
                     <workingDirectory>${basedir}/..</workingDirectory>
                     <arguments>
                         <argument>${info.appVersion}</argument>
@@ -138,7 +135,7 @@
                             <resources>
                                 <resource>
                                     <directory>..</directory>
-                                    <include>rv-predict-c-${info.appVersion}.deb</include>
+                                    <include>rv-predict-c_${info.appVersion}-1_amd64.deb</include>
                                 </resource>
                             </resources>
                             <outputDirectory>${staging.dir.app}</outputDirectory>
@@ -185,24 +182,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>1.5.0</version>
-                <executions>
-                    <execution>
-                        <id>test-installer</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>${project.basedir}/scripts/test-installer</executable>
-                            <workingDirectory>${project.basedir}/..</workingDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <!-- 
             Install project jars after generating the izpack install jar so it shows up as
             a Maven artifact.
@@ -227,7 +206,7 @@
                             <serverId>rv-site</serverId>
                             <url>scp://release@ftp.runtimeverification.com/</url>
                             <fromDir>${staging.dir.app}</fromDir>
-                            <includes>rv-predict-c-${info.appVersion}.deb</includes>
+                            <includes>rv-predict-c_*-1_amd64.deb</includes>
                             <toDir>/var/www/predict/${project.version}/c</toDir>
                         </configuration>
                     </execution>
@@ -249,4 +228,36 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>perform-c-installer-test</id>
+            <activation>
+                <property>
+                    <name>!skip_installer_test</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>1.5.0</version>
+                        <executions>
+                            <execution>
+                                <id>test-c-installer</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${project.basedir}/scripts/test-installer</executable>
+                                    <workingDirectory>${project.basedir}/..</workingDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

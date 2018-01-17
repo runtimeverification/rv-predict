@@ -9,16 +9,16 @@ FILESDIR=$(DATADIR)/examples/rv-predict-c/c11
 INCSDIR=$(FILESDIR)
 INCS=lpcq.h nbcompat.h signals.h spcq.h
 FILES=Makefile
-FILES+=README.lpcq README.raceless-signal
+FILES+=README.lpcq README.signal
 FILES+=$(SRCS.dot-product) $(SRCS.double-checked-locking)
 FILES+=$(SRCS.spinning-loop) $(SRCS.square-sum) $(SRCS.memcpy)
 FILES+=$(SRCS.simple-state-machine)
-FILES+=$(SRCS.simplerace) $(SRCS.lpcq) $(SRCS.spcq) $(SRCS.raceless-signal)
+FILES+=$(SRCS.simplerace) $(SRCS.lpcq) $(SRCS.spcq) $(SRCS.signal)
 FILES+=$(SRCS.slpcq)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
-PROGS=	dot-product double-checked-locking lpcq memcpy raceless-signal
+PROGS=	dot-product double-checked-locking lpcq memcpy signal
 PROGS+=	simple-state-machine simplerace slpcq spcq spinning-loop square-sum
 #PROGS+=	stolz-queue
 .endif
@@ -40,7 +40,7 @@ SRCS.simplerace=simplerace.c
 SRCS.lpcq=lpcq.c lpcq_main.c signals.c
 SRCS.slpcq=slpcq.c slpcq_main.c signals.c
 SRCS.spcq=spcq.c spcq_main.c
-SRCS.raceless-signal=raceless-signal.c signals.c
+SRCS.signal=signal.c signals.c
 SRCS.stolz-queue=stolz-queue.c
 
 .include "../rvp.mk"

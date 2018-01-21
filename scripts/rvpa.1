@@ -39,14 +39,6 @@ needs to convert data & instruction addresses to names in its reports.
 Command-line options modify the behavior of
 .Nm :
 .Bl -tag -width "mmprompt-for-license"
-.It Fl Fl prompt-for-license
-if this option is on the command line, and
-.Tn RV-Predict/C
-cannot find a valid license key, then it will ask for the user's email
-address and password and try to download a new key.
-Otherwise, if there is not a valid license key,
-.Nm
-aborts the analysis.
 .It Fl Fl window Ar size
 .Tn RV-Predict/C
 segments
@@ -136,9 +128,10 @@ ignores the setting of
 .Ev RVP_TRACE_FILE
 in the user's environment.
 .It Ev RVP_ANALYSIS_ARGS
-.Nm treats the content of
+.Nm
+treats the content of
 .Ev RVP_ANALYSIS_ARGS
-as if they appeared at the beginning of its command-line arguments.
+as if it appeared at the beginning of its command-line arguments.
 Actual command-line arguments will override the arguments 
 set by
 .Ev RVP_ANALYSIS_ARGS .

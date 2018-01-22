@@ -1,4 +1,6 @@
-/* Copyright (c) 2016 Runtime Verification, Inc.  All rights reserved. */
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
 
 #include <sched.h>	/* for sched_yield() */
 #include <sys/param.h>	/* for MAX */

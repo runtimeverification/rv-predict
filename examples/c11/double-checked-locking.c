@@ -1,3 +1,7 @@
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
+
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>

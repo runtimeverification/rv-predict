@@ -44,7 +44,6 @@
         <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
         <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
-        <res id="HTMLErrorInfoPanel.invalidOS" src="res/rvpredict-java-invalid_os.html" />
         <res id="Heading.image" src="res/images/predict.png"/>
         <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec_Java.xml"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->

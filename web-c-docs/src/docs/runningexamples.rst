@@ -100,7 +100,7 @@ We will apply RV-Predict/C to ``dot-product`` in two steps.  Make sure you
 are in the directory ``/usr/share/examples/rv-predict-c/c11``.  First, ``$
 rvpc dot-product.c`` creates an instrumented version of a multithreaded
 program that computes a dot product.  Second, ``$ ./a.out`` runs the
-program and analyzes its run-time behavior.  The results look like this:
+program and analyzes its run-time behavior.  The results resemble this:
 
 .. code-block:: none
 

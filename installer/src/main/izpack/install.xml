@@ -10,6 +10,7 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
+        <run-privileged condition="izpack.windowsinstall|izpack.macinstall"/>
         <javaversion>1.8</javaversion>
     </info>
 
@@ -65,26 +66,22 @@
             </java>
             <returnvalue type="boolean">true</returnvalue>
         </condition>
-        <condition type="or" id="installOnValidOS">
+        <condition type="or" id="installOnDebianOrUbuntu">
             <condition type="ref" refid="installOnDebian"></condition>
             <condition type="ref" refid="installOnUbuntu"></condition>
-        </condition>
-        <condition type="not" id="installOnInvalidOS">
-            <condition type="ref" refid="installOnValidOS"></condition>
         </condition>
     </conditions>
 
     <!-- Installer Panel Sequence -->
     <panels>
-        <panel classname="com.izforge.izpack.panels.htmlerrorinfo.HTMLErrorInfoPanel" condition="installOnInvalidOS" id="invalidOS" />
         <panel classname="TargetPanel"/>
         <panel classname="LicencePanel"/>
         <panel classname="PacksPanel"/>
         <panel classname="InstallPanel"/>
-        <panel classname="UserInputPanel" id="sudo">
+        <panel classname="UserInputPanel" id="sudo" condition="installOnDebianOrUbuntu">
             <validator classname="com.izforge.izpack.panels.sudo.SudoPasswordValidator"/>
         </panel>
-        <panel classname="ProcessPanel"/>
+        <panel classname="ProcessPanel" condition="installOnDebianOrUbuntu"/>
         <panel classname="com.izforge.izpack.panels.htmlfinishinfo.HTMLFinishInfoPanel" id="finish" />
     </panels>
 

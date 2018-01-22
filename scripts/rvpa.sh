@@ -7,12 +7,28 @@ analyze_passthrough=
 symbolize_passthrough=
 sharedir=$(dirname $0)/../share/rv-predict-c
 
-usage()
+_usage()
 {
-cat 1>&2 <<EOF
-usage: $(basename $0) [--prompt-for-license] [--window size]
+	cat 1>&2 <<EOF
+usage: $(basename $0) [--window size]
     [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--]
     program [trace-file]
+EOF
+}
+
+usage()
+{
+	_usage
+	exit 1
+}
+
+help()
+{
+	_usage
+	cat 1>&2 <<EOF
+
+For more information, see the manual page, $(basename $0)(1).
+
 EOF
 	exit 1
 }
@@ -91,7 +107,7 @@ if [ -n "${RVP_ANALYSIS_ARGS:-}" ]; then
 	set -- ${RVP_ANALYSIS_ARGS} "$@"
 fi
 
-while [ $# -gt 1 ]; do
+while [ $# -ge 1 ]; do
 	case $1 in
 	--no-symbol)
 		symbolize_passthrough="${symbolize_passthrough:-} -S"
@@ -128,7 +144,11 @@ while [ $# -gt 1 ]; do
 		shift
 		shift
 		;;
-	--prompt-for-license|--debug)
+	-h|--help)
+		shift
+		help
+		;;
+	--debug)
 		analyze_passthrough="${analyze_passthrough:-} $1"
 		shift
 		;;

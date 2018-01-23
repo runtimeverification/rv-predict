@@ -1,6 +1,6 @@
 Quickstart
 ==========
-.. note:: We only currently officially support automated installation for Ubuntu and Debian. 
+.. note:: We only currently officially support RV-Predict/C on 64-bit Ubuntu Linux 16.04 and greater. 
           If you would like to use a different distribution, `contact support <https://runtimeverification.com/support>`_ and
           we will be happy to add support for you.  
 
@@ -13,7 +13,7 @@ GUI Installer
 2. Download the `RV-Predict/C GUI installer <https://runtimeverification.com/predict/>`_.
 3. Run the ``.jar`` file with ``java -jar rv-predict-c-installer.jar``. Follow the instructions to finish the installation.  
 
-Debian Installer 
+Debian package 
 ~~~~~~~~~~~~~~~~
 1. Download the `RV-Predict/C Debian package <https://runtimeverification.com/predict/>`_.
 2. Run the ``.deb`` file with ``sudo apt-get update; sudo dpkg -i rv-predict-c.deb``.  

@@ -248,7 +248,7 @@ Helgrind analysis is shown below.
 
 Helgrind is able to detect two data races related to concurrent writes or
 a concurrent read and a concurrent write at line 62, but not is not able
-to predict a concurrent write at line 62 and a concurrent read at line 63.
+to predict a concurrent write at line 62 and a concurrent read at line 64.
 
 2. Simple State Machine
 -----------------------

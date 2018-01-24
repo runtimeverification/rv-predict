@@ -16,6 +16,8 @@ let rec trim_rvp frames = match frames with
 | frame :: tail ->
     if frame.symbol = "__rvpredict_thread_wrapper" then
       []
+    else if frame.symbol = "__rvpredict_static_intr_handler" then
+      []
     else if String.length frame.symbol >= magic_len 
         && String.sub frame.symbol 0 magic_len = magic then
       trim_rvp tail

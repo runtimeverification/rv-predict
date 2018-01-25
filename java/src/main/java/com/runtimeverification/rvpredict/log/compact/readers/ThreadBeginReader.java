@@ -13,9 +13,10 @@ public class ThreadBeginReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 TraceElement::new,
-                (context, compactEventFactory, element) ->
+                (context, originalEventId, compactEventFactory, element) ->
                         compactEventFactory.beginThread(
-                                context, element.threadId.getAsLong(), element.generation.getAsLong()));
+                                context, originalEventId,
+                                element.threadId.getAsLong(), element.generation.getAsLong()));
     }
 
     private static class TraceElement extends ReadableAggregateData {

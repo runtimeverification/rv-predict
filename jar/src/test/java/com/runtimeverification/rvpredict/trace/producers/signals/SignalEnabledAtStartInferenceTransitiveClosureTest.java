@@ -21,6 +21,7 @@ import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -140,12 +141,12 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_1)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_1)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceFromInterruptions.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_2)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_2, Constants.INVALID_EVENT_ID)));
 
         when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(TTID_1, TTID_2));
         ThreadInfosComponentUtils.fillMockThreadInfosComponentFromThreadInfos(
@@ -161,17 +162,17 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_1));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2).keySet(),
                 containsExactly(TTID_1));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_1));
     }
 
@@ -190,12 +191,12 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_4)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_4, Constants.INVALID_EVENT_ID)));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_5)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_5, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceFromInterruptions.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_3, ImmutableSet.of(TTID_6)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_3, ImmutableMap.of(TTID_6, Constants.INVALID_EVENT_ID)));
 
         when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(
                 TTID_1, TTID_2, TTID_3, TTID_4, TTID_5, TTID_6));
@@ -229,18 +230,18 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2).keySet(),
                 containsExactly(TTID_2, TTID_5));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_3));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_3),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_3).keySet(),
                 containsExactly(TTID_3, TTID_6));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         // TTID_1 is not in the set because we can't infer disable bits from signal interruptions.
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_4));
     }
 
@@ -259,12 +260,12 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_4)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_4, Constants.INVALID_EVENT_ID)));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_5)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_5, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceFromInterruptions.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_3, ImmutableSet.of(TTID_6)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_3, ImmutableMap.of(TTID_6, Constants.INVALID_EVENT_ID)));
 
         when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(
                 TTID_1, TTID_2, TTID_3, TTID_4, TTID_5, TTID_6));
@@ -283,9 +284,18 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                 mockSignalMaskForEvents,
                 Collections.emptyMap(),
                 ImmutableMap.of(
-                        TTID_1, ImmutableMap.of(EVENT_ID_1, SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_1)),
-                        TTID_2, ImmutableMap.of(EVENT_ID_2, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_2)),
-                        TTID_3, ImmutableMap.of(EVENT_ID_3, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_3))));
+                        TTID_1,
+                        ImmutableMap.of(
+                                EVENT_ID_1,
+                                SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)),
+                        TTID_2,
+                        ImmutableMap.of(
+                                EVENT_ID_2,
+                                SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID)),
+                        TTID_3,
+                        ImmutableMap.of(
+                                EVENT_ID_3,
+                                SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_3, Constants.INVALID_EVENT_ID))));
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
                 ImmutableMap.of(
@@ -298,17 +308,17 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2).keySet(),
                 containsExactly(TTID_5));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_3));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_3),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_3).keySet(),
                 containsExactly(TTID_6));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_4));
     }
 
@@ -327,12 +337,12 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         mockTtidToStartAndJoinEventsForWindow);
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_4)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_4, Constants.INVALID_EVENT_ID)));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_5)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_5, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceFromInterruptions.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_3, ImmutableSet.of(TTID_6)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_3, ImmutableMap.of(TTID_6, Constants.INVALID_EVENT_ID)));
 
         when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(
                 TTID_1, TTID_2, TTID_3, TTID_4, TTID_5, TTID_6));
@@ -358,18 +368,18 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2).keySet(),
                 containsExactly(TTID_2, TTID_5));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_3));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_3),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_3).keySet(),
                 containsExactly(TTID_3, TTID_6));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         // TTID_1 is not in the set because we can't infer disable bits from signal interruptions.
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_4));
     }
 
@@ -392,10 +402,10 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         ReadonlyEventInterface start4 = TraceUtils.extractSingleEvent(tu.threadStart(THREAD_4));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_7)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_7, Constants.INVALID_EVENT_ID)));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_7)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_7, Constants.INVALID_EVENT_ID)));
 
         when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(
                 TTID_1, TTID_7));
@@ -410,8 +420,12 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
                 ImmutableMap.of(
-                        TTID_1, SignalMask.UNKNOWN_MASK,
-                        TTID_7, SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_2).enable(SIGNAL_NUMBER_1)));
+                        TTID_1,
+                        SignalMask.UNKNOWN_MASK,
+                        TTID_7,
+                        SignalMask.UNKNOWN_MASK
+                                .disable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID)
+                                .enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)));
         StartAndJoinEventsForWindowUtils.fillMockStartAndJoinEventsForWindow(
                 mockTtidToStartAndJoinEventsForWindow,
                 ImmutableMap.of(TTID_7, start4),
@@ -421,14 +435,14 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2).keySet(),
                 containsExactly(TTID_1, TTID_7));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         // TTID_1 is not in the set because we can't infer disable bits from signal interruptions.
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_1, TTID_7));
     }
 
@@ -451,10 +465,10 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         ReadonlyEventInterface start4 = TraceUtils.extractSingleEvent(tu.threadStart(THREAD_4));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_7)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_7, Constants.INVALID_EVENT_ID)));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_7)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_7, Constants.INVALID_EVENT_ID)));
 
         when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(
                 TTID_1, TTID_7));
@@ -469,8 +483,12 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
                 ImmutableMap.of(
-                        TTID_1, SignalMask.UNKNOWN_MASK,
-                        TTID_7, SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_2).enable(SIGNAL_NUMBER_1)));
+                        TTID_1,
+                        SignalMask.UNKNOWN_MASK,
+                        TTID_7,
+                        SignalMask.UNKNOWN_MASK
+                                .disable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID)
+                                .enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)));
         StartAndJoinEventsForWindowUtils.fillMockStartAndJoinEventsForWindow(
                 mockTtidToStartAndJoinEventsForWindow,
                 ImmutableMap.of(TTID_7, start4),
@@ -480,23 +498,23 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2).keySet(),
                 containsExactly(TTID_1, TTID_7));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         // TTID_1 is not in the set because we can't infer disable bits from signal interruptions.
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_1, TTID_7));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_1)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
 
         when(mockSignalEnabledAtStartInferenceFromReads.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_1)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceFromInterruptions.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_2)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_2, Constants.INVALID_EVENT_ID)));
 
         when(mockSortedTtidsWithParentFirst.getTtids()).thenReturn(ImmutableList.of(TTID_1, TTID_2));
         ThreadInfosComponentUtils.fillMockThreadInfosComponentFromThreadInfos(
@@ -512,19 +530,18 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), hasMapSize(2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_1));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_2));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_2));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_2).keySet(),
                 containsExactly(TTID_1));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), hasMapSize(1));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_1));
-
     }
 
     private ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure> initProducer(

@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -44,7 +45,7 @@ public class FunctionEnterReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
         when(mockCompactEventFactory.enterFunction(
-                mockContext, CANONICAL_FRAME_ADDRESS, OptionalLong.of(CALL_SITE_ADDRESS)))
+                mockContext, Constants.INVALID_EVENT_ID, CANONICAL_FRAME_ADDRESS, OptionalLong.of(CALL_SITE_ADDRESS)))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
         ByteBuffer buffer = ByteBuffer.allocate(24)
@@ -53,7 +54,8 @@ public class FunctionEnterReaderTest {
 
         CompactEventReader.Reader reader = FunctionEnterReader.createReader();
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                reader.readEvent(
+                        mockContext, Constants.INVALID_EVENT_ID, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

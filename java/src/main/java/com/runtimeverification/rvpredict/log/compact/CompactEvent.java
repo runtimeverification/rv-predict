@@ -14,17 +14,25 @@ public abstract class CompactEvent extends ReadonlyEvent {
     private final long originalThreadId;
     private final int signalDepth;
     private final EventType type;
+    private final long originalEventId;
 
-    CompactEvent(Context context, EventType type) {
-        this(context.newId(), context.getPC(), context.getThreadId(), context.getSignalDepth(), type);
+    CompactEvent(Context context, EventType type, long originalEventId) {
+        this(context.newId(), context.getPC(), context.getThreadId(), context.getSignalDepth(), type, originalEventId);
     }
 
     @VisibleForTesting
-    public CompactEvent(long eventId, long locationId, long originalThreadId, int signalDepth, EventType type) {
+    public CompactEvent(
+            long eventId,
+            long locationId,
+            long originalThreadId,
+            int signalDepth,
+            EventType type,
+            long originalEventId) {
         this.eventId = eventId;
         this.locationId = locationId;
         this.originalThreadId = originalThreadId;
         this.signalDepth = signalDepth;
+        this.originalEventId = originalEventId;
         this.type = type;
     }
 
@@ -152,6 +160,11 @@ public abstract class CompactEvent extends ReadonlyEvent {
     public ReadonlyEventInterface destructiveWithEventId(long eventId) {
         this.eventId = eventId;
         return this;
+    }
+
+    @Override
+    public long getOriginalId() {
+        return originalEventId;
     }
 
     @Override

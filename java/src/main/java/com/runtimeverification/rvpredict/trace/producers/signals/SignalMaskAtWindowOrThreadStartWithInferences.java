@@ -1,13 +1,13 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
+import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
-import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.signals.SignalMismatchError;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class SignalMaskAtWindowOrThreadStartWithInferences
         extends SignalMaskAtWindowStart<SignalMaskAtWindowOrThreadStartWithInferences.State> {
@@ -22,6 +22,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferences
         public void reset() {
             signalMasks.clear();
         }
+
     }
 
     public SignalMaskAtWindowOrThreadStartWithInferences(
@@ -54,18 +55,26 @@ public class SignalMaskAtWindowOrThreadStartWithInferences
     }
 
     private SignalMask setSignalMaskBits(
-            int ttid, SignalMask mask, Map<Long, Set<Integer>> signalNumberToTtids, boolean enable) {
-        for (Map.Entry<Long, Set<Integer>> entry : signalNumberToTtids.entrySet()) {
-            if (!entry.getValue().contains(ttid)) {
+            int ttid, SignalMask mask, Map<Long, Map<Integer, Long>> signalNumberToTtids, boolean enable) {
+        for (Map.Entry<Long, Map<Integer, Long>> entry : signalNumberToTtids.entrySet()) {
+            Long originalEventId = entry.getValue().get(ttid);
+            if (originalEventId == null) {
                 continue;
             }
             long signalNumber = entry.getKey();
             SignalMask.SignalMaskBit maskBit = mask.getMaskBit(signalNumber);
             if (maskBit == SignalMask.SignalMaskBit.UNKNOWN) {
-                mask = enable ? mask.enable(signalNumber) : mask.disable(signalNumber);
+                mask = enable
+                        ? mask.enable(signalNumber, originalEventId)
+                        : mask.disable(signalNumber, originalEventId);
                 continue;
             }
-            assert maskBit == (enable ? SignalMask.SignalMaskBit.ENABLED : SignalMask.SignalMaskBit.DISABLED);
+            if (maskBit != (enable ? SignalMask.SignalMaskBit.ENABLED : SignalMask.SignalMaskBit.DISABLED)) {
+                System.out.println("hello");
+            }
+            assert maskBit == (enable ? SignalMask.SignalMaskBit.ENABLED : SignalMask.SignalMaskBit.DISABLED)
+                    : SignalMismatchError.errorMessage(
+                            originalEventId, mask.getOriginalEventIdForChange(signalNumber), signalNumber);
         }
         return mask;
     }

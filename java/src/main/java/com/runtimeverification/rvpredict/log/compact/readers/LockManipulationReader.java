@@ -7,7 +7,8 @@ public class LockManipulationReader {
     public static CompactEventReader.Reader createReader(CompactEventReader.LockManipulationType lockManipulationType) {
         return new SimpleDataReader<>(
                 Address::new,
-                (context, compactEventFactory, address) ->
-                        compactEventFactory.lockManipulation(context, lockManipulationType, address.getAsLong()));
+                (context, originalEventId, compactEventFactory, address) ->
+                        compactEventFactory.lockManipulation(
+                                context, originalEventId, lockManipulationType, address.getAsLong()));
     }
 }

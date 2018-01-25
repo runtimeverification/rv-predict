@@ -17,7 +17,8 @@ class SimpleDataReader<T extends ReadableData> implements CompactEventReader.Rea
 
     interface ReadableDataToEventListConverter<T> {
         List<ReadonlyEventInterface> dataElementToEvent(
-                Context context, CompactEventFactory compactEventFactory, T element)
+                Context context, long originalEventId,
+                CompactEventFactory compactEventFactory, T element)
                 throws InvalidTraceDataException;
     }
 
@@ -34,10 +35,11 @@ class SimpleDataReader<T extends ReadableData> implements CompactEventReader.Rea
 
     @Override
     public List<ReadonlyEventInterface> readEvent(
-            Context context, CompactEventFactory compactEventFactory, TraceHeader header, ByteBuffer buffer)
+            Context context, long originalEventId,
+            CompactEventFactory compactEventFactory, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
         T element = reader.getInit(header);
         element.read(buffer);
-        return converter.dataElementToEvent(context, compactEventFactory, element);
+        return converter.dataElementToEvent(context, originalEventId, compactEventFactory, element);
     }
 }

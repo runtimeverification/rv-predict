@@ -5,6 +5,7 @@ import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.producerframework.TestProducerModule;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.testutils.SignalMasksAtWindowStartUtils;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,7 +52,10 @@ public class TtidsToSignalEnablingTest {
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
                 Collections.singletonMap(
-                        TTID_1, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1).disable(SIGNAL_NUMBER_2)));
+                        TTID_1,
+                        SignalMask.UNKNOWN_MASK
+                                .enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)
+                                .disable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID)));
         module.reset();
 
         Map<Long, Set<Integer>> signalToTtidWhereDisabled =

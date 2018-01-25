@@ -13,9 +13,9 @@ public class FunctionEnterReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 TraceElement::new,
-                (context, compactEventFactory, element) ->
+                (context, originalEventId, compactEventFactory, element) ->
                         compactEventFactory.enterFunction(
-                                context, element.canonicalFrameAddress.getAsLong(),
+                                context, originalEventId, element.canonicalFrameAddress.getAsLong(),
                                 optionalFromZeroable(element.callSite.getAsLong())));
     }
 

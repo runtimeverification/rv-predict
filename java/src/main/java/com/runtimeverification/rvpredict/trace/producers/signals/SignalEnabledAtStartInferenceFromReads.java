@@ -1,18 +1,17 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.producerframework.ProducerState;
-import com.runtimeverification.rvpredict.signals.SignalMask;
-import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.ProducerState;
+import com.runtimeverification.rvpredict.signals.SignalMask;
+import com.runtimeverification.rvpredict.signals.SignalMismatchError;
+import com.runtimeverification.rvpredict.signals.Signals;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTraces;
 import com.runtimeverification.rvpredict.util.Constants;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class SignalEnabledAtStartInferenceFromReads
         extends ComputingProducer<SignalEnabledAtStartInferenceFromReads.State> {
@@ -20,8 +19,8 @@ public class SignalEnabledAtStartInferenceFromReads
     private final SignalMaskForEvents signalMaskForEvents;
 
     protected static class State implements ProducerState {
-        private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
-        private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+        private final Map<Long, Map<Integer, Long>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+        private final Map<Long, Map<Integer, Long>> signalToTtidWhereDisabledAtStart = new HashMap<>();
 
         @Override
         public void reset() {
@@ -53,21 +52,23 @@ public class SignalEnabledAtStartInferenceFromReads
                     SignalMask.SignalMaskBit maskBit = computedMask.getMaskBit(signalNumber);
                     switch (maskBit) {
                         case ENABLED:
-                            assert Signals.signalIsEnabled(signalNumber, mask);
+                            assert Signals.signalIsEnabled(signalNumber, mask)
+                                    : SignalMismatchError.errorMessage(event, computedMask, signalNumber);
                             break;
                         case DISABLED:
-                            assert Signals.signalIsDisabledInFullMask(signalNumber, mask);
+                            assert Signals.signalIsDisabledInFullMask(signalNumber, mask)
+                                    : SignalMismatchError.errorMessage(event, computedMask, signalNumber);
                             break;
                         case UNKNOWN:
                             if (Signals.signalIsEnabled(signalNumber, mask)) {
                                 getState().signalToTtidWhereEnabledAtStart
-                                        .computeIfAbsent(signalNumber, k -> new HashSet<>())
-                                        .add(ttid);
+                                        .computeIfAbsent(signalNumber, k -> new HashMap<>())
+                                        .put(ttid, event.getOriginalId());
                             } else {
                                 assert Signals.signalIsDisabledInFullMask(signalNumber, mask);
                                 getState().signalToTtidWhereDisabledAtStart
-                                        .computeIfAbsent(signalNumber, k -> new HashSet<>())
-                                        .add(ttid);
+                                        .computeIfAbsent(signalNumber, k -> new HashMap<>())
+                                        .put(ttid, event.getOriginalId());
                             }
                             break;
                         default:
@@ -78,11 +79,11 @@ public class SignalEnabledAtStartInferenceFromReads
         });
     }
 
-    Map<Long, Set<Integer>> getSignalToTtidWhereEnabledAtStart() {
+    Map<Long, Map<Integer, Long>> getSignalToTtidWhereEnabledAtStart() {
         return getState().signalToTtidWhereEnabledAtStart;
     }
 
-    Map<Long, Set<Integer>> getSignalToTtidWhereDisabledAtStart() {
+    Map<Long, Map<Integer, Long>> getSignalToTtidWhereDisabledAtStart() {
         return getState().signalToTtidWhereDisabledAtStart;
     }
 }

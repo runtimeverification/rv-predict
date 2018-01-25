@@ -7,7 +7,7 @@ public class ThreadSyncReader {
     public static CompactEventReader.Reader createReader(CompactEventReader.ThreadSyncType threadSyncType) {
         return new SimpleDataReader<>(
                 ThreadId::new,
-                (context, compactEventFactory, threadId) ->
-                        compactEventFactory.threadSync(context, threadSyncType, threadId.getAsLong()));
+                (context, originalEventId, compactEventFactory, threadId) ->
+                        compactEventFactory.threadSync(context, originalEventId, threadSyncType, threadId.getAsLong()));
     }
 }

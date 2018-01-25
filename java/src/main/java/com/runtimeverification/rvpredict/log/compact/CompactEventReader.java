@@ -135,7 +135,7 @@ public class CompactEventReader implements IEventReader {
                         "Short read for " + this + ", expected " + buffer.length + " bytes, got " + readSize + ".");
             }
             return reader.readEvent(
-                    context, compactEventFactory, header,
+                    context, context.newOriginalEventId(), compactEventFactory, header,
                     ByteBuffer.wrap(buffer).order(header.getByteOrder()));
         }
 
@@ -179,6 +179,7 @@ public class CompactEventReader implements IEventReader {
         int size(TraceHeader header) throws InvalidTraceDataException;
         List<ReadonlyEventInterface> readEvent(
                 Context context,
+                long originalEventId,
                 CompactEventFactory compactEventFactory,
                 TraceHeader header,
                 ByteBuffer buffer)
@@ -228,7 +229,9 @@ public class CompactEventReader implements IEventReader {
         ThreadId threadId = new ThreadId(header);
         readData(inputStream, threadId, "thread id for the start event");
 
-        events = factory.beginThread(context, threadId.getAsLong(), 0);  // The first generation is always 0.
+        events = factory.beginThread(
+                context, context.newOriginalEventId(),
+                threadId.getAsLong(), 0);  // The first generation is always 0.
 
         currentEvent = -1;
         readEvent();

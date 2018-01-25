@@ -14,9 +14,10 @@ public class SignalEnterReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 TraceElement::new,
-                (context, compactEventFactory, element) ->
+                (context, originalEventId, compactEventFactory, element) ->
                         compactEventFactory.enterSignal(
                                 context,
+                                originalEventId,
                                 element.generation.getAsLong(),
                                 element.signalNumber.getAsLong(),
                                 element.handler.getAsLong()));

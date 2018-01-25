@@ -8,13 +8,12 @@ import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.producers.base.OtidToSignalDepthToTtidAtWindowStart;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
+import com.runtimeverification.rvpredict.util.Constants;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
-import java.util.Set;
 
 public class SignalEnabledAtStartInferenceFromInterruptions extends
         ComputingProducer<SignalEnabledAtStartInferenceFromInterruptions.State> {
@@ -25,7 +24,7 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends
     private final OtidToSignalDepthToTtidAtWindowStart otidToSignalDepthToTtidAtWindowStart;
 
     protected static class State implements ProducerState {
-        private Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+        private Map<Long, Map<Integer, Long>> signalToTtidWhereEnabledAtStart = new HashMap<>();
 
         @Override
         public void reset() {
@@ -64,8 +63,9 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends
                                     // didn't know it when the thread/signal started. However, because of the
                                     // interruption, we can infer that it was enabled at the beginning.
                                     getState().signalToTtidWhereEnabledAtStart
-                                            .computeIfAbsent(signalNumber, k -> new HashSet<>())
-                                            .add(ttid);
+                                            .computeIfAbsent(signalNumber, k -> new HashMap<>())
+                                            // TODO: Put a better event ID here.
+                                            .put(ttid, Constants.INTERRUPTION_MARKER_EVENT_ID);
                                     break;
                                 case ENABLED:
                                     // We can't learn anything new.
@@ -100,8 +100,8 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends
                     // TODO(virgil): Maybe it would be worth checking that it is not already enabled.
                     // The semantics would be cleaner, but it shouldn't make a difference in practice.
                     getState().signalToTtidWhereEnabledAtStart
-                            .computeIfAbsent(signalNumber.getAsLong(), k -> new HashSet<>())
-                            .add(parentTtid);
+                            .computeIfAbsent(signalNumber.getAsLong(), k -> new HashMap<>())
+                            .put(parentTtid, Constants.INTERRUPTION_MARKER_EVENT_ID);
                 });
     }
 
@@ -109,7 +109,7 @@ public class SignalEnabledAtStartInferenceFromInterruptions extends
         return threadInfosComponent.getThreadType(ttid) == ThreadType.SIGNAL;
     }
 
-    Map<Long, Set<Integer>> getSignalToTtidWhereEnabledAtStart() {
+    Map<Long, Map<Integer, Long>> getSignalToTtidWhereEnabledAtStart() {
         return getState().signalToTtidWhereEnabledAtStart;
     }
 }

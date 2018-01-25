@@ -7,7 +7,7 @@ public class BlockSignalsReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 SignalMaskNumber::new,
-                (context, compactEventFactory, signalMaskNumber) ->
-                        compactEventFactory.blockSignals(context, signalMaskNumber.getAsLong()));
+                (context, originalEventId, compactEventFactory, signalMaskNumber) ->
+                        compactEventFactory.blockSignals(context, originalEventId, signalMaskNumber.getAsLong()));
     }
 }

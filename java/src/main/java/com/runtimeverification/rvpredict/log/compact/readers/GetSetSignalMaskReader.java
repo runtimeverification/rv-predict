@@ -12,8 +12,9 @@ public class GetSetSignalMaskReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 header -> new TraceElement(header),
-                (context, compactEventFactory, element) -> compactEventFactory.getSetSignalMask(
+                (context, originalEventId, compactEventFactory, element) -> compactEventFactory.getSetSignalMask(
                         context,
+                        originalEventId,
                         element.readMask.getAsLong(),
                         element.writeMask.getAsLong()));
     }

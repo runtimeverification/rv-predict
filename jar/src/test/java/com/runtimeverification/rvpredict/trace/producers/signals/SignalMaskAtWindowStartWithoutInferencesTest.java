@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.TestProducerModule;
 import com.runtimeverification.rvpredict.signals.SignalMask;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +35,8 @@ public class SignalMaskAtWindowStartWithoutInferencesTest {
                 initProducer(module, mockSignalMaskAtWindowStartLeaf);
 
         when(mockSignalMaskAtWindowStartLeaf.getMasks())
-                .thenReturn(ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1)));
+                .thenReturn(ImmutableMap.of(
+                        TTID_1, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)));
         module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalMasks(), hasMapSize(1));
@@ -50,7 +52,8 @@ public class SignalMaskAtWindowStartWithoutInferencesTest {
                 initProducer(module, mockSignalMaskAtWindowStartLeaf);
 
         when(mockSignalMaskAtWindowStartLeaf.getMasks())
-                .thenReturn(ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1)));
+                .thenReturn(ImmutableMap.of(
+                        TTID_1, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)));
         module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalMasks(), hasMapSize(1));

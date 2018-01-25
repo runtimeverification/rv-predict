@@ -6,6 +6,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,7 +51,7 @@ public class GetSignalMaskReaderTest {
     public void readsData() throws InvalidTraceDataException {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
-        when(mockCompactEventFactory.getSignalMask(mockContext, SIGNAL_MASK_NUMBER))
+        when(mockCompactEventFactory.getSignalMask(mockContext, Constants.INVALID_EVENT_ID, SIGNAL_MASK_NUMBER))
                 .thenReturn(EVENT_LIST);
 
         ByteBuffer buffer = ByteBuffer.allocate(24)
@@ -59,7 +60,8 @@ public class GetSignalMaskReaderTest {
 
         CompactEventReader.Reader reader = GetSignalMaskReader.createReader();
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                reader.readEvent(
+                        mockContext, Constants.INVALID_EVENT_ID, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertTrue(EVENT_LIST == events);
     }

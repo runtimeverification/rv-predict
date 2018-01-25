@@ -9,7 +9,7 @@ public class SignalDepthReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 header -> new VariableInt(header, 4),
-                (context, compactEventFactory, depth) ->
+                (context, originalEventId, compactEventFactory, depth) ->
                         compactEventFactory.signalDepth(context, toIntExact(depth.getAsLong())));
     }
 }

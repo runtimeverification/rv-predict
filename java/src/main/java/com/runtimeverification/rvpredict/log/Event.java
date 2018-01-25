@@ -173,6 +173,11 @@ public class Event extends ReadonlyEvent {
     }
 
     @Override
+    public long getOriginalId() {
+        return eventId;
+    }
+
+    @Override
     public OptionalLong getCallSiteAddress() {
         assert getType() == EventType.INVOKE_METHOD;
         return OptionalLong.empty();

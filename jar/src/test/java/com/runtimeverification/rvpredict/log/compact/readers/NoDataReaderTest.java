@@ -6,6 +6,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventFactory;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,16 +31,19 @@ public class NoDataReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
 
-        NoDataReader reader = new NoDataReader((factory, context) -> Collections.singletonList(mockCompactEvent));
+        NoDataReader reader = new NoDataReader(
+                (factory, context, originalEventId) -> Collections.singletonList(mockCompactEvent));
         Assert.assertEquals(0, reader.size(mockTraceHeader));
     }
 
     @Test
     public void usesFactoryToCreate() throws InvalidTraceDataException {
         ByteBuffer buffer = ByteBuffer.allocate(0);
-        NoDataReader reader = new NoDataReader((factory, context) -> Collections.singletonList(mockCompactEvent));
+        NoDataReader reader = new NoDataReader(
+                (factory, context, originalEventId) -> Collections.singletonList(mockCompactEvent));
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                reader.readEvent(
+                        mockContext, Constants.INVALID_EVENT_ID, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

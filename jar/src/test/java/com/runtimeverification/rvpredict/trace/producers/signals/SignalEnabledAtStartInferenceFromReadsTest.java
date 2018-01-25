@@ -70,7 +70,7 @@ public class SignalEnabledAtStartInferenceFromReadsTest {
                 hasMapSize(Math.toIntExact(Constants.SIGNAL_NUMBER_COUNT)));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereDisabledAtStart().containsKey(SIGNAL_NUMBER_1));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereDisabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(rawTrace.getThreadInfo().getId()));
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereEnabledAtStart(), isEmptyMap());
     }
@@ -96,7 +96,7 @@ public class SignalEnabledAtStartInferenceFromReadsTest {
                 hasMapSize(Math.toIntExact(Constants.SIGNAL_NUMBER_COUNT)));
         Assert.assertTrue(producer.getComputed().getSignalToTtidWhereEnabledAtStart().containsKey(SIGNAL_NUMBER_1));
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(rawTrace.getThreadInfo().getId()));
     }
 
@@ -112,7 +112,7 @@ public class SignalEnabledAtStartInferenceFromReadsTest {
         SignalMaskForEventsUtils.clearMockSignalMaskForEvents(mockSignalMaskForEvents);
         when(mockSignalMaskForEvents.getSignalMaskBeforeEvent(
                 rawTrace.getThreadInfo().getId(), TraceUtils.extractSingleEvent(e1).getEventId()))
-                .thenReturn(SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_1));
+                .thenReturn(SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID));
 
         Assert.assertThat(
                 producer.getComputed().getSignalToTtidWhereDisabledAtStart(),
@@ -133,7 +133,7 @@ public class SignalEnabledAtStartInferenceFromReadsTest {
         SignalMaskForEventsUtils.clearMockSignalMaskForEvents(mockSignalMaskForEvents);
         when(mockSignalMaskForEvents.getSignalMaskBeforeEvent(
                 rawTrace.getThreadInfo().getId(), TraceUtils.extractSingleEvent(e1).getEventId()))
-                .thenReturn(SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1));
+                .thenReturn(SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID));
 
         Assert.assertThat(producer.getComputed().getSignalToTtidWhereDisabledAtStart(), isEmptyMap());
 

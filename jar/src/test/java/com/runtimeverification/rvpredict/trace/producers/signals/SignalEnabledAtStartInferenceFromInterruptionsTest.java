@@ -13,6 +13,7 @@ import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.producers.base.OtidToSignalDepthToTtidAtWindowStart;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -98,7 +99,7 @@ public class SignalEnabledAtStartInferenceFromInterruptionsTest {
 
         Assert.assertEquals(1, producer.getComputed().getSignalToTtidWhereEnabledAtStart().size());
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_1));
     }
 
@@ -120,7 +121,7 @@ public class SignalEnabledAtStartInferenceFromInterruptionsTest {
                 ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_1, EVENT_ID_1)));
         SignalMaskForEventsUtils.clearMockSignalMaskForEvents(mockSignalMaskForEvents);
         when(mockSignalMaskForEvents.getSignalMaskBeforeEvent(TTID_1, EVENT_ID_1))
-                .thenReturn(SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1));
+                .thenReturn(SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID));
         TtidSetDifferenceUtils.clearMockTtidSetDifference(mockUnfinishedTtidsAtWindowStart);
         ThreadInfosComponentUtils.fillMockThreadInfosComponentFromThreadInfos(
                 mockThreadInfosComponent, THREAD_INFO_1, SIGNAL_INFO_2);
@@ -155,7 +156,7 @@ public class SignalEnabledAtStartInferenceFromInterruptionsTest {
 
         Assert.assertEquals(1, producer.getComputed().getSignalToTtidWhereEnabledAtStart().size());
         Assert.assertThat(
-                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1),
+                producer.getComputed().getSignalToTtidWhereEnabledAtStart().get(SIGNAL_NUMBER_1).keySet(),
                 containsExactly(TTID_1));
     }
 

@@ -40,20 +40,20 @@ public class Signals {
     public static Optional<SignalMask> changedSignalMaskAfterEvent(
             ReadonlyEventInterface event, SignalMask threadMask) {
         if (event.getType() == EventType.UNBLOCK_SIGNALS) {
-            return Optional.of(threadMask.unblock(event.getPartialSignalMask()));
+            return Optional.of(threadMask.unblock(event.getPartialSignalMask(), event.getOriginalId()));
         } else if (event.getType() == EventType.BLOCK_SIGNALS) {
-            return Optional.of(threadMask.block(event.getPartialSignalMask()));
+            return Optional.of(threadMask.block(event.getPartialSignalMask(), event.getOriginalId()));
         } else if (event.getType() == EventType.WRITE_SIGNAL_MASK) {
-            return Optional.of(threadMask.setMask(event.getFullWriteSignalMask()));
+            return Optional.of(threadMask.setMask(event.getFullWriteSignalMask(), event.getOriginalId()));
         } else if (event.getType() == EventType.READ_SIGNAL_MASK) {
-            threadMask.assertSameBits(event.getFullReadSignalMask());
+            threadMask.assertSameBits(event.getFullReadSignalMask(), event.getOriginalId());
             // Since the signal mask is per-thread and we have read-write consistency
             // for these, it's safe to overwrite the unknown bits in the mask with
             // the read values.
-            return Optional.of(threadMask.setMask(event.getFullReadSignalMask()));
+            return Optional.of(threadMask.setMask(event.getFullReadSignalMask(), event.getOriginalId()));
         } else if (event.getType() == EventType.READ_WRITE_SIGNAL_MASK) {
-            threadMask.assertSameBits(event.getFullReadSignalMask());
-            return Optional.of(threadMask.setMask(event.getFullWriteSignalMask()));
+            threadMask.assertSameBits(event.getFullReadSignalMask(), event.getOriginalId());
+            return Optional.of(threadMask.setMask(event.getFullWriteSignalMask(), event.getOriginalId()));
         }
         return Optional.empty();
     }

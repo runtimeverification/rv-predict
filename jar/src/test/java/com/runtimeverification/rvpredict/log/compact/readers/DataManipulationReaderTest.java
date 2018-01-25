@@ -7,6 +7,7 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.log.compact.TraceHeader;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,7 +65,7 @@ public class DataManipulationReaderTest {
         when(mockTraceHeader.getDefaultDataWidthInBytes()).thenReturn(4);
         when(mockTraceHeader.getPointerWidthInBytes()).thenReturn(8);
         when(mockCompactEventFactory.dataManipulation(
-                mockContext, CompactEventReader.DataManipulationType.LOAD, 2,
+                mockContext, Constants.INVALID_EVENT_ID, CompactEventReader.DataManipulationType.LOAD, 2,
                 ADDRESS, READ_VALUE, CompactEventReader.Atomicity.NOT_ATOMIC))
                 .thenReturn(Collections.singletonList(mockCompactEvent));
 
@@ -75,7 +76,8 @@ public class DataManipulationReaderTest {
         CompactEventReader.Reader reader = DataManipulationReader.createReader(
                 2, CompactEventReader.DataManipulationType.LOAD, CompactEventReader.Atomicity.NOT_ATOMIC);
         List<ReadonlyEventInterface> events =
-                reader.readEvent(mockContext, mockCompactEventFactory, mockTraceHeader, buffer);
+                reader.readEvent(
+                        mockContext, Constants.INVALID_EVENT_ID, mockCompactEventFactory, mockTraceHeader, buffer);
 
         Assert.assertEquals(1, events.size());
         Assert.assertEquals(mockCompactEvent, events.get(0));

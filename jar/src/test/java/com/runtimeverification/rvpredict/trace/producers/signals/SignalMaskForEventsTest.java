@@ -18,6 +18,7 @@ import com.runtimeverification.rvpredict.trace.producers.base.OtidToMainTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,11 +59,15 @@ public class SignalMaskForEventsTest {
     private static final long GENERATION_1 = 1101L;
 
     private static final SignalMask SIGNAL_MASK_1_ENABLED_2_DISABLED =
-            SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1).disable(SIGNAL_NUMBER_2);
+            SignalMask.UNKNOWN_MASK
+                    .enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)
+                    .disable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID);
     private static final SignalMask SIGNAL_MASK_2_ENABLED_1_DISABLED =
-            SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_2).disable(SIGNAL_NUMBER_1);
+            SignalMask.UNKNOWN_MASK
+                    .enable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID)
+                    .disable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID);
     private static final SignalMask SIGNAL_MASK_1_DISABLED =
-            SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_1);
+            SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID);
 
     @Mock private RawTracesByTtid mockRawTracesByTtid;
     @Mock private SortedTtidsWithParentFirst mockSortedTtidsWithParentFirst;

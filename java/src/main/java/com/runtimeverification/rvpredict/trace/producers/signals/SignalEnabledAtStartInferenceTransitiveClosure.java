@@ -6,18 +6,17 @@ import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
+import com.runtimeverification.rvpredict.signals.SignalMismatchError;
 import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
-import java.util.Set;
 
 public class SignalEnabledAtStartInferenceTransitiveClosure
         extends ComputingProducer<SignalEnabledAtStartInferenceTransitiveClosure.State> {
@@ -31,8 +30,8 @@ public class SignalEnabledAtStartInferenceTransitiveClosure
     private final TtidToStartAndJoinEventsForWindow ttidToStartAndJoinEventsForWindow;
 
     protected static class State implements ProducerState {
-        private final Map<Long, Set<Integer>> signalToTtidWhereEnabledAtStart = new HashMap<>();
-        private final Map<Long, Set<Integer>> signalToTtidWhereDisabledAtStart = new HashMap<>();
+        private final Map<Long, Map<Integer, Long>> signalToTtidWhereEnabledAtStart = new HashMap<>();
+        private final Map<Long, Map<Integer, Long>> signalToTtidWhereDisabledAtStart = new HashMap<>();
 
         @Override
         public void reset() {
@@ -81,10 +80,11 @@ public class SignalEnabledAtStartInferenceTransitiveClosure
     }
 
     private void transitiveInferences(
-            Map<Long, Set<Integer>> signalToTtids, SignalMask.SignalMaskBit expectedMaskBit) {
+            Map<Long, Map<Integer, Long>> signalToTtids, SignalMask.SignalMaskBit expectedMaskBit) {
         signalToTtids.forEach((signalNumber, ttids) -> {
             for (int ttid : Lists.reverse(sortedTtidsWithParentFirst.getTtids())) {
-                if (!ttids.contains(ttid)) {
+                Long originalEventId = ttids.get(ttid);
+                if (originalEventId == null) {
                     continue;
                 }
                 ThreadType threadType = threadInfosComponent.getThreadType(ttid);
@@ -127,13 +127,17 @@ public class SignalEnabledAtStartInferenceTransitiveClosure
                 switch (maskBit) {
                     case ENABLED:
                     case DISABLED:
-                        assert maskBit == expectedMaskBit;
+                        assert maskBit == expectedMaskBit
+                                : SignalMismatchError.errorMessage(
+                                        originalEventId,
+                                        signalMask.getOriginalEventIdForChange(signalNumber),
+                                        signalNumber);
                         break;
                     case UNKNOWN:
                         // TODO(virgil): We should always know the enable bit for a normal thread, but this
                         // is not true in tests.
                         // assert threadInfosComponent.getThreadType(parentTtid) == ThreadType.SIGNAL;
-                        ttids.add(parentTtid);
+                        ttids.put(parentTtid, originalEventId);
                         break;
                     default:
                         throw new IllegalStateException("Unknown mask bit type: " + maskBit);
@@ -142,16 +146,16 @@ public class SignalEnabledAtStartInferenceTransitiveClosure
         });
     }
 
-    private void mergeToFormer(Map<Long, Set<Integer>> former, Map<Long, Set<Integer>> latter) {
+    private void mergeToFormer(Map<Long, Map<Integer, Long>> former, Map<Long, Map<Integer, Long>> latter) {
         latter.forEach((signalNumber, ttids) ->
-                former.computeIfAbsent(signalNumber, k -> new HashSet<>()).addAll(ttids));
+                former.computeIfAbsent(signalNumber, k -> new HashMap<>()).putAll(ttids));
     }
 
-    Map<Long, Set<Integer>> getSignalToTtidWhereEnabledAtStart() {
+    Map<Long, Map<Integer, Long>> getSignalToTtidWhereEnabledAtStart() {
         return getState().signalToTtidWhereEnabledAtStart;
     }
 
-    Map<Long, Set<Integer>> getSignalToTtidWhereDisabledAtStart() {
+    Map<Long, Map<Integer, Long>> getSignalToTtidWhereDisabledAtStart() {
         return getState().signalToTtidWhereDisabledAtStart;
     }
 }

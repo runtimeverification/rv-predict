@@ -89,4 +89,5 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     boolean isSimilarTo(ReadonlyEventInterface event);
     boolean isSignalMaskRead();
 
+    long getOriginalId();
 }

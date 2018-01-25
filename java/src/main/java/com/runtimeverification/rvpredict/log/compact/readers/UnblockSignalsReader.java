@@ -7,7 +7,7 @@ public class UnblockSignalsReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 SignalMaskNumber::new,
-                (context, compactEventFactory, signalMaskNumber) ->
-                        compactEventFactory.unblockSignals(context, signalMaskNumber.getAsLong()));
+                (context, originalEventId, compactEventFactory, signalMaskNumber) ->
+                        compactEventFactory.unblockSignals(context, originalEventId, signalMaskNumber.getAsLong()));
     }
 }

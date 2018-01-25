@@ -84,6 +84,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.DataManipulationType.LOAD,
                 DATA_SIZE_IN_BYTES,
                 ADDRESS,
@@ -116,6 +117,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.DataManipulationType.STORE,
                 DATA_SIZE_IN_BYTES,
                 ADDRESS,
@@ -148,6 +150,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.DataManipulationType.LOAD,
                 DATA_SIZE_IN_BYTES,
                 ADDRESS,
@@ -200,6 +203,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.dataManipulation(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.DataManipulationType.LOAD,
                 DATA_SIZE_IN_BYTES,
                 ADDRESS,
@@ -253,6 +257,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.atomicReadModifyWrite(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 DATA_SIZE_IN_BYTES,
                 ADDRESS,
                 VALUE,
@@ -328,6 +333,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.lockManipulation(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.LockManipulationType.LOCK,
                 ADDRESS);
 
@@ -352,6 +358,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.lockManipulation(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.LockManipulationType.UNLOCK,
                 ADDRESS);
 
@@ -391,6 +398,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.establishSignal(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 SIGNAL_HANDLER,
                 SIGNAL_NUMBER,
                 SIGNAL_MASK_NUMBER);
@@ -458,6 +466,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.disestablishSignal(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 SIGNAL_NUMBER);
 
         Assert.assertEquals(4, events.size());
@@ -520,6 +529,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.enterSignal(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 GENERATION,
                 SIGNAL_NUMBER,
                 SIGNAL_HANDLER);
@@ -581,7 +591,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getSignalNumber()).thenReturn(SIGNAL_NUMBER);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<ReadonlyEventInterface> events = eventFactory.exitSignal(mockContext);
+        List<ReadonlyEventInterface> events = eventFactory.exitSignal(mockContext, Constants.INVALID_EVENT_ID);
 
         Assert.assertEquals(1, events.size());
         ReadonlyEventInterface event = events.get(0);
@@ -640,6 +650,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.signalMask(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 SIGNAL_MASK_NUMBER);
 
         Assert.assertEquals(1, events.size());
@@ -665,6 +676,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.getSetSignalMask(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 SIGNAL_MASK_NUMBER,
                 SIGNAL_MASK_NUMBER2);
 
@@ -691,6 +703,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.getSignalMask(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 SIGNAL_MASK_NUMBER);
 
         Assert.assertEquals(1, events.size());
@@ -715,6 +728,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.blockSignals(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 SIGNAL_MASK_NUMBER);
 
         Assert.assertEquals(1, events.size());
@@ -739,6 +753,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.unblockSignals(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 SIGNAL_MASK_NUMBER);
 
         Assert.assertEquals(1, events.size());
@@ -761,7 +776,11 @@ public class CompactEventFactoryTest {
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events =
-                eventFactory.enterFunction(mockContext, CANONICAL_FRAME_ADDRESS, OptionalLong.of(CALL_SITE_ADDRESS));
+                eventFactory.enterFunction(
+                        mockContext,
+                        Constants.INVALID_EVENT_ID,
+                        CANONICAL_FRAME_ADDRESS,
+                        OptionalLong.of(CALL_SITE_ADDRESS));
 
         Assert.assertEquals(1, events.size());
         ReadonlyEventInterface event = events.get(0);
@@ -783,7 +802,7 @@ public class CompactEventFactoryTest {
         when(mockContext.getThreadId()).thenReturn(THREAD_ID);
 
         CompactEventFactory eventFactory = new CompactEventFactory();
-        List<ReadonlyEventInterface> events = eventFactory.exitFunction(mockContext);
+        List<ReadonlyEventInterface> events = eventFactory.exitFunction(mockContext, Constants.INVALID_EVENT_ID);
 
         Assert.assertEquals(1, events.size());
         ReadonlyEventInterface event = events.get(0);
@@ -805,6 +824,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.beginThread(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 THREAD_ID,
                 GENERATION);
 
@@ -829,7 +849,8 @@ public class CompactEventFactoryTest {
 
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.endThread(
-                mockContext);
+                mockContext,
+                Constants.INVALID_EVENT_ID);
 
         Assert.assertEquals(1, events.size());
         ReadonlyEventInterface event = events.get(0);
@@ -853,6 +874,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.threadSync(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.ThreadSyncType.SWITCH,
                 THREAD_ID);
 
@@ -869,6 +891,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.threadSync(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.ThreadSyncType.FORK,
                 OTHER_THREAD_ID);
 
@@ -895,6 +918,7 @@ public class CompactEventFactoryTest {
         CompactEventFactory eventFactory = new CompactEventFactory();
         List<ReadonlyEventInterface> events = eventFactory.threadSync(
                 mockContext,
+                Constants.INVALID_EVENT_ID,
                 CompactEventReader.ThreadSyncType.JOIN,
                 OTHER_THREAD_ID);
 

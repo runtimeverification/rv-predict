@@ -28,4 +28,6 @@ public interface Constants {
 
     long MAX_SIGNAL_NUMBER = 63L;
     long SIGNAL_NUMBER_COUNT = MAX_SIGNAL_NUMBER + 1;
+    long INVALID_EVENT_ID = -1L;
+    long INTERRUPTION_MARKER_EVENT_ID = -2L;
 }

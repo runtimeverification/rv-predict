@@ -503,7 +503,9 @@ public class TraceCacheTest {
 
     private List<ReadonlyEventInterface> endSignal(long threadId, int signalDepth) {
         return Collections.singletonList(
-                new CompactEvent(eventId++, locationId++, threadId, signalDepth, EventType.EXIT_SIGNAL) {}
+                new CompactEvent(
+                        eventId++, locationId++, threadId, signalDepth, EventType.EXIT_SIGNAL,
+                        Constants.INVALID_EVENT_ID) {}
         );
     }
 
@@ -511,13 +513,17 @@ public class TraceCacheTest {
             long signalNumber, long signalHandlerAddress, long threadId, int signalDepth) {
         long locationId = this.locationId++;
         return Arrays.asList(
-                new CompactEvent(eventId++, locationId, threadId, signalDepth, EventType.WRITE_LOCK) {
+                new CompactEvent(
+                        eventId++, locationId, threadId, signalDepth, EventType.WRITE_LOCK,
+                        Constants.INVALID_EVENT_ID) {
                     @Override
                     public long getSyncObject() {
                         return Constants.SIGNAL_LOCK_C;
                     }
                 },
-                new CompactEvent(eventId++, locationId, threadId, signalDepth, EventType.ENTER_SIGNAL) {
+                new CompactEvent(
+                        eventId++, locationId, threadId, signalDepth, EventType.ENTER_SIGNAL,
+                        Constants.INVALID_EVENT_ID) {
                     @Override
                     public long getSignalNumber() {
                         return signalNumber;
@@ -528,7 +534,9 @@ public class TraceCacheTest {
                         return signalHandlerAddress;
                     }
                 },
-                new CompactEvent(eventId++, locationId, threadId, signalDepth, EventType.WRITE_UNLOCK) {
+                new CompactEvent(
+                        eventId++, locationId, threadId, signalDepth, EventType.WRITE_UNLOCK,
+                        Constants.INVALID_EVENT_ID) {
                     @Override
                     public long getSyncObject() {
                         return Constants.SIGNAL_LOCK_C;
@@ -539,7 +547,9 @@ public class TraceCacheTest {
 
     private List<ReadonlyEventInterface> startThread(long threadId, int signalDepth, long startedThread) {
         return Collections.singletonList(
-                new CompactEvent(eventId++, locationId++, threadId, signalDepth, EventType.START_THREAD) {
+                new CompactEvent(
+                        eventId++, locationId++, threadId, signalDepth, EventType.START_THREAD,
+                        Constants.INVALID_EVENT_ID) {
                     @Override
                     public long getSyncedThreadId() {
                         return startedThread;
@@ -550,13 +560,16 @@ public class TraceCacheTest {
 
     private List<ReadonlyEventInterface> readData(long threadId, int signalDepth) {
         return Collections.singletonList(
-                new CompactEvent(eventId++, locationId++, threadId, signalDepth, EventType.READ) {}
+                new CompactEvent(
+                        eventId++, locationId++, threadId, signalDepth, EventType.READ, Constants.INVALID_EVENT_ID) {}
         );
     }
 
     private List<ReadonlyEventInterface> beginThread(long threadId) {
         return Collections.singletonList(
-                new CompactEvent(eventId++, locationId++, threadId, NO_SIGNAL, EventType.BEGIN_THREAD) {}
+                new CompactEvent(
+                        eventId++, locationId++, threadId, NO_SIGNAL, EventType.BEGIN_THREAD,
+                        Constants.INVALID_EVENT_ID) {}
         );
     }
 
@@ -567,7 +580,7 @@ public class TraceCacheTest {
         private int eventIndex;
         private ReadonlyEventInterface lastReadEvent;
 
-        private ListEventReader(List<List<ReadonlyEventInterface>> events) throws IOException {
+        private ListEventReader(List<List<ReadonlyEventInterface>> events) {
             this.events = new ArrayList<>();
             for (List<ReadonlyEventInterface> eventList : events) {
                 this.events.addAll(eventList);
@@ -577,7 +590,7 @@ public class TraceCacheTest {
         }
 
         @Override
-        public ReadonlyEventInterface readEvent() throws IOException {
+        public ReadonlyEventInterface readEvent() {
             if (eventIndex >= events.size()) {
                 lastReadEvent = null;
                 return null;
@@ -593,8 +606,7 @@ public class TraceCacheTest {
         }
 
         @Override
-        public void close() throws IOException {
-
+        public void close() {
         }
     }
 

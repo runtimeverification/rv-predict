@@ -9,6 +9,7 @@ import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.TraceState;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 
 import java.util.ArrayList;
@@ -60,12 +61,13 @@ public class TraceUtils {
     public List<ReadonlyEventInterface> enterSignal(
             long signalNumber, long signalHandler, long generation) throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
-        return compactEventFactory.enterSignal(mockContext, generation, signalNumber, signalHandler);
+        return compactEventFactory.enterSignal(
+                mockContext, Constants.INVALID_EVENT_ID, generation, signalNumber, signalHandler);
     }
 
     public List<ReadonlyEventInterface> exitSignal() throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
-        return compactEventFactory.exitSignal(mockContext);
+        return compactEventFactory.exitSignal(mockContext, Constants.INVALID_EVENT_ID);
     }
 
     public List<ReadonlyEventInterface> setSignalHandler(
@@ -73,19 +75,20 @@ public class TraceUtils {
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(disabledSignalMask);
-        return compactEventFactory.establishSignal(mockContext, signalHandler, signalNumber, 123);
+        return compactEventFactory.establishSignal(
+                mockContext, Constants.INVALID_EVENT_ID, signalHandler, signalNumber, 123);
     }
 
     public List<ReadonlyEventInterface> getSignalMask(long signalMask) {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(signalMask);
-        return compactEventFactory.getSignalMask(mockContext, 123);
+        return compactEventFactory.getSignalMask(mockContext, Constants.INVALID_EVENT_ID, 123);
     }
 
     public List<ReadonlyEventInterface> setSignalMask(long signalMask) {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(signalMask);
-        return compactEventFactory.signalMask(mockContext, 123);
+        return compactEventFactory.signalMask(mockContext, Constants.INVALID_EVENT_ID, 123);
     }
 
     public List<ReadonlyEventInterface> getSetSignalMask(
@@ -93,61 +96,64 @@ public class TraceUtils {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(readSignalMask);
         when(mockContext.getMemoizedSignalMask(124)).thenReturn(writeSignalMask);
-        return compactEventFactory.getSetSignalMask(mockContext, 123, 124);
+        return compactEventFactory.getSetSignalMask(
+                mockContext, Constants.INVALID_EVENT_ID, 123, 124);
     }
 
     public List<ReadonlyEventInterface> disestablishSignal(long signalNumber)
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
-        return compactEventFactory.disestablishSignal(mockContext, signalNumber);
+        return compactEventFactory.disestablishSignal(mockContext, Constants.INVALID_EVENT_ID, signalNumber);
     }
 
     public List<ReadonlyEventInterface> disableSignal(long signalNumber)
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(1L << Math.toIntExact(signalNumber));
-        return compactEventFactory.blockSignals(mockContext, 123);
+        return compactEventFactory.blockSignals(mockContext, Constants.INVALID_EVENT_ID, 123);
     }
 
     public List<ReadonlyEventInterface> enableSignal(long signalNumber)
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         when(mockContext.getMemoizedSignalMask(123)).thenReturn(1L << Math.toIntExact(signalNumber));
-        return compactEventFactory.unblockSignals(mockContext, 123);
+        return compactEventFactory.unblockSignals(mockContext, Constants.INVALID_EVENT_ID, 123);
     }
 
     public List<ReadonlyEventInterface> lock(long lockId)
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
-        return compactEventFactory.lockManipulation(mockContext, CompactEventReader.LockManipulationType.LOCK, lockId);
+        return compactEventFactory.lockManipulation(
+                mockContext, Constants.INVALID_EVENT_ID, CompactEventReader.LockManipulationType.LOCK, lockId);
     }
 
     public List<ReadonlyEventInterface> unlock(long lockId)
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         return compactEventFactory.lockManipulation(
-                mockContext, CompactEventReader.LockManipulationType.UNLOCK, lockId);
+                mockContext, Constants.INVALID_EVENT_ID, CompactEventReader.LockManipulationType.UNLOCK, lockId);
     }
 
     public List<ReadonlyEventInterface> threadStart(long newThread)
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         return compactEventFactory.threadSync(
-                mockContext, CompactEventReader.ThreadSyncType.FORK, newThread);
+                mockContext, Constants.INVALID_EVENT_ID, CompactEventReader.ThreadSyncType.FORK, newThread);
     }
 
     public List<ReadonlyEventInterface> threadJoin(long newThread)
             throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         return compactEventFactory.threadSync(
-                mockContext, CompactEventReader.ThreadSyncType.JOIN, newThread);
+                mockContext, Constants.INVALID_EVENT_ID, CompactEventReader.ThreadSyncType.JOIN, newThread);
     }
 
     public List<ReadonlyEventInterface> nonAtomicLoad(
             long address, long value) throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         return compactEventFactory.dataManipulation(
-                mockContext, CompactEventReader.DataManipulationType.LOAD, LONG_SIZE_IN_BYTES,
+                mockContext, Constants.INVALID_EVENT_ID,
+                CompactEventReader.DataManipulationType.LOAD, LONG_SIZE_IN_BYTES,
                 address, value,
                 CompactEventReader.Atomicity.NOT_ATOMIC);
     }
@@ -156,7 +162,8 @@ public class TraceUtils {
             long address, long value) throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         return compactEventFactory.dataManipulation(
-                mockContext, CompactEventReader.DataManipulationType.STORE, LONG_SIZE_IN_BYTES,
+                mockContext, Constants.INVALID_EVENT_ID,
+                CompactEventReader.DataManipulationType.STORE, LONG_SIZE_IN_BYTES,
                 address, value,
                 CompactEventReader.Atomicity.NOT_ATOMIC);
     }
@@ -165,7 +172,8 @@ public class TraceUtils {
             long address, long value) throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         return compactEventFactory.dataManipulation(
-                mockContext, CompactEventReader.DataManipulationType.LOAD, LONG_SIZE_IN_BYTES,
+                mockContext, Constants.INVALID_EVENT_ID,
+                CompactEventReader.DataManipulationType.LOAD, LONG_SIZE_IN_BYTES,
                 address, value,
                 CompactEventReader.Atomicity.ATOMIC);
     }
@@ -173,14 +181,16 @@ public class TraceUtils {
     public List<ReadonlyEventInterface> atomicStore(long address, long value) throws InvalidTraceDataException {
         prepareContextForEvent(threadId, signalDepth);
         return compactEventFactory.dataManipulation(
-                mockContext, CompactEventReader.DataManipulationType.STORE, LONG_SIZE_IN_BYTES,
+                mockContext, Constants.INVALID_EVENT_ID,
+                CompactEventReader.DataManipulationType.STORE, LONG_SIZE_IN_BYTES,
                 address, value,
                 CompactEventReader.Atomicity.ATOMIC);
     }
 
     public List<ReadonlyEventInterface> enterFunction(long canonicalFrameAddress, OptionalLong callSiteAddress) {
         prepareContextForEvent(threadId, signalDepth);
-        return compactEventFactory.enterFunction(mockContext, canonicalFrameAddress, callSiteAddress);
+        return compactEventFactory.enterFunction(
+                mockContext, Constants.INVALID_EVENT_ID, canonicalFrameAddress, callSiteAddress);
     }
 
     public static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {

@@ -7,7 +7,7 @@ public class ChangeOfGenerationReader {
     public static CompactEventReader.Reader createReader() {
         return new SimpleDataReader<>(
                 Generation::new,
-                (context, compactEventFactory, generation) ->
+                (context, originalEventId, compactEventFactory, generation) ->
                         compactEventFactory.changeOfGeneration(context, generation.getAsLong()));
     }
 }

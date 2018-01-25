@@ -1,7 +1,6 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.ProducerModule;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
@@ -9,6 +8,7 @@ import com.runtimeverification.rvpredict.producerframework.TestProducerModule;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.testutils.SignalMasksAtWindowStartUtils;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
+import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,7 +68,11 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
 
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
-                ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1).disable(SIGNAL_NUMBER_2)));
+                ImmutableMap.of(
+                        TTID_1,
+                        SignalMask.UNKNOWN_MASK
+                                .enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)
+                                .disable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereEnabledAtStart())
                 .thenReturn(Collections.emptyMap());
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())
@@ -98,9 +102,9 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
                 mockSignalMaskAtWindowStart,
                 ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK));
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereEnabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableSet.of(TTID_1)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())
-                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableSet.of(TTID_1)));
+                .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
         when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singletonList(TTID_1));
         module.reset();
 
@@ -124,7 +128,11 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
 
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
-                ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_1).disable(SIGNAL_NUMBER_2)));
+                ImmutableMap.of(
+                        TTID_1,
+                        SignalMask.UNKNOWN_MASK
+                                .enable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID)
+                                .disable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereEnabledAtStart())
                 .thenReturn(Collections.emptyMap());
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())

@@ -18,7 +18,7 @@ import java.util.List;
 public class NoDataReader implements CompactEventReader.Reader {
     @FunctionalInterface
     public interface BiFunctionWithException<T, U, R> {
-        R apply(T t, U u) throws InvalidTraceDataException;
+        R apply(T t, U u, long originalEventId) throws InvalidTraceDataException;
     }
 
     private final BiFunctionWithException<CompactEventFactory, Context, List<ReadonlyEventInterface>> eventFactory;
@@ -35,8 +35,9 @@ public class NoDataReader implements CompactEventReader.Reader {
 
     @Override
     public List<ReadonlyEventInterface> readEvent(
-            Context context, CompactEventFactory compactEventFactory, TraceHeader header, ByteBuffer buffer)
+            Context context, long originalEventId,
+            CompactEventFactory compactEventFactory, TraceHeader header, ByteBuffer buffer)
             throws InvalidTraceDataException {
-        return eventFactory.apply(compactEventFactory, context);
+        return eventFactory.apply(compactEventFactory, context, originalEventId);
     }
 }

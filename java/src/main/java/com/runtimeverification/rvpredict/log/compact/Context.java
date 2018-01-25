@@ -18,6 +18,7 @@ public class Context {
 
     private ThreadState currentThread;
     private long lastAddressId;
+    private long nextOriginalEventId;
 
     public Context(long minDeltaAndEventType) {
         threadIdToState = new HashMap<>();
@@ -30,6 +31,10 @@ public class Context {
 
     public long newId() {
         return currentThread.newId();
+    }
+
+    public long newOriginalEventId() {
+        return nextOriginalEventId++;
     }
 
     public long getThreadId() {

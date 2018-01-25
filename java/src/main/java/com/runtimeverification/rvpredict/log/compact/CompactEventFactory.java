@@ -22,6 +22,7 @@ public class CompactEventFactory {
 
     public List<ReadonlyEventInterface> dataManipulation(
             Context context,
+            long originalEventId,
             CompactEventReader.DataManipulationType dataManipulationType,
             int dataSizeInBytes,
             long address,
@@ -42,7 +43,8 @@ public class CompactEventFactory {
         long addressId = context.createUniqueDataAddressId(address);
         if (atomicity == CompactEventReader.Atomicity.NOT_ATOMIC) {
             return Collections.singletonList(
-                    dataManipulationEvent(context, dataSizeInBytes, address, addressId, value, compactType));
+                    dataManipulationEvent(
+                            context, originalEventId, dataSizeInBytes, address, addressId, value, compactType));
         }
         // TODO(virgil): These locks should be something more fine-grained, e.g. write_locks.
         // Also, it would probably be nice if an atomic write to a variable would also be atomic for
@@ -50,18 +52,21 @@ public class CompactEventFactory {
         // work.
         return Arrays.asList(
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.LOCK, address, LockReason.ATOMIC),
-                dataManipulationEvent(context, dataSizeInBytes, address, addressId, value, compactType),
+                        context, originalEventId,
+                        CompactEventReader.LockManipulationType.LOCK, address, LockReason.ATOMIC),
+                dataManipulationEvent(
+                        context, originalEventId, dataSizeInBytes, address, addressId, value, compactType),
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.UNLOCK, address, LockReason.ATOMIC)
+                        context, originalEventId,
+                        CompactEventReader.LockManipulationType.UNLOCK, address, LockReason.ATOMIC)
         );
     }
 
     private ReadonlyEventInterface dataManipulationEvent(
-            Context context, int dataSizeInBytes, long dataAddress, long dataAddressId, long value,
-            EventType compactType)
+            Context context, long originalEventId, int dataSizeInBytes, long dataAddress, long dataAddressId,
+            long value, EventType compactType)
             throws InvalidTraceDataException {
-        return new CompactEvent(context, compactType) {
+        return new CompactEvent(context, compactType, originalEventId) {
             @Override
             int getDataSizeInBytes() {
                 return dataSizeInBytes;
@@ -106,16 +111,21 @@ public class CompactEventFactory {
 
     public List<ReadonlyEventInterface> atomicReadModifyWrite(
             Context context,
+            long originalEventId,
             int dataSizeInBytes,
             long dataAddress, long readValue, long writeValue) throws InvalidTraceDataException {
         long addressId = context.createUniqueDataAddressId(dataAddress);
         return Arrays.asList(
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.LOCK, dataAddress, LockReason.ATOMIC),
-                dataManipulationEvent(context, dataSizeInBytes, dataAddress, addressId, readValue, EventType.READ),
-                dataManipulationEvent(context, dataSizeInBytes, dataAddress, addressId, writeValue, EventType.WRITE),
+                        context, originalEventId,
+                        CompactEventReader.LockManipulationType.LOCK, dataAddress, LockReason.ATOMIC),
+                dataManipulationEvent(
+                        context, originalEventId, dataSizeInBytes, dataAddress, addressId, readValue, EventType.READ),
+                dataManipulationEvent(
+                        context, originalEventId, dataSizeInBytes, dataAddress, addressId, writeValue, EventType.WRITE),
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.UNLOCK, dataAddress, LockReason.ATOMIC));
+                        context, originalEventId,
+                        CompactEventReader.LockManipulationType.UNLOCK, dataAddress, LockReason.ATOMIC));
     }
 
     public List<ReadonlyEventInterface> changeOfGeneration(Context context, long generation) {
@@ -124,14 +134,16 @@ public class CompactEventFactory {
     }
 
     public List<ReadonlyEventInterface> lockManipulation(
-            Context context, CompactEventReader.LockManipulationType lockManipulationType, long address)
+            Context context, long originalEventId,
+            CompactEventReader.LockManipulationType lockManipulationType, long address)
             throws InvalidTraceDataException {
         return Collections.singletonList(
-                lockManipulationEvent(context, lockManipulationType, address, LockReason.NORMAL));
+                lockManipulationEvent(context, originalEventId, lockManipulationType, address, LockReason.NORMAL));
     }
 
     private ReadonlyEventInterface lockManipulationEvent(
             Context context,
+            long originalEventId,
             CompactEventReader.LockManipulationType lockManipulationType,
             long address,
             LockReason lockReason)
@@ -147,7 +159,7 @@ public class CompactEventFactory {
             default:
                 throw new InvalidTraceDataException("Unknown lock manipulation type: " + lockManipulationType);
         }
-        return new CompactEvent(context, compactType) {
+        return new CompactEvent(context, compactType, originalEventId) {
             @Override
             public long getSyncObject() {
                 return address;
@@ -192,16 +204,16 @@ public class CompactEventFactory {
     // Signal events.
 
     public List<ReadonlyEventInterface> establishSignal(
-            Context context,
+            Context context, long originalEventId,
             long handler, long signalNumber, long signalMaskNumber) throws InvalidTraceDataException {
         context.establishSignal(handler, signalNumber, signalMaskNumber);
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         long addressId = context.createUniqueSignalHandlerId(signalNumber);
         return Arrays.asList(
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.LOCK,
+                        context, originalEventId, CompactEventReader.LockManipulationType.LOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL),
-                new CompactEvent(context, EventType.ESTABLISH_SIGNAL) {
+                new CompactEvent(context, EventType.ESTABLISH_SIGNAL, originalEventId) {
                     @Override
                     public long getFullWriteSignalMask() {
                         return signalMask;
@@ -223,23 +235,23 @@ public class CompactEventFactory {
                     }
                 },
                 dataManipulationEvent(
-                        context, Constants.LONG_SIZE_IN_BYTES,
+                        context, originalEventId, Constants.LONG_SIZE_IN_BYTES,
                         signalNumber, addressId, handler, EventType.WRITE),
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.UNLOCK,
+                        context, originalEventId, CompactEventReader.LockManipulationType.UNLOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
         );
     }
 
     public List<ReadonlyEventInterface> disestablishSignal(
-            Context context, long signalNumber) throws InvalidTraceDataException {
+            Context context, long originalEventId, long signalNumber) throws InvalidTraceDataException {
         context.disestablishSignal(signalNumber);
         long addressId = context.createUniqueSignalHandlerId(signalNumber);
         return Arrays.asList(
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.LOCK,
+                        context, originalEventId, CompactEventReader.LockManipulationType.LOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL),
-                new CompactEvent(context, EventType.DISESTABLISH_SIGNAL) {
+                new CompactEvent(context, EventType.DISESTABLISH_SIGNAL, originalEventId) {
                     public long getSignalNumber() {
                         return signalNumber;
                     }
@@ -250,23 +262,24 @@ public class CompactEventFactory {
                     }
                 },
                 dataManipulationEvent(
-                        context, Constants.LONG_SIZE_IN_BYTES,
+                        context, originalEventId, Constants.LONG_SIZE_IN_BYTES,
                         signalNumber, addressId, Constants.INVALID_PROGRAM_COUNTER, EventType.WRITE),
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.UNLOCK,
+                        context, originalEventId, CompactEventReader.LockManipulationType.UNLOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
         );
     }
 
     public List<ReadonlyEventInterface> enterSignal(
-            Context context, long generation, long signalNumber, long signalHandler) throws InvalidTraceDataException {
+            Context context, long originalEventId,
+            long generation, long signalNumber, long signalHandler) throws InvalidTraceDataException {
         context.enterSignal(signalNumber, generation);
         long addressId = context.createUniqueSignalHandlerId(signalNumber);
         return Arrays.asList(
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.LOCK,
+                        context, originalEventId, CompactEventReader.LockManipulationType.LOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL),
-                new CompactEvent(context, EventType.ENTER_SIGNAL) {
+                new CompactEvent(context, EventType.ENTER_SIGNAL, originalEventId) {
                     @Override
                     public long getSignalNumber() {
                         return signalNumber;
@@ -283,18 +296,19 @@ public class CompactEventFactory {
                     }
                 },
                 dataManipulationEvent(
-                        context, Constants.LONG_SIZE_IN_BYTES,
+                        context, originalEventId, Constants.LONG_SIZE_IN_BYTES,
                         signalNumber, addressId, signalHandler, EventType.READ),
                 lockManipulationEvent(
-                        context, CompactEventReader.LockManipulationType.UNLOCK,
+                        context, originalEventId, CompactEventReader.LockManipulationType.UNLOCK,
                         com.runtimeverification.rvpredict.util.Constants.SIGNAL_LOCK_C, LockReason.SIGNAL)
         );
     }
 
-    public List<ReadonlyEventInterface> exitSignal(Context context) throws InvalidTraceDataException {
+    public List<ReadonlyEventInterface> exitSignal(
+            Context context, long originalEventId) throws InvalidTraceDataException {
         long currentSignal = context.getSignalNumber();
         context.exitSignal();
-        return Collections.singletonList(new CompactEvent(context, EventType.EXIT_SIGNAL) {
+        return Collections.singletonList(new CompactEvent(context, EventType.EXIT_SIGNAL, originalEventId) {
             @Override
             public long getSignalNumber() {
                 return currentSignal;
@@ -319,9 +333,9 @@ public class CompactEventFactory {
         return NO_EVENTS;
     }
 
-    public List<ReadonlyEventInterface> signalMask(Context context, long signalMaskNumber) {
+    public List<ReadonlyEventInterface> signalMask(Context context, long originalEventId, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        return Collections.singletonList(new CompactEvent(context, EventType.WRITE_SIGNAL_MASK) {
+        return Collections.singletonList(new CompactEvent(context, EventType.WRITE_SIGNAL_MASK, originalEventId) {
             @Override
             public long getFullWriteSignalMask() {
                 return signalMask;
@@ -334,11 +348,11 @@ public class CompactEventFactory {
         });
     }
 
-    public List<ReadonlyEventInterface> blockSignals(Context context, long signalMaskNumber)
+    public List<ReadonlyEventInterface> blockSignals(Context context, long originalEventId, long signalMaskNumber)
             throws InvalidTraceDataException {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(
-                new CompactEvent(context, EventType.BLOCK_SIGNALS) {
+                new CompactEvent(context, EventType.BLOCK_SIGNALS, originalEventId) {
                     @Override
                     public long getPartialSignalMask() {
                         return signalMask;
@@ -351,11 +365,11 @@ public class CompactEventFactory {
                 });
     }
 
-    public List<ReadonlyEventInterface> unblockSignals(Context context, long signalMaskNumber)
+    public List<ReadonlyEventInterface> unblockSignals(Context context, long originalEventId, long signalMaskNumber)
             throws InvalidTraceDataException {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(
-                new CompactEvent(context, EventType.UNBLOCK_SIGNALS) {
+                new CompactEvent(context, EventType.UNBLOCK_SIGNALS, originalEventId) {
                     @Override
                     public long getPartialSignalMask() {
                         return signalMask;
@@ -369,10 +383,10 @@ public class CompactEventFactory {
     }
 
     public List<ReadonlyEventInterface> getSetSignalMask(
-            Context context, long readSignalMaskNumber, long writeSignalMaskNumber) {
+            Context context, long originalEventId, long readSignalMaskNumber, long writeSignalMaskNumber) {
         long readSignalMask = context.getMemoizedSignalMask(readSignalMaskNumber);
         long writeSignalMask = context.getMemoizedSignalMask(writeSignalMaskNumber);
-        return Collections.singletonList(new CompactEvent(context, EventType.READ_WRITE_SIGNAL_MASK) {
+        return Collections.singletonList(new CompactEvent(context, EventType.READ_WRITE_SIGNAL_MASK, originalEventId) {
             @Override
             public long getFullReadSignalMask() {
                 return readSignalMask;
@@ -390,9 +404,9 @@ public class CompactEventFactory {
         });
     }
 
-    public List<ReadonlyEventInterface> getSignalMask(Context context, long signalMaskNumber) {
+    public List<ReadonlyEventInterface> getSignalMask(Context context, long originalEventId, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
-        return Collections.singletonList(new CompactEvent(context, EventType.READ_SIGNAL_MASK) {
+        return Collections.singletonList(new CompactEvent(context, EventType.READ_SIGNAL_MASK, originalEventId) {
             @Override
             public long getFullReadSignalMask() {
                 return signalMask;
@@ -408,8 +422,8 @@ public class CompactEventFactory {
     // Function events.
 
     public List<ReadonlyEventInterface> enterFunction(
-            Context context, long canonicalFrameAddress, OptionalLong callSiteAddress) {
-        return Collections.singletonList(new CompactEvent(context, EventType.INVOKE_METHOD) {
+            Context context, long originalEventId, long canonicalFrameAddress, OptionalLong callSiteAddress) {
+        return Collections.singletonList(new CompactEvent(context, EventType.INVOKE_METHOD, originalEventId) {
             @Override
             public long getCanonicalFrameAddress() {
                 return canonicalFrameAddress;
@@ -427,28 +441,29 @@ public class CompactEventFactory {
         });
     }
 
-    List<ReadonlyEventInterface> exitFunction(Context context) {
-        return Collections.singletonList(new CompactEvent(context, EventType.FINISH_METHOD) {
+    List<ReadonlyEventInterface> exitFunction(Context context, long originalEventId) {
+        return Collections.singletonList(new CompactEvent(context, EventType.FINISH_METHOD, originalEventId) {
         });
     }
 
     // Thread events.
 
-    public List<ReadonlyEventInterface> beginThread(Context context, long threadId, long generation)
+    public List<ReadonlyEventInterface> beginThread(
+            Context context, long originalEventId, long threadId, long generation)
             throws InvalidTraceDataException {
         context.beginThread(threadId, generation);
-        return Collections.singletonList(new CompactEvent(context, EventType.BEGIN_THREAD) {
+        return Collections.singletonList(new CompactEvent(context, EventType.BEGIN_THREAD, originalEventId) {
         });
     }
 
-    List<ReadonlyEventInterface> endThread(Context context) {
+    List<ReadonlyEventInterface> endThread(Context context, long originalEventId) {
         context.endThread();
-        return Collections.singletonList(new CompactEvent(context, EventType.END_THREAD) {
+        return Collections.singletonList(new CompactEvent(context, EventType.END_THREAD, originalEventId) {
         });
     }
 
     public List<ReadonlyEventInterface> threadSync(
-            Context context, CompactEventReader.ThreadSyncType threadSyncType, long threadId)
+            Context context, long originalEventId, CompactEventReader.ThreadSyncType threadSyncType, long threadId)
             throws InvalidTraceDataException {
         EventType compactType;
         switch (threadSyncType) {
@@ -466,7 +481,7 @@ public class CompactEventFactory {
             default:
                 throw new InvalidTraceDataException("Unknown thread sync event: " + threadSyncType);
         }
-        return Collections.singletonList(new CompactEvent(context, compactType) {
+        return Collections.singletonList(new CompactEvent(context, compactType, originalEventId) {
             @Override
             public long getSyncedThreadId() {
                 return threadId;

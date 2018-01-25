@@ -13,48 +13,55 @@ public class SignalMask {
     public static final SignalMask UNKNOWN_MASK = new SignalMask();
 
     private final SignalMaskBit[] maskBits;
+    private final long[] eventForSignal;
 
     private SignalMask(SignalMask signalMask) {
         maskBits = Arrays.copyOf(signalMask.maskBits, signalMask.maskBits.length);
+        eventForSignal = Arrays.copyOf(signalMask.eventForSignal, signalMask.eventForSignal.length);
     }
 
     private SignalMask() {
         maskBits = new SignalMaskBit[Math.toIntExact(Constants.SIGNAL_NUMBER_COUNT)];
         Arrays.fill(maskBits, SignalMaskBit.UNKNOWN);
+        eventForSignal = new long[maskBits.length];
+        Arrays.fill(eventForSignal, Constants.INVALID_EVENT_ID);
     }
 
-    SignalMask unblock(long signalMask) {
+    SignalMask unblock(long signalMask, long eventId) {
         SignalMask unblocked = new SignalMask(this);
         for (int i = 0; i < Constants.SIGNAL_NUMBER_COUNT; i++) {
             if (Signals.signalInMask(i, signalMask)) {
                 unblocked.maskBits[i] = SignalMaskBit.ENABLED;
+                unblocked.eventForSignal[i] = eventId;
             }
         }
         return unblocked;
     }
 
-    SignalMask block(long signalMask) {
+    SignalMask block(long signalMask, long eventId) {
         SignalMask blocked = new SignalMask(this);
         for (int i = 0; i < Constants.SIGNAL_NUMBER_COUNT; i++) {
             if (Signals.signalInMask(i, signalMask)) {
                 blocked.maskBits[i] = SignalMaskBit.DISABLED;
+                blocked.eventForSignal[i] = eventId;
             }
         }
         return blocked;
     }
 
-    public SignalMask enable(long signalNumber) {
-        return setSignalMaskBit(Math.toIntExact(signalNumber), SignalMaskBit.ENABLED);
+    public SignalMask enable(long signalNumber, long eventId) {
+        return setSignalMaskBit(Math.toIntExact(signalNumber), SignalMaskBit.ENABLED, eventId);
     }
 
-    public SignalMask disable(long signalNumber) {
-        return setSignalMaskBit(Math.toIntExact(signalNumber), SignalMaskBit.DISABLED);
+    public SignalMask disable(long signalNumber, long eventId) {
+        return setSignalMaskBit(Math.toIntExact(signalNumber), SignalMaskBit.DISABLED, eventId);
     }
 
-    public SignalMask setMask(long mask) {
+    public SignalMask setMask(long mask, long eventId) {
         SignalMask retv = new SignalMask(this);
         for (int i = 0; i < Constants.SIGNAL_NUMBER_COUNT; i++) {
             retv.maskBits[i] = Signals.signalIsEnabled(i, mask) ? SignalMaskBit.ENABLED : SignalMaskBit.DISABLED;
+            retv.eventForSignal[i] = eventId;
         }
         return retv;
     }
@@ -62,7 +69,10 @@ public class SignalMask {
     public SignalMask enabledToUnknown() {
         SignalMask retv = new SignalMask(this);
         for (int i = 0; i < retv.maskBits.length; i++) {
-            retv.maskBits[i] = retv.maskBits[i] == SignalMaskBit.ENABLED ? SignalMaskBit.UNKNOWN : retv.maskBits[i];
+            if (retv.maskBits[i] == SignalMaskBit.ENABLED) {
+                retv.maskBits[i] = SignalMaskBit.UNKNOWN;
+                retv.eventForSignal[i] = Constants.INVALID_EVENT_ID;
+            }
         }
         return retv;
     }
@@ -71,14 +81,20 @@ public class SignalMask {
         return maskBits[Math.toIntExact(signalNumber)];
     }
 
-    void assertSameBits(long mask) {
+    public long getOriginalEventIdForChange(long signalNumber) {
+        return eventForSignal[Math.toIntExact(signalNumber)];
+    }
+
+    void assertSameBits(long mask, long originalEventId) {
         for (int i = 0; i < Constants.SIGNAL_NUMBER_COUNT; i++) {
             switch (maskBits[i]) {
                 case ENABLED:
-                    assert Signals.signalIsEnabled(i, mask) : "expected signal #" + i + " enabled";
+                    assert Signals.signalIsEnabled(i, mask)
+                            : SignalMismatchError.errorMessage(getOriginalEventIdForChange(i), originalEventId, i);
                     break;
                 case DISABLED:
-                    assert !Signals.signalIsEnabled(i, mask) : "expected signal #" + i + " disabled";
+                    assert !Signals.signalIsEnabled(i, mask)
+                            : SignalMismatchError.errorMessage(getOriginalEventIdForChange(i), originalEventId, i);
                     break;
                 case UNKNOWN:
                     break;
@@ -88,12 +104,13 @@ public class SignalMask {
         }
     }
 
-    private SignalMask setSignalMaskBit(int signalNumber, SignalMaskBit value) {
+    private SignalMask setSignalMaskBit(int signalNumber, SignalMaskBit value, long eventId) {
         if (maskBits[signalNumber] == value) {
             return this;
         }
         SignalMask enabled = new SignalMask(this);
         enabled.maskBits[signalNumber] = value;
+        enabled.eventForSignal[signalNumber] = eventId;
         return enabled;
     }
 

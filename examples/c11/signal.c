@@ -2,7 +2,6 @@
  * All rights reserved.
  */
 
-#include <features.h>
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>	/* for PRIu64 */

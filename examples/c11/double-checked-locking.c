@@ -21,7 +21,8 @@ something(void)
 resource_t * volatile resource_ptr = NULL;
 pthread_mutex_t resource_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void *foo(void *arg __unused)
+static void *
+foo(void *arg __unused)
 {
 	if (resource_ptr == NULL) {
 		pthread_mutex_lock(&resource_mutex);

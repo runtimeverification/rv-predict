@@ -24,6 +24,7 @@ PROGS+=	simple-state-machine simplerace slpcq spcq spinning-loop square-sum
 
 CC=clang
 CFLAGS+=-std=c11
+CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
 #CPPFLAGS+=-Dlpcq_atomic=_Atomic
 #CPPFLAGS.spcq+=-D__STDC_NO_ATOMICS__

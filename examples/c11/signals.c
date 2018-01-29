@@ -12,6 +12,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "signals.h"
+
 void
 signals_changemask(int how, int signum, sigset_t *oset)
 {

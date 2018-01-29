@@ -12,7 +12,7 @@
 bool condition = false;
 int sharedVar;
 
-void *
+static void *
 thread1(void *arg __unused)
 {
 	sharedVar = 1;
@@ -20,7 +20,7 @@ thread1(void *arg __unused)
 	return NULL;
 }
 
-void *
+static void *
 thread2(void *arg __unused)
 {
 	while (!condition) {

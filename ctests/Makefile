@@ -21,6 +21,6 @@ $(BINDEPS):
 	$(MAKE) ONLY_TEST_DEPENDENCIES=yes DESTDIR=$(.OBJDIR) PREFIX= \
 	    LIBDIR=/lib -C $(.CURDIR)/.. install
 
-CLEANDIRS+=bin include lib man share
+CLEANDIRS+=bin include lib libexec man share
 
 .include <mkc.subdir.mk>

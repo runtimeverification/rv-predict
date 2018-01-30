@@ -13,6 +13,12 @@
 #include "text.h"
 #include "trace.h"
 
+#if defined(SIGINFO)
+#define	RVP_INFO_SIGNUM	SIGINFO
+#else
+#define	RVP_INFO_SIGNUM	SIGPWR
+#endif
+
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
@@ -94,10 +100,29 @@ rvp_signal_prefork_init(void)
 	    sigsuspend);
 }
 
+static void
+rvp_siginfo_handler(int signum __unused)
+{
+	rvp_info_dump_request();
+}
+
 void
 rvp_signal_init(void)
 {
 	rvp_signal_table_init();
+	struct sigaction osa, sa;
+	memset(&sa, 0, sizeof(sa));
+	if (sigemptyset(&sa.sa_mask) != 0)
+		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
+	sa.sa_handler = rvp_siginfo_handler;
+	if (real_sigaction(RVP_INFO_SIGNUM, &sa, &osa) == -1)
+		err(EXIT_FAILURE, "%s: sigaction", __func__);
+
+	if ((osa.sa_flags & SA_SIGINFO) != 0 || osa.sa_handler != SIG_DFL) {
+		errx(EXIT_FAILURE,
+		    "%s: signal %d unexpectedly had a non-default action",
+		    __func__, RVP_INFO_SIGNUM);
+	}
 }
 
 static void
@@ -187,8 +212,13 @@ rvp_signal_ring_acquire_scan(rvp_thread_t *t, uint32_t idepth)
 		if (!atomic_compare_exchange_strong(&r->r_state, &dirty,
 						 RVP_RING_S_INUSE))
 			continue;
-		if (r->r_tid == tid && r->r_idepth == idepth)
+		if (r->r_tid == tid && r->r_idepth == idepth) {
+			// We may reuse tid's, so make sure t_stats is
+			// up-to-date.
+			if (r->r_stats != &t->t_stats)
+				r->r_stats = &t->t_stats;
 			return r;
+		}
 		/* Not a match, put it back. */
 		atomic_store_explicit(&r->r_state, RVP_RING_S_DIRTY,
 		    memory_order_relaxed);
@@ -201,6 +231,7 @@ rvp_signal_ring_acquire_scan(rvp_thread_t *t, uint32_t idepth)
 						 RVP_RING_S_INUSE)) {
 			r->r_tid = tid;
 			r->r_idepth = idepth;
+			r->r_stats = &t->t_stats;
 			break;
 		}
 	}
@@ -759,10 +790,15 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	if (act == NULL)
 		goto out;
 
+	/* XXX sigaction(2) is supposed to be async-signal-safe, so instead of
+	 * acquiring a lock here, I should use a signal-safe approach to
+	 * allocating & establishing a new rvp_signal_t, possibly copying
+	 * from intern_sigset().
+	 */
 	rvp_signal_lock(signum, &savedmask);
 
 	if ((s = rvp_signal_alternate_lookup(signum)) == NULL)
-		err(EXIT_FAILURE, "%s: malloc", __func__);
+		err(EXIT_FAILURE, "%s: rvp_signal_alternate_lookup", __func__);
 
 	if ((act->sa_flags & SA_SIGINFO) != 0) {
 		handler = (rvp_addr_t)(s->s_sigaction = act->sa_sigaction);
@@ -794,6 +830,13 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	rvp_signal_select_alternate(signum, s);
 
 out:
+	if (signum == RVP_INFO_SIGNUM && (act->sa_flags & SA_SIGINFO) == 0 &&
+	    s->s_handler == SIG_DFL) {
+		act_copy = *act;
+		act_copy.sa_handler = rvp_siginfo_handler;
+		act = &act_copy;
+	}
+
 	rc = real_sigaction(signum, act, oact);
 	if (oact == NULL || (oact->sa_flags & SA_SIGINFO) == 0 ||
 	    oact->sa_sigaction != __rvpredict_handler_wrapper) {

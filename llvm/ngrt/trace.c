@@ -1,12 +1,12 @@
 #include <assert.h>
-#include <sys/types.h>	/* for open(2), getpid(2) */
-#include <sys/stat.h>	/* for open(2) */
+#include <sys/types.h>	/* for open(2), getpid(2), fstat(2) */
+#include <sys/stat.h>	/* for open(2), fstat(2) */
 #include <fcntl.h>	/* for open(2) */
 #include <sys/uio.h>	/* for writev(2) */
 #include <stdio.h>	/* for snprintf(3) */
 #include <stdlib.h>	/* for getenv(3) */
 #include <time.h>	/* for time(3) */
-#include <unistd.h>	/* for getlogin(3) */
+#include <unistd.h>	/* for getlogin(3), fstat(2) */
 
 #include "access.h"
 #include "nbcompat.h"
@@ -142,19 +142,45 @@ rvp_expand_template(const char *template)
 int
 rvp_trace_open(void)
 {
-	const char *template = getenv("RVP_TRACE_FILE");
-	char *tracefn = rvp_expand_template(template);
+	const char *file_tmpl = getenv("RVP_TRACE_FILE");
+	const char *fifo_tmpl = getenv("RVP_TRACE_FIFO");
+	const char *tmpl = (fifo_tmpl != NULL) ? fifo_tmpl : file_tmpl;
+	char *tracefn = rvp_expand_template(tmpl);
+	int fd;
 
 	if (tracefn == NULL) {
 		err(EXIT_FAILURE,
 		    "%s: could not expand trace-file template \"%s\"", __func__,
-		        template);
+		        tmpl);
 	}
 
-	const int fd = open(tracefn, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	if (fifo_tmpl != NULL) {
+		fd = open(tracefn, O_WRONLY);
+	} else {
+		fd = open(tracefn, O_WRONLY|O_CREAT|O_TRUNC,
+		    S_IRUSR | S_IWUSR /* 0600 may be more readable! */);
+	}
 
 	if (fd == -1)
 		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
+
+	if (fifo_tmpl != NULL) {
+		struct stat st;
+
+		if (fstat(fd, &st) == -1)
+			err(EXIT_FAILURE, "%s: fstat", __func__);
+
+		switch (st.st_mode & S_IFMT) {
+		case S_IFCHR:
+		case S_IFIFO:
+		case S_IFSOCK:
+			break;
+		default:
+			errx(EXIT_FAILURE,
+			    "%s: expected a character device, FIFO, "
+			    "or socket at \"%s\"", __func__, tracefn);
+		}
+	}
 
 	if (writeall(fd, &header, sizeof(header)) == -1)
 		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);

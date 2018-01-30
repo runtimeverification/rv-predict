@@ -1415,6 +1415,79 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	return 0;
 }
 
+static void *
+memdup(const void *buf, size_t buflen)
+{
+	void *p;
+
+	if ((p = malloc(buflen)) == NULL)
+		return NULL;
+
+	return memcpy(p, buf, buflen);
+}
+
+static void
+advance_iov(struct iovec **iovp, int *iovcntp, ssize_t nbytes)
+{
+	int i;
+	const int iovcnt = *iovcntp;
+	struct iovec *iov;
+
+	for (iov = *iovp, i = 0; nbytes > 0 && i < iovcnt; iov++, i++) {
+		if (iov->iov_len > nbytes) {
+			iov->iov_len -= nbytes;
+			iov->iov_base = (char *)iov->iov_base + nbytes;
+			break;
+		}
+		if (nbytes < iov->iov_len) {
+			errx(EXIT_FAILURE, "nbytes %zd <= iov->iov_len %zu",
+			    nbytes, iov->iov_len);
+		}
+		nbytes -= iov->iov_len;
+	}
+	*iovp = iov;
+	*iovcntp = iovcnt - i;
+}
+
+static ssize_t
+readallv(int fd, const struct iovec *iov0, int iovcnt)
+{
+	ssize_t nexpected = iovsum(iov0, iovcnt),
+		nread,
+		ntotal;
+
+	nread = readv(fd, iov0, iovcnt);
+	if (nread == -1 || nread == 0 || nread == nexpected) {
+		warnx("%s.%d: nread -> %zd", __func__, __LINE__, nread);
+		return nread;
+	}
+
+	struct iovec *niov = memdup(iov0, sizeof(iov0[0]) * iovcnt),
+	    *iov = niov;
+
+	for (ntotal = nread; ntotal < nexpected; ntotal += nread) {
+		advance_iov(&iov, &iovcnt, nread);
+		nread = readv(fd, iov, iovcnt);
+		if (nread == -1) {
+			free(niov);
+			warnx("%s.%d: nread -> %zd", __func__, __LINE__, nread);
+			return -1;
+		}
+		if (nread == 0) {
+			warnx("%s.%d: nread -> %zd", __func__, __LINE__, nread);
+			break;
+		}
+
+		assert(nread <= nexpected - ntotal);
+	}
+	free(niov);
+	if (ntotal != nexpected) {
+		warnx("%s.%d: ntotal %zd != nexpected %zd", __func__, __LINE__,
+		    ntotal, nexpected);
+	}
+	return ntotal;
+}
+
 void
 rvp_trace_dump(const rvp_output_params_t *op, int fd)
 {
@@ -1465,13 +1538,13 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		     op->op_type);
 	}
 
-	if ((nread = readv(fd, iov, __arraycount(iov))) == -1)
+	if ((nread = readallv(fd, iov, __arraycount(iov))) == -1)
 		err(EXIT_FAILURE, "%s: readv(header)", __func__);
 
 	if (nread < iovsum(iov, __arraycount(iov))) {
 		errx(EXIT_FAILURE,
-		    "%s: short read (header + 1st deltop + ggen init)",
-		    __func__);
+		    "%s: read %zd bytes, expected %zd (header + 1st deltop + ggen init)",
+		    __func__, nread, iovsum(iov, __arraycount(iov)));
 	}
 
 	cmp = memcmp(th.th_magic, expected_th.th_magic, sizeof(th.th_magic));

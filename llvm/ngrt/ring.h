@@ -20,6 +20,12 @@ typedef enum _rvp_ring_state {
 	, RVP_RING_S_DIRTY
 } rvp_ring_state_t;
 
+typedef struct _rvp_ring_stats {
+	volatile uint64_t _Atomic	rs_ring_sleeps;
+	volatile uint64_t _Atomic	rs_ring_spins;
+	volatile uint64_t _Atomic	rs_iring_spins;
+} rvp_ring_stats_t;
+
 struct _rvp_ring;
 typedef struct _rvp_ring rvp_ring_t;
 
@@ -114,6 +120,7 @@ struct _rvp_ring {
 					//
 	rvp_sigdepth_t r_sigdepth;	// storage for a change of signal
 					// depth event
+	rvp_ring_stats_t *r_stats;	// statistic counters
 };
 
 extern volatile _Atomic uint64_t rvp_ggen;
@@ -235,6 +242,7 @@ rvp_iring_wait_for_one_empty(rvp_ring_t *r)
 	for (i = 32; rvp_iring_nempty(ir) < 1; i = MIN(16384, i + 1)) {
 		for (j = 0; j < i; j++)
 			;
+		r->r_stats->rs_iring_spins += i;
 		/* we call this when we're queueing an interruption, and
 		 * we only do that from a signal context, so we mustn't
 		 * call sched_yield() here.

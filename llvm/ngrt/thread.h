@@ -30,9 +30,10 @@ struct _rvp_thread {
 	 * After a thread enters its start_routine, t_intrmask tracks
 	 * the signal mask that's in effect.
 	 */
-	uint64_t		t_intrmask;
+	uint64_t _Atomic	t_intrmask;
 	uint32_t _Atomic	t_idepth;
 	rvp_ring_t * _Atomic	t_intr_ring;
+	rvp_ring_stats_t	t_stats;
 };
 
 int __rvpredict_pthread_create(pthread_t *, const pthread_attr_t *,
@@ -42,6 +43,7 @@ int __rvpredict_pthread_join(pthread_t, void **);
 
 bool rvp_thread_flush_to_fd(rvp_thread_t *, int, bool);
 rvp_thread_t *rvp_pthread_to_thread(pthread_t);
+void rvp_info_dump_request(void);
 
 REAL_DECL(int, pthread_join, pthread_t, void **);
 REAL_DECL(int, pthread_create, pthread_t *, const pthread_attr_t *,

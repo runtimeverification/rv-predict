@@ -53,7 +53,7 @@
                                 <artifactItem>
                                     <groupId>com.runtimeverification.install</groupId>
                                     <artifactId>rv-install</artifactId>
-                                    <version>1.5.2-SNAPSHOT</version>
+                                    <version>1.5.4-SNAPSHOT</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${staging.dir.app}</outputDirectory>
@@ -66,6 +66,27 @@
                         </configuration>
                     </execution>
                     <execution>
+                        <id>copy-rv-install-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.runtimeverification.install</groupId>
+                                    <artifactId>rv-install</artifactId>
+                                    <version>1.5.4-SNAPSHOT</version>
+                                    <type>jar</type>
+                                    <overWrite>false</overWrite>
+                                    <destFileName>rv-install.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>${staging.dir.app}</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-rv-license-jar</id>
                         <phase>package</phase>
                         <goals>
                             <goal>copy</goal>
@@ -139,6 +160,21 @@
                                 </resource>
                             </resources>
                             <outputDirectory>${staging.dir.app}</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-debian-directory</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>${basedir}/../debian</directory>
+                                </resource>
+                            </resources>
+                            <outputDirectory>${staging.dir.app}/debian</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>

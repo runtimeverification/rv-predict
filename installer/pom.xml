@@ -52,7 +52,7 @@
                                 <artifactItem>
                                     <groupId>com.runtimeverification.install</groupId>
                                     <artifactId>rv-install</artifactId>
-                                    <version>1.5.2-SNAPSHOT</version>
+                                    <version>1.5.4-SNAPSHOT</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>../target/release/rv-predict/</outputDirectory>
@@ -65,6 +65,27 @@
                         </configuration>
                     </execution>
                     <execution>
+                        <id>copy-rv-install-jar</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.runtimeverification.install</groupId>
+                                    <artifactId>rv-install</artifactId>
+                                    <version>1.5.4-SNAPSHOT</version>
+                                    <type>jar</type>
+                                    <overWrite>false</overWrite>
+                                    <destFileName>rv-install.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                            <outputDirectory>../target/release/rv-predict/</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-rv-license-jar</id>
                         <phase>package</phase>
                         <goals>
                             <goal>copy</goal>

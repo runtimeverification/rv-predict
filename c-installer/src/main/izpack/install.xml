@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?>
 
 <installation version="5.0">
-
-    <jar src="res/panels/RVPanels.jar" />
+    <jar src="rv-install.jar" />
     <jar src="rv-licensing.jar" />
 
     <!-- General Application Information -->
@@ -11,8 +10,8 @@
         <appversion>@{rvpredict.version}</appversion>
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
-        <run-privileged condition="izpack.windowsinstall|izpack.macinstall"/>
         <tempdir variablename="INSTALL_PATH"/>
+        <javaversion>1.8</javaversion>
     </info>
 
     <variables>
@@ -43,23 +42,39 @@
         <res id="CustomLangPack.xml_eng" src="res/izpack-rv-predict-eng-lang.xml"/>
         <!-- User input spec defining RV key inputs -->
         <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
-        <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
+        <res id="LicencePanel.licence" src="debian/copyright"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/rv-predict-finish.html"/>
+        <res id="HTMLErrorInfoPanel.invalidOS" src="res/rvpredict-c-invalid-os.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
         <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec.xml"/>
 <!--        <res id="TargetPanel.dir.windows" src="res/windows-installpath.txt"/> -->
     </resources>
 
+    <!-- Installer Conditions -->
     <conditions>
         <condition type="comparenumerics" id="false">
             <arg1>1</arg1>
             <arg2>2</arg2>
             <operator>eq</operator>
         </condition>
+        <condition type="java" id="installOnUbuntu">
+            <java>
+                <class>com.izforge.izpack.util.OsVersion</class>
+                <field>IS_UBUNTU_LINUX</field>
+            </java>
+            <returnvalue type="boolean">true</returnvalue>
+        </condition>
+        <condition type="or" id="installOnValidOS">
+            <condition type="ref" refid="installOnUbuntu"></condition>
+        </condition>
+        <condition type="not" id="installOnInvalidOS">
+            <condition type="ref" refid="installOnValidOS"></condition>
+        </condition>
     </conditions>
 
     <!-- Installer Panel Sequence -->
     <panels>
+        <panel classname="com.izforge.izpack.panels.htmlerrorinfo.HTMLErrorInfoPanel" condition="installOnInvalidOS" id="invalidOS" />
         <!-- There is a long-standing izpack problem that a TargetPanel is required. We don't need one,
              so we're filtering it out using a condition -->
         <panel classname="TargetPanel" id="targetPanelId" condition="false"/>
@@ -80,7 +95,7 @@
                 <os family="unix"/>
             </file>
             <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
-            <file src="EVALUATION-LICENSE.md" targetdir="$INSTALL_PATH"/>
+            <file src="debian/copyright" targetdir="$INSTALL_PATH"/>
             <file src="install-scripts/install.sh" targetdir="$INSTALL_PATH/bin">
                 <os family="unix"/>
             </file>

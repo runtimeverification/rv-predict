@@ -45,4 +45,5 @@ fi
 rc=$?
 echo "dpkg-buildpackage failed. Left ${release_dir} for post-mortem." \
     1>&2
+rm -rf ${release_dir}
 exit $rc

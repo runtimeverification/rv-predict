@@ -11,6 +11,7 @@ sudo apt install maven mk-configure
 sudo apt install opam openjdk-8-jdk-headless
 sudo apt install pandoc
 sudo apt install sed
+sudo apt install devscripts debhelper dh-virtualenv
 ```
 
 Here are some other programs that must be available:
@@ -104,11 +105,7 @@ rm -rf ~/.m2/repository/com/runtimeverification/install/;
 
 cd rv-install 
 
-ant # build rv-install
-
-# install to local cache
-# you may need to replace `1.5.2-SNAPSHOT` to the correct version.   
-mvn install:install-file -DgroupId=com.runtimeverification.install -DartifactId=rv-install -Dversion=1.5.2-SNAPSHOT -Dpackaging=jar -Dfile=../rv-install/dist/rv-install-1.5.2-SNAPSHOT.jar
+mvn clean install
 ```
 
 Then you can start building the installer for RV-Predict (see the previous

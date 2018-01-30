@@ -1,5 +1,6 @@
-#include <features.h>
-
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
 #include <err.h>
 #include <signal.h>
 #include <stdbool.h>

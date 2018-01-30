@@ -7,12 +7,28 @@ analyze_passthrough=
 symbolize_passthrough=
 sharedir=$(dirname $0)/../share/rv-predict-c
 
-usage()
+_usage()
 {
-cat 1>&2 <<EOF
-usage: $(basename $0) [--prompt-for-license] [--window size]
+	cat 1>&2 <<EOF
+usage: $(basename $0) [--window size]
     [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--]
     program [trace-file]
+EOF
+}
+
+usage()
+{
+	_usage
+	exit 1
+}
+
+help()
+{
+	_usage
+	cat 1>&2 <<EOF
+
+For more information, see the manual page, $(basename $0)(1).
+
 EOF
 	exit 1
 }
@@ -22,9 +38,10 @@ rvpredict()
 	if which java >/dev/null; then
 		# found java executable in PATH
 		_java=java
-	elif [ -n "$JAVA_HOME" -a -x "$JAVA_HOME/bin/java" ];  then
+	elif [ "${JAVA_HOME:-}/bin/java" != "/bin/java" -a \
+	       -x "${JAVA_HOME:-}/bin/java" ];  then
 		# found java executable in JAVA_HOME
-		_java="$JAVA_HOME/bin/java"
+		_java="${JAVA_HOME:-}/bin/java"
 	else
 		cat 1>&2 <<EOF
 RV Predict requires Java ${min_version} to run but Java was not detected.
@@ -91,7 +108,7 @@ if [ -n "${RVP_ANALYSIS_ARGS:-}" ]; then
 	set -- ${RVP_ANALYSIS_ARGS} "$@"
 fi
 
-while [ $# -gt 1 ]; do
+while [ $# -ge 1 ]; do
 	case $1 in
 	--no-symbol)
 		symbolize_passthrough="${symbolize_passthrough:-} -S"
@@ -128,7 +145,11 @@ while [ $# -gt 1 ]; do
 		shift
 		shift
 		;;
-	--prompt-for-license|--debug)
+	-h|--help)
+		shift
+		help
+		;;
+	--debug)
 		analyze_passthrough="${analyze_passthrough:-} $1"
 		shift
 		;;

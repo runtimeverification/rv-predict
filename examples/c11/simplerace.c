@@ -1,3 +1,6 @@
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
 #include <stdio.h>
 #include <stdlib.h>	/* for EXIT_SUCCESS */
 #include <pthread.h>
@@ -6,14 +9,14 @@
 
 int shared_var = 1;
 
-void *
+static void *
 thread1(void *arg __unused)
 {
 	shared_var++;
 	return NULL;
 }
 
-void *
+static void *
 thread2(void *arg __unused)
 {
 	shared_var++;

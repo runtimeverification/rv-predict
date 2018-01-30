@@ -5,14 +5,11 @@ Maintainer: Runtime Verification, Inc. <support@runtimeverification.com>
 Build-Depends: debhelper (>=9), mk-configure
 Standards-Version: 3.9.6
 Homepage: https://runtimeverification.com/predict/
-#Vcs-Git: git://anonscm.debian.org/collab-maint/rv-predict-c.git
-#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/rv-predict-c.git
 
 Package: rv-predict-c
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, clang-4.0, java8-runtime-headless, libc6
 Description: RV-Predict/C predicts data races in C and C++ programs.
- Use RV-Predict/C compiles and runs a C/C++ program with
- instrumentation that produces an execution trace.  RV-Predict/C
- analyzes the execution trace and reports the data races that could
- occur.
+ C/C++ programs compiled by RV-Predict/C run with instrumentation that
+ produces an execution trace.  RV-Predict/C analyzes the execution trace
+ and reports the data races that could occur.

@@ -1,4 +1,6 @@
-// Copyright (c) 2016 Runtime Verification Inc. (RV-Predict Team). All Rights Reserved.
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
 
 #include <pthread.h>
 #include <sched.h>
@@ -10,7 +12,7 @@ bool ready = false;
 typedef enum { STOP, INIT, START } state_t;
 state_t state = STOP;
 
-void *
+static void *
 init(void *arg __unused)
 {
 	pthread_mutex_lock(&l);
@@ -23,7 +25,7 @@ init(void *arg __unused)
 	return NULL;
 }
 
-void *
+static void *
 start(void *arg __unused)
 {
 	sched_yield();
@@ -35,7 +37,7 @@ start(void *arg __unused)
 	return NULL;
 }
 
-void *
+static void *
 stop(void *arg __unused)
 {
 	pthread_mutex_lock(&l);

@@ -1,4 +1,6 @@
-#include <features.h>
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
 #include <err.h>
 #include <limits.h>
 #include <string.h>	/* strerror(3) */
@@ -9,6 +11,8 @@
 #include <signal.h>	/* sigaction(2) */
 #include <time.h>
 #include <unistd.h>
+
+#include "signals.h"
 
 void
 signals_changemask(int how, int signum, sigset_t *oset)

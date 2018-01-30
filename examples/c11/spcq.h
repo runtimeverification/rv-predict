@@ -1,3 +1,6 @@
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
 #include <stdatomic.h>
 #include <stdbool.h>
 

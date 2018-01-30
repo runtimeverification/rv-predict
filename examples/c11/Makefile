@@ -1,7 +1,6 @@
 #
-# This makefile uses BSD macro files.  You can get a rudimentary
-# set of BSD macro files on POSIX-compliant platforms like Linux and
-# Mac OS X by installing a Pkgsrc bootstrap kit from pkgsrc.org.
+# This makefile should be built with `mkcmake`.  Install it with
+# `apt-get install mk-configure`.
 #
 .-include "../mkbin.mk"
 
@@ -25,6 +24,7 @@ PROGS+=	simple-state-machine simplerace slpcq spcq spinning-loop square-sum
 
 CC=clang
 CFLAGS+=-std=c11
+CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
 #CPPFLAGS+=-Dlpcq_atomic=_Atomic
 #CPPFLAGS.spcq+=-D__STDC_NO_ATOMICS__

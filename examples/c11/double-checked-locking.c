@@ -1,3 +1,7 @@
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
+
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -17,7 +21,8 @@ something(void)
 resource_t * volatile resource_ptr = NULL;
 pthread_mutex_t resource_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void *foo(void *arg __unused)
+static void *
+foo(void *arg __unused)
 {
 	if (resource_ptr == NULL) {
 		pthread_mutex_lock(&resource_mutex);

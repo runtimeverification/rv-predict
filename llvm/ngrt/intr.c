@@ -32,7 +32,7 @@ static bool intr_debug = false;
 static sigset_t intr_mask;
 
 static void
-rvp_static_intr_handler(int signum)
+__rvpredict_static_intr_handler(int signum)
 {
 	int i;
 
@@ -161,7 +161,7 @@ rvp_static_intrs_reinit(void)
 
 		sa.sa_mask = intr_mask;
 
-		sa.sa_handler = rvp_static_intr_handler;
+		sa.sa_handler = __rvpredict_static_intr_handler;
 		if (sigaction(signum, &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
 	}
@@ -176,7 +176,7 @@ rvp_static_intrs_reinit(void)
 
 		sa.sa_mask = intr_mask;
 
-		sa.sa_handler = rvp_static_intr_handler;
+		sa.sa_handler = __rvpredict_static_intr_handler;
 		if (sigaction(signum, &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
 

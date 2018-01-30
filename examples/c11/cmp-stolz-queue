@@ -19,7 +19,7 @@ with_tsan()
 with_rvp()
 {
 	echo trying with rv-predict
-	rvpx ./stolz-queue.rvp > /dev/null
+	./stolz-queue.rvp > /dev/null
 }
 
 if [ $# -eq 0 ]; then

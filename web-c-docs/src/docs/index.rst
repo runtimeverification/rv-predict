@@ -1,5 +1,5 @@
-Welcome!
-========
+RV-Predict/C
+============
 
 RV-Predict/C is the only dynamic data race detector that is both sound and
 maximal. *Dynamic* means that it executes the program in order to extract
@@ -33,6 +33,7 @@ Contents
 .. toctree::
 
    :maxdepth: 2
+   installation
    quickstart
    runningexamples
 

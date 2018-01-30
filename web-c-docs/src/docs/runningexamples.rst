@@ -100,7 +100,7 @@ We will apply RV-Predict/C to ``dot-product`` in two steps.  Make sure you
 are in the directory ``/usr/share/examples/rv-predict-c/c11``.  First, ``$
 rvpc dot-product.c`` creates an instrumented version of a multithreaded
 program that computes a dot product.  Second, ``$ ./a.out`` runs the
-program and analyzes its run-time behavior.  The results look like this:
+program and analyzes its run-time behavior.  The results resemble this:
 
 .. code-block:: none
 
@@ -188,8 +188,9 @@ predicts that the program can read and write ``dotstr.sum`` concurrently.
 ThreadSanitizer misses the race between lines 62 and 64 entirely.
 
 Furthermore, consider Helgrind, another widely used tool for detecting
-concurrency bugs that is part of the Valgrind toolset. The result of
-Helgrind analysis is shown below.
+concurrency bugs that is part of the Valgrind toolset.  (These examples
+were produced using Valgrind version 3.11.0.)  The result of Helgrind
+analysis is shown below.
 
 .. code-block:: none
 
@@ -248,7 +249,7 @@ Helgrind analysis is shown below.
 
 Helgrind is able to detect two data races related to concurrent writes or
 a concurrent read and a concurrent write at line 62, but not is not able
-to predict a concurrent write at line 62 and a concurrent read at line 63.
+to predict a concurrent write at line 62 and a concurrent read at line 64.
 
 2. Simple State Machine
 -----------------------
@@ -417,15 +418,15 @@ races.
 3. Double-checked Locking
 -------------------------
 
-Suppose you have a shared resource (e.g.shared a database connection or a large allocation a
-big chunk of of memory) that is expensive to construct, so it is only done when necessary. 
+Suppose you have a shared resource (e.g., a database connection or a large allocation a
+big chunk of memory) that is expensive to construct, so it is only done when necessary. 
 A common idiom used in such cases is known as `double-checked locking` pattern. 
 The basic idea is that the pointer is first read without acquiring the lock, and the lock
 is acquired only if the pointer is NULL. The pointer is then checked again once the lock has
-been acquired in case another threads has done the initialization between the first check
+been acquired in case another thread has done the initialization between the first check
 and this thread acquiring a lock. 
 
-For full source see examples/rv-predict-c/c11/double-checked-locking.c.
+For full source see ``examples/rv-predict-c/c11/double-checked-locking.c``.
 
 .. code-block:: c
 

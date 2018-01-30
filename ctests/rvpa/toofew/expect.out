@@ -1,4 +1,4 @@
 rvpa: too few arguments
-usage: rvpa [--prompt-for-license] [--window size]
+usage: rvpa [--window size]
     [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--]
     program [trace-file]

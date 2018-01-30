@@ -1,5 +1,6 @@
-// Copyright (c) 2016 Runtime Verification Inc. (RV-Predict Team). All Rights Reserved.
-
+/* Copyright (c) 2016,2017,2018 Runtime Verification, Inc.
+ * All rights reserved.
+ */
 #include <err.h>
 #include <pthread.h>
 #include <sched.h>
@@ -11,7 +12,7 @@
 bool condition = false;
 int sharedVar;
 
-void *
+static void *
 thread1(void *arg __unused)
 {
 	sharedVar = 1;
@@ -19,7 +20,7 @@ thread1(void *arg __unused)
 	return NULL;
 }
 
-void *
+static void *
 thread2(void *arg __unused)
 {
 	while (!condition) {

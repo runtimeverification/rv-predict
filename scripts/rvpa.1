@@ -9,7 +9,8 @@ instrumentation using
 .Xr rvpc 1
 .Sh SYNOPSIS
 .Nm 
-.Op Fl Fl prompt-for-license
+.Op Fl h
+.Op Fl Fl help
 .Op Fl Fl window Ar size
 .Op Fl Fl no-shorten
 .Op Fl Fl no-signal
@@ -39,14 +40,8 @@ needs to convert data & instruction addresses to names in its reports.
 Command-line options modify the behavior of
 .Nm :
 .Bl -tag -width "mmprompt-for-license"
-.It Fl Fl prompt-for-license
-if this option is on the command line, and
-.Tn RV-Predict/C
-cannot find a valid license key, then it will ask for the user's email
-address and password and try to download a new key.
-Otherwise, if there is not a valid license key,
-.Nm
-aborts the analysis.
+.It Fl h | Fl Fl help
+Print a help message. 
 .It Fl Fl window Ar size
 .Tn RV-Predict/C
 segments
@@ -136,9 +131,10 @@ ignores the setting of
 .Ev RVP_TRACE_FILE
 in the user's environment.
 .It Ev RVP_ANALYSIS_ARGS
-.Nm treats the content of
+.Nm
+treats the content of
 .Ev RVP_ANALYSIS_ARGS
-as if they appeared at the beginning of its command-line arguments.
+as if it appeared at the beginning of its command-line arguments.
 Actual command-line arguments will override the arguments 
 set by
 .Ev RVP_ANALYSIS_ARGS .
@@ -241,7 +237,7 @@ but the version is not late enough.
 .Xr rvpx 1
 .Sh HISTORY
 .Tn RV-Predict/C
-2.0 was released in July 2017.
+1.9 was released in January 2018.
 .Sh AUTHORS
 .\" .An "Yilong Li"
 .\" .An "Traian Serbanuta"

@@ -31,8 +31,8 @@ let rvsyms_field str =
   if raw = "" then str else
   let parts = Str.split_delim (Str.regexp ";") raw in
   match parts with
-  | loc :: _ :: _  :: symbol :: [] -> symbol ^ " at " ^ loc
-  | loc :: _  :: symbol :: [] -> symbol ^ " at " ^ loc
+  | loc :: _ :: _  :: symbol :: [] -> "`" ^ symbol ^ "` at " ^ loc
+  | loc :: _  :: symbol :: [] -> "`" ^ symbol ^ "` at " ^ loc
   | _ -> failwith "could not parse field in rvsyms output"
 
 let parse_loc loc =

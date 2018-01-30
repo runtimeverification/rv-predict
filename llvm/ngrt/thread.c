@@ -254,7 +254,7 @@ serialize(void *arg __unused)
 		}
 		nwake--;
 
-		if (info_dump_requested)
+		if (atomic_exchange(&info_dump_requested, false))
 			rvp_dump_info();
 
 		rvp_increase_ggen();

@@ -352,6 +352,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 */
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_signal_t *s = rvp_signal_lookup(signum);
+	uint64_t omask = t->t_intrmask;
 	uint32_t idepth = atomic_fetch_add_explicit(&t->t_idepth, 1,
 	    memory_order_acquire);
 	rvp_ring_t *r = rvp_signal_ring_acquire(t, idepth + 1);
@@ -360,6 +361,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
+	t->t_intrmask = omask | sigset_to_mask(&s->s_blockset->bs_sigset);
 	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a
@@ -400,6 +402,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_ring_put_buf(r, b);
 	rvp_interruption_close(it, r->r_producer - r->r_items);
 	rvp_signal_ring_put(t, r);
+	t->t_intrmask = omask;
 	/* I wait until after the ring is relinquished to restore the old
 	 * idepth so that the relinquished ring is available for reuse.
 	 */
@@ -748,7 +751,17 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	if (oldset != NULL) {
 		const uint64_t actual_omask = sigset_to_mask(oldset);
 
-		if (actual_omask != 0 && omask != actual_omask)
+                /* The mask that was in `t->t_intrmask` when we entered
+                 * this function should precisely match the mask
+                 * returned by `changefn` (`real_pthread_sigmask`),
+                 * above, *except* in a signal.
+		 *
+                 * In a signal, the mask that is actually in effect will
+                 * block at least all of the signals blocked in
+		 * `t->t_intrmask`, however, it may block more.
+		 */
+		if (t->t_intr_ring == &t->t_ring &&
+		    actual_omask != 0 && omask != actual_omask)
 			abort();
 	}
 
@@ -795,6 +808,12 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
+/* XXX sigaction(2) is async-signal-safe, so we have to
+ * XXX take care to avoid async-signal-UNSAFE functions in
+ * XXX our implementation.  rvp_signal_lock() calls
+ * XXX pthread_mutex_lock(), which is not async-signal-safe.
+ * XXX So I need to fix that someday. 
+ */
 int
 __rvpredict_sigaction(int signum, const struct sigaction *act0,
     struct sigaction *oact)

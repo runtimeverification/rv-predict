@@ -15,6 +15,8 @@ STRIPFLAG=
 INCS=intr_exports.h
 CC?=clang
 CFLAGS+=-std=c11
+CFLAGS+=-pedantic
+CFLAGS+=-Wmissing-prototypes
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wmissing-prototypes

@@ -62,6 +62,12 @@ typedef struct _rvp_iring {
 	rvp_interruption_t ir_items[8];
 } rvp_iring_t;
 
+// XXX one-off addition for customer's interrupt simulation
+typedef struct _rvp_intr_hack {
+	sigset_t ih_mask;
+	bool ih_valid;
+} rvp_intr_hack_t;
+
 /* An event ring contains events that are serialized as one
  * or more unsigned 32-bit integers.  An execution sequence
  * (thread/interrupt/signal) has an event ring, `r`.  Each new event
@@ -121,6 +127,9 @@ struct _rvp_ring {
 	rvp_sigdepth_t r_sigdepth;	// storage for a change of signal
 					// depth event
 	rvp_ring_stats_t *r_stats;	// statistic counters
+	rvp_intr_hack_t r_intr_hack;	// hack for supporting
+					// splhigh()/splx()-like function
+					// for our customer
 };
 
 extern volatile _Atomic uint64_t rvp_ggen;

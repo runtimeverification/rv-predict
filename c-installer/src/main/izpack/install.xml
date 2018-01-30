@@ -57,13 +57,6 @@
             <arg2>2</arg2>
             <operator>eq</operator>
         </condition>
-        <condition type="java" id="installOnDebian">
-            <java>
-                <class>com.izforge.izpack.util.OsVersion</class>
-                <field>IS_DEBIAN_LINUX</field>
-            </java>
-            <returnvalue type="boolean">true</returnvalue>
-        </condition>
         <condition type="java" id="installOnUbuntu">
             <java>
                 <class>com.izforge.izpack.util.OsVersion</class>
@@ -72,7 +65,6 @@
             <returnvalue type="boolean">true</returnvalue>
         </condition>
         <condition type="or" id="installOnValidOS">
-            <condition type="ref" refid="installOnDebian"></condition>
             <condition type="ref" refid="installOnUbuntu"></condition>
         </condition>
         <condition type="not" id="installOnInvalidOS">

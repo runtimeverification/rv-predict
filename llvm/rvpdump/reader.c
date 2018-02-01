@@ -19,6 +19,12 @@
 
 #define	RSVD_IDEPTH 0
 
+static inline void __printflike(1, 2)
+dbg_printf(const char *fmt __unused, ...)
+{
+	return;
+}
+
 typedef char prebuf_t[
     sizeof("tid 4294967295.4294967295 18446744073709551615 ") +
     MAX(sizeof("{0x0123456789abcdef}"), sizeof("pc 0x0123456789abcdef"))];
@@ -1458,7 +1464,7 @@ readallv(int fd, const struct iovec *iov0, int iovcnt)
 
 	nread = readv(fd, iov0, iovcnt);
 	if (nread == -1 || nread == 0 || nread == nexpected) {
-		warnx("%s.%d: nread -> %zd", __func__, __LINE__, nread);
+		dbg_printf("%s.%d: nread -> %zd", __func__, __LINE__, nread);
 		return nread;
 	}
 
@@ -1470,11 +1476,13 @@ readallv(int fd, const struct iovec *iov0, int iovcnt)
 		nread = readv(fd, iov, iovcnt);
 		if (nread == -1) {
 			free(niov);
-			warnx("%s.%d: nread -> %zd", __func__, __LINE__, nread);
+			dbg_printf("%s.%d: nread -> %zd", __func__, __LINE__,
+			    nread);
 			return -1;
 		}
 		if (nread == 0) {
-			warnx("%s.%d: nread -> %zd", __func__, __LINE__, nread);
+			dbg_printf("%s.%d: nread -> %zd", __func__, __LINE__,
+			    nread);
 			break;
 		}
 
@@ -1482,8 +1490,8 @@ readallv(int fd, const struct iovec *iov0, int iovcnt)
 	}
 	free(niov);
 	if (ntotal != nexpected) {
-		warnx("%s.%d: ntotal %zd != nexpected %zd", __func__, __LINE__,
-		    ntotal, nexpected);
+		dbg_printf("%s.%d: ntotal %zd != nexpected %zd",
+		    __func__, __LINE__, ntotal, nexpected);
 	}
 	return ntotal;
 }

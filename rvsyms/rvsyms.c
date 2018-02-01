@@ -1435,6 +1435,7 @@ main(int argc, char **argv)
 		} else if (sscanf(lbuf, "[0x%" SCNx64 "]\n",
 		    &params[0].dataptr) == 1) {
 			params[0].have_dataptr = true;
+			params[0].have_frameptr = false;
 			paramidx = 0;
 			nparams = 1;
 		} else if (sscanf(lbuf, "{0x%" SCNx64 "}\n",

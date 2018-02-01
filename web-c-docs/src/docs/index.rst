@@ -34,6 +34,6 @@ Contents
 
    :maxdepth: 2
    installation
-   gettingstarted
+   quickstart
    runningexamples
 

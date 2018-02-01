@@ -4,26 +4,18 @@ Installation
 Requirements
 ------------
 
-RV-Predict/C requires Ubuntu Linux 16.04 or higher.
+.. note:: We only currently officially support RV-Predict/C on 64-bit Ubuntu Linux 16.04 and greater. 
+          If you would like to use a different distribution, `contact support <https://runtimeverification.com/support>`_ and
+          we will try to support you.  
 
-Installing the Debian package (```.deb```)
-------------------------------------------
+GUI Installer 
+-------------
+1. Download and install the Oracle Java 8 (or higher) JRE or OpenJDK 8 JRE for your architecture.
+2. Download the `RV-Predict/C GUI installer <https://runtimeverification.com/predict/>`_.
+3. Run the ``.jar`` file with ``java -jar rv-predict-c-installer.jar``. Follow the instructions to finish the installation.  
 
-To install the Debian package for RV-Predict/C---suppose that it is called
-```rv-predict-c.deb```---run as ```root```:
-
-.. code-block:: none
-	
-	dpkg -i rv-predict-c.deb
-	apt-get install -f -y
-
-Starting the GUI installer (```.jar```)
----------------------------------------
-
-To use the GUI installer, you must have Java 8 installed.
-To start the installer---let us say that it is called ```rv-predict-c.jar```---run:
-
-.. code-block:: none
-	
-	java -jar rv-predict-c.jar
+Debian package 
+--------------
+1. Download the `RV-Predict/C Debian package <https://runtimeverification.com/predict/>`_.
+2. Run the ``.deb`` file with ``sudo apt-get update; sudo dpkg -i rv-predict-c.deb; sudo apt-get install -f -y``.  
 

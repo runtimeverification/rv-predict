@@ -104,6 +104,12 @@ public class Trace {
             ttidToAddrToWriteEvents;
 
     /**
+     * Map from (thread ID, memory address) to read events that have no writes on the same thread.
+     */
+    private final Table<Integer, Long, List<ReadonlyEventInterface>>
+            ttidToAddrToPrefixReadEvents;
+
+    /**
      * Map from lock ID to critical lock pairs.
      */
     private final Map<Long, List<LockRegion>> lockIdToLockRegions;
@@ -142,6 +148,7 @@ public class Trace {
             Map<Integer, ThreadState> tidToThreadState,
             MemoryAddrToStateMap addrToState,
             Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
+            Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToPrefixReadEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<ReadonlyEventInterface> clinitEvents,
             Map<Integer, Set<Integer>> ttidsThatCanOverlap,
@@ -156,6 +163,7 @@ public class Trace {
         this.tidToThreadState = tidToThreadState;
         this.addrToState = addrToState;
         this.ttidToAddrToWriteEvents = tidToAddrToEvents;
+        this.ttidToAddrToPrefixReadEvents = tidToAddrToPrefixReadEvents;
         this.lockIdToLockRegions = lockIdToLockRegions;
         this.clinitEvents = clinitEvents;
         this.ttidsThatCanOverlap = ttidsThatCanOverlap;
@@ -286,6 +294,10 @@ public class Trace {
 
     public Iterable<ReadonlyEventInterface> getWriteEvents(Long addr) {
         return Iterables.concat(ttidToAddrToWriteEvents.column(addr).values());
+    }
+
+    public Iterable<ReadonlyEventInterface> getPrefixReadEvents(Long addr) {
+        return Iterables.concat(ttidToAddrToPrefixReadEvents.column(addr).values());
     }
 
     private ReadonlyEventInterface getPrevWrite(long gid, int ttid, Long addr) {
@@ -597,6 +609,11 @@ public class Trace {
                         eventIdToTtid.put(event.getEventId(), ttid);
                         if (event.isWrite()) {
                             ttidToAddrToWriteEvents.row(ttid)
+                                    .computeIfAbsent(event.getDataInternalIdentifier(), p -> new ArrayList<>())
+                                    .add(event);
+                        } else if (event.isRead()
+                                && !ttidToAddrToWriteEvents.row(ttid).containsKey(event.getDataInternalIdentifier())) {
+                            ttidToAddrToPrefixReadEvents.row(ttid)
                                     .computeIfAbsent(event.getDataInternalIdentifier(), p -> new ArrayList<>())
                                     .add(event);
                         }

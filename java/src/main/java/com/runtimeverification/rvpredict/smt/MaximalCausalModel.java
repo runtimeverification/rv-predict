@@ -216,13 +216,20 @@ public class MaximalCausalModel {
     private BoolFormula getPhiSC(ReadonlyEventInterface read) {
         /* compute all the write events that could interfere with the read event */
         List<ReadonlyEventInterface> diffThreadSameAddrSameValWrites = new ArrayList<>();
-        List<ReadonlyEventInterface> diffThreadSameAddrDiffValWrites = new ArrayList<>();
+        List<ReadonlyEventInterface> diffThreadSameAddrDiffValWritesOrReadPrefix = new ArrayList<>();
         trace.getWriteEvents(read.getDataInternalIdentifier()).forEach(write -> {
             if (trace.getTraceThreadId(write) != trace.getTraceThreadId(read) && !happensBefore(read, write)) {
                 if (write.getDataValue() == read.getDataValue()) {
                     diffThreadSameAddrSameValWrites.add(write);
                 } else {
-                    diffThreadSameAddrDiffValWrites.add(write);
+                    diffThreadSameAddrDiffValWritesOrReadPrefix.add(write);
+                }
+            }
+        });
+        trace.getPrefixReadEvents(read.getDataInternalIdentifier()).forEach(otherRead -> {
+            if (trace.getTraceThreadId(otherRead) != trace.getTraceThreadId(read) && !happensBefore(read, otherRead)) {
+                if (otherRead.getDataValue() != read.getDataValue()) {
+                    diffThreadSameAddrDiffValWritesOrReadPrefix.add(otherRead);
                 }
             }
         });
@@ -236,8 +243,8 @@ public class MaximalCausalModel {
 
                 { /* case 1: read the value written in the same thread */
                     FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                    diffThreadSameAddrDiffValWrites
-                            .forEach(w -> and.add(OR(HB(w, sameThreadPrevWrite), HB(read, w))));
+                    diffThreadSameAddrDiffValWritesOrReadPrefix
+                            .forEach(rw -> and.add(OR(HB(rw, sameThreadPrevWrite), HB(read, rw))));
                     or.add(and.build());
                 }
 
@@ -246,9 +253,9 @@ public class MaximalCausalModel {
                     if (!happensBefore(w1, sameThreadPrevWrite)) {
                         FormulaTerm.Builder and = FormulaTerm.andBuilder();
                         and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
-                        diffThreadSameAddrDiffValWrites.forEach(w2 -> {
-                            if (!happensBefore(w2, w1) && !happensBefore(w2, sameThreadPrevWrite)) {
-                                and.add(OR(HB(w2, w1), HB(read, w2)));
+                        diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw2 -> {
+                            if (!happensBefore(rw2, w1) && !happensBefore(rw2, sameThreadPrevWrite)) {
+                                and.add(OR(HB(rw2, w1), HB(read, rw2)));
                             }
                         });
                         or.add(and.build());
@@ -263,9 +270,9 @@ public class MaximalCausalModel {
                         FormulaTerm.Builder and = FormulaTerm.andBuilder();
                         and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
                         and.add(HB(sameThreadPrevWrite, w1), HB(w1, read));
-                        diffThreadSameAddrDiffValWrites.forEach(w2 -> {
-                            if (!happensBefore(w2, w1)) {
-                                and.add(OR(HB(w2, w1), HB(read, w2)));
+                        diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw2 -> {
+                            if (!happensBefore(rw2, w1)) {
+                                and.add(OR(HB(rw2, w1), HB(read, rw2)));
                             }
                         });
                         or.add(and.build());
@@ -283,7 +290,7 @@ public class MaximalCausalModel {
             if (diffThreadPrevWrite == null) {
                 /* the initial value of this address must be read.getDataValue() */
                 FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                diffThreadSameAddrDiffValWrites.forEach(w -> and.add(HB(read, w)));
+                diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw -> and.add(HB(read, rw)));
                 return and.build();
             } else {
                 /* the initial value of this address is unknown */
@@ -293,9 +300,9 @@ public class MaximalCausalModel {
                         FormulaTerm.Builder and = FormulaTerm.andBuilder();
                         and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
                         and.add(HB(w1, read));
-                        diffThreadSameAddrDiffValWrites.forEach(w2 -> {
-                            if (!happensBefore(w2, w1)) {
-                                and.add(OR(HB(w2, w1), HB(read, w2)));
+                        diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw2 -> {
+                            if (!happensBefore(rw2, w1)) {
+                                and.add(OR(HB(rw2, w1), HB(read, rw2)));
                             }
                         });
                         or.add(and.build());

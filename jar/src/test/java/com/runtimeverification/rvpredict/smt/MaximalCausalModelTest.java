@@ -2033,7 +2033,7 @@ public class MaximalCausalModelTest {
     }
 
     @Test
-    public void something() throws InvalidTraceDataException {
+    public void incompatibilityBetweenPrefixReads() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
         List<ReadonlyEventInterface> e1;
@@ -2058,24 +2058,6 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
-        /*
-        -- Switching to thread T1 --
-        T1.0         0          beginthread                                                    {0xffffffffffffffff}
-        T1.0        13                 read [0x0000000000617118], 0x0                          {0x0000000000401ec7}
-        T1.0        14                 read [0x00000000006162a9], 0x0                          {0x0000000000401ede}
-        T1.0        16          startthread T2                                                 {0x0000000000401cf5}
-        T1.0        17          startthread T3                                                 {0x0000000000401d14}
-        -- Switching to thread T3 --
-        T3.0         1          beginthread                                                    {0x000000000040da30}
-        T3.0         3                 read [0x00000000006162a9], 0x1                          {0x0000000000401e37}
-        T3.0         4                 read [0x0000000000617118], 0x1                          {0x0000000000401e71}
-        -- Switching to thread T2 --
-        T2.0         7          beginthread                                                    {0x000000000040da30}
-        -- Found race for threads T3 and T2 --
-                T3.0         4                 read [0x0000000000617118], 0x1                          {0x0000000000401e71}
-        -- vs
-        T2.0         9                write [0x0000000000617118], 0x1                          {0x0000000000401daf}
-*/
     }
 
     // TODO: Tests with writes that enable certain reads, both with and without signals.

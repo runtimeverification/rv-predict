@@ -17,5 +17,5 @@ GUI Installer
 Debian package 
 --------------
 1. Download the `RV-Predict/C Debian package <https://runtimeverification.com/predict/>`_.
-2. Run the ``.deb`` file with ``sudo apt-get update; sudo dpkg -i rv-predict-c.deb; sudo apt-get install -f -y``.  
+2. Install the ``.deb`` file with ``sudo apt-get update; sudo dpkg -i rv-predict-c.deb; sudo apt-get install -f -y``.  
 

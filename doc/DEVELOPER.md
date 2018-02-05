@@ -185,3 +185,9 @@ and the `scp`ing to ftp.runtimeverification.com.  Then run:
 sh mvn-release.sh
 ```
 
+That will build and upload a Debian package (`.deb`) for RV-Predict/C,
+the GUI installers (`.jar`) for RV-Predict/C and RV-Predict/Java,
+and documentation to the website, increase the version number, tag the
+release sources, and add the new release to `debian/changelog`.
+
+You should commit the changes to `debian/changelog` right away.

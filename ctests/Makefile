@@ -1,7 +1,4 @@
-SUBDIR=rvpa stats trace
-# The rvsyms/basic/ test fails on Jenkins, so I've commented it
-# out for now. --dyoung
-#SUBDIR+=rvsyms
+SUBDIR=rvpa rvsyms stats trace
 
 MKINSTALL=no
 

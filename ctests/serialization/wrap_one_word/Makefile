@@ -1,4 +1,4 @@
-PROG=wrap_one_word
+PROG=prog
 
 .PATH:${.CURDIR}/../../../llvm/ngrt
 

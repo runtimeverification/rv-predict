@@ -1,5 +1,5 @@
-Running Examples
-================
+Running the examples
+====================
 
 We provide examples demonstrating RV-Predict capabilities in detecting
 concurrency bugs. Below we focus on detecting data races.  Data races

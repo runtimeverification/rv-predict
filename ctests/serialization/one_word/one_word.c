@@ -60,6 +60,9 @@ main(void)
 		, .lc_idepth = r.r_idepth
 	};
 	items[0] = htobe32(0xfeedbeef);
-	(void)rvp_ring_flush_to_fd(&r, STDOUT_FILENO, &lc);
+	if (!rvp_ring_flush_to_fd(&r, STDOUT_FILENO, &lc))
+		printf("rvp_ring_flush_to_fd unexpectedly failed\n");
+	if (rvp_ring_flush_to_fd(&r, STDOUT_FILENO, &lc))
+		printf("rvp_ring_flush_to_fd unexpectedly succeeded\n");
 	return EXIT_SUCCESS;
 }

@@ -19,10 +19,6 @@
 #include "trace.h"
 #include "tracefmt.h"
 
-int64_t rvp_trace_size = 0;
-
-static __section(".text") deltops_t deltops = { .matrix = { { 0 } } };
-
 typedef struct _threadswitch {
 	rvp_addr_t deltop;
 	uint32_t id;
@@ -189,100 +185,6 @@ rvp_trace_open(void)
 	free(tracefn);
 
 	return fd;
-}
-
-bool
-rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
-{
-	ssize_t nwritten;
-	uint32_t idepth0, idepth1;
-	rvp_fork_join_switch_t threadswitch = {
-		  .deltop =
-		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
-		, .tid = r->r_tid
-	};
-	rvp_sigdepth_t sigdepth = {
-		  .deltop =
-		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGDEPTH)
-		, .depth = r->r_idepth
-	};
-	struct iovec iov[20] = {
-		  [0] = (struct iovec){
-			  .iov_base = &threadswitch
-			, .iov_len = sizeof(threadswitch)
-		}
-		, [1] = (struct iovec){
-			  .iov_base = &sigdepth
-			, .iov_len = sizeof(sigdepth)
-		}
-	};
-	struct iovec *iovp = &iov[0];
-
-	if (lc == NULL)
-		;
-	else if (lc->lc_tid != r->r_tid) {
-		iovp++; /* emit 'switch' to r->r_tid; that will
-			 * reset the reader's interrupt depth to 0.
-			 */
-
-		if (r->r_idepth != 0) {
-			iovp++; /* emit 'sigdepth' to r->r_idepth */
-		}
-	} else if (lc->lc_idepth != r->r_idepth) {
-		iov[0] = iov[1];
-		iovp++; /* emit 'sigdepth' to r->r_idepth */
-	}
-	const struct iovec *first_ring_iov, *iiov,
-	    *lastiov = &iov[__arraycount(iov)];
-
-	first_ring_iov = iovp;
-
-	idepth0 = idepth1 = (lc == NULL) ? 0 : r->r_idepth;
-	/* TBD drop empties after rvp_ring_discard_iovs(), or *in*
-	 * rvp_ring_discard_iovs()?  That didn't actually work when
-	 * I tried it, so more analysis is necessary.
-	 */
-	(void)rvp_ring_drop_empties(r, NULL);
-	(void)rvp_ring_get_iovs(r, NULL, &iovp, lastiov, &idepth0);
-
-	if (iovp == first_ring_iov)
-		return false;
-
-	nwritten = writev(fd, iov, iovp - &iov[0]);
-	if (nwritten == -1)
-		err(EXIT_FAILURE, "%s: writev", __func__);
-
-	rvp_trace_size += nwritten;
-
-	for (iiov = &iov[0]; iiov < first_ring_iov; iiov++)
-		nwritten -= iiov->iov_len;
-
-	assert(nwritten > 0);
-
-	const struct iovec *check_iov = first_ring_iov;
-	assert(rvp_ring_discard_iovs(r, NULL, &check_iov, iovp, &idepth1) <= 0);
-	assert(idepth0 == idepth1);
-
-	if (lc != NULL) {
-		lc->lc_tid = r->r_tid;
-		lc->lc_idepth = idepth0;
-	} else
-		assert(idepth0 == 0);
-
-	return true;
-}
-
-deltop_t *
-rvp_vec_and_op_to_deltop(int jmpvec, rvp_op_t op)
-{
-	deltop_t *deltop =
-	    &deltops.matrix[__arraycount(deltops.matrix) / 2 + jmpvec][op];
-
-	if (deltop < &deltops.matrix[0][0] ||
-		     &deltops.matrix[RVP_NJMPS - 1][RVP_NOPS - 1] < deltop)
-		return NULL;
-	
-	return deltop;
 }
 
 void

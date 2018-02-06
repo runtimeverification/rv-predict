@@ -2,6 +2,7 @@
 #include "init.h"
 #include "interpose.h"
 #include "nbcompat.h"
+#include "str.h"
 #include "text.h"
 #include "tracefmt.h"
 

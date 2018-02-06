@@ -17,6 +17,7 @@ CC?=clang
 CFLAGS+=-std=c11
 #COPTS+=-O3
 COPTS+=-g
+CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS=access.c const.c func.c lock.c notimpl.c

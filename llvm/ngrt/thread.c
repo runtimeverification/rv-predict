@@ -275,10 +275,6 @@ serialize(void *arg __unused)
 				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
 				    fd, &serializer_lc);
 			}
-#if 0
-			any_emptied |= rvp_signal_rings_flush_to_fd(fd,
-			    &serializer_lc);
-#endif
 		} while (any_emptied);
 
 		if (rvp_trace_size_limit <= rvp_trace_size) {

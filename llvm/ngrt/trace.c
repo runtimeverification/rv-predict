@@ -2,6 +2,7 @@
 #include <sys/types.h>	/* for open(2), getpid(2), fstat(2) */
 #include <sys/stat.h>	/* for open(2), fstat(2) */
 #include <fcntl.h>	/* for open(2) */
+#include <libgen.h>	/* for basename(3) */
 #include <sys/uio.h>	/* for writev(2) */
 #include <stdio.h>	/* for snprintf(3) */
 #include <stdlib.h>	/* for getenv(3) */

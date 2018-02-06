@@ -10,7 +10,7 @@ CC=clang
 CFLAGS+=-std=c11
 COPTS+=-O3
 LDADD+=-pthread
-DBG+=-g
+COPTS+=-g
 LDADD+=-g
 CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
 CPPFLAGS+=-I$(.CURDIR)/../include

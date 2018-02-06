@@ -1,17 +1,7 @@
-PROG=prog
+PROG=wrap_one_word
 
-.PATH:${.CURDIR}/../../../llvm/ngrt
+.include "../serialization.mk"
 
-CC?=clang
-CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../../../llvm/ngrt
-CPPFLAGS+=-I${.CURDIR}/../../../include
-WARNS=4
-SRCS=$(PROG).c
-SRCS+=deltops.c serialize.c
-STRIPFLAG=
-
-COPTS+=-g -O3
-
-.include "test.mk"
+.include "../test.mk"
 
 .include <mkc.prog.mk>

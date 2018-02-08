@@ -5,7 +5,7 @@ container="rv-predict-installer-test-$(date +%s)"
 source_container="ubuntu-1604-java"
 
 function stopLxc {
-  lxc stop $container    
+  lxc stop $container
 }
 unset XDG_SESSION_ID
 unset XDG_RUNTIME_DIR

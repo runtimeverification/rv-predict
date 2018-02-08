@@ -4,7 +4,7 @@
     <groupId>com.runtimeverification.rvpredict</groupId>
     <artifactId>root</artifactId>
     <packaging>pom</packaging>
-    <version>1.8.41-SNAPSHOT</version>
+    <version>1.9</version>
     <profiles>
         <profile>
             <id>JDK 8 Build</id>
@@ -51,7 +51,7 @@
     <url>http://www.runtimeverification.com</url>
     <scm>
         <connection>scm:git:git@github.com:runtimeverification/rv-predict.git</connection>
-        <tag>HEAD</tag>
+        <tag>root-1.9</tag>
     </scm>
     <repositories>
         <repository>

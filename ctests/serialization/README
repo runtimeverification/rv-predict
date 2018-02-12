@@ -1,6 +1,8 @@
 This directory contains tests of event-ring serialization.  Every test
 should run to completion and produce the expected output.
 
+Note: these tests will only pass on a little-endian host.
+ 
 multi_word/: write multiple words starting with the 0th element of
 the ring
 

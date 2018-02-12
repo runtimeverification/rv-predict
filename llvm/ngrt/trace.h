@@ -6,6 +6,11 @@
 #include "ring.h"
 #include "tracefmt.h"
 
+typedef struct _rvp_jumpless_op {
+	rvp_addr_t jo_sigdepth;
+	rvp_addr_t jo_switch;
+} rvp_jumpless_op_t;
+
 int rvp_trace_open(void);
 
 deltop_t *rvp_vec_and_op_to_deltop(int, rvp_op_t);
@@ -16,5 +21,6 @@ void rvp_ring_put_u64(rvp_ring_t *, uint64_t);
 
 extern int64_t rvp_trace_size_limit;
 extern int64_t rvp_trace_size;
+extern rvp_jumpless_op_t rvp_jumpless_op;
 
 #endif /* _RVP_TRACE_H_ */

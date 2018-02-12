@@ -437,6 +437,7 @@ rvp_assert_atomicity(void)
 static void
 rvp_prefork_init(void)
 {
+	rvp_deltop_init();
 	rvp_assert_atomicity();
 	rvp_lock_prefork_init();	// needed by rvp_signal_init()
 	rvp_signal_prefork_init();

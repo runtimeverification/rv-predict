@@ -173,8 +173,7 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 			return -1;
 
 		r->r_sigdepth = (rvp_sigdepth_t){
-			  .deltop = (rvp_addr_t)rvp_vec_and_op_to_deltop(0,
-			      RVP_OP_SIGDEPTH)
+			  .deltop = rvp_jumpless_op.jo_sigdepth
 			, .depth = r->r_idepth
 		};
 
@@ -599,13 +598,11 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	ssize_t nwritten;
 	uint32_t idepth0, idepth1;
 	rvp_fork_join_switch_t threadswitch = {
-		  .deltop =
-		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SWITCH)
+		  .deltop = rvp_jumpless_op.jo_switch
 		, .tid = r->r_tid
 	};
 	rvp_sigdepth_t sigdepth = {
-		  .deltop =
-		      (rvp_addr_t)rvp_vec_and_op_to_deltop(0, RVP_OP_SIGDEPTH)
+		  .deltop = rvp_jumpless_op.jo_sigdepth
 		, .depth = r->r_idepth
 	};
 	struct iovec iov[20] = {

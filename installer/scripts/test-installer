@@ -1,15 +1,17 @@
 #!/bin/bash
 set -e
 
-container="rv-predict-installer-test"
-source_container="rvpredict-ubuntu-base"
+container="rv-predict-installer-test-$(date +%s)"
+source_container="ubuntu-1604-java"
 
 function stopLxc {
-  lxc-stop -n ${container}
+  lxc stop $container
 }
 unset XDG_SESSION_ID
 unset XDG_RUNTIME_DIR
 unset XDG_SESSION_COOKIE
-lxc-copy -s -e -B overlay -m bind=`pwd`:/mnt/jenkins:rw -n ${source_container} -N ${container} \
-&& trap stopLxc EXIT
-lxc-attach -n ${container} -- su -l -c /mnt/jenkins/installer/scripts/install-in-container
+
+lxc copy $source_container $container -e && trap stopLxc EXIT
+lxc config device add $container rv-predict-test disk source=`pwd` path=/mnt/jenkins/
+lxc start $container
+lxc exec $container -- su -l -c /mnt/jenkins/installer/scripts/install-in-container

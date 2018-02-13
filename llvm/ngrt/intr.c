@@ -9,6 +9,7 @@
 #include <time.h>	/* for timer_create(2) */
 
 #include "init.h"
+#include "intr.h"
 #include "intr_exports.h"
 #include "nbcompat.h"
 

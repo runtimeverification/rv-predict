@@ -292,7 +292,7 @@ rvp_signal_rings_replenish(void)
 	}
 }
 
-rvp_ring_t *
+static rvp_ring_t *
 rvp_signal_ring_acquire(rvp_thread_t *t, uint32_t idepth)
 {
 	rvp_ring_t *r;

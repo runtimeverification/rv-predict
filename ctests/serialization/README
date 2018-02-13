@@ -1,0 +1,23 @@
+This directory contains tests of event-ring serialization.  Every test
+should run to completion and produce the expected output.
+
+Note: these tests will only pass on a little-endian host.
+ 
+multi_word/: write multiple words starting with the 0th element of
+    the ring
+
+wrap_multi_word/: write multiple words starting with an element before
+    the last element of the ring and ending with an element past the
+    0th element
+
+one_word/: write one word starting with the 0th element of the ring
+
+wrap_one_word/: write one word starting with the last element of the ring,
+    wrapping back to the 0th
+
+full_ring/: write a full ring
+
+empty_ring/: write an empty ring
+
+initial_intr/: write a ring that contains only an interrupting ring
+    that contains one word

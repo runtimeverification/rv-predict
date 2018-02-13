@@ -15,5 +15,6 @@ void rvp_lock_init(void);
 void rvp_signal_init(void);
 void rvp_thread_init(void);
 void rvp_static_intrs_init(void);
+void rvp_deltop_init(void);
 
 #endif /* _RVP_INIT_H_ */

@@ -275,10 +275,6 @@ serialize(void *arg __unused)
 				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
 				    fd, &serializer_lc);
 			}
-#if 0
-			any_emptied |= rvp_signal_rings_flush_to_fd(fd,
-			    &serializer_lc);
-#endif
 		} while (any_emptied);
 
 		if (rvp_trace_size_limit <= rvp_trace_size) {
@@ -441,6 +437,7 @@ rvp_assert_atomicity(void)
 static void
 rvp_prefork_init(void)
 {
+	rvp_deltop_init();
 	rvp_assert_atomicity();
 	rvp_lock_prefork_init();	// needed by rvp_signal_init()
 	rvp_signal_prefork_init();

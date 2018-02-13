@@ -1,4 +1,4 @@
-SUBDIR=rvpa rvsyms stats trace
+SUBDIR=rvpa rvsyms serialization stats trace
 
 MKINSTALL=no
 

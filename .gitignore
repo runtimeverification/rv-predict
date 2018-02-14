@@ -5,6 +5,7 @@
 EVALUATION-LICENSE.md
 .idea
 *.iml
+**/.Makefile.tags
 .metadata
 _mkc_*
 .opam

@@ -7,23 +7,17 @@
 #include <string.h>	/* for memmove(3) */
 #include <unistd.h>	/* for read(2) */
 #include <sys/param.h>	/* for MAX() */
-#include <sys/uio.h>	/* for readv(2) */
 #include <sys/types.h>	/* for open(2) */
 #include <sys/stat.h>	/* for open(2) */
 #include <fcntl.h>	/* for open(2) */
 
+#include "io.h"	/* for __arraycount, offsetof */
 #include "nbcompat.h"	/* for __arraycount, offsetof */
 #include "tracefmt.h"
 #include "legacy.h"
 #include "reader.h"
 
 #define	RSVD_IDEPTH 0
-
-static inline void __printflike(1, 2)
-dbg_printf(const char *fmt __unused, ...)
-{
-	return;
-}
 
 typedef char prebuf_t[
     sizeof("tid 4294967295.4294967295 18446744073709551615 ") +
@@ -517,20 +511,6 @@ intmax_table_put(intmax_table_t *t, uintmax_t v, bool *is_newp)
 	if (is_newp != NULL)
 		*is_newp = true;
 	return nitem->i_id;
-}
-
-static ssize_t
-writeall(int fd, const void *buf, size_t nbytes)
-{
-	ssize_t nwritten;
-	const char *p = buf;
-
-	for (; nbytes > 0; p += nwritten, nbytes -= nwritten) {
-		nwritten = write(fd, p, nbytes);
-		if (nwritten == -1)
-			return -1;
-	}
-	return nbytes;
 }
 
 static uint64_t
@@ -1421,84 +1401,6 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	return 0;
 }
 
-static void
-advance_iov(struct iovec **iovp, int *iovcntp, ssize_t nbytes)
-{
-	int i;
-	const int iovcnt = *iovcntp;
-	struct iovec *iov;
-
-	for (iov = *iovp, i = 0; nbytes > 0 && i < iovcnt; iov++, i++) {
-		if (iov->iov_len > nbytes) {
-			iov->iov_len -= nbytes;
-			iov->iov_base = (char *)iov->iov_base + nbytes;
-			break;
-		}
-		if (nbytes < iov->iov_len) {
-			errx(EXIT_FAILURE, "nbytes %zd <= iov->iov_len %zu",
-			    nbytes, iov->iov_len);
-		}
-		nbytes -= iov->iov_len;
-	}
-	*iovp = iov;
-	*iovcntp = iovcnt - i;
-}
-
-static ssize_t
-xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
-    const int err_ret,
-    const struct iovec *iov0, struct iovec *scratch, int iovcnt)
-{
-	ssize_t nexpected = iovsum(iov0, iovcnt),
-		nxferd,
-		ntotal;
-
-	nxferd = xferv(fd, iov0, iovcnt);
-	if (nxferd == -1 || nxferd == err_ret || nxferd == nexpected) {
-		dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__, nxferd);
-		return nxferd;
-	}
-
-	struct iovec *niov = memcpy(scratch, iov0, sizeof(iov0[0]) * iovcnt),
-	    *iov = niov;
-
-	for (ntotal = nxferd; ntotal < nexpected; ntotal += nxferd) {
-		advance_iov(&iov, &iovcnt, nxferd);
-		nxferd = xferv(fd, iov, iovcnt);
-		if (nxferd == -1) {
-			dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__,
-			    nxferd);
-			return -1;
-		}
-		if (nxferd == 0) {
-			dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__,
-			    nxferd);
-			break;
-		}
-
-		assert(nxferd <= nexpected - ntotal);
-	}
-	if (ntotal != nexpected) {
-		dbg_printf("%s.%d: ntotal %zd != nexpected %zd",
-		    __func__, __LINE__, ntotal, nexpected);
-	}
-	return ntotal;
-}
-
-static ssize_t
-readallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
-{
-	return xferallv(fd, readv, 0, iov0, scratch, iovcnt);
-}
-
-#if 0
-static ssize_t
-writeallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
-{
-	return xferallv(fd, writev, -1, iov0, scratch, iovcnt);
-}
-#endif
-
 void
 rvp_trace_dump(const rvp_output_params_t *op, int fd)
 {
@@ -1551,7 +1453,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 	}
 
 	if ((nread = readallv(fd, iov, scratch, __arraycount(iov))) == -1)
-		err(EXIT_FAILURE, "%s: readv(header)", __func__);
+		err(EXIT_FAILURE, "%s: readallv(header)", __func__);
 
 	if (nread < iovsum(iov, __arraycount(iov))) {
 		errx(EXIT_FAILURE,

@@ -9,26 +9,16 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-LIB?=rvprt
+LIB=rvu
 
 STRIPFLAG=
-INCS=intr_exports.h
 CC?=clang
 CFLAGS+=-std=c11
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
-CPPFLAGS+=-I$(.CURDIR)/../librvu
-CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
-SRCS=access.c const.c deltops.c func.c lock.c notimpl.c
-SRCS+=opinit.c
-SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c
-SRCS+=str.c
-SRCS+=supervise.c
-SRCS+=thread.c trace.c
-SRCS+=intr.c
+SRCS=io.c
 WARNS=4
-LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
 
 .include <mkc.lib.mk>

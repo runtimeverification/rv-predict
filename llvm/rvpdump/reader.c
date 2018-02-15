@@ -1421,17 +1421,6 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	return 0;
 }
 
-static void *
-memdup(const void *buf, size_t buflen)
-{
-	void *p;
-
-	if ((p = malloc(buflen)) == NULL)
-		return NULL;
-
-	return memcpy(p, buf, buflen);
-}
-
 static void
 advance_iov(struct iovec **iovp, int *iovcntp, ssize_t nbytes)
 {
@@ -1456,45 +1445,59 @@ advance_iov(struct iovec **iovp, int *iovcntp, ssize_t nbytes)
 }
 
 static ssize_t
-readallv(int fd, const struct iovec *iov0, int iovcnt)
+xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
+    const int err_ret,
+    const struct iovec *iov0, struct iovec *scratch, int iovcnt)
 {
 	ssize_t nexpected = iovsum(iov0, iovcnt),
-		nread,
+		nxferd,
 		ntotal;
 
-	nread = readv(fd, iov0, iovcnt);
-	if (nread == -1 || nread == 0 || nread == nexpected) {
-		dbg_printf("%s.%d: nread -> %zd", __func__, __LINE__, nread);
-		return nread;
+	nxferd = xferv(fd, iov0, iovcnt);
+	if (nxferd == -1 || nxferd == err_ret || nxferd == nexpected) {
+		dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__, nxferd);
+		return nxferd;
 	}
 
-	struct iovec *niov = memdup(iov0, sizeof(iov0[0]) * iovcnt),
+	struct iovec *niov = memcpy(scratch, iov0, sizeof(iov0[0]) * iovcnt),
 	    *iov = niov;
 
-	for (ntotal = nread; ntotal < nexpected; ntotal += nread) {
-		advance_iov(&iov, &iovcnt, nread);
-		nread = readv(fd, iov, iovcnt);
-		if (nread == -1) {
-			free(niov);
-			dbg_printf("%s.%d: nread -> %zd", __func__, __LINE__,
-			    nread);
+	for (ntotal = nxferd; ntotal < nexpected; ntotal += nxferd) {
+		advance_iov(&iov, &iovcnt, nxferd);
+		nxferd = xferv(fd, iov, iovcnt);
+		if (nxferd == -1) {
+			dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__,
+			    nxferd);
 			return -1;
 		}
-		if (nread == 0) {
-			dbg_printf("%s.%d: nread -> %zd", __func__, __LINE__,
-			    nread);
+		if (nxferd == 0) {
+			dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__,
+			    nxferd);
 			break;
 		}
 
-		assert(nread <= nexpected - ntotal);
+		assert(nxferd <= nexpected - ntotal);
 	}
-	free(niov);
 	if (ntotal != nexpected) {
 		dbg_printf("%s.%d: ntotal %zd != nexpected %zd",
 		    __func__, __LINE__, ntotal, nexpected);
 	}
 	return ntotal;
 }
+
+static ssize_t
+readallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
+{
+	return xferallv(fd, readv, 0, iov0, scratch, iovcnt);
+}
+
+#if 0
+static ssize_t
+writeallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
+{
+	return xferallv(fd, writev, -1, iov0, scratch, iovcnt);
+}
+#endif
 
 void
 rvp_trace_dump(const rvp_output_params_t *op, int fd)
@@ -1526,6 +1529,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		, { .iov_base = &tid, .iov_len = sizeof(tid) }
 		, { .iov_base = &generation, .iov_len = sizeof(generation) }
 	};
+	struct iovec scratch[__arraycount(iov)];
 	const rvp_emitters_t *emitters;
 
 	switch (op->op_type) {
@@ -1546,7 +1550,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		     op->op_type);
 	}
 
-	if ((nread = readallv(fd, iov, __arraycount(iov))) == -1)
+	if ((nread = readallv(fd, iov, scratch, __arraycount(iov))) == -1)
 		err(EXIT_FAILURE, "%s: readv(header)", __func__);
 
 	if (nread < iovsum(iov, __arraycount(iov))) {

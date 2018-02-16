@@ -31,7 +31,7 @@ At the top level of the RV-Predict sources, create the wrapper
 script, `rvpmake`, with which you should build, by running:
 
 ```
-./setup.sh
+sh ./setup.sh
 ```
 
 Make sure that you have `clang 4.0` in your PATH.

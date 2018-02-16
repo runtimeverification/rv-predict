@@ -217,21 +217,24 @@ public class MaximalCausalModel {
         /* compute all the write events that could interfere with the read event */
         List<ReadonlyEventInterface> diffThreadSameAddrSameValWrites = new ArrayList<>();
         List<ReadonlyEventInterface> diffThreadSameAddrDiffValWrites = new ArrayList<>();
-        List<ReadonlyEventInterface> diffThreadSameAddrDiffValWritesOrReadPrefix = new ArrayList<>();
+        Map<Integer, ReadonlyEventInterface> diffThreadSameAddrFirstDiffValReadPrefix = new HashMap<>();
+        //List<ReadonlyEventInterface> diffThreadSameAddrDiffValReadPrefix = new ArrayList<>();
         trace.getWriteEvents(read.getDataInternalIdentifier()).forEach(write -> {
             if (trace.getTraceThreadId(write) != trace.getTraceThreadId(read) && !happensBefore(read, write)) {
                 if (write.getDataValue() == read.getDataValue()) {
                     diffThreadSameAddrSameValWrites.add(write);
                 } else {
                     diffThreadSameAddrDiffValWrites.add(write);
-                    diffThreadSameAddrDiffValWritesOrReadPrefix.add(write);
                 }
             }
         });
         trace.getPrefixReadEvents(read.getDataInternalIdentifier()).forEach(otherRead -> {
             if (trace.getTraceThreadId(otherRead) != trace.getTraceThreadId(read) && !happensBefore(read, otherRead)) {
                 if (otherRead.getDataValue() != read.getDataValue()) {
-                    diffThreadSameAddrDiffValWritesOrReadPrefix.add(otherRead);
+                    diffThreadSameAddrFirstDiffValReadPrefix
+                            .compute(
+                                    trace.getTraceThreadId(otherRead),
+                                    (k, v) -> v == null || v.getEventId() > otherRead.getEventId() ? otherRead : v);
                 }
             }
         });
@@ -328,12 +331,13 @@ public class MaximalCausalModel {
                     return BooleanConstant.TRUE;
                 }
             }
-            /* sameThreadPrevWrite is unavailable in the current window */
+            /* sameThreadPrevWrite and sameThreadPrevReadDiffValue are unavailable in the current window.*/
             ReadonlyEventInterface diffThreadPrevWrite = trace.getAllThreadsPrevWrite(read);
             if (diffThreadPrevWrite == null) {
                 /* the initial value of this address must be read.getDataValue() */
                 FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw -> and.add(HB(read, rw)));
+                diffThreadSameAddrDiffValWrites.forEach(w -> and.add(HB(read, w)));
+                diffThreadSameAddrFirstDiffValReadPrefix.values().forEach(r -> and.add(HB(read, r)));
                 return and.build();
             } else {
                 /* the initial value of this address is unknown */
@@ -346,11 +350,11 @@ public class MaximalCausalModel {
                                 FormulaTerm.Builder and = FormulaTerm.andBuilder();
                                 and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
                                 and.add(HB(w1, read));
-                                diffThreadSameAddrDiffValWritesOrReadPrefix
+                                diffThreadSameAddrDiffValWrites
                                         .stream()
-                                        .filter(rw2 -> !happensBefore(rw2, w1))
-                                        .filter(rw2 -> !happensBefore(read, rw2))
-                                        .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                                        .filter(w2 -> !happensBefore(w2, w1))
+                                        .filter(w2 -> !happensBefore(read, w2))
+                                        .forEach(w2 -> and.add(OR(HB(w2, w1), HB(read, w2))));
                                 or.add(and.build());
                             });
                     return or.build();

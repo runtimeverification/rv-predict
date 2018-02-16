@@ -1,7 +1,7 @@
 NOMAN=
 MKINSTALL=no
 
-PATH:=$(.OBJDIR)/../../bin:$(PATH)
+PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 .export PATH
 
 .include "test.mk"

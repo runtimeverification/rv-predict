@@ -11,3 +11,7 @@ opam update
 opam switch 4.03.0
 eval $(opam config env)
 OPAMYES=true opam install ocp-ocamlres ocamlbuild-atdgen csv uri atdgen atdj
+
+install -o $(id -u) -g $(id -g) -m 0755 ./rvpmake.in rvpmake
+
+exit 0

@@ -27,16 +27,11 @@ yacc
 
 Configure an object directory if you're going to use one.
 
-At the top level of the RV-Predict sources, configure OCaml by running
+At the top level of the RV-Predict sources, create the wrapper
+script, `rvpmake`, with which you should build, by running:
 
 ```
-./opam-setup.sh
-```
-
-After it finishes, run the following command to update the environment:
-
-```        
-eval $(opam config env)
+./setup.sh
 ```
 
 Make sure that you have `clang 4.0` in your PATH.
@@ -53,8 +48,8 @@ OPAM packages required by the unified error reporting in errors/:
 
 ```bash
 cd rv-predict
-mkcmake depend
-mkcmake
+rvpmake depend
+rvpmake
 ```
 
 ## Creating the RV-Predict distribution
@@ -76,8 +71,8 @@ Below are a few useful options:
 
 ```bash
 cd rv-predict
-mkcmake depend
-mkcmake PREFIX=$HOME install
+rvpmake depend
+rvpmake PREFIX=$HOME install
 ```
 
 ## Creating the installer for RV-Predict

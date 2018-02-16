@@ -1,2 +1,5 @@
+**/*.d
+**/.depend
 _mkc_*
+**/*.o
 tags

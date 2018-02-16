@@ -1,9 +1,9 @@
 .include <mkc.init.mk>
 
 FILESMODE=0755
-FILES=rv-error
+FILES=rvp-error
 
-CLEANFILES+=rv-error
+CLEANFILES+=rvp-error
 
 BUILD_DIR_OPT=-build-dir $(.OBJDIR)
 
@@ -23,8 +23,8 @@ tags:
 test uninstall:
 	@echo "Nothing to do for $(.TARGET)"
 
-rv-error: $(SRCDIR)/rv-error
-	@cp $(.ALLSRC) $(.OBJDIR)/.
+rvp-error: $(SRCDIR)/rv-error
+	@cp $(.ALLSRC) $(.OBJDIR)/rvp-error
 
 $(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Nall:Ndepend:Ntest):
 	cd $(SRCDIR) && unset DESTDIR && \

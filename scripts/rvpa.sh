@@ -93,7 +93,7 @@ symbolize()
 	rvpsymbolize-json ${symbolize_passthrough} "$@" | \
 	{ [ ${filter_trim:-yes} = yes ] && rvptrimframe || cat ; } | \
 	{ [ ${filter_shorten:-yes} = yes ] && rvpshortenpaths || cat ; } | \
-	rv-error ${sharedir}/${output_format:-console}-metadata.json
+	rvp-error ${sharedir}/${output_format:-console}-metadata.json
 }
 
 if [ ${RVP_WINDOW_SIZE:-none} != none ]; then

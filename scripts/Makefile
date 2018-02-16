@@ -27,6 +27,6 @@ MLINKS=rvpc.1 rvpc++.1
 # between PREFIX and BINDIR, and that may not always be the case.
 #
 rvpc.sh! rvpc.sh.in
-	sed "s,--LIBEXECDIR--,$(LIBEXECDIR:C,^$(PREFIX)/,,g),g" < $(.ALLSRC) > $(.OBJDIR)/$(.TARGET)
+	@sed "s,--LIBEXECDIR--,$(LIBEXECDIR:C,^$(PREFIX)/,,g),g" < $(.ALLSRC) > $(.OBJDIR)/$(.TARGET)
 
 .include <mkc.files.mk>

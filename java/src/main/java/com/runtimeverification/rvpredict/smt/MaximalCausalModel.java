@@ -216,12 +216,14 @@ public class MaximalCausalModel {
     private BoolFormula getPhiSC(ReadonlyEventInterface read) {
         /* compute all the write events that could interfere with the read event */
         List<ReadonlyEventInterface> diffThreadSameAddrSameValWrites = new ArrayList<>();
+        List<ReadonlyEventInterface> diffThreadSameAddrDiffValWrites = new ArrayList<>();
         List<ReadonlyEventInterface> diffThreadSameAddrDiffValWritesOrReadPrefix = new ArrayList<>();
         trace.getWriteEvents(read.getDataInternalIdentifier()).forEach(write -> {
             if (trace.getTraceThreadId(write) != trace.getTraceThreadId(read) && !happensBefore(read, write)) {
                 if (write.getDataValue() == read.getDataValue()) {
                     diffThreadSameAddrSameValWrites.add(write);
                 } else {
+                    diffThreadSameAddrDiffValWrites.add(write);
                     diffThreadSameAddrDiffValWritesOrReadPrefix.add(write);
                 }
             }
@@ -243,40 +245,53 @@ public class MaximalCausalModel {
 
                 { /* case 1: read the value written in the same thread */
                     FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                    diffThreadSameAddrDiffValWritesOrReadPrefix
+                    diffThreadSameAddrDiffValWrites
+                            .stream()
+                            .filter(rw -> !happensBefore(rw, sameThreadPrevWrite))
+                            .filter(rw -> !happensBefore(read, rw))
                             .forEach(rw -> and.add(OR(HB(rw, sameThreadPrevWrite), HB(read, rw))));
                     or.add(and.build());
                 }
 
                 /* case 2: read the value written in another thread  */
-                diffThreadSameAddrSameValWrites.forEach(w1 -> {
-                    if (!happensBefore(w1, sameThreadPrevWrite)) {
-                        FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                        and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
-                        diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw2 -> {
-                            if (!happensBefore(rw2, w1) && !happensBefore(rw2, sameThreadPrevWrite)) {
-                                and.add(OR(HB(rw2, w1), HB(read, rw2)));
-                            }
+                diffThreadSameAddrSameValWrites
+                        .stream()
+                        .filter(w1 -> !happensBefore(w1, sameThreadPrevWrite))
+                        .filter(w1 -> !happensBefore(read, w1))
+                        .forEach(w1 -> {
+                            FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                            and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                            and.add(HB(w1, read));
+                            // This is also possible, but not needed: and.add(HB(sameThreadPrevWrite, w1));
+                            diffThreadSameAddrDiffValWrites
+                                    .stream()
+                                    .filter(rw2 -> !happensBefore(rw2, w1))
+                                    .filter(rw2 -> !happensBefore(rw2, sameThreadPrevWrite))
+                                    .filter(rw2 -> !happensBefore(read, rw2))
+                                    .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                            or.add(and.build());
                         });
-                        or.add(and.build());
-                    }
-                });
                 return or.build();
             } else {
                 /* the read value is different from sameThreadPrevWrite */
                 if (!diffThreadSameAddrSameValWrites.isEmpty()) {
                     FormulaTerm.Builder or = FormulaTerm.orBuilder();
-                    diffThreadSameAddrSameValWrites.forEach(w1 -> {
-                        FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                        and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
-                        and.add(HB(sameThreadPrevWrite, w1), HB(w1, read));
-                        diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw2 -> {
-                            if (!happensBefore(rw2, w1)) {
-                                and.add(OR(HB(rw2, w1), HB(read, rw2)));
-                            }
-                        });
-                        or.add(and.build());
-                    });
+                    diffThreadSameAddrSameValWrites
+                            .stream()
+                            .filter(w1 -> !happensBefore(w1, sameThreadPrevWrite))
+                            .filter(w1 -> !happensBefore(read, w1))
+                            .forEach(w1 -> {
+                                FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                                and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                                and.add(HB(sameThreadPrevWrite, w1), HB(w1, read));
+                                diffThreadSameAddrDiffValWrites
+                                        .stream()
+                                        .filter(rw2 -> !happensBefore(rw2, w1))
+                                        .filter(rw2 -> !happensBefore(rw2, sameThreadPrevWrite))
+                                        .filter(rw2 -> !happensBefore(read, rw2))
+                                        .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                                or.add(and.build());
+                            });
                     return or.build();
                 } else {
                     /* the read-write consistency constraint is UNSAT */
@@ -296,17 +311,20 @@ public class MaximalCausalModel {
                 /* the initial value of this address is unknown */
                 if (!diffThreadSameAddrSameValWrites.isEmpty()) {
                     FormulaTerm.Builder or = FormulaTerm.orBuilder();
-                    diffThreadSameAddrSameValWrites.forEach(w1 -> {
-                        FormulaTerm.Builder and = FormulaTerm.andBuilder();
-                        and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
-                        and.add(HB(w1, read));
-                        diffThreadSameAddrDiffValWritesOrReadPrefix.forEach(rw2 -> {
-                            if (!happensBefore(rw2, w1)) {
-                                and.add(OR(HB(rw2, w1), HB(read, rw2)));
-                            }
-                        });
-                        or.add(and.build());
-                    });
+                    diffThreadSameAddrSameValWrites
+                            .stream()
+                            .filter(w1 -> !happensBefore(read, w1))
+                            .forEach(w1 -> {
+                                FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                                and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                                and.add(HB(w1, read));
+                                diffThreadSameAddrDiffValWritesOrReadPrefix
+                                        .stream()
+                                        .filter(rw2 -> !happensBefore(rw2, w1))
+                                        .filter(rw2 -> !happensBefore(read, rw2))
+                                        .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                                or.add(and.build());
+                            });
                     return or.build();
                 } else {
                     /* the read-write consistency constraint is UNSAT */

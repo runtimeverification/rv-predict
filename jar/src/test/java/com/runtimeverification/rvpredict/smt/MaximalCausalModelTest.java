@@ -46,10 +46,12 @@ public class MaximalCausalModelTest {
     private static final long THREAD_1 = 1;
     private static final long THREAD_2 = 2;
     private static final long THREAD_3 = 3;
+    private static final long THREAD_4 = 4;
     private static final int NO_SIGNAL = 0;
     private static final int ONE_SIGNAL = 1;
     private static final int TWO_SIGNALS = 2;
     private static final long LOCK_1 = 500;
+    private static final long LOCK_2 = 501;
     private static final long SIGNAL_NUMBER_1 = 1;
     private static final long SIGNAL_NUMBER_2 = 2;
     private static final long SIGNAL_NUMBER_63 = 63;
@@ -2054,6 +2056,52 @@ public class MaximalCausalModelTest {
                         tu.threadStart(THREAD_2),
                         tu.threadStart(THREAD_3))
                 );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void sameWriteOnDifferentThreadMustBeBeforeReadWithSameWriteBefore() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.lock(LOCK_1),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_2),
+                        tu.unlock(LOCK_1),
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.unlock(LOCK_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.unlock(LOCK_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_3, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_2),
+                        tu.unlock(LOCK_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_4, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_2),
+                        tu.unlock(LOCK_2),
+                        tu.unlock(LOCK_1)
+                )
+        );
 
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);

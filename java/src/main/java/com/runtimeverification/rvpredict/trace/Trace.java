@@ -343,6 +343,27 @@ public class Trace {
         return prevWrite;
     }
 
+    public ReadonlyEventInterface getSameThreadPrevReadSameAddrDiffValue(ReadonlyEventInterface read) {
+        ReadonlyEventInterface lastDifferentRead = null;
+        for (ReadonlyEventInterface event : eventsByThreadID().get(eventIdToTtid.get(read.getEventId()))) {
+            if (event.getEventId() == read.getEventId()) {
+                return lastDifferentRead;
+            }
+            if (!event.isRead()) {
+                continue;
+            }
+            if (event.getDataInternalIdentifier() != read.getDataInternalIdentifier()) {
+                continue;
+            }
+            if (event.getDataValue() == read.getDataValue()) {
+                continue;
+            }
+            lastDifferentRead = event;
+        }
+        assert false : "Event " + read.getEventId() + " not found in its own thread.";
+        return null;
+    }
+
     public Map<Long, List<LockRegion>> getLockIdToLockRegions() {
         return lockIdToLockRegions;
     }
@@ -707,7 +728,7 @@ public class Trace {
                 }
             } else if (event.isSignalEvent()) {
                 // Do nothing for now, since signal events themselves are not involved with r/w.
-                endCrntBlock = false;
+                endCrntBlock = true;
             } else {
                 throw new IllegalStateException("Unexpected critical event: " + event);
             }

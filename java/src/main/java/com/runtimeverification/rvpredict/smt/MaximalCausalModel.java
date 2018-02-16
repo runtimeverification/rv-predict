@@ -300,6 +300,34 @@ public class MaximalCausalModel {
                 }
             }
         } else {
+            ReadonlyEventInterface sameThreadPrevReadDiffValue =
+                    trace.getSameThreadPrevReadSameAddrDiffValue(read);
+            if (sameThreadPrevReadDiffValue != null) {
+                if (!diffThreadSameAddrSameValWrites.isEmpty()) {
+                    FormulaTerm.Builder or = FormulaTerm.orBuilder();
+                    diffThreadSameAddrSameValWrites
+                            .stream()
+                            .filter(w1 -> !happensBefore(w1, sameThreadPrevReadDiffValue))
+                            .filter(w1 -> !happensBefore(read, w1))
+                            .forEach(w1 -> {
+                                FormulaTerm.Builder and = FormulaTerm.andBuilder();
+                                and.add(getPhiAbs(trace.getMemoryAccessBlock(w1)));
+                                and.add(HB(sameThreadPrevReadDiffValue, w1), HB(w1, read));
+                                diffThreadSameAddrDiffValWrites
+                                        .stream()
+                                        .filter(rw2 -> !happensBefore(rw2, w1))
+                                        .filter(rw2 -> !happensBefore(rw2, sameThreadPrevReadDiffValue))
+                                        .filter(rw2 -> !happensBefore(read, rw2))
+                                        .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                                or.add(and.build());
+                            });
+                    return or.build();
+                } else {
+                    /* the read-write consistency constraint is UNSAT */
+                    trace.logger().debug("Missing write events on " + read.getDataInternalIdentifier());
+                    return BooleanConstant.TRUE;
+                }
+            }
             /* sameThreadPrevWrite is unavailable in the current window */
             ReadonlyEventInterface diffThreadPrevWrite = trace.getAllThreadsPrevWrite(read);
             if (diffThreadPrevWrite == null) {

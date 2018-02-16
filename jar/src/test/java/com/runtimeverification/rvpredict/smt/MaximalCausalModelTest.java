@@ -2063,6 +2063,55 @@ public class MaximalCausalModelTest {
     }
 
     @Test
+    public void twoDifferentPrefixReadsNeedAWriteBetween() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.atomicLoad(ADDRESS_1, VALUE_1),
+                        tu.atomicLoad(ADDRESS_1, VALUE_2),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_2))
+        );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void twoDifferentReadsNeedAWriteBetween() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.atomicStore(ADDRESS_1, VALUE_1),
+                        tu.atomicLoad(ADDRESS_1, VALUE_1),
+                        tu.atomicLoad(ADDRESS_1, VALUE_2),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_2))
+        );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
     public void sameWriteOnDifferentThreadMustBeBeforeReadWithSameWriteBefore() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 

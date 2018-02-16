@@ -2,9 +2,9 @@ FILESMODE=0755
 FILES=rvpsymbolize-json rvptrimframe rvpshortenpaths
 CLEANFILES_CMD=rm -f *.cmx *.cmi *.o $(FILES)
 
-_TOPOBJDIR!=$(MAKE) -C $(.CURDIR)/.. -V "$(.OBJDIR)"
-OPAMROOT=$(_TOPOBJDIR)/.opam
-.export OPAMROOT
+.if $(RVPMAKE_DIR:Unone) == none
+.error "RVPMAKE_DIR must be set.  Run `rvpmake`."
+.endif
 
 rvpsymbolize-json: rvpsymbolize_json.ml
 	ocamlfind opt -g $(.ALLSRC) -o $(.OBJDIR)/rvpsymbolize-json -package atdgen -package rv_error -linkpkg -package unix

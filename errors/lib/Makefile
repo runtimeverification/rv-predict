@@ -4,9 +4,9 @@ BUILD_DIR_OPT=-build-dir $(.OBJDIR)
 
 SRCDIR=$(.CURDIR)/../rv-error/src/main/ocaml/
 
-_TOPOBJDIR!=$(MAKE) -C $(.CURDIR)/../.. -V "$(.OBJDIR)"
-OPAMROOT=$(_TOPOBJDIR)/.opam
-.export OPAMROOT
+.if $(RVPMAKE_DIR:Unone) == none
+.error "RVPMAKE_DIR must be set.  Run `rvpmake`."
+.endif
 
 cleandir distclean:
 	cd $(SRCDIR) && $(MAKE) uninstall clean

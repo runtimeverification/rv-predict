@@ -1,4 +1,5 @@
 .depend
 *.d
+*.o
 *.os
 *.a

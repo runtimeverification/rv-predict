@@ -11,6 +11,8 @@
 
 LIB=rvu
 
+.PATH: $(.CURDIR)/../ngrt
+
 STRIPFLAG=
 CC?=clang
 CFLAGS+=-std=c11

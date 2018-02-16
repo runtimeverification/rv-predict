@@ -182,7 +182,7 @@ First you will need to install credentials in `$HOME/.m2/settings.xml` for AWS
 and the `scp`ing to ftp.runtimeverification.com.  Then run:
 
 ```bash
-sh mvn-release.sh
+./mvn-release.sh
 ```
 
 That will build and upload a Debian package (`.deb`) for RV-Predict/C,
@@ -191,3 +191,14 @@ and documentation to the website, increase the version number, tag the
 release sources, and add the new release to `debian/changelog`.
 
 You should commit the changes to `debian/changelog` right away.
+
+Without arguments, `mvn-release.sh` increases the number after the
+second decimal point (the "teeny" version).  To make a release under a
+particular version number---for example, 1.9---run this:
+
+```bash
+./mvn-release.sh -DreleaseVersion=1.9 -DdevelopmentVersion=1.9.1-SNAPSHOT
+```
+
+The `-DdevelopmentVersion=1.9.1-SNAPSHOT` argument tells where to
+start the "teeny" releases.

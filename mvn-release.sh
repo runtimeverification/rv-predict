@@ -21,6 +21,7 @@ if [ ${SSH_AUTH_SOCK:-none} = none ]; then
 	exec ssh-agent ./mvn-release.sh
 fi
 
+chmod go-rwx keys/release-key
 ssh-add keys/release-key
 
 # -DpreparationGoals="clean install" 

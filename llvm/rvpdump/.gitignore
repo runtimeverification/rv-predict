@@ -1,13 +1,3 @@
-core
-*.core
-*.d
-.depend
-.gdbinit
-.Makefile.tags
 metadatadump
-_mkc_*
-*.o
 rvpdump
-.*.swp
-tags
 tracedump

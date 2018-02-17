@@ -1,0 +1,1 @@
+According to an ISO C11 language constraint, each declaration must include a type specifier. Many implementations will default to a type of int in this case, but any such behavior is ultimately non-portable and undefined by the standard. To fix this issue, be sure every declaration includes at least one type specifier.

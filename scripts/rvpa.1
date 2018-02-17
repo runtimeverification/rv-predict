@@ -20,11 +20,10 @@ instrumentation using
 .Op Fl Fl output=...
 .Op Fl -
 .Ar program
+.Op Ar trace-file
 .Sh DESCRIPTION
 .Nm
-analyzes a trace file,
-.Pa rvpredict.trace ,
-left in the current directory by
+analyzes a trace file left by
 .Ar program Ap s
 .Tn RV-Predict/C
 instrumentation.
@@ -36,6 +35,18 @@ is used as a source for the DWARF debugging information
 that
 .Nm
 needs to convert data & instruction addresses to names in its reports.
+.Pp
+If the optional argument
+.Ar trace-file
+is provided, then
+.Nm
+analyzes that trace file.
+Otherwise,
+.Nm
+analyzes the trace file
+.Pa rvpredict.trace 
+left in the current directory by
+.Ar program .
 .Pp
 Command-line options modify the behavior of
 .Nm :

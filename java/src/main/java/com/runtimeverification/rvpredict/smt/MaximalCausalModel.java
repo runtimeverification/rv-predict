@@ -218,7 +218,6 @@ public class MaximalCausalModel {
         List<ReadonlyEventInterface> diffThreadSameAddrSameValWrites = new ArrayList<>();
         List<ReadonlyEventInterface> diffThreadSameAddrDiffValWrites = new ArrayList<>();
         Map<Integer, ReadonlyEventInterface> diffThreadSameAddrFirstDiffValReadPrefix = new HashMap<>();
-        //List<ReadonlyEventInterface> diffThreadSameAddrDiffValReadPrefix = new ArrayList<>();
         trace.getWriteEvents(read.getDataInternalIdentifier()).forEach(write -> {
             if (trace.getTraceThreadId(write) != trace.getTraceThreadId(read) && !happensBefore(read, write)) {
                 if (write.getDataValue() == read.getDataValue()) {
@@ -250,9 +249,9 @@ public class MaximalCausalModel {
                     FormulaTerm.Builder and = FormulaTerm.andBuilder();
                     diffThreadSameAddrDiffValWrites
                             .stream()
-                            .filter(rw -> !happensBefore(rw, sameThreadPrevWrite))
-                            .filter(rw -> !happensBefore(read, rw))
-                            .forEach(rw -> and.add(OR(HB(rw, sameThreadPrevWrite), HB(read, rw))));
+                            .filter(w -> !happensBefore(w, sameThreadPrevWrite))
+                            .filter(w -> !happensBefore(read, w))
+                            .forEach(w -> and.add(OR(HB(w, sameThreadPrevWrite), HB(read, w))));
                     or.add(and.build());
                 }
 
@@ -268,10 +267,10 @@ public class MaximalCausalModel {
                             // This is also possible, but not needed: and.add(HB(sameThreadPrevWrite, w1));
                             diffThreadSameAddrDiffValWrites
                                     .stream()
-                                    .filter(rw2 -> !happensBefore(rw2, w1))
-                                    .filter(rw2 -> !happensBefore(rw2, sameThreadPrevWrite))
-                                    .filter(rw2 -> !happensBefore(read, rw2))
-                                    .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                                    .filter(w2 -> !happensBefore(w2, w1))
+                                    .filter(w2 -> !happensBefore(w2, sameThreadPrevWrite))
+                                    .filter(w2 -> !happensBefore(read, w2))
+                                    .forEach(w2 -> and.add(OR(HB(w2, w1), HB(read, w2))));
                             or.add(and.build());
                         });
                 return or.build();
@@ -289,10 +288,10 @@ public class MaximalCausalModel {
                                 and.add(HB(sameThreadPrevWrite, w1), HB(w1, read));
                                 diffThreadSameAddrDiffValWrites
                                         .stream()
-                                        .filter(rw2 -> !happensBefore(rw2, w1))
-                                        .filter(rw2 -> !happensBefore(rw2, sameThreadPrevWrite))
-                                        .filter(rw2 -> !happensBefore(read, rw2))
-                                        .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                                        .filter(w2 -> !happensBefore(w2, w1))
+                                        .filter(w2 -> !happensBefore(w2, sameThreadPrevWrite))
+                                        .filter(w2 -> !happensBefore(read, w2))
+                                        .forEach(w2 -> and.add(OR(HB(w2, w1), HB(read, w2))));
                                 or.add(and.build());
                             });
                     return or.build();
@@ -303,6 +302,7 @@ public class MaximalCausalModel {
                 }
             }
         } else {
+            /* sameThreadPrevWrite is unavailable in the current window.*/
             ReadonlyEventInterface sameThreadPrevReadDiffValue =
                     trace.getSameThreadPrevReadSameAddrDiffValue(read);
             if (sameThreadPrevReadDiffValue != null) {
@@ -318,10 +318,10 @@ public class MaximalCausalModel {
                                 and.add(HB(sameThreadPrevReadDiffValue, w1), HB(w1, read));
                                 diffThreadSameAddrDiffValWrites
                                         .stream()
-                                        .filter(rw2 -> !happensBefore(rw2, w1))
-                                        .filter(rw2 -> !happensBefore(rw2, sameThreadPrevReadDiffValue))
-                                        .filter(rw2 -> !happensBefore(read, rw2))
-                                        .forEach(rw2 -> and.add(OR(HB(rw2, w1), HB(read, rw2))));
+                                        .filter(w2 -> !happensBefore(w2, w1))
+                                        .filter(w2 -> !happensBefore(w2, sameThreadPrevReadDiffValue))
+                                        .filter(w2 -> !happensBefore(read, w2))
+                                        .forEach(w2 -> and.add(OR(HB(w2, w1), HB(read, w2))));
                                 or.add(and.build());
                             });
                     return or.build();
@@ -331,7 +331,7 @@ public class MaximalCausalModel {
                     return BooleanConstant.TRUE;
                 }
             }
-            /* sameThreadPrevWrite and sameThreadPrevReadDiffValue are unavailable in the current window.*/
+            /* sameThreadPrevReadDiffValue is unavailable in the current window.*/
             ReadonlyEventInterface diffThreadPrevWrite = trace.getAllThreadsPrevWrite(read);
             if (diffThreadPrevWrite == null) {
                 /* the initial value of this address must be read.getDataValue() */

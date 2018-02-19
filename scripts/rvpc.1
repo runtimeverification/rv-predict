@@ -32,7 +32,7 @@ lock acquisition and release, thread creation and destruction.
 The trace is analyzed by
 .Tn RV-Predict/C ,
 which searches feasible schedules of the trace events for schedules
-that involve
+that produce
 .Em data races .
 .Pp
 .Nm
@@ -51,16 +51,29 @@ with the
 .Tn RV-Predict/C
 runtime and its dependencies.
 .Pp
-When
-.Ar program
-is run, it records a trace of its dynamic behavior to a temporary file
-and automatically performs
+In the default
 .Tn RV-Predict/C
-data-race prediction on the trace after
+operating mode,
 .Ar program
-calls
-.Xr exit 2
-or is cancelled with a signal.
+sends a trace of its dynamic behavior over a pipe to a concurrent process
+that performs data-race prediction.
+Environment variables alter the operating mode.
+Use
+.Ev RVP_OFFLINE_ANALYSIS
+to make the data-race prediction run after
+the application code in
+.Ar program
+finishes.
+Use
+.Ev RVP_TRACE_ONLY
+to make
+.Ar program
+leave a trace in the filesystem for
+.Xr rvpa 1
+to analyze offline.
+See
+.Sx ENVIRONMENT ,
+below.
 .Sh EXIT STATUS
 See
 .Xr clang 1
@@ -106,6 +119,22 @@ Use
 .Dq \&%%
 to interpolate a literal percent sign.
 .Pp
+.It Ev RVP_TRACE_FIFO
+Works like
+.Ev RVP_TRACE_FILE
+except that
+.Ar program
+will not create a trace file.
+.Ar program
+will abort if a named pipe (FIFO) does not already exist at the given
+path.
+If the named pipe does exist, then
+.Ar program
+will write traces to it.
+Value-interpolation works the same for
+.Ev RVP_TRACE_FIFO
+as for
+.Ev RVP_TRACE_FILE .
 .It Ev RVP_TRACE_SIZE_LIMIT
 .Ar program
 exits by calling
@@ -138,6 +167,31 @@ predicts.
 Affects the automatic data-race prediction.
 See
 .Xr rvpa 1 .
+.It Ev RVP_OFFLINE_ANALYSIS
+If this variable is not in the environment, or if it is not set to
+.Dq yes ,
+then the application code in
+.Ar program
+will run concurrently with the data-race prediction;
+output from the data-race predictor will intermingle with output from
+.Ar program
+output on the standard error stream.
+If
+.Ev RVP_OFFLINE_ANALYSIS
+is set to
+.Dq yes ,
+then data-race prediction will run after
+.Ar program
+calls
+.Xr exit 2
+or is cancelled with a signal.
+If
+.Ev RVP_TRACE_ONLY
+is set to
+.Dq yes
+in the environment, then 
+.Ev RVP_OFFLINE_ANALYSIS
+has no effect.
 .It Ev RVP_WINDOW_SIZE
 Affects the automatic data-race prediction.
 See

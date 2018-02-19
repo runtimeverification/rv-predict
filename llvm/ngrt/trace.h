@@ -11,7 +11,7 @@ typedef struct _rvp_jumpless_op {
 	rvp_addr_t jo_switch;
 } rvp_jumpless_op_t;
 
-int rvp_trace_open(void);
+int rvp_trace_begin(void);
 
 deltop_t *rvp_vec_and_op_to_deltop(int, rvp_op_t);
 void rvp_ring_put_addr(rvp_ring_t *, const void *);

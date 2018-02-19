@@ -47,6 +47,7 @@ static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
 static bool stopping = false;
 bool rvp_trace_only = true;
+bool rvp_online_analysis = true;
 int64_t rvp_trace_size_limit = INT64_MAX;
 static _Atomic bool info_dump_requested = false;
 
@@ -360,7 +361,7 @@ rvp_serializer_create(void)
 	int rc;
 	sigset_t oldmask;
 
-	serializer_fd = rvp_trace_open();
+	serializer_fd = rvp_trace_begin();
 
 	thread_lock(&oldmask);
 	assert(thread_head->t_next == NULL);
@@ -491,6 +492,9 @@ void
 __rvpredict_init(void)
 {
 	const char *s;
+
+	rvp_online_analysis = (s = getenv("RVP_ONLINE_ANALYSIS")) == NULL ||
+	    strcasecmp(s, "yes") == 0;
 
 	rvp_trace_only = (s = getenv("RVP_TRACE_ONLY")) != NULL &&
 	    strcasecmp(s, "yes") == 0;

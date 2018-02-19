@@ -10,6 +10,7 @@
 #include <unistd.h>	/* for getlogin(3), fstat(2) */
 
 #include "access.h"
+#include "io.h"
 #include "nbcompat.h"
 #include "notimpl.h"
 #include "ring.h"
@@ -31,22 +32,6 @@ static const rvp_trace_header_t header = {
 	, .th_pointer_width = sizeof(rvp_addr_t)
 	, .th_data_width = sizeof(uint32_t)
 };
-
-static ssize_t
-writeall(int fd, const void *buf, size_t nbytes)
-{
-	ssize_t nwritten, nleft;
-	const char *next;
-
-	for (next = buf, nleft = nbytes;  
-	     nleft != 0;
-	     next += nwritten, nleft -= nwritten) {
-		if ((nwritten = write(fd, next, nleft)) == -1) {
-			return -1;
-		}
-	}
-	return nwritten;
-}
 
 static char *
 rvp_expand_template(const char *template)
@@ -136,9 +121,12 @@ rvp_expand_template(const char *template)
 	return strdup(buf);
 }
 
-int
+static int
 rvp_trace_open(void)
 {
+	if (rvp_analysis_fd != -1)
+		return rvp_analysis_fd;
+
 	const char *file_tmpl = getenv("RVP_TRACE_FILE");
 	const char *fifo_tmpl = getenv("RVP_TRACE_FIFO");
 	const char *tmpl = (fifo_tmpl != NULL) ? fifo_tmpl : file_tmpl;
@@ -179,10 +167,18 @@ rvp_trace_open(void)
 		}
 	}
 
-	if (writeall(fd, &header, sizeof(header)) == -1)
-		err(EXIT_FAILURE, "%s: open(\"%s\")", __func__, tracefn);
-
 	free(tracefn);
+
+	return fd;
+}
+
+int
+rvp_trace_begin(void)
+{
+	const int fd = rvp_trace_open();
+
+	if (writeall(fd, &header, sizeof(header)) == -1)
+		err(EXIT_FAILURE, "%s: writeall", __func__);
 
 	return fd;
 }

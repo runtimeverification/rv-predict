@@ -100,8 +100,7 @@ public class TraceState {
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
-        this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS,
-                                         DEFAULT_NUM_OF_ADDR);
+        this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_ADDR);
         this.t_tidToAddrToPrefixReadEvents = HashBasedTable.create(DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);

@@ -75,6 +75,38 @@ rvpmake depend
 rvpmake PREFIX=$HOME install
 ```
 
+## Examining RV-Predict/C runtime statistics
+
+If you set `RVP_INFO_ATEXIT` to `yes`, then the RV-Predict/C runtime
+will print some statistics about its performance when an instrumented
+program exits:
+
+```
+t1: ring sleeps 0 spins 0 i-ring spins 0
+joined threads: ring sleeps 103 spins 0 i-ring spins 0
+```
+
+Those statistics tell us that thread 1 (`t1`), which was still running
+when the program exited, had slept 0 times waiting for an event ring to
+empty, it had spun in its busy-wait loop 0 times waiting for an event
+ring to empty, and it had spun 0 times waiting to start new rings when
+interrupts occurred.
+
+(The enters a busy-wait loop instead of sleeping when it is running in
+an interrupt/signal context, where sleeping is not allowed.)
+
+The `joined threads` statistics are the sum of statistics for threads
+that were previously joined: in total, joined threads slept 103 times
+while they waited for their rings to empty.
+
+Sleeps/spins indicate that a thread fills its event rings faster than the
+serialization thread can empty them.  That may mean that more buffering is
+needed (i.e., the rings should be longer), that serialization is too slow,
+or that online analysis cannot keep up with the rate of event production.
+
+It's also possible to get an instrumented program to write the statistics
+to its standard error stream by sending it a SIGPWR signal.
+
 ## Creating the installer for RV-Predict
 
 ```bash

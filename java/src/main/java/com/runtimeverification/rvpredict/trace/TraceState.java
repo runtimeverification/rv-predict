@@ -128,6 +128,7 @@ public class TraceState {
         t_tidToThreadState.clear();
         t_addrToState.clear();
         t_tidToAddrToEvents.clear();
+        t_tidToAddrToPrefixReadEvents.clear();
         t_lockIdToLockRegions.clear();
         t_clinitEvents.clear();
         t_ttidsThatCanOverlap.clear();

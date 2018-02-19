@@ -493,8 +493,8 @@ __rvpredict_init(void)
 {
 	const char *s;
 
-	rvp_online_analysis = (s = getenv("RVP_ONLINE_ANALYSIS")) == NULL ||
-	    strcasecmp(s, "yes") == 0;
+	rvp_online_analysis = (s = getenv("RVP_OFFLINE_ANALYSIS")) == NULL ||
+	    strcasecmp(s, "yes") != 0;
 
 	rvp_trace_only = (s = getenv("RVP_TRACE_ONLY")) != NULL &&
 	    strcasecmp(s, "yes") == 0;

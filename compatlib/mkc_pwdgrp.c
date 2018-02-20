@@ -1,5 +1,3 @@
-/*	$NetBSD: setmode.c,v 1.34 2012/06/25 22:32:43 abs Exp $	*/
-
 /*
  * Copyright © 2015 Aleksey Cheusov <vle@gmx.net>
  *
@@ -83,5 +81,29 @@ int gid_from_group(const char *name, gid_t *gid)
 	*gid = g->gr_gid;
 
 	return 0;
+}
+#endif
+
+#ifndef HAVE_FUNC4_PWCACHE_USERDB_PWD_H
+int pwcache_userdb(
+	int		(*a_setpassent)(int),
+	void		(*a_endpwent)(void),
+	struct passwd *	(*a_getpwnam)(const char *),
+	struct passwd *	(*a_getpwuid)(uid_t))
+{
+	/* this function works only on NetBSD */
+	return -1;
+}
+#endif
+
+#ifndef HAVE_FUNC4_PWCACHE_GROUPDB_GRP_H
+int pwcache_groupdb(
+	int		(*a_setgroupent)(int),
+	void		(*a_endgrent)(void),
+	struct group *	(*a_getgrnam)(const char *),
+	struct group *	(*a_getgrgid)(gid_t))
+{
+	/* this function works only on NetBSD */
+	return -1;
 }
 #endif

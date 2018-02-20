@@ -1,19 +1,5 @@
 #!/bin/sh
 #
-# From david.young@runtimeverification.com Fri Feb 16 13:41:41 2018
-# Date: Fri, 16 Feb 2018 13:41:41 -0600
-# From: David Young <david.young@runtimeverification.com>
-# To: virgil.serbanuta@runtimeverification.com
-# Subject: rvpmake: wrapper for mkcmake
-# Message-ID: <20180216194141.GF1507@pobox.com>
-# MIME-Version: 1.0
-# Content-Type: text/plain; charset=us-ascii
-# Content-Disposition: inline
-# User-Agent: Mutt/1.5.20 (2009-06-14)
-# Status: RO
-# Content-Length: 2569
-# Lines: 94
-# 
 # A RV-Predict/C working copy needs a OCaml configuration that's
 # independent of the user's configuration, so that 1) the user's
 # configuration doesn't get polluted with software that's under
@@ -71,6 +57,7 @@ exec_top()
 		     -x ${search_dir}/bin/rvpmake -a \
 		     -d ${search_dir}/.opam ]; then
 			export RVPMAKE_DIR=${search_dir}
+			export PATH=${search_dir}/bin:${PATH}
 			exec ${search_dir}/bin/rvpmake "$@"
 			err "unreachable"
 		fi

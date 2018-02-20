@@ -1,4 +1,4 @@
-/*	$NetBSD: crc_extern.h,v 1.1 2006/09/04 20:01:10 dsl Exp $	*/
+/*	$NetBSD: extern.h,v 1.39 2014/04/24 17:22:41 christos Exp $	*/
 
 /*-
  * Copyright (c) 1991, 1993
@@ -31,10 +31,58 @@
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
  */
 
-__BEGIN_DECLS
-#include <stdint.h>
+#include "mtree.h"
 
-int	 crc(int, u_int32_t *, off_t *);
-uint32_t crc_buf(uint32_t, const void *, size_t);
-uint32_t crc_byte(uint32_t, unsigned int);
-__END_DECLS
+#if HAVE_NBTOOL_CONFIG_H
+#include "nbtool_config.h"
+#else 
+#define HAVE_STRUCT_STAT_ST_FLAGS 1
+#endif
+ 
+#include <err.h> 
+#include <fts.h>
+#include <stdbool.h>
+
+#if HAVE_NETDB_H
+/* For MAXHOSTNAMELEN on some platforms. */
+#include <netdb.h>
+#endif
+
+#ifndef MAXHOSTNAMELEN
+#define MAXHOSTNAMELEN 256
+#endif
+
+enum flavor {
+	F_MTREE,
+	F_FREEBSD9,
+	F_NETBSD6
+};
+
+void	 addtag(slist_t *, char *);
+int	 check_excludes(const char *, const char *);
+int	 compare(NODE *, FTSENT *);
+int	 crc(int, u_int32_t *, u_int32_t *);
+void	 cwalk(FILE *);
+void	 dump_nodes(FILE *, const char *, NODE *, int);
+void	 init_excludes(void);
+int	 matchtags(NODE *);
+__dead __printflike(1,2) void	 mtree_err(const char *, ...);
+const char *nodetype(u_int);
+u_int	 parsekey(const char *, int *);
+void	 parsetags(slist_t *, char *);
+u_int	 parsetype(const char *);
+void	 read_excludes_file(const char *);
+const char *rlink(const char *);
+int	 verify(FILE *);
+void	 load_only(const char *fname);
+bool	 find_only(const char *path);
+
+extern int	bflag, dflag, eflag, iflag, jflag, lflag, mflag,
+		nflag, qflag, rflag, sflag, tflag, uflag;
+extern int	mtree_Mflag, mtree_Sflag, mtree_Wflag;
+extern size_t	mtree_lineno;
+extern enum flavor	flavor;
+extern u_int32_t crc_total;
+extern int	ftsoptions, keys;
+extern char	fullpath[];
+extern slist_t	includetags, excludetags;

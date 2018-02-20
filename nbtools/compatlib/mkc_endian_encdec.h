@@ -1,5 +1,5 @@
 /*
- * Copyright © 2015-2017 Aleksey Cheusov <vle@gmx.net>
+ * Copyright (C) 2017 Aleksey Cheusov <vle@gmx.net>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,42 +22,67 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MKC_PWDGRP_H_
-#define _MKC_PWDGRP_H_
+#ifndef _MKC_ENDIAN_ENCDEC_H_
+#define _MKC_ENDIAN_ENCDEC_H_
 
-#include <pwd.h>
-#include <grp.h>
+#ifdef HAVE_HEADER_SYS_ENDIAN_H
+# include <sys/endian.h>
+#endif
+
+#include <stdint.h>
 
 //__BEGIN_DECLS
 
-#ifndef HAVE_FUNC2_USER_FROM_UID_PWD_H
-const char *user_from_uid(uid_t uid, int nouser);
+/* decode functions */
+#ifndef HAVE_FUNC1_BE16DEC_SYS_ENDIAN_H
+uint16_t be16dec(const void *stream);
 #endif
 
-#ifndef HAVE_FUNC2_GROUP_FROM_GID_GRP_H
-const char *group_from_gid(gid_t gid, int nogroup);
+#ifndef HAVE_FUNC1_BE32DEC_SYS_ENDIAN_H
+uint32_t be32dec(const void *stream);
 #endif
 
-#ifndef HAVE_FUNC2_UID_FROM_USER_PWD_H
-int uid_from_user(const char *name, uid_t *uid);
+#ifndef HAVE_FUNC1_BE64DEC_SYS_ENDIAN_H
+uint64_t be64dec(const void *stream);
 #endif
 
-#ifndef HAVE_FUNC2_GID_FROM_GROUP_GRP_H
-int gid_from_group(const char *name, gid_t *gid);
+#ifndef HAVE_FUNC1_LE16DEC_SYS_ENDIAN_H
+uint16_t le16dec(const void *stream);
 #endif
 
-#ifndef HAVE_FUNC4_PWCACHE_USERDB_PWD_H
-int pwcache_userdb(int (*setpassent)(int), void (*endpwent)(void),
-         struct passwd * (*getpwnam)(const char *),
-         struct passwd * (*getpwuid)(uid_t));
+#ifndef HAVE_FUNC1_LE32DEC_SYS_ENDIAN_H
+uint32_t le32dec(const void *stream);
 #endif
 
-#ifndef HAVE_FUNC4_PWCACHE_GROUPDB_GRP_H
-int pwcache_groupdb(int (*setgroupent)(int), void (*endgrent)(void),
-         struct group * (*getgrnam)(const char *),
-         struct group * (*getgrgid)(gid_t));
+#ifndef HAVE_FUNC1_LE64DEC_SYS_ENDIAN_H
+uint64_t le64dec(const void *stream);
+#endif
+
+/* decode functions */
+#ifndef HAVE_FUNC2_BE16ENC_SYS_ENDIAN_H
+void be16enc(void *stream, uint16_t host16);
+#endif
+
+#ifndef HAVE_FUNC2_BE32ENC_SYS_ENDIAN_H
+void be32enc(void *stream, uint32_t host32);
+#endif
+
+#ifndef HAVE_FUNC2_BE64ENC_SYS_ENDIAN_H
+void be64enc(void *stream, uint64_t host64);
+#endif
+
+#ifndef HAVE_FUNC2_LE16ENC_SYS_ENDIAN_H
+void le16enc(void *stream, uint16_t host16);
+#endif
+
+#ifndef HAVE_FUNC2_LE32ENC_SYS_ENDIAN_H
+void le32enc(void *stream, uint32_t host32);
+#endif
+
+#ifndef HAVE_FUNC2_LE64ENC_SYS_ENDIAN_H
+void le64enc(void *stream, uint64_t host64);
 #endif
 
 //__END_DECLS
 
-#endif /* _MKC_PWDGRP_H_ */
+#endif /* _MKC_ENDIAN_ENCDEC_H_ */

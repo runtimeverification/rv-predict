@@ -5,7 +5,10 @@ import com.runtimeverification.rvpredict.util.Constants;
 
 import java.util.List;
 
-public interface RaceDetector extends Constants {
+/**
+ * Objects having this interface should be closed.
+ */
+public interface RaceDetector extends Constants, AutoCloseable {
     List<String> getRaceReports();
 
     void run(Trace trace);

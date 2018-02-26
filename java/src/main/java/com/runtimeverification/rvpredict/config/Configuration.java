@@ -422,6 +422,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")
     public int solver_timeout = 60;
 
+    final static String opt_parallel_smt = "--parallel-smt";
+    @Parameter(names = opt_parallel_smt, description = "How many parallel SMTs to use. Should always be 1 when analysing doing online Java analysis.", hidden = false, descriptionKey = "2700")
+    public int parallel_smt = 1;
+
     final static String opt_debug = "--debug";
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "3000")
     public static boolean debug = false;

@@ -6,6 +6,7 @@
         <runs value="32" />
         <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="ftpserver.jar" module="ftpserver">
         <jar/>
@@ -14,35 +15,43 @@
         <rvarg value="--offline" />
         <rvarg value="--without-generation" />
         <rvarg value="--debug" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <test name="SpringExample.jar" module="SpringExample">
         <jar/>
         <rvarg key="--window" value="6000" />
         <rvarg value="--debug" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <test name="account.Account" module="examples">
         <runs value="64" />
         <arg value="account.Account" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="array.Test" module="basic">
         <arg value="array.Test" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="airlinetickets.Airlinetickets" module="examples">
         <runs value="32" />
         <arg value="airlinetickets.Airlinetickets" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
         <runs value="32" />
         <rvarg key="--window" value="5000" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="benchmarks.JGFMonteCarloBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="benchmarks.JGFMolDynBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <test name="demo.Example" module="basic">

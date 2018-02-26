@@ -29,29 +29,24 @@
 package com.runtimeverification.rvpredict.smt;
 
 import com.google.common.collect.ImmutableList;
-import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.Model;
-import com.microsoft.z3.Solver;
-import com.microsoft.z3.Status;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.performance.ProfilerToken;
 import com.runtimeverification.rvpredict.performance.Profiler;
-import com.runtimeverification.rvpredict.smt.constraintsources.SignalStartMask;
-import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
-import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
-import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
-import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
-import com.runtimeverification.rvpredict.smt.formula.IntConstant;
-import com.runtimeverification.rvpredict.smt.formula.InterruptedThreadVariable;
-import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
+import com.runtimeverification.rvpredict.performance.ProfilerToken;
 import com.runtimeverification.rvpredict.smt.constraintsources.DisjointLocks;
 import com.runtimeverification.rvpredict.smt.constraintsources.InterThreadOrdering;
 import com.runtimeverification.rvpredict.smt.constraintsources.IntraThreadOrdering;
 import com.runtimeverification.rvpredict.smt.constraintsources.SignalInterruptLocationsConstraintSource;
+import com.runtimeverification.rvpredict.smt.constraintsources.SignalStartMask;
 import com.runtimeverification.rvpredict.smt.constraintsources.SignalsDoNotOverlapWhenInterruptingTheSameThread;
-import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
+import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
+import com.runtimeverification.rvpredict.smt.formula.BooleanConstant;
+import com.runtimeverification.rvpredict.smt.formula.ConcretePhiVariable;
+import com.runtimeverification.rvpredict.smt.formula.FormulaTerm;
+import com.runtimeverification.rvpredict.smt.formula.InterruptedThreadVariable;
+import com.runtimeverification.rvpredict.smt.formula.OrderVariable;
 import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -107,28 +102,23 @@ public class MaximalCausalModel {
 
     private final Map<String, ReadonlyEventInterface> nameToEvent = new HashMap<>();
 
-    private final Z3Filter z3filter;
-
-    private final com.microsoft.z3.Solver fastSolver;
-    private final com.microsoft.z3.Solver soundSolver;
+    private final RaceSolver raceSolver;
 
     private final boolean detectInterruptedThreadRace;
 
     public static MaximalCausalModel create(
-            Trace trace, Z3Filter z3filter, Solver fastSolver, Solver soundSolver, boolean detectInterruptedThreadRace) {
+            Trace trace, RaceSolver raceSolver, boolean detectInterruptedThreadRace) {
         MaximalCausalModel model = new MaximalCausalModel(
-                trace, z3filter, fastSolver, soundSolver, detectInterruptedThreadRace);
+                trace, raceSolver, detectInterruptedThreadRace);
 
         model.addConstraints();
         return model;
     }
 
     private MaximalCausalModel(
-            Trace trace, Z3Filter z3filter, Solver fastSolver, Solver soundSolver, boolean detectInterruptedThreadRace) {
+            Trace trace, RaceSolver raceSolver, boolean detectInterruptedThreadRace) {
         this.trace = trace;
-        this.z3filter = z3filter;
-        this.fastSolver = fastSolver;
-        this.soundSolver = soundSolver;
+        this.raceSolver = raceSolver;
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
         trace.eventsByThreadID().forEach((tid, events) ->
                 events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event)));
@@ -394,25 +384,6 @@ public class MaximalCausalModel {
         return raceAsst.build();
     }
 
-    private class EventWithOrder {
-        private final ReadonlyEventInterface event;
-        private final long orderId;
-        private EventWithOrder(ReadonlyEventInterface event, long orderId) {
-            this.event = event;
-            this.orderId = orderId;
-        }
-        private ReadonlyEventInterface getEvent() {
-            return event;
-        }
-        private long getOrderId() {
-            return orderId;
-        }
-        @Override
-        public String toString() {
-            return String.format("(Id:%s Order:%s)", event.getEventId(), orderId);
-        }
-    }
-
     /**
      * Checks if the given race suspects are real. Race suspects are grouped by
      * their signatures.
@@ -435,16 +406,19 @@ public class MaximalCausalModel {
 
         Map<String, Race> result = new HashMap<>();
         try (ProfilerToken ignored = Profiler.instance().start("All solver stuff")) {
-            startWindow(unsoundButFastPhiTau.build(), soundPhiTau.build(), buildPhiConc());
+            raceSolver.startWindow(unsoundButFastPhiTau.build(), soundPhiTau.build(), buildPhiConc());
             /* check race suspects */
 
             boolean atLeastOneRace = false;
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
-                    boolean isRace = checkRace(
-                            race,
+                    boolean isRace = raceSolver.checkRace(
                             suspectToAsst.get(race),
-                            (threadToExecution, signalParents) -> {
+                            model -> {
+                                Map<Integer, List<EventWithOrder>> threadToExecution =
+                                        extractExecution(model, nameToEvent);
+                                Map<Integer, Integer> signalParents = extractSignalParents(model);
+                                fillSignalStack(threadToExecution, signalParents, race);
                                 if (Configuration.debug) {
                                     dumpOrderingWithLessThreadSwitches(
                                             threadToExecution,
@@ -460,18 +434,18 @@ public class MaximalCausalModel {
                 }
             }
             if (!atLeastOneRace && Configuration.debug) {
-                generateSolution(
-                    (threadToExecution, signalParents) -> {
-                        if (Configuration.debug) {
-                            dumpOrderingWithLessThreadSwitches(
-                                    threadToExecution,
-                                    Optional.empty(), Optional.empty(),
-                                    signalParents);
+                raceSolver.generateSolution(
+                        model -> {
+                            if (Configuration.debug) {
+                                dumpOrderingWithLessThreadSwitches(
+                                        extractExecution(model, nameToEvent),
+                                        Optional.empty(), Optional.empty(),
+                                        extractSignalParents(model));
+                            }
                         }
-                    }
                 );
             }
-            endWindow();
+            raceSolver.endWindow();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -479,72 +453,14 @@ public class MaximalCausalModel {
         return result;
     }
 
-    private void startWindow(
-            BoolFormula unsoundButFastPhiTau,
-            BoolFormula soundPhiTau,
-            Collection<BoolFormula> phiConc) throws Exception {
-        fastSolver.push();
-        soundSolver.push();
-        /* translate our formula into Z3 AST format */
-        fastSolver.add(z3filter.filter(unsoundButFastPhiTau));
-        soundSolver.add(z3filter.filter(soundPhiTau));
-        for (BoolFormula entry : phiConc) {
-            fastSolver.add(z3filter.filter(entry));
-            soundSolver.add(z3filter.filter(entry));
-        }
-    }
-
-    interface RaceDebugger {
-        void raceDebugInfo(Map<Integer, List<EventWithOrder>> threadToExecution, Map<Integer, Integer> signalParents);
-    }
-
-    private void endWindow() {
-        fastSolver.pop();
-        soundSolver.pop();
-        z3filter.clear();
-    }
-
-    private boolean checkRace(Race race, BoolFormula assertion, RaceDebugger debugger) throws Exception {
-        try (ProfilerToken ignored1 = Profiler.instance().start("Main solver loop")) {
-            fastSolver.push();
-            fastSolver.add(z3filter.filter(assertion));
-            boolean isRace = fastSolver.check() == Status.SATISFIABLE;
-            if (isRace) {
-                try (ProfilerToken ignored2 = Profiler.instance().start("Secondary solver loop")) {
-                    soundSolver.push();
-                    soundSolver.add(z3filter.filter(assertion));
-                    isRace = soundSolver.check() == Status.SATISFIABLE;
-                    if (isRace) {
-                        Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution(soundSolver);
-                        Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
-                        fillSignalStack(threadToExecution, signalParents, race);
-                        debugger.raceDebugInfo(threadToExecution, signalParents);
-                    }
-                    soundSolver.pop();
-                }
-            }
-            fastSolver.pop();
-            return isRace;
-        }
-    }
-
-    private void generateSolution(RaceDebugger debugger) {
-        soundSolver.push();
-        if (soundSolver.check() == Status.SATISFIABLE) {
-            debugger.raceDebugInfo(extractExecution(soundSolver), extractSignalParents(soundSolver));
-        }
-        soundSolver.pop();
-    }
-
-    private Collection<BoolFormula> buildPhiConc() throws Exception {
+    private Collection<BoolFormula> buildPhiConc() {
         return readToPhiConc.entrySet()
                 .stream()
                 .map(entry -> BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()), entry.getValue()))
                 .collect(Collectors.toList());
     }
 
-    private Map<Integer, Integer> extractSignalParents(Solver solver) {
-        Model model = solver.getModel();
+    private Map<Integer, Integer> extractSignalParents(Model model) {
         Map<Integer, Integer> signalParents = new HashMap<>();
         for (FuncDecl f : model.getConstDecls()) {
             String name = f.getName().toString();
@@ -612,17 +528,9 @@ public class MaximalCausalModel {
         return signalStack;
     }
 
-    private void findAndDumpOrdering(Solver solver) {
-        solver.push();
-        if (solver.check() == Status.SATISFIABLE) {
-            dumpOrderingWithLessThreadSwitches(
-                    extractExecution(solver), Optional.empty(), Optional.empty(), extractSignalParents(solver));
-        }
-        solver.pop();
-    }
-
-    private Map<Integer, List<EventWithOrder>> extractExecution(Solver solver) {
-        Model model = solver.getModel();
+    private Map<Integer, List<EventWithOrder>> extractExecution(
+            Model model,
+            Map<String, ReadonlyEventInterface> nameToEvent) {
         Map<Integer, List<EventWithOrder>> threadToExecution = new HashMap<>();
         for (FuncDecl f : model.getConstDecls()) {
             String name = f.getName().toString();
@@ -942,35 +850,4 @@ public class MaximalCausalModel {
         }
         return description.toString();
     }
-
-    /**
-     * Checks if the logged trace is in a consistent state.
-     */
-    @SuppressWarnings("unused")
-    private void checkTraceConsistency(Z3Filter z3filter, com.microsoft.z3.Solver solver)
-            throws Exception {
-        List<MemoryAccessBlock> blks = new ArrayList<>();
-        trace.memoryAccessBlocksByThreadID().values().forEach(l -> blks.addAll(l));
-        Collections.sort(blks);
-
-        solver.push();
-        /* simply assign the GID of an event to its order variable */
-        for (List<ReadonlyEventInterface> l : trace.eventsByThreadID().values()) {
-            for (ReadonlyEventInterface event : l) {
-                solver.add(z3filter.filter(
-                        INT_EQUAL(OrderVariable.get(event), new IntConstant(event.getEventId()))));
-            }
-        }
-
-        /* assert that all events should be concretely feasible */
-        for (MemoryAccessBlock blk : blks) {
-            solver.add(z3filter.filter(getPhiConc(blk)));
-        }
-
-        if (solver.check() != Status.SATISFIABLE) {
-            throw new RuntimeException("Inconsistent trace!");
-        }
-        solver.pop();
-    }
-
 }

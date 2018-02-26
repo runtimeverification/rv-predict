@@ -13,6 +13,7 @@ import com.microsoft.z3.Params;
 import com.microsoft.z3.Z3Exception;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
+import com.runtimeverification.rvpredict.smt.RaceSolver;
 import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.violation.Race;
@@ -30,27 +31,25 @@ public class MaximalRaceDetector implements RaceDetector {
 
     private final List<String> reports = new ArrayList<>();
 
-    private final Z3Filter z3filter;
-
-    private final com.microsoft.z3.Solver fastSolver;
-    private final com.microsoft.z3.Solver soundSolver;
+    private final RaceSolver raceSolver;
 
     public MaximalRaceDetector(Configuration config) {
         this.config = config;
         Context z3Context;
         z3Context = getZ3Context();
-        this.z3filter = new Z3Filter(z3Context, config.windowSize);
+        Z3Filter z3filter = new Z3Filter(z3Context, config.windowSize);
         try {
             /* setup the solver */
             // mkSimpleSolver < mkSolver < mkSolver("QF_IDL")
-            this.fastSolver = z3Context.mkSimpleSolver();
+            com.microsoft.z3.Solver fastSolver = z3Context.mkSimpleSolver();
             Params params = z3Context.mkParams();
             params.add("timeout", config.solver_timeout * 900);
             fastSolver.setParameters(params);
-            this.soundSolver = z3Context.mkSimpleSolver();
+            com.microsoft.z3.Solver soundSolver = z3Context.mkSimpleSolver();
             params = z3Context.mkParams();
             params.add("timeout", config.solver_timeout * 100);
             soundSolver.setParameters(params);
+            raceSolver = new RaceSolver(z3filter, fastSolver, soundSolver);
         } catch (Z3Exception e) {
             throw new RuntimeException(e);
         }
@@ -119,8 +118,7 @@ public class MaximalRaceDetector implements RaceDetector {
         }
 
         Map<String, Race> result =
-                MaximalCausalModel.create(
-                        trace, z3filter, fastSolver, soundSolver, config.detectInterruptedThreadRace())
+                MaximalCausalModel.create(trace, raceSolver, config.detectInterruptedThreadRace())
                         .checkRaceSuspects(sigToRaceSuspects);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {

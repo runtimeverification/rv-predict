@@ -2238,7 +2238,7 @@ public class MaximalCausalModelTest {
             trace = traceState.initNextTraceWindow(rawTraces);
         }
         MaximalCausalModel model = MaximalCausalModel.create(
-                trace, z3Filter, fastSolver, soundSolver, detectInterruptedThreadRace);
+                trace, new RaceSolver(z3Filter, fastSolver, soundSolver), detectInterruptedThreadRace);
 
         if (trace.getSize() == 0) {
             return Collections.emptyMap();

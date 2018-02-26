@@ -29,6 +29,7 @@
 package com.runtimeverification.rvpredict.smt;
 
 import com.google.common.collect.ImmutableList;
+import com.microsoft.z3.BoolExpr;
 import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.Model;
 import com.microsoft.z3.Solver;
@@ -58,6 +59,7 @@ import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.violation.Race;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -433,57 +435,43 @@ public class MaximalCausalModel {
 
         Map<String, Race> result = new HashMap<>();
         try (ProfilerToken ignored = Profiler.instance().start("All solver stuff")) {
-            fastSolver.push();
-            soundSolver.push();
-            /* translate our formula into Z3 AST format */
-            fastSolver.add(z3filter.filter(unsoundButFastPhiTau.build()));
-            soundSolver.add(z3filter.filter(soundPhiTau.build()));
-            addPhiConc(fastSolver);
-            addPhiConc(soundSolver);
-
+            startWindow(unsoundButFastPhiTau.build(), soundPhiTau.build(), buildPhiConc());
             /* check race suspects */
 
             boolean atLeastOneRace = false;
             for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                 for (Race race : entry.getValue()) {
-                    try (ProfilerToken ignored1 = Profiler.instance().start("Main solver loop")) {
-                        fastSolver.push();
-                        fastSolver.add(z3filter.filter(suspectToAsst.get(race)));
-                        boolean isRace = fastSolver.check() == Status.SATISFIABLE;
-                        if (isRace) {
-                            try (ProfilerToken ignored2 = Profiler.instance().start("Secondary solver loop")) {
-                                soundSolver.push();
-                                soundSolver.add(z3filter.filter(suspectToAsst.get(race)));
-                                isRace = soundSolver.check() == Status.SATISFIABLE;
-                                atLeastOneRace |= isRace;
-                                if (isRace) {
-                                    Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution(soundSolver);
-                                    Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
-                                    fillSignalStack(threadToExecution, signalParents, race);
-                                    if (Configuration.debug) {
-                                        dumpOrderingWithLessThreadSwitches(
-                                                threadToExecution,
-                                                Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
-                                                signalParents);
-                                    }
+                    boolean isRace = checkRace(
+                            race,
+                            suspectToAsst.get(race),
+                            (threadToExecution, signalParents) -> {
+                                if (Configuration.debug) {
+                                    dumpOrderingWithLessThreadSwitches(
+                                            threadToExecution,
+                                            Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
+                                            signalParents);
                                 }
-                                soundSolver.pop();
-                            }
-                        }
-                        fastSolver.pop();
-                        if (isRace) {
-                            result.put(entry.getKey(), race);
-                            break;
-                        }
+                            });
+                    atLeastOneRace |= isRace;
+                    if (isRace) {
+                        result.put(entry.getKey(), race);
+                        break;
                     }
                 }
             }
             if (!atLeastOneRace && Configuration.debug) {
-                findAndDumpOrdering(soundSolver);
+                generateSolution(
+                    (threadToExecution, signalParents) -> {
+                        if (Configuration.debug) {
+                            dumpOrderingWithLessThreadSwitches(
+                                    threadToExecution,
+                                    Optional.empty(), Optional.empty(),
+                                    signalParents);
+                        }
+                    }
+                );
             }
-            fastSolver.pop();
-            soundSolver.pop();
-            z3filter.clear();
+            endWindow();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -491,11 +479,68 @@ public class MaximalCausalModel {
         return result;
     }
 
-    private void addPhiConc(Solver solver) throws Exception {
-        for (Map.Entry<ReadonlyEventInterface, BoolFormula> entry : readToPhiConc.entrySet()) {
-            solver.add(z3filter.filter(BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()),
-                    entry.getValue())));
+    private void startWindow(
+            BoolFormula unsoundButFastPhiTau,
+            BoolFormula soundPhiTau,
+            Collection<BoolFormula> phiConc) throws Exception {
+        fastSolver.push();
+        soundSolver.push();
+        /* translate our formula into Z3 AST format */
+        fastSolver.add(z3filter.filter(unsoundButFastPhiTau));
+        soundSolver.add(z3filter.filter(soundPhiTau));
+        for (BoolFormula entry : phiConc) {
+            fastSolver.add(z3filter.filter(entry));
+            soundSolver.add(z3filter.filter(entry));
         }
+    }
+
+    interface RaceDebugger {
+        void raceDebugInfo(Map<Integer, List<EventWithOrder>> threadToExecution, Map<Integer, Integer> signalParents);
+    }
+
+    private void endWindow() {
+        fastSolver.pop();
+        soundSolver.pop();
+        z3filter.clear();
+    }
+
+    private boolean checkRace(Race race, BoolFormula assertion, RaceDebugger debugger) throws Exception {
+        try (ProfilerToken ignored1 = Profiler.instance().start("Main solver loop")) {
+            fastSolver.push();
+            fastSolver.add(z3filter.filter(assertion));
+            boolean isRace = fastSolver.check() == Status.SATISFIABLE;
+            if (isRace) {
+                try (ProfilerToken ignored2 = Profiler.instance().start("Secondary solver loop")) {
+                    soundSolver.push();
+                    soundSolver.add(z3filter.filter(assertion));
+                    isRace = soundSolver.check() == Status.SATISFIABLE;
+                    if (isRace) {
+                        Map<Integer, List<EventWithOrder>> threadToExecution = extractExecution(soundSolver);
+                        Map<Integer, Integer> signalParents = extractSignalParents(soundSolver);
+                        fillSignalStack(threadToExecution, signalParents, race);
+                        debugger.raceDebugInfo(threadToExecution, signalParents);
+                    }
+                    soundSolver.pop();
+                }
+            }
+            fastSolver.pop();
+            return isRace;
+        }
+    }
+
+    private void generateSolution(RaceDebugger debugger) {
+        soundSolver.push();
+        if (soundSolver.check() == Status.SATISFIABLE) {
+            debugger.raceDebugInfo(extractExecution(soundSolver), extractSignalParents(soundSolver));
+        }
+        soundSolver.pop();
+    }
+
+    private Collection<BoolFormula> buildPhiConc() throws Exception {
+        return readToPhiConc.entrySet()
+                .stream()
+                .map(entry -> BOOL_EQUAL(new ConcretePhiVariable(entry.getKey()), entry.getValue()))
+                .collect(Collectors.toList());
     }
 
     private Map<Integer, Integer> extractSignalParents(Solver solver) {

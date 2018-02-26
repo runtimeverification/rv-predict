@@ -11,6 +11,7 @@
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
         <tempdir variablename="INSTALL_PATH"/>
+	<pack-compression-format>xz</pack-compression-format>
         <javaversion>1.8</javaversion>
     </info>
 
@@ -94,7 +95,6 @@
             <file src="rv-predict-c_@{info.appVersion}-1_amd64.deb" targetdir="$INSTALL_PATH">
                 <os family="unix"/>
             </file>
-            <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="debian/copyright" targetdir="$INSTALL_PATH"/>
             <file src="install-scripts/install.sh" targetdir="$INSTALL_PATH/bin">
                 <os family="unix"/>

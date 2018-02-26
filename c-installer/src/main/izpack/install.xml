@@ -11,7 +11,6 @@
         <uninstaller write="no"/>
         <writeinstallationinformation>false</writeinstallationinformation>
         <tempdir variablename="INSTALL_PATH"/>
-	<pack-compression-format>xz</pack-compression-format>
         <javaversion>1.8</javaversion>
     </info>
 

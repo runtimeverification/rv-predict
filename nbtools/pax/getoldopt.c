@@ -18,7 +18,7 @@
 __RCSID("$NetBSD: getoldopt.c,v 1.23 2012/08/09 11:05:59 christos Exp $");
 #endif /* not lint */
 
-#if HAVE_NBTOOL_CONFIG_H
+#if HAVE_NBTOOL_CONFIG_H && NO_NO_NO
 #include "compat_getopt.h"
 #else
 #include <getopt.h>

@@ -1,18 +1,19 @@
 PROG=   pax
+CPPFLAGS +=	-DHAVE_NBTOOL_CONFIG_H
 SRCS=	ar_io.c ar_subs.c buf_subs.c file_subs.c ftree.c\
 	gen_subs.c getoldopt.c options.c pat_rep.c pax.c sel_subs.c tables.c\
 	tar.c tty_subs.c
 
-SMALLPROG=1
+#SMALLPROG=1
 
 .if defined(SMALLPROG)
 CPPFLAGS+=	-DSMALL -DNO_CPIO
 .else
 SRCS+=		getid.c spec.c misc.c pack_dev.c cpio.c
-CPPFLAGS+=	-I${NETBSDSRCDIR}/usr.sbin/mtree \
-		-I${NETBSDSRCDIR}/sbin/mknod
-.PATH:		${NETBSDSRCDIR}/usr.sbin/mtree \
-		${NETBSDSRCDIR}/sbin/mknod
+CPPFLAGS+=	-I${.CURDIR}/../mtree \
+		-I${.CURDIR}/../mknod
+.PATH:		${.CURDIR}/../mtree \
+		${.CURDIR}/../mknod
 
 .if (${HOSTPROG:U} == "")
 DPADD+= ${LIBUTIL}
@@ -38,7 +39,7 @@ SYMLINKS+=${BINDIR}/cpio /usr/bin/cpio
 .endif
 .endif	# }	! HOSTPROG
 
-.if !defined(HOSTPROG) && !defined(SMALLPROG)
+.if !defined(HOSTPROG) && !defined(SMALLPROG) && defined(NO_NO_NO)
 CPPFLAGS+=	-DSUPPORT_RMT
 
 LDADD+=	-lrmt

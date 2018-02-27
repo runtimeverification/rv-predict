@@ -52,7 +52,7 @@ __RCSID("$NetBSD: options.c,v 1.115 2013/11/14 04:00:48 christos Exp $");
 #include <sys/param.h>
 #include <ctype.h>
 #include <errno.h>
-#if HAVE_NBTOOL_CONFIG_H
+#if HAVE_NBTOOL_CONFIG_H && NO_NO_NO
 #include "compat_getopt.h"
 #else
 #include <getopt.h>

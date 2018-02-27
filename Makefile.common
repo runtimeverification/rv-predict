@@ -1,23 +1,10 @@
 STRIPFLAG=-s
 MANDIR=${PREFIX}/share/man
 
-#
-# manual pages in Debian binary packages must be compressed
-#
-# I cannot use MANZ because it doesn't pass -9n to gzip, so
-# I am doing something unsupported and exploiting knowledge of
-# the implementation by setting MCOMPRESS and MCOMPRESSSUFFIX
-# directly.
-#
-#MANZ=yes
-MCOMPRESS       =       gzip -9ncf
-MCOMPRESSSUFFIX =       .gz
-
-.if defined(FAKEROOT_FIFO) && defined(INSTALL)
-.if !exists($(FAKEROOT_FIFO))
-.error "FAKEROOT_FIFO=$(FAKEROOT_FIFO) is defined but missing."
-.endif
-INSTALL:=fakeroot -s $(FAKEROOT_FIFO) $(INSTALL)
+.if $(.CURDIR:C,.*/ctests.*,,) != "" && $(NBINSTALL:Unone) != "none"
+INSTALL:=$(NBINSTALL)
+LN:=$(NBINSTALL) -l h
+LN_S:=$(NBINSTALL) -l s
 BINOWN=root
 BINGRP=root
 FILESOWN=root

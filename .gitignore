@@ -15,6 +15,11 @@ EVALUATION-LICENSE.md
 **/.Makefile.tags
 .metadata
 **/_mkc_*
+.nbstage
+nbtools/mtree/mtree
+nbtools/**/*.os
+nbtools/pax/pax
+nbtools/xinstall/xinstall
 **/*.o
 .opam
 **/*.pico
@@ -26,4 +31,5 @@ EVALUATION-LICENSE.md
 **/.*.swp
 **/tags
 target/
+.tools
 **/*.trace

@@ -53,12 +53,12 @@ exec_top()
 {
 	search_dir=$(pwd)
 	while true; do
-		if [ -f ${search_dir}/bin/rvpmake -a \
-		     -x ${search_dir}/bin/rvpmake -a \
+		if [ -f ${search_dir}/.tools/bin/rvpmake -a \
+		     -x ${search_dir}/.tools/bin/rvpmake -a \
 		     -d ${search_dir}/.opam ]; then
 			export RVPMAKE_DIR=${search_dir}
-			export PATH=${search_dir}/bin:${PATH}
-			exec ${search_dir}/bin/rvpmake "$@"
+			export PATH=${search_dir}/.tools/bin:${PATH}
+			exec ${search_dir}/.tools/bin/rvpmake "$@"
 			err "unreachable"
 		fi
 		search_dir=$(dirname ${search_dir})

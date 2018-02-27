@@ -2,6 +2,7 @@
 
 set -e
 set -u
+set -x
 
 usage()
 {
@@ -12,79 +13,127 @@ usage()
 cleanup()
 {
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
-	kill $bgpid
-	rm -rf ${destdir} ${tmpdir}
-	wait $bgpid || true
+	echo rm -rf ${tmpdir}
 }
 
 [ $# -eq 1 ] || usage
 
 version=$1
 
-destdir=$(mktemp -d -t $(basename $0).destdir.XXXXXX)
+start_dir=$(pwd)
 tmpdir=$(mktemp -d -t $(basename $0).XXXXX)
-rootfifo=${tmpdir}/rootfifo
-rootsave=${tmpdir}/rootsave
-
-# I do not want to run this script as root, but the files in a Debian
-# binary package need to have the proper ownership, root:root.  In
-# Ubuntu, the way for an unprivileged user to install a file "as if"
-# using root permissions is with fakeroot. fakeroot will save file
-# meta-information to a file, however, independent invocations of
-# fakeroot truncate the meta-information file.  In order to accumulate
-# meta-information over several invocations of 'fakeroot install -o root
-# -g root ...', I use a FIFO as the output file.  I empty the FIFO to a
-# regular file in the background using tail -f.
-#
-# TBD: this would be a lot easier with NetBSD's install(1), mtree(1),
-# and pax(1) utilities, so someday I may install a NetBSD cross
-# toolchain on the RV, Inc., development boxes.
-# 
-mkfifo ${rootfifo}
-tail -f ${rootfifo} > ${rootsave} &
-bgpid=$!
+destdir=${tmpdir}/debian/rv-predict-c
 
 trap cleanup EXIT ALRM HUP INT PIPE QUIT TERM
-rm -f rv-predict-c.deb
-if ! type mkcmake > /dev/null 2>&1; then
-	export PATH=${HOME}/pkg/bin:${PATH}
+
+changelog_regex="^rv-predict-c ($(echo $version | sed 's,\.,\\.,g')-1) xenial; urgency=medium"
+
+cp -a debian $tmpdir/
+
+if [ ${version%%-SNAPSHOT} != ${version} ]
+then
+	cat - debian/changelog > ${tmpdir}/debian/changelog <<CHANGELOG_TEMPLATE
+rv-predict-c (${version}-1) xenial; urgency=medium
+
+  * Miscellaneous bug fixes and new features.
+
+ -- Runtime Verification, Inc. <support@runtimeverification.com>  $(date +'%a, %d %b %Y %H:%M:%S %z')
+
+CHANGELOG_TEMPLATE
+elif ! head -1 debian/changelog > ${tmpdir}/changelog_first_line || \
+     ! grep -q "${changelog_regex}" < ${tmpdir}/changelog_first_line
+then
+	echo "Before you run $(basename $0), you should add version ${version} to debian/changelog." 1>&2
+	exit 1
+else
+	cp debian/changelog ${tmpdir}/debian/changelog
 fi
 
+gzip -9fn < ${tmpdir}/debian/changelog > ${tmpdir}/changelog.Debian.gz
 
 # avoid creating files & directories with permissions 0775 
-umask 022
+#umask 022
+
+NBINSTALL="nb-install -U -D ${destdir} -M ${destdir}/metalog -h md5"
+DEBINSTALL="nb-install -U -D ${tmpdir}/debian -M ${tmpdir}/debian/metalog"
 
 #
-# Call mkcmake with FAKEROOT_FIFO set so that meta-information is
-# captured.  When FAKEROOT_FIFO is set, Makefile.common sets INSTALL to
-# fakeroot $(INSTALL) -s $(FAKEROOT_FIFO).
+# Call rvpmake with NBINSTALL=yes so that meta-information is
+# captured.
 #
-export CHOWNPROG=$(which chown)
-export PATH=$(pwd)/bin:${PATH}
-mkcmake FAKEROOT_FIFO=${rootfifo} RELEASE=yes DESTDIR=${destdir} PREFIX=/usr install
-fakeroot -s ${rootfifo} cp -rp DEBIAN ${destdir}/.
-fakeroot -s ${rootfifo} chmod 0755 ${destdir}/DEBIAN/*
-cat > ${tmpdir}/control <<END_OF_CONTROL
-Package: rv-predict-c
-Version: ${version}-1
-Architecture: amd64
-Depends: clang-4.0, java8-runtime-headless, libc6
-Section: devel
-Priority: optional
-Maintainer: David Young <david.young@runtimeverification.com>
-Description: RV-Predict/C predicts data races in C and C++ programs.
- Use RV-Predict/C compiles and runs a C/C++ program with
- instrumentation that produces an execution trace.  RV-Predict/C
- analyzes the execution trace and reports the data races that could
- occur.
-END_OF_CONTROL
-fakeroot -s ${rootfifo} install -o root -g root -m 0664 \
-    ${tmpdir}/control ${destdir}/DEBIAN/control
-fakeroot -s ${rootfifo} chown -R root:root ${destdir}/DEBIAN
+RVPMAKE="rvpmake RELEASE=yes DESTDIR=${destdir} PREFIX=/usr LIBDIR=/usr/lib/x86_64-linux-gnu LIBEXECDIR=/usr/lib/x86_64-linux-gnu"
+$RVPMAKE cleandir all
 
 #
-# Use `fakeroot -i ${rootsave}` to invoke `dpkg-deb` so that
-# in the binary package `dpkg-deb` builds, the meta-information
-# that we accumulated previously takes effect.
+# Get nb-install onto our PATH
 #
-fakeroot -i ${rootsave} dpkg-deb -b ${destdir} rv-predict-c-${version}.deb
+export PATH=$(rvpmake -V '$(.OBJDIR)')/.tools/bin:${PATH}
+
+# nb-install requires that the directory that receives the metalog exists.
+mkdir -p ${destdir}
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/lib
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/doc
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/doc/rv-predict-c
+$NBINSTALL -o root -g root -m 0644 ${tmpdir}/changelog.Debian.gz \
+    ${destdir}/usr/share/doc/rv-predict-c/changelog.Debian.gz
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/examples
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/examples/rv-predict-c
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/man
+$RVPMAKE NBINSTALL="${NBINSTALL}" install
+cd $tmpdir
+dh_makeshlibs
+dpkg-shlibdeps debian/rv-predict-c/usr/lib/x86_64-linux-gnu/rvpinstrument.so \
+    debian/rv-predict-c/usr/bin/rvpdump \
+    debian/rv-predict-c/usr/bin/rvp-error \
+    debian/rv-predict-c/usr/bin/rvpshortenpaths \
+    debian/rv-predict-c/usr/bin/rvpsymbolize-json \
+    debian/rv-predict-c/usr/bin/rvptrimframe \
+    debian/rv-predict-c/usr/bin/rvsyms
+
+dpkg-gencontrol -Pdebian/rv-predict-c
+cd $start_dir
+
+deb_filename=rv-predict-c_${version}-1_amd64.deb
+man_match="^\./usr/share/man/.*\.[0-9]\>"
+
+cd ${destdir}/DEBIAN
+nb-pax -wzf ${tmpdir}/control.tar.gz .
+cd ${destdir}/
+
+grep "${man_match}" < ${destdir}/metalog > ${destdir}/metalog.man
+grep -v "${man_match}" < ${destdir}/metalog > ${destdir}/metalog.dedup
+
+mv -f ${destdir}/metalog.dedup ${destdir}/metalog
+
+while read fn rest; do
+	gzip -9fn < $fn > ${tmpdir}/tmp.gz
+	$NBINSTALL -o root -g root -m 0644 \
+	  ${tmpdir}/tmp.gz ${destdir}/${fn##./}.gz
+	rm -f ${tmpdir}/tmp.gz
+done < ${destdir}/metalog.man
+
+{
+	echo "/set uname=root gname=root"
+	#
+	# lintian(1) expects directory names to end in /, apparently.
+	# Make it so.  Also sort by filename.
+	#
+#	sed 's,\([^[:space:]]*[^/]\)\([[:space:]]\+.*type=dir.*\)$,\1/\2,' < \
+#	    ${destdir}/metalog | sort -u -k 1,1
+	sort -u -k 1,1 < ${destdir}/metalog
+} | tee ${destdir}/metalog.new | nb-mtree -D -k md5 | \
+grep '\<md5=' | sed 's/[[:space:]]*\<type=[^[:space:]]\+[[:space:]]*//' | \
+sed 's/md5=\([^[:space:]]\+\)/\1 /' > ${tmpdir}/md5sum
+$DEBINSTALL -o root -g root -m 0644 ${tmpdir}/md5sum ${destdir}/DEBIAN/md5sums
+
+mv -f ${destdir}/metalog.new ${destdir}/metalog
+
+nb-pax --xz -M -wf ${tmpdir}/data.tar.xz < ${destdir}/metalog
+echo "2.0" > ${tmpdir}/debian-binary
+cd ${tmpdir}
+ar rcs ${start_dir}/${deb_filename} debian-binary control.tar.gz data.tar.xz
+
+exit 0

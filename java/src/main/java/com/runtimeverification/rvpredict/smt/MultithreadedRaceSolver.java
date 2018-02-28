@@ -26,9 +26,11 @@ public class MultithreadedRaceSolver implements RaceSolver {
     }
 
     private final SingleResourceProducerConsumer.Producer<RaceData> resourceProducer;
+    // Solver used to generate a solution for the window constraints, without any race constraint.
     private final SingleThreadedRaceSolver oneRaceSolver;
 
     MultithreadedRaceSolver(SingleThreadedRaceSolver[] solvers) {
+        // All solvers are identical, we pick any as the oneRaceSolver.
         oneRaceSolver = solvers[0];
         resourceProducer = new SingleResourceProducerConsumer.Producer<>();
         for (SingleThreadedRaceSolver raceSolver : solvers) {

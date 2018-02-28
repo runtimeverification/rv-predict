@@ -62,9 +62,9 @@ public interface RaceSolver extends AutoCloseable {
             SolutionReporter solutionReporter) throws Exception;
 
     /**
-     * Attempts to generate a solution for the window-specific constraints.
+     * Attempts to generate a solution for the window-specific constraints, without any race constraints.
      *
-     * Calls the solutionReporter callback asynchronously whenever such a solution is found.
+     * Calls the solutionReporter callback synchronously whenever such a solution is found.
      */
     void generateSolution(WindowData windowData, SolutionReporter solutionReporter) throws Exception;
 

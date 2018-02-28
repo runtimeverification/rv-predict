@@ -411,9 +411,9 @@ public class MaximalCausalModel {
                 new RaceSolver.WindowData(unsoundButFastPhiTau.build(), soundPhiTau.build(), buildPhiConc());
         Map<String, Race> result = new HashMap<>();
         try (ProfilerToken ignored = Profiler.instance().start("All solver stuff")) {
+            MutableBoolean atLeastOneRace = new MutableBoolean(false);
             try {
                 /* check race suspects */
-                MutableBoolean atLeastOneRace = new MutableBoolean(false);
                 for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                     for (Race race : entry.getValue()) {
                         raceSolver.checkRace(
@@ -438,21 +438,17 @@ public class MaximalCausalModel {
                         }
                     }
                 }
-                if (!atLeastOneRace.booleanValue() && Configuration.debug) {
-                    raceSolver.generateSolution(
-                            windowData,
-                            model -> {
-                                if (Configuration.debug) {
-                                    dumpOrderingWithLessThreadSwitches(
-                                            extractExecution(model, nameToEvent),
-                                            Optional.empty(), Optional.empty(),
-                                            extractSignalParents(model));
-                                }
-                            }
-                    );
-                }
             } finally {
                 raceSolver.finishAllWork();
+            }
+            if (!atLeastOneRace.booleanValue() && Configuration.debug) {
+                raceSolver.generateSolution(
+                        windowData,
+                        model -> dumpOrderingWithLessThreadSwitches(
+                                extractExecution(model, nameToEvent),
+                                Optional.empty(), Optional.empty(),
+                                extractSignalParents(model))
+                );
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

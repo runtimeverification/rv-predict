@@ -13,6 +13,7 @@ usage()
 cleanup()
 {
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
+	cd ${start_dir}
 	echo rm -rf ${tmpdir}
 }
 

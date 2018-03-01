@@ -14,7 +14,7 @@ cleanup()
 {
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
 	cd ${start_dir}
-	echo rm -rf ${tmpdir}
+	rm -rf ${tmpdir}
 }
 
 [ $# -eq 1 ] || usage
@@ -63,7 +63,7 @@ DEBINSTALL="nb-install -U -D ${tmpdir}/debian -M ${tmpdir}/debian/metalog"
 # captured.
 #
 RVPMAKE="rvpmake RELEASE=yes DESTDIR=${destdir} PREFIX=/usr LIBDIR=/usr/lib/x86_64-linux-gnu LIBEXECDIR=/usr/lib/x86_64-linux-gnu"
-$RVPMAKE cleandir all
+$RVPMAKE all
 
 #
 # Get nb-install onto our PATH

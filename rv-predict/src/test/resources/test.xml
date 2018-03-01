@@ -6,7 +6,6 @@
         <runs value="32" />
         <rvarg key="--window" value="2000" />
         <rvarg value="--debug" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="ftpserver.jar" module="ftpserver">
         <jar/>
@@ -22,36 +21,29 @@
         <jar/>
         <rvarg key="--window" value="6000" />
         <rvarg value="--debug" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <test name="account.Account" module="examples">
         <runs value="64" />
         <arg value="account.Account" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="array.Test" module="basic">
         <arg value="array.Test" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="airlinetickets.Airlinetickets" module="examples">
         <runs value="32" />
         <arg value="airlinetickets.Airlinetickets" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="benchmarks.JGFRayTracerBenchSizeA" module="examples">
         <runs value="32" />
         <rvarg key="--window" value="5000" />
         <arg value="benchmarks.JGFRayTracerBenchSizeA" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="benchmarks.JGFMonteCarloBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMonteCarloBenchSizeA" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="benchmarks.JGFMolDynBenchSizeA" module="examples">
         <arg value="benchmarks.JGFMolDynBenchSizeA" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <test name="demo.Example" module="basic">
@@ -60,7 +52,6 @@
     <test name="boundedbuffer.BoundedBuffer" module="basic">
         <runs value="64" />
         <arg value="boundedbuffer.BoundedBuffer" />
-        <rvarg key="--window" value="800" />
     </test>
     <test name="critical.Critical" module="basic">
         <runs value="8" />
@@ -145,16 +136,19 @@
         <rvarg value="--without-generation" />
         <rvarg key="--window" value="4000"/>
         <rvarg key="--llvm-predict" value="$in" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <test name="llvm.demo.example2" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
     <test name="llvm.account.account" module="llvm-tests">
         <in/>
         <rvarg key="--llvm-predict" value="$in" />
         <rvarg key="--window" value="4000" />
+        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <!-- TODO(virgil): Consider deleting this test or replacing it with something else.

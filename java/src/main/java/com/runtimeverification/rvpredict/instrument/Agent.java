@@ -47,9 +47,12 @@ public class Agent implements ClassFileTransformer, Constants {
         preinitializeClasses();
         processAgentArguments(agentArgs);
         if (!config.isLogging() && !config.isProfiling()) {
-            Runtime.getRuntime().addShutdownHook(
-                    RVPredict.getPredictionThread(config, null));
-            System.exit(0);
+            prematureExit();
+        }
+        if (config.parallel_smt > 1) {
+            config.logger().report(
+                    "Cannot run rv-predict as an agent with --parallel_smt greater than one.", Logger.MSGTYPE.ERROR);
+            prematureExit();
         }
         initLoggingDirectory();
         printStartupInfo();
@@ -91,6 +94,12 @@ public class Agent implements ClassFileTransformer, Constants {
         config.logger().report("Finished retransforming preloaded classes.", Logger.MSGTYPE.INFO);
 
         Runtime.getRuntime().addShutdownHook(RVPredict.getPredictionThread(config, loggingEngine));
+    }
+
+    private static void prematureExit() {
+        Runtime.getRuntime().addShutdownHook(
+                RVPredict.getPredictionThread(config, null));
+        System.exit(0);
     }
 
     /**

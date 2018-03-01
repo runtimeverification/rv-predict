@@ -31,7 +31,6 @@ package com.runtimeverification.rvpredict.config;
 import com.beust.jcommander.*;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.runtimeverification.rvpredict.instrument.Agent;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 

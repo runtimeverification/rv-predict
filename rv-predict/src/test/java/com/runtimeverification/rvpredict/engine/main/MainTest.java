@@ -67,7 +67,7 @@ public class MainTest {
      * @param numOfRuns how many times the test should be attempted
      * @param rvArguments arguments to be passed to RV-Predict
      * @param arguments arguments to be passed to the java command line
-     * @param agentTest whether the tests should be run using rv-redict as an agent
+     * @param agentTest whether the tests should be run using rv-predict as an agent
      * @param inputTest whether this test uses a precomputed log (and thus it only requires prediction)
      */
     public MainTest(String name, Path modulePath, int numOfRuns, List<String> rvArguments, List<String> arguments,

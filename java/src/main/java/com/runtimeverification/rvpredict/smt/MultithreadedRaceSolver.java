@@ -35,13 +35,15 @@ public class MultithreadedRaceSolver implements RaceSolver {
         oneRaceSolver = solvers[0];
         resourceProducer = new SingleResourceProducerConsumer.Producer<>();
         for (SingleThreadedRaceSolver raceSolver : solvers) {
-            SingleResourceProducerConsumer.Consumer<RaceData> consumer = new SingleResourceProducerConsumer.Consumer<>(
-                    resourceProducer,
-                    resource -> raceSolver.checkRace(
-                            resource.windowData,
-                            resource.assertion,
-                            // use addTask in order to make sure that the callback runs on the main thread.
-                            model -> resourceProducer.addTask(() -> reportSolution(model, resource.solutionReporter))));
+            SingleResourceProducerConsumer.Consumer<RaceData, Model> consumer =
+                    new SingleResourceProducerConsumer.Consumer<>(
+                        resourceProducer,
+                        (resource, consumerArg) ->
+                                raceSolver.checkRace(
+                                        resource.windowData,
+                                        resource.assertion,
+                                        model -> consumerArg.consume(resource, model)),
+                        (resource, model) -> reportSolution(model, resource.solutionReporter));
             consumer.start();
         }
     }

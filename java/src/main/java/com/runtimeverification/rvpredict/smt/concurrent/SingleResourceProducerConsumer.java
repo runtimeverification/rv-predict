@@ -17,19 +17,25 @@ public class SingleResourceProducerConsumer {
      * Interface for processing a resource in one of the consumers.
      * Must be thread safe.
      */
-    public interface ResourceProcessor<R> {
-        void process(R resource) throws Exception;
+    public interface ResourceTransformer<R, T> {
+        /**
+         * Must call the consumer on the processed resource (if any)
+         */
+        void process(R resource, ResourceConsumer<R, T> consumer) throws Exception;
     }
 
-    public interface RunnableWithException {
+    public interface ResourceConsumer<R, T> {
+        void consume(R resource, T result);
+    }
+
+    private interface RunnableWithException {
         void run() throws Exception;
     }
 
     /**
      * Producer class. Not thread safe in general, but its interactions with its consumers are thread-safe.
      *
-     * It expects that the public interface is called from a single thread, in which case
-     * addTask can be used to wrap callbacks in order to make sure that they run on that thread.
+     * It expects that the public interface is called from a single thread.
      *
      * If the public interface is called from multiple threads, besides the usual requirement that the
      * calls are synchronized, one must make sure that the callbacks passed to the producer can run on
@@ -87,10 +93,7 @@ public class SingleResourceProducerConsumer {
             runPendingTasks();
         }
 
-        /**
-         * addTask can wrap a callback in order to run it on the producer thread.
-         */
-        public void addTask(RunnableWithException task) {
+        private void addTask(RunnableWithException task) {
             synchronized (resource) {
                 pendingTasks.add(task);
                 stateChangeSignal.release();
@@ -148,13 +151,18 @@ public class SingleResourceProducerConsumer {
     /**
      * Consumer class. Not thread safe in general, but its interactions with the producer are thread-safe.
      */
-    public static class Consumer<R> extends Thread {
+    public static class Consumer<R, T> extends Thread {
         private final Producer<R> producer;
-        private final ResourceProcessor<R> resourceProcessor;
+        private final ResourceTransformer<R, T> resourceTransformer;
+        private final ResourceConsumer<R, T> resourceConsumer;
 
-        public Consumer(Producer<R> producer, ResourceProcessor<R> resourceProcessor) {
+        public Consumer(
+                Producer<R> producer,
+                ResourceTransformer<R, T> resourceTransformer,
+                ResourceConsumer<R, T> resourceConsumer) {
             this.producer = producer;
-            this.resourceProcessor = resourceProcessor;
+            this.resourceTransformer = resourceTransformer;
+            this.resourceConsumer = resourceConsumer;
             producer.registerConsumer(this);
         }
 
@@ -190,7 +198,10 @@ public class SingleResourceProducerConsumer {
                         producer.stateChangeSignal.release();
                     }
                     try {
-                        resourceProcessor.process(acquiredResource);
+                        resourceTransformer.process(
+                                acquiredResource,
+                                (resource, result) -> producer.addTask(() -> resourceConsumer.consume(resource, result))
+                        );
                     } catch (Exception e) {
                         producer.addException(e);
                         return;

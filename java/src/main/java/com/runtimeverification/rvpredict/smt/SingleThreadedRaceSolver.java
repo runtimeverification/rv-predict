@@ -91,9 +91,11 @@ public class SingleThreadedRaceSolver implements RaceSolver {
                     if (soundSolver.check() == Status.SATISFIABLE) {
                         solutionReporter.solution(soundSolver.getModel());
                     }
+                } finally {
                     soundSolver.pop();
                 }
             }
+        } finally {
             fastSolver.pop();
         }
     }

@@ -331,6 +331,7 @@ public class MaximalCausalModel {
                     return BooleanConstant.TRUE;
                 }
             }
+
             /* sameThreadPrevReadDiffValue is unavailable in the current window.*/
             ReadonlyEventInterface diffThreadPrevWrite = trace.getAllThreadsPrevWrite(read);
             if (diffThreadPrevWrite == null) {

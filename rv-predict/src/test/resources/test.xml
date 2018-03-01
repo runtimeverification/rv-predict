@@ -14,7 +14,6 @@
         <rvarg value="--offline" />
         <rvarg value="--without-generation" />
         <rvarg value="--debug" />
-        <rvarg key="--parallel_smt" value="2" />
     </test>
 
     <test name="SpringExample.jar" module="SpringExample">
@@ -52,6 +51,7 @@
     <test name="boundedbuffer.BoundedBuffer" module="basic">
         <runs value="64" />
         <arg value="boundedbuffer.BoundedBuffer" />
+        <rvarg key="--window" value="800" />
     </test>
     <test name="critical.Critical" module="basic">
         <runs value="8" />

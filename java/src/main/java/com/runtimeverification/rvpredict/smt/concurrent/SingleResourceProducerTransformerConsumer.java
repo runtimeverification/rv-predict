@@ -12,7 +12,7 @@ import java.util.List;
  *
  * It is the responsibility of the client to start the consumer threads.
  */
-public class SingleResourceProducerConsumer {
+public class SingleResourceProducerTransformerConsumer {
     /**
      * Interface for processing a resource in one of the consumers.
      * Must be thread safe.
@@ -100,7 +100,6 @@ public class SingleResourceProducerConsumer {
             }
         }
 
-        // Only call when the resource lock is held.
         private void runPendingTasks() throws Exception {
             List<RunnableWithException> localPendingTasks;
             synchronized (resource) {

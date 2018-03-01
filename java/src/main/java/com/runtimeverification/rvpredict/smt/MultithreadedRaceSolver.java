@@ -1,7 +1,7 @@
 package com.runtimeverification.rvpredict.smt;
 
 import com.microsoft.z3.Model;
-import com.runtimeverification.rvpredict.smt.concurrent.SingleResourceProducerConsumer;
+import com.runtimeverification.rvpredict.smt.concurrent.SingleResourceProducerTransformerConsumer;
 import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
 
 /**
@@ -9,7 +9,7 @@ import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
  *
  * The class itself is not thread-safe, the RaceSolver.SolutionReporter
  * callback runs will be disjoint. However, when used from multiple threads,
- * the RaceSolver.SolutionReporter calls may run on any of those threads.
+ * the RaceSolver. SolutionReporter calls may run on any of those threads.
  */
 public class MultithreadedRaceSolver implements RaceSolver {
     private class RaceData {
@@ -26,24 +26,24 @@ public class MultithreadedRaceSolver implements RaceSolver {
         }
     }
 
-    private final SingleResourceProducerConsumer.Producer<RaceData> resourceProducer;
+    private final SingleResourceProducerTransformerConsumer.Producer<RaceData> resourceProducer;
     // Solver used to generate a solution for the window constraints, without any race constraint.
     private final SingleThreadedRaceSolver oneRaceSolver;
 
     MultithreadedRaceSolver(SingleThreadedRaceSolver[] solvers) {
         // All solvers are identical, we pick any as the oneRaceSolver.
         oneRaceSolver = solvers[0];
-        resourceProducer = new SingleResourceProducerConsumer.Producer<>();
+        resourceProducer = new SingleResourceProducerTransformerConsumer.Producer<>();
         for (SingleThreadedRaceSolver raceSolver : solvers) {
-            SingleResourceProducerConsumer.Consumer<RaceData, Model> consumer =
-                    new SingleResourceProducerConsumer.Consumer<>(
+            SingleResourceProducerTransformerConsumer.Consumer<RaceData, Model> consumer =
+                    new SingleResourceProducerTransformerConsumer.Consumer<>(
                         resourceProducer,
                         (resource, consumerArg) ->
                                 raceSolver.checkRace(
                                         resource.windowData,
                                         resource.assertion,
                                         model -> consumerArg.consume(resource, model)),
-                        (resource, model) -> reportSolution(model, resource.solutionReporter));
+                        (resource, model) -> resource.solutionReporter.solution(model));
             consumer.start();
         }
     }
@@ -70,9 +70,5 @@ public class MultithreadedRaceSolver implements RaceSolver {
     @Override
     public void finishAllWork() throws Exception {
         resourceProducer.finishAllWork();
-    }
-
-    private synchronized void reportSolution(Model model, SingleThreadedRaceSolver.SolutionReporter solutionReporter) {
-        solutionReporter.solution(model);
     }
 }

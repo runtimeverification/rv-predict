@@ -442,10 +442,11 @@ public class MaximalCausalModel {
             if (!atLeastOneRace.booleanValue() && Configuration.debug) {
                 raceSolver.generateSolution(
                         windowData,
-                        model -> dumpOrderingWithLessThreadSwitches(
-                                extractExecution(model, nameToEvent),
-                                Optional.empty(), Optional.empty(),
-                                extractSignalParents(model))
+                        model ->
+                                dumpOrderingWithLessThreadSwitches(
+                                        extractExecution(model, nameToEvent),
+                                        Optional.empty(), Optional.empty(),
+                                        extractSignalParents(model))
                 );
             }
         } catch (Exception e) {

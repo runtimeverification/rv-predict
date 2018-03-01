@@ -385,8 +385,6 @@ public class MaximalCausalModel {
         return raceAsst.build();
     }
 
-
-
     /**
      * Checks if the given race suspects are real. Race suspects are grouped by
      * their signatures.

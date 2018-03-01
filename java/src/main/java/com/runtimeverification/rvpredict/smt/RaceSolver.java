@@ -54,7 +54,9 @@ public interface RaceSolver extends AutoCloseable {
     /**
      * Checks whether the race encoded by assertion can happen.
      *
-     * Calls the solutionReporter callback asynchronously whenever a race is found.
+     * Calls the solutionReporter callback asynchronously whenever a race is found. The callback
+     * is called on the RaceSolver thread, so one must call finishAllWork in order to allow
+     * any pending callback to run.
      */
     void checkRace(
             WindowData windowData,

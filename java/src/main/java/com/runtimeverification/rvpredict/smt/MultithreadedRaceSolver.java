@@ -8,7 +8,8 @@ import com.runtimeverification.rvpredict.smt.formula.BoolFormula;
  * The MultithreadedRaceSolver detects races in a multi-threaded environment.
  *
  * The class itself is not thread-safe, the RaceSolver.SolutionReporter
- * callback runs will be disjoint.
+ * callback runs will be disjoint. However, when used from multiple threads,
+ * the RaceSolver.SolutionReporter calls may run on any of those threads.
  */
 public class MultithreadedRaceSolver implements RaceSolver {
     private class RaceData {
@@ -39,7 +40,8 @@ public class MultithreadedRaceSolver implements RaceSolver {
                     resource -> raceSolver.checkRace(
                             resource.windowData,
                             resource.assertion,
-                            model -> reportSolution(model, resource.solutionReporter)));
+                            // use addTask in order to make sure that the callback runs on the main thread.
+                            model -> resourceProducer.addTask(() -> reportSolution(model, resource.solutionReporter))));
             consumer.start();
         }
     }

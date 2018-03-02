@@ -70,12 +70,10 @@
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
-    <!--
-                                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-    -->
                                         <Main-Class>com.runtimeverification.rvpredict.engine.main.Main</Main-Class>
                                         <Premain-Class>com.runtimeverification.rvpredict.instrument.Agent</Premain-Class>
                                         <Boot-Class-Path>rv-predict.jar</Boot-Class-Path>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
                                         <Can-Retransform-Classes>true</Can-Retransform-Classes>
                                     </manifestEntries>
                                 </transformer>

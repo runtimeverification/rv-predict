@@ -1,4 +1,4 @@
-/*******************************************************************************
+/* ******************************************************************************
  * Copyright (c) 2013 University of Illinois
  *
  * All rights reserved.
@@ -25,16 +25,8 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- ******************************************************************************/
+ * *****************************************************************************/
 package com.runtimeverification.rvpredict.engine.main;
-
-import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
-import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
@@ -42,19 +34,30 @@ import com.runtimeverification.rvpredict.metadata.CompactMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
+import com.runtimeverification.rvpredict.smt.RaceSolver;
 import com.runtimeverification.rvpredict.trace.LLVMCompactTraceCache;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
+import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
+
 /**
  * Class for predicting violations from a logged execution.
  *
  * Splits the log in segments of length {@link Configuration#windowSize},
  * each of them being executed as a {@link RaceDetector} task.
+ *
+ * Objects of this class should be close()d.
  */
-public class RVPredict {
+public class RVPredict implements AutoCloseable {
 
     private final Configuration config;
     private final TraceCache traceCache;
@@ -80,8 +83,13 @@ public class RVPredict {
         if (config.isHappensBefore()) {
             this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
         } else {
-            this.detector = new MaximalRaceDetector(config);
+            this.detector = new MaximalRaceDetector(config, RaceSolver.create(config));
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        detector.close();
     }
 
     public void start() {
@@ -181,7 +189,13 @@ public class RVPredict {
      */
     public static void main(String[] args) {
         Configuration config = Configuration.instance(args);
-        new RVPredict(config).start();
+        try (RVPredict rvPredict = new RVPredict(config)) {
+            rvPredict.start();
+        } catch (Exception e) {
+            System.err.println("Error during prediction.");
+            System.err.println(e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
     }
-
 }

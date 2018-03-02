@@ -22,11 +22,11 @@ public class OrderedRaceDetector implements RaceDetector {
     protected final List<String> reports;
     protected final Configuration config;
     private final MetadataInterface metadata;
-    protected final OrderedTraceReader traceReader;
-    protected final VectorClockTraceReader vectorClockReader;
+    private final OrderedTraceReader traceReader;
+    private final VectorClockTraceReader vectorClockReader;
     final Map<String, Race> races;
-    Map<Long,ReadonlyOrderedEvent> lastWrites = new HashMap<>();
-    Map<Long,Collection<ReadonlyOrderedEvent>> lastReads = new HashMap<>();
+    private Map<Long,ReadonlyOrderedEvent> lastWrites = new HashMap<>();
+    private Map<Long,Collection<ReadonlyOrderedEvent>> lastReads = new HashMap<>();
 
     protected OrderedRaceDetector(
             Configuration config, MetadataInterface metadata, VectorClockOrderInterface happensBefore) {
@@ -62,6 +62,9 @@ public class OrderedRaceDetector implements RaceDetector {
         }
         return builder.build();
     }
+
+    @Override
+    public void close() {}
 
     @Override
     public List<String> getRaceReports() {

@@ -151,10 +151,6 @@
                                     <artifactId>rv-error</artifactId>
                                 </exclusion>
                                 <exclusion>
-                                    <groupId>com.runtimeverification.licensing</groupId>
-                                    <artifactId>rv-licensing</artifactId>
-                                </exclusion>
-                                <exclusion>
                                     <groupId>org.apache.commons</groupId>
                                     <artifactId>commons-collections4</artifactId>
                                 </exclusion>

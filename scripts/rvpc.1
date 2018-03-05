@@ -135,6 +135,19 @@ Value-interpolation works the same for
 .Ev RVP_TRACE_FIFO
 as for
 .Ev RVP_TRACE_FILE .
+.It Ev RVP_OFFLINE_ANALYSIS
+.Ar program
+will wait to begin analysis until after the application code has finished
+running if
+.Ev RVP_OFFLINE_ANALYSIS
+is set to
+.Dq yes .
+.Ev RVP_OFFLINE_ANALYSIS
+has no effect if
+.Ev RVP_TRACE_ONLY
+is set to
+.Dq yes .
+.Ev 
 .It Ev RVP_TRACE_SIZE_LIMIT
 .Ar program
 exits by calling
@@ -152,7 +165,9 @@ indicates multiplication by
 .It Ev RVP_TRACE_ONLY
 Finding
 .Ev RVP_TRACE_ONLY
-set to "yes" when it runs,
+set to
+.Dq yes
+when it runs,
 .Ar program
 records a trace of its dynamic behavior to a file in the current working
 directory called

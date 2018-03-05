@@ -57,7 +57,9 @@ Print a help message.
 .Tn RV-Predict/C
 segments
 .Ar program Ap s
-event trace into "windows" and analyzes one window at a time.
+event trace into
+.Dq windows
+and analyzes one window at a time.
 Windows are measured in the number of events they contain.
 This option sets the number of events per window to
 .Ar size ;
@@ -72,7 +74,8 @@ windows on the same trace.
 .It Fl Fl no-shorten
 in reports,
 long paths to source files are not shortened by replacing the first 
-path components with an ellipsis, "...".
+path components with an ellipsis,
+.Dq ... .
 .It Fl Fl no-signal
 disables symbolization of signal numbers: e.g., S1 is not converted to
 .Dv SIGHUP .

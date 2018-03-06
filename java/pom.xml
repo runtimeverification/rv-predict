@@ -127,12 +127,13 @@
                     <goal>exec</goal>
                   </goals>
                   <configuration>
-                    <executable>atdj.opt</executable>
+                    <executable>rvpmake</executable>
                     <workingDirectory>${project.build.directory}/generated-sources</workingDirectory>
                     <arguments>
-                      <argument>-package</argument>
-                      <argument>com.runtimeverification.error.data</argument>
-                      <argument>${project.basedir}/../errors/rv-error/src/main/ocaml/error.atd</argument>
+                        <argument>ERROR_ATD=${project.basedir}/../errors/rv-error/src/main/ocaml/error.atd</argument>
+                        <argument>-f</argument>
+                        <argument>${project.basedir}/Makefile</argument>
+                        <argument>all</argument>
                     </arguments>
                   </configuration>
                 </execution>

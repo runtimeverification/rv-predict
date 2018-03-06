@@ -8,6 +8,10 @@
 #
 .OBJDIR ?= .
 
+.if $(RVPMAKE_DIR:Unone) == none
+.error "RVPMAKE_DIR must be set.  Run `rvpmake`."
+.endif
+
 OCB := ocamlbuild $(BUILD_DIR_OPT) -use-ocamlfind -plugin-tag "package(ocamlbuild_atdgen)"
 NAME := rv_error
 ARCHIVE  = $(NAME).cma

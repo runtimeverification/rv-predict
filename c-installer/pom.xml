@@ -56,7 +56,7 @@
                                     <version>1.5.4-SNAPSHOT</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
-                                    <outputDirectory>${staging.dir.app}</outputDirectory>
+                                    <outputDirectory>../target/release/rv-predict/</outputDirectory>
                                     <includes>res/**</includes>
                                 </artifactItem>
                             </artifactItems>
@@ -82,7 +82,7 @@
                                     <destFileName>rv-install.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
-                            <outputDirectory>${staging.dir.app}</outputDirectory>
+                            <outputDirectory>../target/release/rv-predict/</outputDirectory>
                         </configuration>
                     </execution>
                     <execution>
@@ -102,7 +102,7 @@
                                     <destFileName>rv-licensing.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
-                            <outputDirectory>${staging.dir.app}</outputDirectory>
+                            <outputDirectory>../target/release/rv-predict/</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
@@ -120,7 +120,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <executable>${basedir}/../deb-new-release.sh</executable>
+                    <executable>${basedir}/../deb-release.sh</executable>
                     <workingDirectory>${basedir}/..</workingDirectory>
                     <arguments>
                         <argument>${info.appVersion}</argument>

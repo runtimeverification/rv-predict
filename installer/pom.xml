@@ -17,11 +17,6 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>com.runtimeverification.licensing</groupId>
-            <artifactId>rv-licensing</artifactId>
-            <version>1.4.4</version>
-        </dependency>
-        <dependency>
             <groupId>com.runtimeverification.rvpredict</groupId>
             <artifactId>rv-predict</artifactId>
             <version>${project.version}</version>
@@ -79,26 +74,6 @@
                                     <type>jar</type>
                                     <overWrite>false</overWrite>
                                     <destFileName>rv-install.jar</destFileName>
-                                </artifactItem>
-                            </artifactItems>
-                            <outputDirectory>../target/release/rv-predict/</outputDirectory>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>copy-rv-license-jar</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>com.runtimeverification.licensing</groupId>
-                                    <artifactId>rv-licensing</artifactId>
-                                    <type>jar</type>
-                                    <classifier>jar-with-dependencies</classifier>
-                                    <overWrite>false</overWrite>
-                                    <destFileName>rv-licensing.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
                             <outputDirectory>../target/release/rv-predict/</outputDirectory>

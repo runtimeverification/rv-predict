@@ -28,8 +28,6 @@ public class Main {
     public static void main(String[] args) {
         config = Configuration.instance(args);
 
-        // LicenseChecker.validateOrDie(config.prompt_for_license);
-
         if (config.isLogging() || config.isProfiling()) {
             if (config.getJavaArguments().isEmpty()) {
                 config.logger().report("You must provide a class or a jar to run.",

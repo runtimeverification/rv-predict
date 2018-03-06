@@ -48,8 +48,6 @@ import java.util.stream.Collectors;
 
 import org.apache.tools.ant.util.JavaEnvUtils;
 
-import com.runtimeverification.licensing.Licensing;
-
 /**
  * Command line options class for rv-predict Used by JCommander to parse the
  * main program parameters.
@@ -438,10 +436,6 @@ public class Configuration implements Constants {
     @Parameter(names = opt_version, description = "Print product version and exit", descriptionKey = "9100")
     public static boolean display_version;
 
-    private final static String opt_prompt_for_license = "--prompt-for-license";
-    @Parameter(names = opt_prompt_for_license, description = "If needed, prompt for a license account and password and download a license", descriptionKey = "9200")
-    public boolean prompt_for_license;
-
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";
     @Parameter(names = { short_opt_help, opt_help }, description = "Print help info", help = true, descriptionKey = "9900")
@@ -458,14 +452,6 @@ public class Configuration implements Constants {
     }
 
     private Configuration() { }
-
-    private void printLicense() {
-        Licensing licensingSystem = Licensing.fromLocations(
-                "predict",
-                Licensing.LicenseLocation.USER_DIRECTORY,
-                Arrays.asList(Licensing.LicenseLocation.values()));
-        licensingSystem.getLicenseCache().getLicense().printInfo();
-    }
 
     private void parseArguments(String[] args) {
         this.args = args;
@@ -510,7 +496,6 @@ public class Configuration implements Constants {
                     + this.getClass().getPackage().getImplementationVersion());
         }
         if (help || display_version) {
-            printLicense();
             System.exit(0);
         }
 

@@ -5,6 +5,7 @@
 
 #include <sys/uio.h>	/* for writev(2) */
 
+#include "io.h"
 #include "ring.h"
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop */
 
@@ -615,6 +616,7 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 			, .iov_len = sizeof(sigdepth)
 		}
 	};
+	struct iovec scratch_iov[__arraycount(iov)];
 	struct iovec *iovp = &iov[0];
 
 	if (lc == NULL)
@@ -647,9 +649,9 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	if (iovp == first_ring_iov)
 		return false;
 
-	nwritten = writev(fd, iov, iovp - &iov[0]);
+	nwritten = writeallv(fd, iov, scratch_iov, iovp - &iov[0]);
 	if (nwritten == -1)
-		err(EXIT_FAILURE, "%s: writev", __func__);
+		err(EXIT_FAILURE, "%s: writeallv", __func__);
 
 	rvp_trace_size += nwritten;
 

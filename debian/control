@@ -8,7 +8,7 @@ Homepage: https://runtimeverification.com/predict/
 
 Package: rv-predict-c
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, clang-4.0, java8-runtime-headless, libc6
+Depends: ${shlibs:Depends}, clang-4.0, java8-runtime-headless, libc6
 Description: RV-Predict/C predicts data races in C and C++ programs.
  C/C++ programs compiled by RV-Predict/C run with instrumentation that
  produces an execution trace.  RV-Predict/C analyzes the execution trace

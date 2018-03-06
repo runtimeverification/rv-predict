@@ -1,16 +1,3 @@
-*.a
-*.d
-.depend
 eitherorboth
-.gdbinit
-*.ll
-.Makefile.tags
-_mkc_*
-*.o
-*.pico
-*.po
 raise
 sigcount
-*.so
-.*.swp
-tags

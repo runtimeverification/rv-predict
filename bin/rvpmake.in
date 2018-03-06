@@ -1,0 +1,90 @@
+#!/bin/sh
+#
+# A RV-Predict/C working copy needs a OCaml configuration that's
+# independent of the user's configuration, so that 1) the user's
+# configuration doesn't get polluted with software that's under
+# development and 2) builds are reproducible.
+# 
+# Let's call the top level directory of the RV-Predict/C working copy
+# `$TOPLEVEL`.
+# 
+# Today, we have a script called `opam-setup.sh` that creates
+# `$TOPLEVEL/.opam`.  Various Makefiles for OCaml stuff export the
+# variable `OPAMROOT=$TOPLEVEL/.opam`, but that's not really sufficient to
+# establish the OCaml root.  Variables such as `OCAML_TOPLEVEL_PATH` also
+# need to be set.
+# 
+# I propose to write a little script, call it `rvpmake`, that we can
+# add our `$PATH`, that sets up the environment for OCaml before
+# forwarding its arguments to `mkcmake`.  E.g., a naive version of
+# `rvpmake` looks like this:
+# 
+# 	#!/bin/sh
+# 
+# 	eval $(opam config env --root=$(pwd)/.opam)
+# 	mkcmake "$@"
+# 
+# In fact, `rvpmake` has to modify its behavior depending on which
+# directory you've started it in, and it should abort right away if
+# it's not run in an RV-Predict/C working copy.  And you probably
+# want the behavior of the `rvpmake` in your working copy, not some
+# arbitrary other `rvpmake` on your `$PATH`.  So `rvpmake` probably
+# looks more like this:
+# 
+
+set -u
+set -e
+
+err()
+{
+	echo "$(basename $0): $@" 1>&2
+	exit 1
+}
+
+#
+# This function never returns.
+#
+# Search for the top-level directory of the RV-Predict/C sources,
+# which must contain an executable `rvpmake` and `.opam/`.  If the
+# top-level isn't found, then abort the program with an error.
+# If the top-level is found, then run the `rvpmake` found there.
+#
+exec_top()
+{
+	search_dir=$(pwd)
+	while true; do
+		if [ -f ${search_dir}/.tools/bin/rvpmake -a \
+		     -x ${search_dir}/.tools/bin/rvpmake -a \
+		     -d ${search_dir}/.opam ]; then
+			export RVPMAKE_DIR=${search_dir}
+			export PATH=${search_dir}/.tools/bin:${PATH}
+			exec ${search_dir}/.tools/bin/rvpmake "$@"
+			err "unreachable"
+		fi
+		search_dir=$(dirname ${search_dir})
+		case ${search_dir} in
+		.)
+			err "internal error: dirname(1) yields '.'."
+			;;
+		/)
+			err "top-level directory for RV-Predict/C" \
+			    "not found."
+			;;
+		*)
+			;;
+		esac
+	done
+}
+
+if [ ${RVPMAKE_DIR:-none} = none ]; then
+	exec_top "$@"
+	err "unreachable"
+fi
+
+#
+# Other environment setup should go here.
+#
+
+eval $(opam config env --root=${RVPMAKE_DIR}/.opam) 
+
+mkcmake "$@"

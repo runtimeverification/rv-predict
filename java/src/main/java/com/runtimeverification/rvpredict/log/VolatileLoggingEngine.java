@@ -33,6 +33,7 @@ import com.runtimeverification.rvpredict.engine.main.MaximalRaceDetector;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
+import com.runtimeverification.rvpredict.smt.RaceSolver;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.trace.TraceState;
@@ -117,7 +118,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         if (config.isHappensBefore()) {
             this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
         } else {
-            this.detector = new MaximalRaceDetector(config);
+            this.detector = new MaximalRaceDetector(config, RaceSolver.create(config));
         }
         bufferCleaner = new BufferCleaner();
         bufferCleaner.start();
@@ -150,6 +151,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             config.logger().report("No races found.", Logger.MSGTYPE.VERBOSE);
         } else {
             reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REPORT));
+        }
+        try {
+            detector.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

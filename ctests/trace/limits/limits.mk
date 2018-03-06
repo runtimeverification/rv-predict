@@ -7,7 +7,7 @@ NOMAN=
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
-PATH:=$(.OBJDIR)/../../../bin:$(PATH)
+PATH:=$(.OBJDIR)/../../../toolset/bin:$(PATH)
 RVP_TRACE_FILE:=/dev/null
 RVP_TRACE_ONLY:=yes
 

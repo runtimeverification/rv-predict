@@ -25,9 +25,6 @@ or
 
     java -javaagent:../lib/rv-predict.jar -cp examples.jar account.Account
 
-Read the RV-Predict documentation and blog articles reachable from the
-[RV-Predict website](http://runtimeverification.com/predict).
-https://runtimeverification.com/predict for more details.  Contact us using
-the [Runtime Verification Support](http://runtimeverification.com/support)
-page for problems, comments, suggestions.
+Read the RV-Predict documentation and blog articles reachable from the [RV-Predict website](http://runtimeverification.com/predict) for more details.    
+Contact us using the [Runtime Verification Support](http://runtimeverification.com/support) page for problems, comments, suggestions.
 

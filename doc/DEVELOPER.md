@@ -25,6 +25,14 @@ libarchive
 yacc
 ```
 
+For clang you can try:
+
+```
+sudo apt install clang-4.0
+sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/lib/llvm-4.0/bin/clang++ 100
+sudo update-alternatives --install /usr/bin/clang clang /usr/lib/llvm-4.0/bin/clang 100
+```
+
 Configure an object directory if you're going to use one.
 
 At the top level of the RV-Predict sources, create the wrapper

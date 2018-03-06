@@ -104,6 +104,12 @@ public class Trace {
             ttidToAddrToWriteEvents;
 
     /**
+     * Map from (thread ID, memory address) to read events that have no writes on the same thread.
+     */
+    private final Table<Integer, Long, List<ReadonlyEventInterface>>
+            ttidToAddrToPrefixReadEvents;
+
+    /**
      * Map from lock ID to critical lock pairs.
      */
     private final Map<Long, List<LockRegion>> lockIdToLockRegions;
@@ -142,6 +148,7 @@ public class Trace {
             Map<Integer, ThreadState> tidToThreadState,
             MemoryAddrToStateMap addrToState,
             Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
+            Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToPrefixReadEvents,
             Map<Long, List<LockRegion>> lockIdToLockRegions,
             Set<ReadonlyEventInterface> clinitEvents,
             Map<Integer, Set<Integer>> ttidsThatCanOverlap,
@@ -156,6 +163,7 @@ public class Trace {
         this.tidToThreadState = tidToThreadState;
         this.addrToState = addrToState;
         this.ttidToAddrToWriteEvents = tidToAddrToEvents;
+        this.ttidToAddrToPrefixReadEvents = tidToAddrToPrefixReadEvents;
         this.lockIdToLockRegions = lockIdToLockRegions;
         this.clinitEvents = clinitEvents;
         this.ttidsThatCanOverlap = ttidsThatCanOverlap;
@@ -288,6 +296,10 @@ public class Trace {
         return Iterables.concat(ttidToAddrToWriteEvents.column(addr).values());
     }
 
+    public Iterable<ReadonlyEventInterface> getPrefixReadEvents(Long addr) {
+        return Iterables.concat(ttidToAddrToPrefixReadEvents.column(addr).values());
+    }
+
     private ReadonlyEventInterface getPrevWrite(long gid, int ttid, Long addr) {
         List<ReadonlyEventInterface> list = ttidToAddrToWriteEvents.get(ttid, addr);
         if (list == null || list.isEmpty() || list.get(0).getEventId() >= gid) {
@@ -329,6 +341,27 @@ public class Trace {
            }
         }
         return prevWrite;
+    }
+
+    public ReadonlyEventInterface getSameThreadPrevReadSameAddrDiffValue(ReadonlyEventInterface read) {
+        ReadonlyEventInterface lastDifferentRead = null;
+        for (ReadonlyEventInterface event : eventsByThreadID().get(eventIdToTtid.get(read.getEventId()))) {
+            if (event.getEventId() == read.getEventId()) {
+                return lastDifferentRead;
+            }
+            if (!event.isRead()) {
+                continue;
+            }
+            if (event.getDataInternalIdentifier() != read.getDataInternalIdentifier()) {
+                continue;
+            }
+            if (event.getDataValue() == read.getDataValue()) {
+                continue;
+            }
+            lastDifferentRead = event;
+        }
+        assert false : "Event " + read.getEventId() + " not found in its own thread.";
+        return null;
     }
 
     public Map<Long, List<LockRegion>> getLockIdToLockRegions() {
@@ -599,6 +632,11 @@ public class Trace {
                             ttidToAddrToWriteEvents.row(ttid)
                                     .computeIfAbsent(event.getDataInternalIdentifier(), p -> new ArrayList<>())
                                     .add(event);
+                        } else if (event.isRead()
+                                && !ttidToAddrToWriteEvents.row(ttid).containsKey(event.getDataInternalIdentifier())) {
+                            ttidToAddrToPrefixReadEvents.row(ttid)
+                                    .computeIfAbsent(event.getDataInternalIdentifier(), p -> new ArrayList<>())
+                                    .add(event);
                         }
                     }
                 }
@@ -690,7 +728,7 @@ public class Trace {
                 }
             } else if (event.isSignalEvent()) {
                 // Do nothing for now, since signal events themselves are not involved with r/w.
-                endCrntBlock = false;
+                endCrntBlock = true;
             } else {
                 throw new IllegalStateException("Unexpected critical event: " + event);
             }

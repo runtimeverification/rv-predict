@@ -75,6 +75,8 @@ public class TraceState {
 
     private final Table<Integer, Long, List<ReadonlyEventInterface>> t_tidToAddrToEvents;
 
+    private final Table<Integer, Long, List<ReadonlyEventInterface>> t_tidToAddrToPrefixReadEvents;
+
     private final Map<Long, List<LockRegion>> t_lockIdToLockRegions;
 
     private final Set<ReadonlyEventInterface> t_clinitEvents;
@@ -98,8 +100,8 @@ public class TraceState {
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
-        this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS,
-                                            DEFAULT_NUM_OF_ADDR);
+        this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_ADDR);
+        this.t_tidToAddrToPrefixReadEvents = HashBasedTable.create(DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_ADDR);
         this.t_lockIdToLockRegions     = new LinkedHashMap<>(config.windowSize >> 1);
         this.t_clinitEvents            = new HashSet<>(config.windowSize >> 1);
         this.t_ttidsThatCanOverlap     = new HashMap<>(DEFAULT_NUM_OF_THREADS);
@@ -126,6 +128,7 @@ public class TraceState {
         t_tidToThreadState.clear();
         t_addrToState.clear();
         t_tidToAddrToEvents.clear();
+        t_tidToAddrToPrefixReadEvents.clear();
         t_lockIdToLockRegions.clear();
         t_clinitEvents.clear();
         t_ttidsThatCanOverlap.clear();
@@ -139,6 +142,7 @@ public class TraceState {
                 t_tidToThreadState,
                 t_addrToState,
                 t_tidToAddrToEvents,
+                t_tidToAddrToPrefixReadEvents,
                 t_lockIdToLockRegions,
                 t_clinitEvents,
                 t_ttidsThatCanOverlap,

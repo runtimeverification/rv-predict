@@ -1,14 +1,10 @@
 package com.runtimeverification.rvpredict.smt;
 
-import com.microsoft.z3.Params;
-import com.microsoft.z3.Solver;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.main.MaximalRaceDetector;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
-import com.runtimeverification.rvpredict.smt.visitors.Z3Filter;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
@@ -35,7 +31,7 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class MaximalCausalModelTest {
     private static final int WINDOW_SIZE = 100;
-    private static final int TIMEOUT_MILLIS = 2000;
+    private static final int TIMEOUT_SECONDS = 2;
     private static final long ADDRESS_1 = 200;
     private static final long ADDRESS_2 = 201;
     private static final long ADDRESS_3 = 202;
@@ -46,10 +42,12 @@ public class MaximalCausalModelTest {
     private static final long THREAD_1 = 1;
     private static final long THREAD_2 = 2;
     private static final long THREAD_3 = 3;
+    private static final long THREAD_4 = 4;
     private static final int NO_SIGNAL = 0;
     private static final int ONE_SIGNAL = 1;
     private static final int TWO_SIGNALS = 2;
     private static final long LOCK_1 = 500;
+    private static final long LOCK_2 = 501;
     private static final long SIGNAL_NUMBER_1 = 1;
     private static final long SIGNAL_NUMBER_2 = 2;
     private static final long SIGNAL_NUMBER_63 = 63;
@@ -75,6 +73,7 @@ public class MaximalCausalModelTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_2)).thenReturn(3L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_3)).thenReturn(4L);
+        mockConfiguration.solver_timeout = TIMEOUT_SECONDS;
     }
 
     @Test
@@ -2032,6 +2031,129 @@ public class MaximalCausalModelTest {
         Assert.assertTrue(hasRace(rawTraces, event1, event2, tu, true));
     }
 
+    @Test
+    public void incompatibilityBetweenPrefixReads() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_3, NO_SIGNAL),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
+                        e1 = tu.nonAtomicLoad(ADDRESS_2, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.threadStart(THREAD_2),
+                        tu.threadStart(THREAD_3))
+                );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void twoDifferentPrefixReadsNeedAWriteBetween() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.atomicLoad(ADDRESS_1, VALUE_1),
+                        tu.atomicLoad(ADDRESS_1, VALUE_2),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_2))
+        );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void twoDifferentReadsNeedAWriteBetween() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, NO_SIGNAL),
+                        tu.atomicStore(ADDRESS_1, VALUE_1),
+                        tu.atomicLoad(ADDRESS_1, VALUE_1),
+                        tu.atomicLoad(ADDRESS_1, VALUE_2),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.atomicStore(ADDRESS_1, VALUE_2))
+        );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void sameWriteOnDifferentThreadMustBeBeforeReadWithSameWriteBefore() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.lock(LOCK_1),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_2),
+                        tu.unlock(LOCK_1),
+                        tu.lock(LOCK_1),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.unlock(LOCK_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_2, NO_SIGNAL),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_2),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.unlock(LOCK_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_3, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                        tu.unlock(LOCK_2),
+                        tu.unlock(LOCK_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_4, NO_SIGNAL),
+                        tu.lock(LOCK_1),
+                        tu.lock(LOCK_2),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_2),
+                        tu.unlock(LOCK_2),
+                        tu.unlock(LOCK_1)
+                )
+        );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to
@@ -2082,48 +2204,40 @@ public class MaximalCausalModelTest {
             List<ReadonlyEventInterface> previousSigestEvents,
             TraceUtils tu,
             boolean detectInterruptedThreadRace) {
-        com.microsoft.z3.Context context = MaximalRaceDetector.getZ3Context();
-        Z3Filter z3Filter = new Z3Filter(context, WINDOW_SIZE);
-        Solver fastSolver = context.mkSimpleSolver();
-        Params params = context.mkParams();
-        params.add("timeout", TIMEOUT_MILLIS);
-        fastSolver.setParameters(params);
-        Solver soundSolver = context.mkSimpleSolver();
-        params = context.mkParams();
-        params.add("timeout", TIMEOUT_MILLIS);
-        soundSolver.setParameters(params);
-
-        mockConfiguration.windowSize = WINDOW_SIZE;
-        TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
-        ThreadInfos threadInfos = traceState.getThreadInfos();
-        if (!previousSigestEvents.isEmpty()) {
-            RawTrace rawTrace = tu.createRawTrace(false, previousSigestEvents);
-            traceState.preStartWindow();
-            threadInfos.registerThreadInfo(rawTrace.getThreadInfo());
-            traceState.fastProcess(rawTrace);
-        }
-
-        Trace trace = null;
-        assert !rawTracesList.isEmpty();
-        for (List<RawTrace> rawTraces : rawTracesList) {
-            for (RawTrace rawTrace : rawTraces) {
+        try (RaceSolver raceSolver = SingleThreadedRaceSolver.createRaceSolver(mockConfiguration)) {
+            mockConfiguration.windowSize = WINDOW_SIZE;
+            TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
+            ThreadInfos threadInfos = traceState.getThreadInfos();
+            if (!previousSigestEvents.isEmpty()) {
+                RawTrace rawTrace = tu.createRawTrace(false, previousSigestEvents);
+                traceState.preStartWindow();
                 threadInfos.registerThreadInfo(rawTrace.getThreadInfo());
+                traceState.fastProcess(rawTrace);
             }
-            traceState.preStartWindow();
-            trace = traceState.initNextTraceWindow(rawTraces);
+
+            Trace trace = null;
+            assert !rawTracesList.isEmpty();
+            for (List<RawTrace> rawTraces : rawTracesList) {
+                for (RawTrace rawTrace : rawTraces) {
+                    threadInfos.registerThreadInfo(rawTrace.getThreadInfo());
+                }
+                traceState.preStartWindow();
+                trace = traceState.initNextTraceWindow(rawTraces);
+            }
+            MaximalCausalModel model = MaximalCausalModel.create(trace, raceSolver, detectInterruptedThreadRace);
+
+            if (trace.getSize() == 0) {
+                return Collections.emptyMap();
+            }
+
+            Map<String, List<Race>> sigToRaceSuspects = new HashMap<>();
+            ArrayList<Race> raceSuspects = new ArrayList<>();
+            raceSuspects.add(new Race(e1, e2, trace, mockConfiguration));
+            sigToRaceSuspects.put("race", raceSuspects);
+
+            return model.checkRaceSuspects(sigToRaceSuspects);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        MaximalCausalModel model = MaximalCausalModel.create(
-                trace, z3Filter, fastSolver, soundSolver, detectInterruptedThreadRace);
-
-        if (trace.getSize() == 0) {
-            return Collections.emptyMap();
-        }
-
-        Map<String, List<Race>> sigToRaceSuspects = new HashMap<>();
-        ArrayList<Race> raceSuspects = new ArrayList<>();
-        raceSuspects.add(new Race(e1, e2, trace, mockConfiguration));
-        sigToRaceSuspects.put("race", raceSuspects);
-
-        return model.checkRaceSuspects(sigToRaceSuspects);
     }
 }

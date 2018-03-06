@@ -22,6 +22,8 @@ static const char *tmproot = "/tmp";
 static const char *self_exe_pathname = "/proc/self/exe";
 static const char *trace_var = "RVP_TRACE_FILE";
 
+volatile _Atomic bool __read_mostly rvp_initialized = false;
+
 const char *product_name = "RV-Predict/C";
 
 char *

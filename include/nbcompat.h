@@ -1,5 +1,32 @@
 /* Copyright (c) 2017 Runtime Verification, Inc.  All rights reserved. */
 /*
+ * Copyright (c) 1995, 1996 Carnegie-Mellon University.
+ * All rights reserved.
+ *
+ * Author: Chris G. Demetriou
+ *
+ * Permission to use, copy, modify and distribute this software and
+ * its documentation is hereby granted, provided that both the copyright
+ * notice and this permission notice appear in all copies of the
+ * software, derivative works or modified versions, and any portions
+ * thereof, and that both notices appear in supporting documentation.
+ *
+ * CARNEGIE MELLON ALLOWS FREE USE OF THIS SOFTWARE IN ITS "AS IS"
+ * CONDITION.  CARNEGIE MELLON DISCLAIMS ANY LIABILITY OF ANY KIND
+ * FOR ANY DAMAGES WHATSOEVER RESULTING FROM THE USE OF THIS SOFTWARE.
+ *
+ * Carnegie Mellon requests users of this software to return to
+ *
+ *  Software Distribution Coordinator  or  Software.Distribution@CS.CMU.EDU
+ *  School of Computer Science
+ *  Carnegie Mellon University
+ *  Pittsburgh PA 15213-3890
+ *
+ * any improvements or extensions that they make and grant Carnegie the
+ * rights to redistribute these changes.
+ */
+
+/*
  * NetBSD compatibility macros
  *
  * NetBSD provides a lot of handy macros that Linux does not.  Many
@@ -13,6 +40,73 @@
 #include <stddef.h>
 
 #ifndef __NetBSD__
+
+/*
+ * On multiprocessor systems we can gain an improvement in performance
+ * by being mindful of which cachelines data is placed in.
+ *
+ * __read_mostly:
+ *
+ *      It makes sense to ensure that rarely modified data is not
+ *      placed in the same cacheline as frequently modified data.
+ *      To mitigate the phenomenon known as "false-sharing" we
+ *      can annotate rarely modified variables with __read_mostly.
+ *      All such variables are placed into the .data.read_mostly
+ *      section in the kernel ELF.
+ *
+ *      Prime candidates for __read_mostly annotation are variables
+ *      which are hardly ever modified and which are used in code
+ *      hot-paths, e.g. pmap_initialized.
+ *
+ * __cacheline_aligned:
+ *
+ *      Some data structures (mainly locks) benefit from being aligned
+ *      on a cacheline boundary, and having a cacheline to themselves.
+ *      This way, the modification of other data items cannot adversely
+ *      affect the lock and vice versa.
+ *
+ *      Any variables annotated with __cacheline_aligned will be
+ *      placed into the .data.cacheline_aligned ELF section.
+ */
+#define __read_mostly                                           \
+    __attribute__((__section__(".data.read_mostly")))
+
+#if 0
+#define __cacheline_aligned                                     \
+    __attribute__((__aligned__(COHERENCY_UNIT),                 \
+                 __section__(".data.cacheline_aligned")))
+#endif
+
+/*
+ * GNU C version 2.96 adds explicit branch prediction so that
+ * the CPU back-end can hint the processor and also so that
+ * code blocks can be reordered such that the predicted path
+ * sees a more linear flow, thus improving cache behavior, etc.
+ *
+ * The following two macros provide us with a way to use this
+ * compiler feature.  Use __predict_true() if you expect the expression
+ * to evaluate to true, and __predict_false() if you expect the
+ * expression to evaluate to false.
+ *
+ * A few notes about usage:
+ *
+ *      * Generally, __predict_false() error condition checks (unless
+ *        you have some _strong_ reason to do otherwise, in which case
+ *        document it), and/or __predict_true() `no-error' condition
+ *        checks, assuming you want to optimize for the no-error case.
+ *
+ *      * Other than that, if you don't know the likelihood of a test
+ *        succeeding from empirical or other `hard' evidence, don't
+ *        make predictions.
+ *
+ *      * These are meant to be used in places that are run `a lot'.
+ *        It is wasteful to make predictions in code that is run
+ *        seldomly (e.g. at subsystem initialization time) as the
+ *        basic block reordering that this affects can often generate
+ *        larger code.
+ */
+#define __predict_true(exp)     __builtin_expect((exp) != 0, 1)
+#define __predict_false(exp)    __builtin_expect((exp) != 0, 0)
 
 /* On some systems, for assembly language to refer to a C symbol,
  * you have to add an underscore (_) to the name.  _C_LABEL() and

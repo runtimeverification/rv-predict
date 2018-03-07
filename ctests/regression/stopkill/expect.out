@@ -1,0 +1,26 @@
+tid 1.0 {} begin thread generation 0
+tid 1.0 in main at .../stopkill/stopkill.c:19 enter function cfa . return {}
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.__sigaction_handler at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[0] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[1] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[2] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[3] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[4] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[5] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[6] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[7] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[8] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[9] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[10] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[11] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[12] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[13] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[14] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_mask.__val[15] at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_flags at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:0:2 store 8 0000000000000000 -> sa.sa_restorer at stopkill.c;main
+tid 1.0 in main at .../stopkill/stopkill.c:30:36 establish signal action signal 14 handler 0x00000000401ef0 mask #4
+tid 1.0 in main at .../stopkill/stopkill.c:39:48 set signal mask #3
+tid 1.0 in main at .../stopkill/stopkill.c:39:48 signal depth -> 1
+tid 1.1 {} enter signal handler signal 14 handler 0x00000000401ef0 generation 0
+tid 1.1 in handler at .../stopkill/stopkill.c:10 enter function cfa . return in __rvpredict_handler_wrapper at .../ngrt/rvpsignal.c:361

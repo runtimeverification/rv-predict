@@ -2,12 +2,15 @@
 
 	cmade/: wrapper for components built by CMake, including our
 	    instrumentation pass
+        librvu/: library of utility functions shared by ngrt/ and rvpdump/
 	ngrt/: next-generation runtime that is simpler and faster
 	    than the one derived from tsan.
 	pass/: standalone instrumentation pass derived from
 	    Thread Sanitizer (tsan)
 	runtime/: standalone runtime derived from tsan.  This is
 	    not built any longer, but we keep it around as a reference.
+	rvpdump/: utility program for displaying RV-Predict/C trace
+	    files
 	test/: tests for instrumentation, just barely started
 
 # Building

@@ -1,7 +1,10 @@
 bin
+**/*.d
+**/.depend
 include
 lib
 libexec
 man
+**/*.o
 share
 **/*.test.out

@@ -2,7 +2,7 @@ NOMAN=
 MKINSTALL=no
 .include "../../../compat.mk"
 
-PATH:=$(.OBJDIR)/../../bin:$(PATH)
+PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 .export PATH
 
 CC?=clang

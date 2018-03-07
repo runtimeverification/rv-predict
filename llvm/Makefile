@@ -1,3 +1,5 @@
-SUBDIR=cmade ngrt rvpdump
+SUBPRJ=cmade ngrt rvpdump
+INTERNALLIBS=librvu
+LIBDEPS=librvu:ngrt librvu:rvpdump
 
-.include <mkc.subdir.mk>
+.include <mkc.subprj.mk>

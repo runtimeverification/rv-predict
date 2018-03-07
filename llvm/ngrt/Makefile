@@ -27,6 +27,7 @@ SRCS+=xstr.o
 SRCS+=supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c
+SRCS+=io.c
 WARNS=4
 LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
 LIBC_A!=$(CC) -print-file-name=libc.a

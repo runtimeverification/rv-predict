@@ -29,7 +29,8 @@ buildit: .PHONY
 .endif
 
 rv-predict.jar.copy: $(.CURDIR)/../jar/target/jar-${MAVEN_VERSION}.jar
-	@$(INSTALL) -c -m 0644 $(.ALLSRC:Ncopyit) $(.OBJDIR)/$(.TARGET)
+	@cp $(.ALLSRC:Ncopyit) $(.OBJDIR)/$(.TARGET)
+	@chmod 0644 $(.OBJDIR)/$(.TARGET)
 .if $(PREBUILT:Uno) == "yes"
 	@echo Installed prebuilt rv-predict.jar.
 .endif

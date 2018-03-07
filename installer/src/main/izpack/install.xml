@@ -2,7 +2,6 @@
 
 <installation version="5.0">
     <jar src="rv-install.jar" />
-    <jar src="rv-licensing.jar" />
 
     <!-- General Application Information -->
     <info>

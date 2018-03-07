@@ -1,16 +1,9 @@
 a.out
-*.d
-.depend
 dot-product
 double-checked-locking
 intr_driver
-*.ll
 lpcq
-.Makefile.tags
 memcpy
-_mkc_*
-*.o
-rvpredict.trace
 signal
 simplerace
 simple-state-machine
@@ -22,6 +15,3 @@ stolz-queue
 stolz-queue.plain
 stolz-queue.rvp
 stolz-queue.tsan
-.*.swp
-tags
-*.trace

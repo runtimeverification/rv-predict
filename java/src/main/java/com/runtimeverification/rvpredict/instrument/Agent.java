@@ -16,7 +16,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.io.Resources;
 import com.runtimeverification.rvpredict.config.Configuration;
-import com.runtimeverification.rvpredict.engine.main.LicenseChecker;
 import com.runtimeverification.rvpredict.engine.main.RVPredict;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.log.PersistentLoggingEngine;
@@ -32,9 +31,6 @@ import com.runtimeverification.rvpredict.instrument.transformer.TransformStrateg
 import com.runtimeverification.rvpredict.metadata.ClassFile;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
-
-import com.runtimeverification.licensing.Licensing;
-import com.runtimeverification.licensing.RVLicenseCache;
 
 public class Agent implements ClassFileTransformer, Constants {
 
@@ -134,7 +130,6 @@ public class Agent implements ClassFileTransformer, Constants {
     }
 
     private static void printStartupInfo() {
-        // LicenseChecker.validateOrDie(config.prompt_for_license);
         config.logger().reportPhase(Configuration.INSTRUMENTED_EXECUTION_TO_RECORD_THE_TRACE);
         if (config.getLogDir() != null) {
             config.logger().report("Log directory: " + config.getLogDir(), Logger.MSGTYPE.INFO);

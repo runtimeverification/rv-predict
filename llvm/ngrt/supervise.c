@@ -4,14 +4,14 @@
 #include <signal.h>	/* for pthread_sigmask(3) */
 #include <stdio.h>
 #include <stdint.h>	/* for intmax_t */
-#include <stdlib.h>
+#include <stdlib.h>	/* for STDIN_FILENO */
 #include <string.h>	/* for strdup(3), strlen(3) */
 #include <sys/param.h>	/* for MIN */
 #include <sys/stat.h>	/* for lstat(2), fts(3) */
 #include <sys/types.h>	/* for waitpid(2), fts(3) */
 #include <fts.h>
 #include <sys/wait.h>
-#include <unistd.h>	/* for pathconf(2), readlink(2) */
+#include <unistd.h>	/* for pathconf(2), pipe(2), readlink(2) */
 
 #include "init.h"
 #include "interpose.h"
@@ -21,6 +21,7 @@
 static const char *tmproot = "/tmp";
 static const char *self_exe_pathname = "/proc/self/exe";
 static const char *trace_var = "RVP_TRACE_FILE";
+int rvp_analysis_fd = -1;
 
 volatile _Atomic bool __read_mostly rvp_initialized = false;
 
@@ -147,6 +148,118 @@ cleanup(char *tmpdir)
 	}
 }
 
+static void
+rvp_online_analysis_start(void)
+{
+	int status;
+	pid_t supervisee_pid, analysis_pid;
+	sigset_t omask;
+	int pipefd[2];
+
+	char *const binpath =
+	    get_binary_path(/* (argc > 0) ? argv[0] : NULL */);
+
+	if (binpath == NULL) {
+		errx(EXIT_FAILURE, "%s could not find a path to the "
+		    "executable binary that it was running", product_name);
+	}
+
+	if (pipe(pipefd) == -1) {
+		err(EXIT_FAILURE,
+		    "%s could not create an event pipeline", product_name);
+	}
+	const int piperd = pipefd[0];
+	const int pipewr = pipefd[1];
+
+	// TBD Avoid using some arbitrary file in the analysis.
+	// Check binpath for an RV-Predict/C runtime symbol, and see if
+	// its address matches the address of our own copy?
+
+	if ((supervisee_pid = fork()) == -1) {
+		err(EXIT_FAILURE,
+		    "%s could not fork a supervisee process", product_name);
+	}
+
+	block_signals(&omask);
+
+	/* the child process runs the program: return to its main routine */
+	if (supervisee_pid == 0) {
+		rvp_analysis_fd = pipewr;
+		(void)close(piperd);
+		restore_signals(&omask);
+		return;
+	}
+
+	if (close(pipewr) == -1) {
+		err(EXIT_FAILURE,
+		    "%s could not close event pipeline inlet", product_name);
+	}
+
+	if ((analysis_pid = fork()) == -1) {
+		err(EXIT_FAILURE,
+		    "%s could not fork an analysis process", product_name);
+	}
+
+	if (analysis_pid == 0) {
+		char *const args[] = {"rvpa", binpath, "/dev/stdin", NULL};
+
+		/* establish read end of pipe as rvpa's stdin */
+		if (dup2(piperd, STDIN_FILENO) == -1) {
+			err(EXIT_FAILURE, "%s could not establish "
+			    "the event pipeline as the analysis input",
+			    product_name);
+		}
+		(void)close(piperd);
+
+		if (execvp("rvpa", args) == -1) {
+			err(EXIT_FAILURE,
+			    "%s could not start an analysis process",
+			    product_name);
+		}
+		// unreachable
+	}
+
+	if (close(piperd) == -1) {
+		err(EXIT_FAILURE,
+		    "%s could not close event pipeline outlet", product_name);
+	}
+
+	/* wait for the analysis to finish */
+	while (waitpid(analysis_pid, NULL, 0) == -1) {
+		if (errno == EINTR)
+			continue;
+		err(EXIT_FAILURE,
+		    "%s failed unexpectedly "
+		    "while it waited for the analysis process to finish",
+		    product_name);
+	}
+
+	/* wait for the supervisee to finish */
+	while (waitpid(supervisee_pid, &status, 0) == -1) {
+		if (errno == EINTR)
+			continue;
+		err(EXIT_FAILURE,
+		    "%s failed unexpectedly "
+		    "while it waited for the instrumented program",
+		    product_name);
+	}
+
+	if (WIFSIGNALED(status)) {
+		fprintf(stderr, "%s", strsignal(WTERMSIG(status)));
+#ifdef WCOREDUMP
+		if (WCOREDUMP(status))
+			fprintf(stderr, " (core dumped)");
+#endif /* WCOREDUMP */
+		fputc('\n', stderr);
+	}
+
+	if (WIFSIGNALED(status))
+		exit(125);	// following xargs(1) here. :-)
+	if (WIFEXITED(status))
+		exit(WEXITSTATUS(status));
+	exit(EXIT_SUCCESS);
+}
+
 void
 rvp_supervision_start(void)
 {
@@ -164,6 +277,11 @@ rvp_supervision_start(void)
 	 */
 	if (rvp_trace_only)
 		return;
+
+	if (rvp_online_analysis) {
+		rvp_online_analysis_start();
+		return;
+	}
 
 	char *const binpath =
 	    get_binary_path(/* (argc > 0) ? argv[0] : NULL */);

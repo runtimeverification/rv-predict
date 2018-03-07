@@ -20,11 +20,10 @@ instrumentation using
 .Op Fl Fl output=...
 .Op Fl -
 .Ar program
+.Op Ar trace-file
 .Sh DESCRIPTION
 .Nm
-analyzes a trace file,
-.Pa rvpredict.trace ,
-left in the current directory by
+analyzes a trace file left by
 .Ar program Ap s
 .Tn RV-Predict/C
 instrumentation.
@@ -37,6 +36,18 @@ that
 .Nm
 needs to convert data & instruction addresses to names in its reports.
 .Pp
+If the optional argument
+.Ar trace-file
+is provided, then
+.Nm
+analyzes that trace file.
+Otherwise,
+.Nm
+analyzes the trace file
+.Pa rvpredict.trace 
+left in the current directory by
+.Ar program .
+.Pp
 Command-line options modify the behavior of
 .Nm :
 .Bl -tag -width "mmprompt-for-license"
@@ -46,7 +57,9 @@ Print a help message.
 .Tn RV-Predict/C
 segments
 .Ar program Ap s
-event trace into "windows" and analyzes one window at a time.
+event trace into
+.Dq windows
+and analyzes one window at a time.
 Windows are measured in the number of events they contain.
 This option sets the number of events per window to
 .Ar size ;
@@ -61,7 +74,8 @@ windows on the same trace.
 .It Fl Fl no-shorten
 in reports,
 long paths to source files are not shortened by replacing the first 
-path components with an ellipsis, "...".
+path components with an ellipsis,
+.Dq ... .
 .It Fl Fl no-signal
 disables symbolization of signal numbers: e.g., S1 is not converted to
 .Dv SIGHUP .

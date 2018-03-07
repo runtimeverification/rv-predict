@@ -751,13 +751,13 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	if (oldset != NULL) {
 		const uint64_t actual_omask = sigset_to_mask(oldset);
 
-                /* The mask that was in `t->t_intrmask` when we entered
-                 * this function should precisely match the mask
-                 * returned by `changefn` (`real_pthread_sigmask`),
-                 * above, *except* in a signal.
+		/* The mask that was in `t->t_intrmask` when we entered
+		 * this function should precisely match the mask
+		 * returned by `changefn` (`real_pthread_sigmask`),
+		 * above, *except* in a signal.
 		 *
-                 * In a signal, the mask that is actually in effect will
-                 * block at least all of the signals blocked in
+		 * In a signal, the mask that is actually in effect will
+		 * block at least all of the signals blocked in
 		 * `t->t_intrmask`, however, it may block more.
 		 */
 		if (t->t_intr_ring == &t->t_ring &&

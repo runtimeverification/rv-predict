@@ -32,7 +32,7 @@ test.trace:
 	@$(.OBJDIR)/memcpy > /dev/null
 
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/memcpy | $(.CURDIR)/../normalize
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/memcpy | $(.CURDIR)/../../normalize-humanized-trace
 
 CLEANFILES+=test.trace
 

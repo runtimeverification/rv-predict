@@ -32,7 +32,7 @@ test.trace:
 	@$(.OBJDIR)/sub > /dev/null
 
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/sub | $(.CURDIR)/../../normalize
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/sub | $(.CURDIR)/../../../normalize-humanized-trace
 
 CLEANFILES+=test.trace
 

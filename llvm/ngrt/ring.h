@@ -65,7 +65,6 @@ typedef struct _rvp_iring {
 // XXX one-off addition for customer's interrupt simulation
 typedef struct _rvp_intr_hack {
 	sigset_t ih_mask;
-	bool ih_valid;
 } rvp_intr_hack_t;
 
 /* An event ring contains events that are serialized as one

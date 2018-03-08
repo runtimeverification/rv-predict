@@ -31,6 +31,8 @@ typedef struct _rvp_signal_couplet {
 	rvp_signal_t	sc_alternate[2];
 } rvp_signal_couplet_t;
 
+uint64_t rvp_unmaskable;
+
 static rvp_signal_couplet_t *signal_storage = NULL;
 static rvp_signal_t * _Atomic *signal_tbl = NULL;
 static int nsignals = 0;
@@ -111,9 +113,26 @@ rvp_signal_init(void)
 {
 	rvp_signal_table_init();
 	struct sigaction osa, sa;
+	sigset_t unmaskable_set;
+
+	if (sigemptyset(&unmaskable_set) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
+
+	if (sigaddset(&unmaskable_set, SIGSTOP) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
+
+	if (sigaddset(&unmaskable_set, SIGKILL) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
+
+#if 1
+	rvp_unmaskable = sigset_to_mask(&unmaskable_set);
+#else
+	rvp_unmaskable = 0;
+#endif
+
 	memset(&sa, 0, sizeof(sa));
 	if (sigemptyset(&sa.sa_mask) != 0)
-		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
 	sa.sa_handler = rvp_siginfo_handler;
 	if (real_sigaction(RVP_INFO_SIGNUM, &sa, &osa) == -1)
 		err(EXIT_FAILURE, "%s: sigaction", __func__);
@@ -333,6 +352,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 */
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	rvp_signal_t *s = rvp_signal_lookup(signum);
+	uint64_t omask = t->t_intrmask;
 	uint32_t idepth = atomic_fetch_add_explicit(&t->t_idepth, 1,
 	    memory_order_acquire);
 	rvp_ring_t *r = rvp_signal_ring_acquire(t, idepth + 1);
@@ -341,6 +361,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
+	t->t_intrmask = omask | sigset_to_mask(&s->s_blockset->bs_sigset);
 	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a
@@ -381,6 +402,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_ring_put_buf(r, b);
 	rvp_interruption_close(it, r->r_producer - r->r_items);
 	rvp_signal_ring_put(t, r);
+	t->t_intrmask = omask;
 	/* I wait until after the ring is relinquished to restore the old
 	 * idepth so that the relinquished ring is available for reuse.
 	 */
@@ -724,13 +746,23 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
-	t->t_intrmask = nmask;
+	t->t_intrmask = nmask & ~rvp_unmaskable;
 
 	if (oldset != NULL) {
 		const uint64_t actual_omask = sigset_to_mask(oldset);
 
-		if (actual_omask != 0 && omask != actual_omask)
-			raise(SIGTRAP);
+		/* The mask that was in `t->t_intrmask` when we entered
+		 * this function should precisely match the mask
+		 * returned by `changefn` (`real_pthread_sigmask`),
+		 * above, *except* in a signal.
+		 *
+		 * In a signal, the mask that is actually in effect will
+		 * block at least all of the signals blocked in
+		 * `t->t_intrmask`, however, it may block more.
+		 */
+		if (t->t_intr_ring == &t->t_ring &&
+		    actual_omask != 0 && omask != actual_omask)
+			abort();
 	}
 
 	if (set == NULL && oldset != NULL)
@@ -750,10 +782,10 @@ __rvpredict_sigsuspend(const sigset_t *mask)
 	const void *retaddr = __builtin_return_address(0);
 	uint64_t omask = t->t_intrmask, nmask = sigset_to_mask(mask);
 	rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
-	t->t_intrmask = nmask;
+	t->t_intrmask = nmask & ~rvp_unmaskable;
 	/* TBD record read of `mask` */
 	const int rc = real_sigsuspend(mask);
-	t->t_intrmask = omask;
+	t->t_intrmask = omask & ~rvp_unmaskable;
 	const int errno_copy = errno;
 	rvp_thread_trace_setmask(t, SIG_SETMASK, omask, retaddr);
 	errno = errno_copy;
@@ -776,6 +808,12 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
+/* XXX sigaction(2) is async-signal-safe, so we have to
+ * XXX take care to avoid async-signal-UNSAFE functions in
+ * XXX our implementation.  rvp_signal_lock() calls
+ * XXX pthread_mutex_lock(), which is not async-signal-safe.
+ * XXX So I need to fix that someday. 
+ */
 int
 __rvpredict_sigaction(int signum, const struct sigaction *act0,
     struct sigaction *oact)

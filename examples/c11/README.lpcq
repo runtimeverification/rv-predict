@@ -1,4 +1,4 @@
-Copyright (c) 2016, 2017 Runtime Verification, Inc.  All rights reserved.
+Copyright (c) 2016, 2017, 2018 Runtime Verification, Inc.  All rights reserved.
 
 `lpcq` is a POSIX Threads-using C program that sends some numbers from
 a producer thread to a consumer thread through a queue.  The program

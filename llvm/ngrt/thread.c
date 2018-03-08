@@ -117,6 +117,7 @@ rvp_thread0_create(void)
 	if (real_pthread_sigmask(SIG_BLOCK, NULL, &oset) != 0)
 		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
 	t->t_intrmask = sigset_to_mask(&oset);
+	assert((t->t_intrmask & rvp_unmaskable) == 0);
 
 	t->t_pthread = pthread_self();
 
@@ -746,6 +747,7 @@ __rvpredict_pthread_create(pthread_t *thread,
 		    strerror(rc));
 	}
 	t->t_intrmask = sigset_to_mask(&oset);
+	assert((t->t_intrmask & rvp_unmaskable) == 0);
 
 	rc = real_pthread_create(&t->t_pthread, attr,
 	    __rvpredict_thread_wrapper, t);

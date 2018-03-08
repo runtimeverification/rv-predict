@@ -12,6 +12,7 @@ FILES+=README.md
 FILES+=$(SRCS.1)
 FILES+=$(SRCS.2)
 FILES+=$(SRCS.3)
+FILES+=$(SRCS.sim)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"

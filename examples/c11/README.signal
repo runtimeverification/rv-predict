@@ -1,16 +1,14 @@
-Copyright (c) 2016, 2017 Runtime Verification, Inc.  All rights reserved.
+Copyright (c) 2016, 2017, 2018 Runtime Verification, Inc.  All rights
+reserved.
 
-`signal` is a POSIX Threads-using C program that modifies
-a shared variable either in a couple of threads (the default
-mode) or else in a thread and in a signal handler (the mode when
-the option `-s` is provided on the command line).
-The program
-demonstrates RV-Predict/C's capability to accurately model
-the differences between a single thread racing with a signal
-handler, and one thread racing with a second thread.
-producer-consumer queue library.  The library itself does not provide
-any synchronization.  Library users must synchronize access to a queue,
-otherwise two or more threads accessing the same queue will corrupt it.
+`signal` is a POSIX Threads-using C program that modifies a shared
+variable either in a couple of threads (the default mode) or else in a
+thread and in a signal handler (the mode when the option `-s` is provided
+on the command line).
+
+The program demonstrates RV-Predict/C's capability to accurately model
+the differences between a single thread racing with a signal handler,
+and one thread racing with a second thread.
 
 # Sources
 
@@ -57,7 +55,7 @@ will be detected:
 	./signal -s -m -v
 
 Or, supply only the `-m` option---i.e., no `-s` option.  Two threads
-will run, and setting of the signal mask will not stop them from racing:
+will run; setting the signal mask will not stop them from racing:
 
 	./signal -m
 

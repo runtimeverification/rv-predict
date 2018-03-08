@@ -5,6 +5,8 @@
 #define __section(x)    __attribute__((__section__(x)))
 #endif /* __section */
 
+int __rvpredict_splhigh(void);
+void __rvpredict_splx(int);
 void __rvpredict_intr_enable(void);
 void __rvpredict_intr_disable(void);
 void __rvpredict_isr_fire(void (*)(void));

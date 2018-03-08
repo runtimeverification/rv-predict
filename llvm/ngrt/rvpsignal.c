@@ -31,6 +31,8 @@ typedef struct _rvp_signal_couplet {
 	rvp_signal_t	sc_alternate[2];
 } rvp_signal_couplet_t;
 
+uint64_t rvp_unmaskable;
+
 static rvp_signal_couplet_t *signal_storage = NULL;
 static rvp_signal_t * _Atomic *signal_tbl = NULL;
 static int nsignals = 0;
@@ -111,9 +113,26 @@ rvp_signal_init(void)
 {
 	rvp_signal_table_init();
 	struct sigaction osa, sa;
+	sigset_t unmaskable_set;
+
+	if (sigemptyset(&unmaskable_set) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
+
+	if (sigaddset(&unmaskable_set, SIGSTOP) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
+
+	if (sigaddset(&unmaskable_set, SIGKILL) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
+
+#if 1
+	rvp_unmaskable = sigset_to_mask(&unmaskable_set);
+#else
+	rvp_unmaskable = 0;
+#endif
+
 	memset(&sa, 0, sizeof(sa));
 	if (sigemptyset(&sa.sa_mask) != 0)
-		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
 	sa.sa_handler = rvp_siginfo_handler;
 	if (real_sigaction(RVP_INFO_SIGNUM, &sa, &osa) == -1)
 		err(EXIT_FAILURE, "%s: sigaction", __func__);
@@ -724,13 +743,13 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
-	t->t_intrmask = nmask;
+	t->t_intrmask = nmask & ~rvp_unmaskable;
 
 	if (oldset != NULL) {
 		const uint64_t actual_omask = sigset_to_mask(oldset);
 
 		if (actual_omask != 0 && omask != actual_omask)
-			raise(SIGTRAP);
+			abort();
 	}
 
 	if (set == NULL && oldset != NULL)
@@ -750,10 +769,10 @@ __rvpredict_sigsuspend(const sigset_t *mask)
 	const void *retaddr = __builtin_return_address(0);
 	uint64_t omask = t->t_intrmask, nmask = sigset_to_mask(mask);
 	rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
-	t->t_intrmask = nmask;
+	t->t_intrmask = nmask & ~rvp_unmaskable;
 	/* TBD record read of `mask` */
 	const int rc = real_sigsuspend(mask);
-	t->t_intrmask = omask;
+	t->t_intrmask = omask & ~rvp_unmaskable;
 	const int errno_copy = errno;
 	rvp_thread_trace_setmask(t, SIG_SETMASK, omask, retaddr);
 	errno = errno_copy;

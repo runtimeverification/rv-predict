@@ -6,7 +6,6 @@ PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 .export PATH
 CC?=rvpc
 PROG=on_exit
-SRCS=on_exit.c
 WARNS=5
 CPPFLAGS+=-I$(.CURDIR)/../../../include
 

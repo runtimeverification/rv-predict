@@ -33,8 +33,22 @@ Command-line options modify the behavior of
 .Bl -tag -width "... symbol-friendly"
 .It Fl g
 Print every event with a generation number.
+.It Fl n Ar number
+Print only
+.Ar number
+events.
+.It Fl t Ar binary
+write
+.Dq binary
+output.
+I.e., write the same format that instrumented programs write and that
+.Nm
+reads.
 .It Fl t Ar plain
-write "plain" output.  This is the default output format.
+write
+.Dq plain
+output.
+This is the default output format.
 .It Fl t Ar symbol-friendly
 Mark addresses in the output so that
 .Xr rvpsymbolize 1
@@ -55,6 +69,11 @@ the example program in
 with addresses symbolized:
 .Bd -literal
 $ rvpdump -t symbol-friendly rvpredict.trace | rvpsymbolize ./lpcq | less
+.Ed
+.Pp
+Copy the first 100 events from one trace file into a new trace file:
+.Bd -literal
+$ rvpdump -n 100 -t binary rvpredict.trace > short.trace
 .Ed
 .Sh EXIT STATUS
 .Nm

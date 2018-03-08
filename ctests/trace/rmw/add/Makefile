@@ -19,7 +19,6 @@ PROG=add
 
 CC?=rvpc
 CPPFLAGS+=-I$(.CURDIR)/../../../../include
-SRCS.add=add.c
 WARNS=4
 STRIPFLAG=
 
@@ -29,10 +28,10 @@ LDADD+=-pthread
 .PHONY: test_output
 
 test.trace:
-	@$(.OBJDIR)/add > /dev/null
+	@$(.OBJDIR)/$(PROG) > /dev/null
 
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/add | $(.CURDIR)/../../normalize
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(.CURDIR)/../../normalize
 
 CLEANFILES+=test.trace
 

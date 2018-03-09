@@ -41,7 +41,7 @@
         <res id="CustomLangPack.xml_eng" src="res/izpack-rv-eng-lang.xml"/>
         <!-- User input spec defining RV key inputs -->
         <res id="userInputSpec.xml" src="res/userInputSpec.xml"/>
-        <res id="LicencePanel.licence" src="EVALUATION-LICENSE.md"/>
+	<res id="LicencePanel.licence" src="res/predict-java-license.md"/>
         <res id="HTMLFinishInfoPanel.finish" src="res/rvdependencies/finish.html"/>
         <res id="Heading.image" src="res/images/predict.png"/>
         <res id="ProcessPanel.Spec.xml" src="res/ProcessPanelSpec_Java.xml"/>
@@ -88,7 +88,6 @@
         <pack name="RV-Predict" required="yes" installGroups="New Application" >
             <description>Required RV-Predict libraries and executables.</description>
             <singlefile src="README.md" target="$INSTALL_PATH/README.md"/>
-            <file src="LICENSE.md" targetdir="$INSTALL_PATH"/>
             <file src="lib/rv-predict.jar" targetdir="$INSTALL_PATH/lib"/>
             <file src="docs" targetdir="$INSTALL_PATH"/>
             <fileset dir="bin" targetdir="$INSTALL_PATH/bin">

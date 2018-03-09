@@ -9,11 +9,13 @@ __weak_alias(__rvpredict_unaligned_load1, __rvpredict_load1)
 __weak_alias(__rvpredict_unaligned_load2, __rvpredict_load2)
 __weak_alias(__rvpredict_unaligned_load4, __rvpredict_load4)
 __weak_alias(__rvpredict_unaligned_load8, __rvpredict_load8)
+__weak_alias(__rvpredict_unaligned_load16, __rvpredict_load16)
 
 __weak_alias(__rvpredict_unaligned_store1, __rvpredict_store1)
 __weak_alias(__rvpredict_unaligned_store2, __rvpredict_store2)
 __weak_alias(__rvpredict_unaligned_store4, __rvpredict_store4)
 __weak_alias(__rvpredict_unaligned_store8, __rvpredict_store8)
+__weak_alias(__rvpredict_unaligned_store16, __rvpredict_store16)
 
 /* void fn(T *addr, T val) */
 void
@@ -47,9 +49,14 @@ __rvpredict_load8(uint64_t *addr, uint64_t val)
 void
 __rvpredict_load16(rvp_uint128_t *addr __unused, rvp_uint128_t val __unused)
 {
-	not_implemented(__func__);
-}
+	int i;
+	const char *retaddr = __builtin_return_address(0);
 
+	for (i = 0; i < __arraycount(addr->elts); i++) {
+		trace_load8(retaddr, RVP_OP_LOAD8,
+		    (rvp_addr_t)&addr->elts[i], val.elts[i]);
+	}
+}
 
 void
 __rvpredict_atomic_load1(uint8_t *addr, uint8_t val, int32_t memory_order __unused)
@@ -133,5 +140,11 @@ __rvpredict_store8(uint64_t *addr, uint64_t val)
 void
 __rvpredict_store16(rvp_uint128_t *addr __unused, rvp_uint128_t val __unused)
 {
-	not_implemented(__func__);
+	int i;
+	const char *retaddr = __builtin_return_address(0);
+
+	for (i = 0; i < __arraycount(addr->elts); i++) {
+		trace_store8(retaddr, RVP_OP_STORE8,
+		    (rvp_addr_t)&addr->elts[i], val.elts[i]);
+	}
 }

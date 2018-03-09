@@ -22,6 +22,11 @@
  * so that a reference to any register, `regp`, can be converted to an
  * index into the metadata, `regp - __data_registers_begin`.
  */
+COHERENCY_UNIT = 64;	/* This appears to be the default size used by NetBSD.
+			 * Only MIPS, with a cacheline size of 32 bytes,
+			 * uses a smaller size.  No architecture appears to
+			 * use a larger size.
+			 */
 SECTIONS
 {
 	__data_registers_begin = . ;
@@ -30,6 +35,12 @@ SECTIONS
 		*(.data.registers)
 	}
 	__data_registers_end = . ;
+
+	. = ALIGN(COHERENCY_UNIT);
+	.data.read_mostly :
+	{
+		*(.data.read_mostly)
+	}
 }
 INSERT AFTER .data;
 SECTIONS

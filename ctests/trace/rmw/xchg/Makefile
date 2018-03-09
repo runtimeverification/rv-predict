@@ -15,7 +15,7 @@ RVP_TRACE_ONLY:=yes
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
 
-PROG=sub
+PROG=xchg
 
 CC?=rvpc
 CPPFLAGS+=-I$(.CURDIR)/../../../../include

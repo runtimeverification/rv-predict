@@ -1,3 +1,3 @@
-SUBPRJ=add sub
+SUBPRJ=add sub xchg
 
 .include <mkc.subprj.mk>

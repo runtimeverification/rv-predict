@@ -476,6 +476,8 @@ rvp_postfork_init(void)
 
 	rvp_static_intrs_init();
 
+	rvp_initialized = true;
+
 	atexit(rvp_stop_transmitter);
 }
 

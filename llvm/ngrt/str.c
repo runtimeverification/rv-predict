@@ -3,12 +3,20 @@
 #include "interpose.h"
 #include "nbcompat.h"
 #include "str.h"
+#include "supervise.h"
 #include "text.h"
 #include "tracefmt.h"
 
-REAL_DEFN(void *, memcpy, void *, const void *, size_t);
-REAL_DEFN(void *, memmove, void *, const void *, size_t);
-REAL_DEFN(void *, memset, void *, int, size_t);
+void *__rvpredict_internal_memcpy(void *, const void *, size_t);
+void *__rvpredict_internal_memmove(void *, const void *, size_t);
+void *__rvpredict_internal_memset(void *, int, size_t);
+
+REAL_DEFN(void *, memcpy, void *, const void *, size_t) =
+    __rvpredict_internal_memcpy;
+REAL_DEFN(void *, memmove, void *, const void *, size_t) =
+    __rvpredict_internal_memmove;
+REAL_DEFN(void *, memset, void *, int, size_t) =
+    __rvpredict_internal_memset;
 
 void
 rvp_str_prefork_init(void)
@@ -155,7 +163,8 @@ __rvpredict_memcpy(void *dst, const void *src, size_t n)
 {
 	const void *retaddr = __builtin_return_address(0);
 
-	if (instruction_is_in_rvpredict(retaddr))
+	if (__predict_false(!rvp_initialized ||
+	                    instruction_is_in_rvpredict(retaddr)))
 		return real_memcpy(dst, src, n);
 
 	return __rvpredict_memmove1(retaddr,
@@ -167,7 +176,8 @@ __rvpredict_memmove(void *dst, const void *src, size_t n)
 {
 	const void *retaddr = __builtin_return_address(0);
 
-	if (instruction_is_in_rvpredict(retaddr))
+	if (__predict_false(!rvp_initialized ||
+	                    instruction_is_in_rvpredict(retaddr)))
 		return real_memmove(dst, src, n);
 
 	return __rvpredict_memmove1(retaddr,
@@ -179,7 +189,8 @@ __rvpredict_memset(void *dst, int c, size_t n)
 {
 	const void *retaddr = __builtin_return_address(0);
 
-	if (instruction_is_in_rvpredict(retaddr))
+	if (__predict_false(!rvp_initialized ||
+	                    instruction_is_in_rvpredict(retaddr)))
 		return real_memset(dst, c, n);
 
 	return __rvpredict_memset1(retaddr, (rvp_addr_t)dst,

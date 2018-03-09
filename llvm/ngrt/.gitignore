@@ -1,3 +1,14 @@
-eitherorboth
-raise
-sigcount
+*.a
+*.d
+.depend
+.gdbinit
+internal-libc-redefines
+*.ll
+.Makefile.tags
+_mkc_*
+*.o
+*.pico
+*.po
+*.so
+.*.swp
+tags

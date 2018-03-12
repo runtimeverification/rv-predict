@@ -10,6 +10,7 @@ instrumentation using
 .Sh SYNOPSIS
 .Nm 
 .Op Fl h
+.Op Fl n
 .Op Fl Fl help
 .Op Fl Fl window Ar size
 .Op Fl Fl no-shorten
@@ -52,7 +53,10 @@ Command-line options modify the behavior of
 .Nm :
 .Bl -tag -width "mmprompt-for-license"
 .It Fl h | Fl Fl help
-Print a help message. 
+Print a help message and exit immediately.
+.It Fl n
+Print the Java command that would be run.
+Perform no analysis.
 .It Fl Fl window Ar size
 .Tn RV-Predict/C
 segments
@@ -251,7 +255,7 @@ but the version is not late enough.
 .Xr rvpx 1
 .Sh HISTORY
 .Tn RV-Predict/C
-1.9 was released in January 2018.
+1.9 was released in February 2018.
 .Sh AUTHORS
 .\" .An "Yilong Li"
 .\" .An "Traian Serbanuta"

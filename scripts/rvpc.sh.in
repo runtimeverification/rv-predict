@@ -29,6 +29,13 @@ for arg in "$@"; do
 	-help)	help=yes
 		break
 		;;
+        --version)
+		version="unknown"
+		if [ -f /usr/share/doc/rv-predict-c/version ]; then
+			version=$(cat /usr/share/doc/rv-predict-c/version)
+		fi
+		printf "RV-Predict/C version %s\n\n" $version 
+		break;;
 	-M|-E)	# -M implies -E, and -E skips normal compilation
 		compile=no
 		link=no

@@ -52,6 +52,10 @@ fi
 
 gzip -9fn < ${tmpdir}/debian/changelog > ${tmpdir}/changelog.Debian.gz
 
+
+# Create `version` file that records rv-predict/c version number
+echo $version > ${tmpdir}/version
+
 # avoid creating files & directories with permissions 0775 
 #umask 022
 
@@ -80,6 +84,8 @@ $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/doc
 $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/doc/rv-predict-c
 $NBINSTALL -o root -g root -m 0644 ${tmpdir}/changelog.Debian.gz \
     ${destdir}/usr/share/doc/rv-predict-c/changelog.Debian.gz
+$NBINSTALL -o root -g root -m 0444 ${tmpdir}/version \
+    ${destdir}/usr/share/doc/rv-predict-c/version
 $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/examples
 $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/examples/rv-predict-c
 $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/man

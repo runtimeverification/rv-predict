@@ -135,6 +135,11 @@ while [ $# -ge 1 ]; do
 			;;
 		esac
 		;;
+	--parallel-smt)
+		shift
+		parallel="--parallel-smt $1"
+		shift
+		;;
 	--window)
 		shift
 		window="--window $1"
@@ -186,7 +191,7 @@ if ! test -e ${progpath}; then
 	exit 1
 fi
 
-rvpredict ${analyze_passthrough:-} ${window:---window 2000} \
+rvpredict ${analyze_passthrough:-} ${window:---window 2000} ${parallel:-} \
     --json-report \
     --compact-trace ${trace_file:-./rvpredict.trace} | \
     symbolize $progpath 2>&1

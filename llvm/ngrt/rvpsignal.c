@@ -361,7 +361,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	t->t_intrmask = omask | sigset_to_mask(&s->s_blockset->bs_sigset);
+	t->t_intrmask = omask | (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
 	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a
@@ -730,23 +730,19 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		break;
 	}
 
+	nmask &= ~rvp_unmaskable;
+
 	if (set == NULL)
 		;
 	else if (oldset != NULL)
 		rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
-	else {
-                /* It's ok we're passing `maskchg` instead of
-                 * the absolute mask, `t->t_intrmask`, because
-		 * _trace_setmask() expects it.  Note that we pass
-		 * the operation, `how`, too.
-		 */
-		rvp_thread_trace_setmask(t, how, maskchg, retaddr);
-	}
+	else
+		rvp_thread_trace_setmask(t, how, nmask, retaddr);
 
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
-	t->t_intrmask = nmask & ~rvp_unmaskable;
+	t->t_intrmask = nmask;
 
 	if (oldset != NULL) {
 		const uint64_t actual_omask = sigset_to_mask(oldset);
@@ -780,12 +776,13 @@ __rvpredict_sigsuspend(const sigset_t *mask)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	const void *retaddr = __builtin_return_address(0);
-	uint64_t omask = t->t_intrmask, nmask = sigset_to_mask(mask);
+	const uint64_t omask = t->t_intrmask,
+	    nmask = sigset_to_mask(mask) & ~rvp_unmaskable;
 	rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
-	t->t_intrmask = nmask & ~rvp_unmaskable;
+	t->t_intrmask = nmask;
 	/* TBD record read of `mask` */
 	const int rc = real_sigsuspend(mask);
-	t->t_intrmask = omask & ~rvp_unmaskable;
+	t->t_intrmask = omask;
 	const int errno_copy = errno;
 	rvp_thread_trace_setmask(t, SIG_SETMASK, omask, retaddr);
 	errno = errno_copy;

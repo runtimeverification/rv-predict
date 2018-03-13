@@ -103,7 +103,7 @@ public class CompactEventReader implements IEventReader {
         SIG_GETSET_MASK(44, GetSetSignalMaskReader.createReader()),
         SIG_GET_MASK(45, GetSignalMaskReader.createReader());
 
-        private static int maxIntValue = 0;
+        private static int maxIntValue;
         private static Map<Integer, Type> intToType;
 
         private final int intValue;
@@ -270,6 +270,7 @@ public class CompactEventReader implements IEventReader {
                 DeltaAndEventType deltaAndEventType =
                         DeltaAndEventType.parseFromPC(minDeltaAndEventType,maxDeltaAndEventType, pc.getAsLong());
                 if (deltaAndEventType == null) {
+                    context.newOriginalEventId();
                     events = factory.jump(context, pc.getAsLong());
                     continue;
                 }

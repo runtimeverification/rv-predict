@@ -56,6 +56,7 @@ public class MaximalCausalModelTest {
     private static final long ALL_SIGNALS_DISABLED_MASK = 0xffffffffffffffffL;
     private static final long SIGNAL_1_ENABLED_MASK = ~(1L << SIGNAL_NUMBER_1);
     private static final long SIGNAL_2_ENABLED_MASK = ~(1L << SIGNAL_NUMBER_2);
+    private static final long SIGNALS_1_AND_2_ENABLED_MASK = SIGNAL_1_ENABLED_MASK & SIGNAL_2_ENABLED_MASK;
     private static final long SIGNAL_63_ENABLED_MASK = 0x7fffffffffffffffL;
     private static final long GENERATION_1 = 700;
 
@@ -2152,6 +2153,32 @@ public class MaximalCausalModelTest {
         ReadonlyEventInterface event1 = extractSingleEvent(e1);
         ReadonlyEventInterface event2 = extractSingleEvent(e2);
         Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void doesNotCrashForConsistencyWithMaskJustBeforeSignal() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setSignalMask(ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                        tu.setSignalMask(SIGNAL_1_ENABLED_MASK),
+                        e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.enableSignal(SIGNAL_NUMBER_2)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_1, ONE_SIGNAL),
+                        tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                        tu.getSignalMask(SIGNALS_1_AND_2_ENABLED_MASK),
+                        e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                        tu.exitSignal()));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, tu, true));
     }
 
     // TODO: Tests with writes that enable certain reads, both with and without signals.

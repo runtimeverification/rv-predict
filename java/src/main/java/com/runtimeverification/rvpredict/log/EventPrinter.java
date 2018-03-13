@@ -17,8 +17,8 @@ public class EventPrinter {
 
     private String getEventPrefix(ReadonlyEventInterface event) {
         return String.format(
-                "T%d.%d %9s %20s",
-                event.getOriginalThreadId(), event.getSignalDepth(), event.getEventId(),
+                "T%d.%d %9s %20s %7s",
+                event.getOriginalThreadId(), event.getSignalDepth(), event.getEventId(), event.getOriginalId(),
                 eventType);
     }
     private String getEventSuffix(ReadonlyEventInterface event) {

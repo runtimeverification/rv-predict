@@ -123,6 +123,10 @@ public class SignalMaskForEvents extends ComputingProducer<SignalMaskForEvents.S
         return lastMask.get();
     }
 
+    public SignalMask getSignalMaskAfterEvent(int interruptedTtid, long eventId) {
+        return getSignalMaskBeforeEvent(interruptedTtid, eventId + 1);
+    }
+
     public Map<Integer, SignalMask> extractTtidToLastEventMap() {
         return getState().ttidToMaskAfterEvent.entrySet().stream().collect(Collectors.toMap(
                 Map.Entry::getKey,
@@ -152,7 +156,7 @@ public class SignalMaskForEvents extends ComputingProducer<SignalMaskForEvents.S
                     .map(SignalMask::enabledToUnknown)
                     .orElse(SignalMask.UNKNOWN_MASK);
         }
-        return getSignalMaskBeforeEvent(interruptedTtid, interruptedEventId.getAsLong()).enabledToUnknown();
+        return getSignalMaskAfterEvent(interruptedTtid, interruptedEventId.getAsLong()).enabledToUnknown();
     }
 
     private Optional<SignalMask> getStartEventMask(int ttid) {

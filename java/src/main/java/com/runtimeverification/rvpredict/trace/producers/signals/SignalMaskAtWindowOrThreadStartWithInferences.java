@@ -69,9 +69,6 @@ public class SignalMaskAtWindowOrThreadStartWithInferences
                         : mask.disable(signalNumber, originalEventId);
                 continue;
             }
-            if (maskBit != (enable ? SignalMask.SignalMaskBit.ENABLED : SignalMask.SignalMaskBit.DISABLED)) {
-                System.out.println("hello");
-            }
             assert maskBit == (enable ? SignalMask.SignalMaskBit.ENABLED : SignalMask.SignalMaskBit.DISABLED)
                     : SignalMismatchError.errorMessage(
                             originalEventId, mask.getOriginalEventIdForChange(signalNumber), signalNumber);

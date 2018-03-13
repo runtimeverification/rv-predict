@@ -321,9 +321,6 @@ public class TraceCache {
     private int windowCount = 0;
     public Trace getTraceWindow() throws IOException {
         windowCount++;
-        if (windowCount == 9) {
-            System.out.println();
-        }
         config.logger().report("-- Window " + windowCount + " --",
             Logger.MSGTYPE.PROGRESS);
         crntState.preStartWindow();

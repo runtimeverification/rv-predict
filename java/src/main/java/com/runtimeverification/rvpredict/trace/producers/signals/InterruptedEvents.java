@@ -104,7 +104,7 @@ public class InterruptedEvents extends ComputingProducer<InterruptedEvents.State
                         return;
                     }
                     int interruptedTtid = maybeInterruptedThread.get();
-                    getState().ttidToInterruptedTtid.put(threadInfo.getId(), interruptedTtid);
+                    getState().ttidToInterruptedTtid.put(ttid, interruptedTtid);
                     Optional<RawTrace> maybeInterruptedTrace = rawTracesByTtid.getRawTrace(interruptedTtid);
                     Optional<ReadonlyEventInterface> maybeInterruptedEvent =
                             findInterruptedEvent(firstSignalEvent, maybeInterruptedTrace);
@@ -126,7 +126,7 @@ public class InterruptedEvents extends ComputingProducer<InterruptedEvents.State
                         ttidToNextMinEventId.put(interruptedTtid, eventId);
                     } else {
                         ReadonlyEventInterface interruptedEvent = maybeInterruptedEvent.get();
-                        getState().ttidToInterruptedEventId.put(threadInfo.getId(), interruptedEvent.getEventId());
+                        getState().ttidToInterruptedEventId.put(ttid, interruptedEvent.getEventId());
                         long nextInterruptedEventId = interruptedEvent.getEventId() + 1;
                         ttidToNextMinEventId.compute(
                                 interruptedTtid,

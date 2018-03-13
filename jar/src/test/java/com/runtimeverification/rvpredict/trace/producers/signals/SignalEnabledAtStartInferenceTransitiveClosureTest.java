@@ -2,7 +2,6 @@ package com.runtimeverification.rvpredict.trace.producers.signals;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -213,7 +212,10 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         ImmutableMap.of(TTID_1, EVENT_ID_1, TTID_2, EVENT_ID_2, TTID_3, EVENT_ID_3)));
         SignalMaskForEventsUtils.fillMockSignalMaskForEvents(
                 mockSignalMaskForEvents,
-                Collections.emptyMap(),
+                ImmutableMap.of(
+                        TTID_1, SignalMask.UNKNOWN_MASK,
+                        TTID_2, SignalMask.UNKNOWN_MASK,
+                        TTID_3, SignalMask.UNKNOWN_MASK),
                 ImmutableMap.of(
                         TTID_1, ImmutableMap.of(EVENT_ID_1, SignalMask.UNKNOWN_MASK),
                         TTID_2, ImmutableMap.of(EVENT_ID_2, SignalMask.UNKNOWN_MASK),
@@ -282,7 +284,10 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
                         ImmutableMap.of(TTID_1, EVENT_ID_1, TTID_2, EVENT_ID_2, TTID_3, EVENT_ID_3)));
         SignalMaskForEventsUtils.fillMockSignalMaskForEvents(
                 mockSignalMaskForEvents,
-                Collections.emptyMap(),
+                ImmutableMap.of(
+                        TTID_1, SignalMask.UNKNOWN_MASK.disable(SIGNAL_NUMBER_1, Constants.INVALID_EVENT_ID),
+                        TTID_2, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_2, Constants.INVALID_EVENT_ID),
+                        TTID_3, SignalMask.UNKNOWN_MASK.enable(SIGNAL_NUMBER_3, Constants.INVALID_EVENT_ID)),
                 ImmutableMap.of(
                         TTID_1,
                         ImmutableMap.of(
@@ -415,7 +420,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         InterruptedEventsUtils.clearMockInterruptedEvents(mockInterruptedEvents);
         SignalMaskForEventsUtils.fillMockSignalMaskForEvents(
                 mockSignalMaskForEvents,
-                Collections.emptyMap(),
+                ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK),
                 ImmutableMap.of(TTID_1, ImmutableMap.of(start4.getEventId(), SignalMask.UNKNOWN_MASK)));
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,
@@ -478,7 +483,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosureTest {
         InterruptedEventsUtils.clearMockInterruptedEvents(mockInterruptedEvents);
         SignalMaskForEventsUtils.fillMockSignalMaskForEvents(
                 mockSignalMaskForEvents,
-                Collections.emptyMap(),
+                ImmutableMap.of(TTID_1, SignalMask.UNKNOWN_MASK),
                 ImmutableMap.of(TTID_1, ImmutableMap.of(start4.getEventId(), SignalMask.UNKNOWN_MASK)));
         SignalMasksAtWindowStartUtils.fillMockSignalMasksAtWindowStart(
                 mockSignalMaskAtWindowStart,

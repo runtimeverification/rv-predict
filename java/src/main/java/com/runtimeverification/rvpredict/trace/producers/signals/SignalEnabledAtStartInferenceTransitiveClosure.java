@@ -118,7 +118,7 @@ public class SignalEnabledAtStartInferenceTransitiveClosure
                 }
                 SignalMask signalMask;
                 if (maybeInterruptedEventId.isPresent()) {
-                    signalMask = signalMaskForEvents.getSignalMaskBeforeEvent(
+                    signalMask = signalMaskForEvents.getSignalMaskAfterEvent(
                             parentTtid, maybeInterruptedEventId.getAsLong());
                 } else {
                     signalMask = signalMaskAtWindowStart.getMask(parentTtid).orElse(SignalMask.UNKNOWN_MASK);

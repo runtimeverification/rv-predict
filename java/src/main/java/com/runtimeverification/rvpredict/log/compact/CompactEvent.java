@@ -170,7 +170,7 @@ public abstract class CompactEvent extends ReadonlyEvent {
     @Override
     public String toString() {
         return String.format(
-                "%s(ID:%s Loc:%s Otid:%s SD:%s)",
-                type, eventId, locationId, originalThreadId, signalDepth);
+                "%s(ID:%s OID:%s Loc:%s Otid:%s SD:%s)",
+                type, eventId, originalEventId, locationId, originalThreadId, signalDepth);
     }
 }

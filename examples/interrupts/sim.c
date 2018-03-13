@@ -12,7 +12,7 @@
 
 static int racy, racefree;
 
-static void __rv_interrupt_handler(irq0, 0) __attribute__((__used__))
+static void __rv_interrupt_handler(irq0, 0)
 handler0(void)
 {
 	const char msg[] = "interrupt 0\n";
@@ -25,7 +25,7 @@ handler0(void)
 	__rvpredict_splx(s);
 }
 
-static void __rv_interrupt_handler(irq1, 1) __attribute__((__used__))
+static void __rv_interrupt_handler(irq1, 1)
 handler1(void)
 {
 	const char msg[] = "interrupt 1\n";
@@ -42,6 +42,7 @@ int
 main(void)
 {
 	int s, t, u;
+
 	__rvpredict_intr_enable();
 	update(racy);
 	s = __rvpredict_splhigh();
@@ -66,4 +67,3 @@ main(void)
 	update(racy);
 	return EXIT_SUCCESS;
 }
-

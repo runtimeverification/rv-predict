@@ -1,6 +1,7 @@
 #include <err.h>
 #include <errno.h>
-#include <inttypes.h> /* for PRId32 */
+#include <inttypes.h>	/* for PRId32 */
+#include <limits.h>	/* for _POSIX_RTSIG_MAX */
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -15,32 +16,53 @@
 #include "intr_exports.h"
 #include "nbcompat.h"
 
-typedef void (*rvp_intr_handler_t)(void);
+static const rvp_intr_personality_t *rvp_intr_personality = NULL;
 
-typedef struct _rvp_static_intr {
-	rvp_intr_handler_t		si_handler;
-	volatile _Atomic int32_t	si_prio;
-	volatile _Atomic int		si_signum;
-	volatile _Atomic int		si_nactive;
-	volatile _Atomic uint32_t	si_times;
-} rvp_static_intr_t;
+rvp_static_intr_t rvp_static_intr[128];
 
-static rvp_static_intr_t rvp_static_intr[128];
+int rvp_static_nintrs = 0;
+int rvp_static_nassigned = 0;
 
-static int rvp_static_nintrs = 0;
-static int nassigned = 0;
+bool rvp_static_intr_debug = false;
 
-static bool intr_debug = false;
+struct itimerspec
+rvp_static_intr_interval(void)
+{
+	long nsec = 1000 * 1000;	// 1 millisecond
+	const char *ivalenv = getenv("RVP_INTR_INTERVAL");
+	if (ivalenv != NULL) {
+		char *end;
+		errno = 0;
+		nsec = strtol(ivalenv, &end, 10);
+		if (errno != 0) {
+			err(EXIT_FAILURE,
+			    "could not interpret "
+			    "RVP_INTR_INTERVAL (%s) "
+			    "as a decimal number", ivalenv);
+		} else if (*end != '\0') {
+			errx(EXIT_FAILURE,
+			    "garbage at end of RVP_INTR_INTERVAL (%s)",
+			    ivalenv);
+		}
+	}
+	return (struct itimerspec){
+		  .it_value = {
+			  .tv_sec = 0
+			, .tv_nsec = nsec
+		  }
+		, .it_interval = {
+			  .tv_sec = 0
+			, .tv_nsec = nsec
+		  }
+	};
+}
 
-static sigset_t intr_mask;
-static sigset_t mask0;
-
-static void
+void
 __rvpredict_static_intr_handler(int signum)
 {
 	int i;
 
-	for (i = 0; i < nassigned; i++) {
+	for (i = 0; i < rvp_static_nassigned; i++) {
 		rvp_static_intr_t *si = &rvp_static_intr[i];
 		if (si->si_signum == signum) {
 			if (si->si_nactive == 0) {
@@ -53,7 +75,7 @@ __rvpredict_static_intr_handler(int signum)
 	}
 }
 
-static void
+void
 rvp_static_intr_fire_all(void)
 {
 	int i;
@@ -63,7 +85,7 @@ rvp_static_intr_fire_all(void)
 	 * Trigger all interrupts (there may be none) at that priority
 	 * and higher.
 	 */
-	for (i = 0; i < nassigned; i++) {
+	for (i = 0; i < rvp_static_nassigned; i++) {
 		rvp_static_intr_t *si = &rvp_static_intr[i];
 
 		if (prio > si->si_prio)
@@ -72,7 +94,7 @@ rvp_static_intr_fire_all(void)
 			prio = si->si_prio + 1;
 	}
 
-	for (i = 0; i < nassigned; i++) {
+	for (i = 0; i < rvp_static_nassigned; i++) {
 		rvp_static_intr_t *si = &rvp_static_intr[i];
 
 		if (prio > si->si_prio)
@@ -94,7 +116,7 @@ __rvpredict_isr_fire(void (*isr)(void))
 	if (sigemptyset(&nonintr_mask) == -1)
 		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
 
-	for (i = 0; i < nassigned; i++) {
+	for (i = 0; i < rvp_static_nassigned; i++) {
 		rvp_static_intr_t *si = &rvp_static_intr[i];
 		if (si->si_handler != isr)
 			continue;
@@ -114,226 +136,77 @@ __rvpredict_isr_fire(void (*isr)(void))
 void
 rvp_static_intrs_reinit(void)
 {
-	int i, rc;
-	sigset_t omask;
-
-	if (rvp_static_nintrs > _POSIX_RTSIG_MAX)
-		errx(EXIT_FAILURE, "too many interrupt priorities");
-
-	if (nassigned == rvp_static_nintrs)
-		return;
-
-	long nsec = 1000 * 1000;	// 1 millisecond
-	const char *ivalenv = getenv("RVP_INTR_INTERVAL");
-	if (ivalenv != NULL) {
-		char *end;
-		errno = 0;
-		nsec = strtol(ivalenv, &end, 10);
-		if (errno != 0) {
-			err(EXIT_FAILURE,
-			    "could not interpret "
-			    "RVP_INTR_INTERVAL (%s) "
-			    "as a decimal number", ivalenv);
-		} else if (*end != '\0') {
-			errx(EXIT_FAILURE,
-			    "garbage at end of RVP_INTR_INTERVAL (%s)",
-			    ivalenv);
-		}
-	}
-	const struct itimerspec it = {
-		  .it_value = {
-			  .tv_sec = 0
-			, .tv_nsec = nsec
-		  }
-		, .it_interval = {
-			  .tv_sec = 0
-			, .tv_nsec = nsec
-		  }
-	};
-
-	/* extend the mask */
-	for (i = nassigned; i < rvp_static_nintrs; i++) {
-		int signum = SIGRTMIN + i;
-		if (intr_debug) {
-			fprintf(stderr, "DI masks %d\n", signum);
-		}
-		if (sigaddset(&intr_mask, signum) != 0)
-			errx(EXIT_FAILURE, "%s: sigaddset", __func__);
-	}
-	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, &omask)) != 0) {
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
-	for (i = nassigned; i < rvp_static_nintrs; i++) {
-		int signum = SIGRTMIN + i;
-		if (sigismember(&omask, signum) == 1) {
-			errx(EXIT_FAILURE,
-			    "%s: did not expect signal %d to be masked",
-			    __func__, signum);
-		}
-	}
-	/* update the mask on the previously established signals */
-	for (i = 0; i < nassigned; i++) {
-		struct sigaction sa;
-		int signum = SIGRTMIN + i;
-		memset(&sa, 0, sizeof(sa));
-
-		sa.sa_mask = intr_mask;
-
-		sa.sa_handler = __rvpredict_static_intr_handler;
-		if (sigaction(signum, &sa, NULL) == -1)
-			err(EXIT_FAILURE, "%s: sigaction", __func__);
-	}
-	/* establish new signals */
-	for (i = nassigned; i < rvp_static_nintrs; i++) {
-		timer_t timerid;
-		struct sigaction sa;
-		int signum = SIGRTMIN + i;
-		rvp_static_intr[i].si_signum = signum;
-
-		memset(&sa, 0, sizeof(sa));
-
-		sa.sa_mask = intr_mask;
-
-		sa.sa_handler = __rvpredict_static_intr_handler;
-		if (sigaction(signum, &sa, NULL) == -1)
-			err(EXIT_FAILURE, "%s: sigaction", __func__);
-
-		struct sigevent sigev = {
-			  .sigev_notify = SIGEV_SIGNAL
-			, .sigev_signo = signum
-		};
-
-		if (timer_create(CLOCK_MONOTONIC, &sigev, &timerid) == -1)
-			err(EXIT_FAILURE, "%s: timer_create", __func__);
-		timer_settime(timerid, 0, &it, NULL);
-	}
-	nassigned = rvp_static_nintrs;
+	(*rvp_intr_personality->ip_reinit)();
 }
 
 void
 rvp_static_intrs_init(void)
 {
 	const char *debugenv = getenv("RVP_INTR_DEBUG");
+	const char *personality = getenv("RVP_INTR_PERSONALITY");
 
-	intr_debug = debugenv != NULL && strcmp(debugenv, "yes") == 0;
+	rvp_static_intr_debug = debugenv != NULL && strcmp(debugenv, "yes") == 0;
 
-	if (intr_debug) {
+	if (rvp_static_intr_debug) {
 		fprintf(stderr, "%d signal handlers found\n",
 		    rvp_static_nintrs);
 	}
 
-	if (sigemptyset(&mask0) != 0)
-		errx(EXIT_FAILURE, "%s: sigemptyset", __func__);
-	if (sigemptyset(&intr_mask) != 0)
-		errx(EXIT_FAILURE, "%s: sigemptyset", __func__);
+	if (personality != NULL && strcasecmp(personality, "78k0") == 0) {
+		rvp_intr_personality = &renesas_78k0_intr_personality;
+	} else {
+		rvp_intr_personality = &basic_intr_personality;
+	}
+
+	if (rvp_static_intr_debug) {
+		warnx("Established %s interrupt personality.",
+		    rvp_intr_personality->ip_name);
+	}
+
+	(*rvp_intr_personality->ip_init)();
 }
 
 void
 __rvpredict_intr_disable(void)
 {
-	int rc;
-
-	/* To guarantee that every interrupt is observed at least once
-	 * in each interrupts-enabled interval, add a request to fire
-	 * all interrupts before disabling them.
-	 */
-	rvp_static_intr_fire_all();
-	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask, NULL)) != 0) {
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
+	(*rvp_intr_personality->ip_disable)();
 }
-
-enum {
-	  RVP_IPL_0 = 0
-	, RVP_IPL_HIGH
-};
-
-static volatile _Atomic int rvp_ipl = RVP_IPL_HIGH;
 
 /* XXX This isn't suitable for multithreaded systems. */
 int
 __rvpredict_splhigh(void)
 {
-	int rc;
-	int old_ipl;
-	rvp_ring_t *r = rvp_ring_for_curthr();
+	int (*m)(void);
 
-	if (rvp_ipl == RVP_IPL_HIGH)
-		return rvp_ipl;
+	if ((m = rvp_intr_personality->ip_splhigh) == NULL)
+		errx(EXIT_FAILURE, "No splhigh in %s interrupt personality.",
+		    rvp_intr_personality->ip_name);
 
-	/* To guarantee that every interrupt is observed at least once
-	 * in each interrupts-enabled interval, add a request to fire
-	 * all interrupts before disabling them.
-	 */
-	rvp_static_intr_fire_all();
-	if ((rc = pthread_sigmask(SIG_BLOCK, &intr_mask,
-	                          &r->r_intr_hack.ih_mask)) != 0) {
-		// XXX signal safety
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
-	old_ipl = rvp_ipl;
-	rvp_ipl = RVP_IPL_HIGH;
-	return old_ipl;
+	return (*m)();
 }
 
 void
 __rvpredict_splx(int level)
 {
-	int rc;
-	rvp_ring_t *r = rvp_ring_for_curthr();
+	void (*m)(int);
 
-	switch (level) {
-	case RVP_IPL_HIGH:
-		return;
-	case RVP_IPL_0:
-		break;
-	default:
-		// XXX signal safety
-		errx(EXIT_FAILURE, "%s: unknown level %d", __func__, level);
-	}
+	if ((m = rvp_intr_personality->ip_splx) == NULL)
+		errx(EXIT_FAILURE, "No splhigh in %s interrupt personality.",
+		    rvp_intr_personality->ip_name);
 
-	rvp_ipl = level;
-
-	if ((rc = pthread_sigmask(SIG_SETMASK,
-	                          &r->r_intr_hack.ih_mask, NULL)) != 0) {
-		// XXX signal safety
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
-
-	/* To guarantee that every interrupt is observed at least once
-	 * in each interrupts-enabled interval, add a request to fire
-	 * all interrupts each time they are enabled.
-	 */
-	rvp_static_intr_fire_all();
+	(*m)(level);
 }
 
 void
 __rvpredict_intr_enable(void)
 {
-	int rc;
-
-	rvp_ipl = RVP_IPL_0;
-
-	if ((rc = pthread_sigmask(SIG_UNBLOCK, &intr_mask, NULL)) != 0) {
-		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
-		    strerror(rc));
-	}
-
-	/* To guarantee that every interrupt is observed at least once
-	 * in each interrupts-enabled interval, add a request to fire
-	 * all interrupts each time they are enabled.
-	 */
-	rvp_static_intr_fire_all();
+	(*rvp_intr_personality->ip_enable)();
 }
 
 void
 __rvpredict_intr_register(void (*handler)(void), int32_t prio)
 {
-	if (intr_debug) {
+	if (rvp_static_intr_debug) {
 		fprintf(stderr, "%s: handler %p prio %" PRId32 "\n",
 		    __func__, (const void *)handler, prio);
 	}

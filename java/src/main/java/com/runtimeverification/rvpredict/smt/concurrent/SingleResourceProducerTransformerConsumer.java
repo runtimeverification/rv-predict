@@ -1,6 +1,6 @@
 package com.runtimeverification.rvpredict.smt.concurrent;
 
-import com.runtimeverification.rvpredict.runtime.java.util.concurrent.Semaphore;
+import java.util.concurrent.Semaphore;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.util.ArrayList;

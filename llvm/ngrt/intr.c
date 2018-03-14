@@ -9,6 +9,7 @@
 #include <string.h>
 #include <time.h>	/* for timer_create(2) */
 
+#include "func.h"
 #include "init.h"
 #include "intr.h"	/* for prototypes */
 #include "ring.h"	/* for rvp_ring_t */
@@ -109,6 +110,8 @@ rvp_static_intr_fire_all(void)
 void
 __rvpredict_isr_fire(void (*isr)(void))
 {
+	const void *retaddr = __rvpredict_func_entry(
+	    __builtin_dwarf_cfa(), __builtin_return_address(0));
 	int i;
 	bool fired = false;
 	sigset_t nonintr_mask;
@@ -131,6 +134,7 @@ __rvpredict_isr_fire(void (*isr)(void))
 	}
 	if (!fired)
 		abort();
+	__rvpredict_func_exit(retaddr);
 }
 
 void
@@ -169,7 +173,10 @@ rvp_static_intrs_init(void)
 void
 __rvpredict_intr_disable(void)
 {
+	const void *retaddr = __rvpredict_func_entry(
+	    __builtin_dwarf_cfa(), __builtin_return_address(0));
 	(*rvp_intr_personality->ip_disable)();
+	__rvpredict_func_exit(retaddr);
 }
 
 /* XXX This isn't suitable for multithreaded systems. */
@@ -178,29 +185,39 @@ __rvpredict_splhigh(void)
 {
 	int (*m)(void);
 
+	const void *retaddr = __rvpredict_func_entry(
+	    __builtin_dwarf_cfa(), __builtin_return_address(0));
 	if ((m = rvp_intr_personality->ip_splhigh) == NULL)
 		errx(EXIT_FAILURE, "No splhigh in %s interrupt personality.",
 		    rvp_intr_personality->ip_name);
 
-	return (*m)();
+	const int retval = (*m)();
+	__rvpredict_func_exit(retaddr);
+	return retval;
 }
 
 void
 __rvpredict_splx(int level)
 {
 	void (*m)(int);
+	const void *retaddr = __rvpredict_func_entry(
+	    __builtin_dwarf_cfa(), __builtin_return_address(0));
 
 	if ((m = rvp_intr_personality->ip_splx) == NULL)
 		errx(EXIT_FAILURE, "No splhigh in %s interrupt personality.",
 		    rvp_intr_personality->ip_name);
 
 	(*m)(level);
+	__rvpredict_func_exit(retaddr);
 }
 
 void
 __rvpredict_intr_enable(void)
 {
+	const void *retaddr = __rvpredict_func_entry(
+	    __builtin_dwarf_cfa(), __builtin_return_address(0));
 	(*rvp_intr_personality->ip_enable)();
+	__rvpredict_func_exit(retaddr);
 }
 
 void

@@ -13,12 +13,16 @@ FILES+=$(SRCS.1)
 FILES+=$(SRCS.2)
 FILES+=$(SRCS.3)
 FILES+=$(SRCS.78k0)
+FILES+=$(SRCS.lolo)
+FILES+=$(SRCS.hilo)
 FILES+=$(SRCS.sim)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
 PROGS=	1 2 3
 PROGS+=	78k0
+PROGS+=	lolo
+PROGS+=	hilo
 PROGS+=	sim
 .endif
 
@@ -34,6 +38,8 @@ SRCS.1=1.c lib.c
 SRCS.2=2.c lib.c
 SRCS.3=3.c lib.c
 SRCS.78k0=78k0.c
+SRCS.lolo=lolo.c
+SRCS.hilo=hilo.c
 SRCS.sim=sim.c
 
 .include "../rvp.mk"

@@ -10,7 +10,7 @@
 #define	EI()	__rvpredict_intr_enable()
 
 #define update(__lvalue) do {	\
-	(__lvalue) += 1;	\
+	(__lvalue) ^= 1;	\
 } while (/*CONSTCOND*/false)
 
 static int racy, racefree;

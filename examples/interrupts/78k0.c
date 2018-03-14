@@ -58,5 +58,6 @@ main(void)
 	update(racefree);
 	EI();
 	update(racy);
+	DI();
 	return EXIT_SUCCESS;
 }

@@ -43,7 +43,12 @@ public class Main {
             if (config.isPerformanceProfiling()) {
                 Profiler.enableProfiler();
             }
-            new RVPredict(config).start();
+            try (RVPredict rvPredict = new RVPredict(config)) {
+                rvPredict.start();
+            } catch (Exception e) {
+                e.printStackTrace();
+                System.exit(1);
+            }
         }
         if (config.isPerformanceProfiling()) {
             config.logger().report(Profiler.instance().toString(), Logger.MSGTYPE.INFO);

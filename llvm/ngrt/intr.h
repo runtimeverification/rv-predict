@@ -13,6 +13,7 @@ struct _rvp_intr_personality {
 	void (*ip_enable)(void);
 	int (*ip_splhigh)(void);
 	void (*ip_splx)(int);
+	void (*ip_fire_all)(void);
 	void (*ip_disable)(void);
 };
 

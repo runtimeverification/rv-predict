@@ -12,6 +12,7 @@ static void renesas_78k0_init(void);
 static void renesas_78k0_reinit(void);
 static void __rvpredict_renesas_78k0_enable(void);
 static void __rvpredict_renesas_78k0_disable(void);
+static void __rvpredict_renesas_78k0_fire_all(void);
 void __rvpredict_renesas_78k0_handler(int);
 
 /* 78k0 interrupt state */
@@ -35,6 +36,7 @@ const rvp_intr_personality_t renesas_78k0_intr_personality = {
 	, .ip_enable = __rvpredict_renesas_78k0_enable
 	, .ip_splhigh = NULL
 	, .ip_splx = NULL
+	, .ip_fire_all = __rvpredict_renesas_78k0_fire_all
 	, .ip_disable = __rvpredict_renesas_78k0_disable
 };
 
@@ -204,5 +206,32 @@ __rvpredict_renesas_78k0_disable(void)
 	if (pthread_sigmask(SIG_BLOCK, &maskall, NULL) == -1) {
 		// XXX signal safety
 		err(EXIT_FAILURE, "%s.%d: pthread_sigmask", __func__, __LINE__);
+	}
+}
+
+static void
+__rvpredict_renesas_78k0_fire_all(void)
+{
+	int i;
+
+	if (!state.enabled)
+		return;
+
+	for (i = 0; i < rvp_static_nassigned; i++) {
+		rvp_static_intr_t *si = &rvp_static_intr[i];
+
+		if (si->si_signum == -1)
+			continue;
+
+		if (state.hipri && si->si_prio == 0)
+			continue;
+
+		/* Limit recursion.  Maybe fire the interrupt with rapidly
+		 * diminishing probability as depth increases?
+		 */
+		if (si->si_nactive > 0)
+			continue;
+
+		raise(si->si_signum);
 	}
 }

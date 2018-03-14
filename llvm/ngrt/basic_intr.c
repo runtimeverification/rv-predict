@@ -18,6 +18,7 @@ static void basic_reinit(void);
 static void basic_enable(void);
 static int basic_splhigh(void);
 static void basic_splx(int);
+static void __rvpredict_basic_fire_all(void);
 static void basic_disable(void);
 
 const rvp_intr_personality_t basic_intr_personality = {
@@ -27,6 +28,7 @@ const rvp_intr_personality_t basic_intr_personality = {
 	, .ip_enable = basic_enable
 	, .ip_splhigh = basic_splhigh
 	, .ip_splx = basic_splx
+	, .ip_fire_all = __rvpredict_basic_fire_all
 	, .ip_disable = basic_disable
 };
 
@@ -209,4 +211,35 @@ basic_reinit(void)
 		timer_settime(timerid, 0, &it, NULL);
 	}
 	rvp_static_nassigned = rvp_static_nintrs;
+}
+
+static void
+__rvpredict_basic_fire_all(void)
+{
+	int i;
+	int prio = 0;
+
+	/* Find the lowest priority where no interrupt already runs.
+	 * Trigger all interrupts (there may be none) at that priority
+	 * and higher.
+	 */
+	for (i = 0; i < rvp_static_nassigned; i++) {
+		rvp_static_intr_t *si = &rvp_static_intr[i];
+
+		if (prio > si->si_prio)
+			continue;
+		if (si->si_nactive > 0)
+			prio = si->si_prio + 1;
+	}
+
+	for (i = 0; i < rvp_static_nassigned; i++) {
+		rvp_static_intr_t *si = &rvp_static_intr[i];
+
+		if (prio > si->si_prio)
+			continue;
+
+		if (si->si_signum == -1)
+			continue;
+		raise(si->si_signum);
+	}
 }

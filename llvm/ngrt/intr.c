@@ -79,32 +79,7 @@ __rvpredict_static_intr_handler(int signum)
 void
 rvp_static_intr_fire_all(void)
 {
-	int i;
-	int prio = 0;
-
-	/* Find the lowest priority where no interrupt already runs.
-	 * Trigger all interrupts (there may be none) at that priority
-	 * and higher.
-	 */
-	for (i = 0; i < rvp_static_nassigned; i++) {
-		rvp_static_intr_t *si = &rvp_static_intr[i];
-
-		if (prio > si->si_prio)
-			continue;
-		if (si->si_nactive > 0)
-			prio = si->si_prio + 1;
-	}
-
-	for (i = 0; i < rvp_static_nassigned; i++) {
-		rvp_static_intr_t *si = &rvp_static_intr[i];
-
-		if (prio > si->si_prio)
-			continue;
-
-		if (si->si_signum == -1)
-			continue;
-		raise(si->si_signum);
-	}
+	(*rvp_intr_personality->ip_fire_all)();
 }
 
 void

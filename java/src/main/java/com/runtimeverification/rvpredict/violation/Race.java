@@ -279,7 +279,7 @@ public class Race {
             t.thread_created_by = Long.toString(parentOTID);
             long locId = trace.metadata().getOriginalThreadCreationLocId(otid);
             if (locId >= 0) {
-                t.thread_created_at = generateFrameData(metadata, locId).orElse(null);
+                t.thread_created_at = generateFrameData(locId).orElse(null);
             }
         }
         return primaryComponent.frames.size() > 0;
@@ -323,6 +323,7 @@ public class Race {
             heldLocks = Collections.emptyList();
             interrupting = new RawStackTraceComponent();
             interrupting.description_fields = new ArrayList<>();
+            interrupting.frames = new ArrayList<>();
         }
         if (trace.getThreadType(ttid) == ThreadType.THREAD) {
             interrupting.description_format = "Interrupting thread " + trace.getOriginalThreadIdForTraceThreadId(ttid) + descriptionSuffix;
@@ -388,7 +389,6 @@ public class Race {
             List<ReadonlyEventInterface> heldLocks) {
         RawStackTraceComponent c = new RawStackTraceComponent();
         c.description_fields = new ArrayList<>();
-        long otid = e.getOriginalThreadId();
         List<ReadonlyEventInterface> stacktrace = new ArrayList<>(trace.getStacktraceAt(e));
         stacktrace.addAll(heldLocks);
         stacktrace.sort((e1, e2) -> -e1.compareTo(e2));
@@ -401,18 +401,15 @@ public class Race {
             if (elem.isLock()) {
                 Optional<RawLock> lock = generateLockData(metadata, elem, locId);
                 if (lock.isPresent()) {
+                    assert lastFrame != null;
                     lastFrame.locks.add(lock.get());
-                } else {
-                    continue;
-                } 
-            } else {
-                Optional<RawFrame> frame = generateFrameData(metadata, locId);
-                if (frame.isPresent()) {
-                    lastFrame = frame.get();
-                    c.frames.add(lastFrame);
-                } else {
-                    continue;
                 }
+                continue;
+            }
+            Optional<RawFrame> frame = generateFrameData(locId);
+            if (frame.isPresent()) {
+                lastFrame = frame.get();
+                c.frames.add(lastFrame);
             }
         }
         return c;
@@ -485,8 +482,7 @@ public class Race {
         return locId.getAsLong();
     }
 
-    private Optional<RawFrame> generateFrameData(
-            MetadataInterface metadata, long locId) {
+    private Optional<RawFrame> generateFrameData(long locId) {
         RawFrame f = new RawFrame();
         f.locks = new ArrayList<>();
         String locSig = locId >= 0 ? trace.metadata().getLocationSig(locId)

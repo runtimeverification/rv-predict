@@ -13,24 +13,25 @@ enum {
 	, RVP_IPL_HIGH
 };
 
-static void basic_init(void);
-static void basic_reinit(void);
-static void basic_enable(void);
-static int basic_splhigh(void);
-static void basic_splx(int);
-static void __rvpredict_basic_fire_all(void);
-static void basic_disable(void);
+static void basic_init(void) __used;
+static void basic_reinit(void) __used;
+static void __rvpredict_basic_enable(void) __used;
+static int __rvpredict_basic_splhigh(void) __used;
+static void __rvpredict_basic_splx(int) __used;
+static void __rvpredict_basic_fire_all(void) __used;
+static void __rvpredict_basic_disable(void) __used;
 
-const rvp_intr_personality_t basic_intr_personality = {
-	  .ip_name = "basic"
-	, .ip_init = basic_init
-	, .ip_reinit = basic_reinit
-	, .ip_enable = basic_enable
-	, .ip_splhigh = basic_splhigh
-	, .ip_splx = basic_splx
-	, .ip_fire_all = __rvpredict_basic_fire_all
-	, .ip_disable = basic_disable
-};
+const char __rvpredict_intr_personality_name[] = "basic";
+
+__strong_alias(__rvpredict_intr_personality_init, basic_init)
+__strong_alias(__rvpredict_intr_personality_reinit, basic_reinit)
+__strong_alias(__rvpredict_intr_personality_enable, __rvpredict_basic_enable)
+__strong_alias(__rvpredict_intr_personality_splhigh,
+    __rvpredict_basic_splhigh)
+__strong_alias(__rvpredict_intr_personality_splx, __rvpredict_basic_splx)
+__strong_alias(__rvpredict_intr_personality_fire_all,
+    __rvpredict_basic_fire_all)
+__strong_alias(__rvpredict_intr_personality_disable, __rvpredict_basic_disable)
 
 static sigset_t intr_mask;
 static sigset_t mask0;
@@ -47,7 +48,7 @@ basic_init(void)
 }
 
 static void
-basic_disable(void)
+__rvpredict_basic_disable(void)
 {
 	int rc;
 
@@ -63,7 +64,7 @@ basic_disable(void)
 }
 
 static void
-basic_enable(void)
+__rvpredict_basic_enable(void)
 {
 	int rc;
 
@@ -82,7 +83,7 @@ basic_enable(void)
 }
 
 static int
-basic_splhigh(void)
+__rvpredict_basic_splhigh(void)
 {
 	int rc;
 	int old_ipl;
@@ -108,7 +109,7 @@ basic_splhigh(void)
 }
 
 static void
-basic_splx(int level)
+__rvpredict_basic_splx(int level)
 {
 	int rc;
 	rvp_ring_t *r = rvp_ring_for_curthr();
@@ -137,6 +138,24 @@ basic_splx(int level)
 	 * all interrupts each time they are enabled.
 	 */
 	rvp_static_intr_fire_all();
+}
+
+static void
+__rvpredict_basic_handler(int signum)
+{
+	int i;
+
+	for (i = 0; i < rvp_static_nassigned; i++) {
+		rvp_static_intr_t *si = &rvp_static_intr[i];
+		if (si->si_signum == signum) {
+			if (si->si_nactive == 0) {
+				++si->si_nactive;
+				(*si->si_handler)();
+				--si->si_nactive;
+			}
+			si->si_times++;
+		}
+	}
 }
 
 static void
@@ -182,7 +201,7 @@ basic_reinit(void)
 
 		sa.sa_mask = intr_mask;
 
-		sa.sa_handler = __rvpredict_static_intr_handler;
+		sa.sa_handler = __rvpredict_basic_handler;
 		if (sigaction(signum, &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
 	}
@@ -197,7 +216,7 @@ basic_reinit(void)
 
 		sa.sa_mask = intr_mask;
 
-		sa.sa_handler = __rvpredict_static_intr_handler;
+		sa.sa_handler = __rvpredict_basic_handler;
 		if (sigaction(signum, &sa, NULL) == -1)
 			err(EXIT_FAILURE, "%s: sigaction", __func__);
 

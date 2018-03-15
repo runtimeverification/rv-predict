@@ -17,7 +17,17 @@
 #include "intr_exports.h"
 #include "nbcompat.h"
 
-static const rvp_intr_personality_t *rvp_intr_personality = NULL;
+static int default_splhigh(void) __used;
+static void default_splx(int) __used;
+static void notimpl(void) __used;
+
+__weak_alias(__rvpredict_intr_personality_splhigh, default_splhigh)
+__weak_alias(__rvpredict_intr_personality_splx, default_splx)
+__weak_alias(__rvpredict_intr_personality_enable, notimpl)
+__weak_alias(__rvpredict_intr_personality_disable, notimpl)
+__weak_alias(__rvpredict_intr_personality_init, notimpl)
+__weak_alias(__rvpredict_intr_personality_reinit, notimpl)
+__weak_alias(__rvpredict_intr_personality_fire_all, notimpl)
 
 rvp_static_intr_t rvp_static_intr[128];
 
@@ -59,27 +69,34 @@ rvp_static_intr_interval(void)
 }
 
 void
-__rvpredict_static_intr_handler(int signum)
-{
-	int i;
-
-	for (i = 0; i < rvp_static_nassigned; i++) {
-		rvp_static_intr_t *si = &rvp_static_intr[i];
-		if (si->si_signum == signum) {
-			if (si->si_nactive == 0) {
-				++si->si_nactive;
-				(*si->si_handler)();
-				--si->si_nactive;
-			}
-			si->si_times++;
-		}
-	}
-}
-
-void
 rvp_static_intr_fire_all(void)
 {
-	(*rvp_intr_personality->ip_fire_all)();
+	__rvpredict_intr_personality_fire_all();
+}
+
+static int
+default_splhigh(void)
+{
+	warnx("Interrupt personality %s has no splhigh implementation.",
+	    __rvpredict_intr_personality_name);
+	abort();
+}
+
+static void
+default_splx(int level)
+{
+	warnx("Interrupt personality %s has no splx implementation.",
+	    __rvpredict_intr_personality_name);
+	abort();
+}
+
+static void
+notimpl(void)
+{
+	warnx("An interrupt-simulation routine was called for "
+	    "which Interrupt personality %s has no implementation.",
+	    __rvpredict_intr_personality_name);
+	abort();
 }
 
 void
@@ -115,34 +132,28 @@ __rvpredict_isr_fire(void (*isr)(void))
 void
 rvp_static_intrs_reinit(void)
 {
-	(*rvp_intr_personality->ip_reinit)();
+	__rvpredict_intr_personality_reinit();
 }
 
 void
 rvp_static_intrs_init(void)
 {
 	const char *debugenv = getenv("RVP_INTR_DEBUG");
-	const char *personality = getenv("RVP_INTR_PERSONALITY");
 
-	rvp_static_intr_debug = debugenv != NULL && strcmp(debugenv, "yes") == 0;
+	rvp_static_intr_debug = debugenv != NULL &&
+	    strcmp(debugenv, "yes") == 0;
 
 	if (rvp_static_intr_debug) {
 		fprintf(stderr, "%d signal handlers found\n",
 		    rvp_static_nintrs);
 	}
 
-	if (personality != NULL && strcasecmp(personality, "78k0") == 0) {
-		rvp_intr_personality = &renesas_78k0_intr_personality;
-	} else {
-		rvp_intr_personality = &basic_intr_personality;
-	}
-
 	if (rvp_static_intr_debug) {
 		warnx("Established %s interrupt personality.",
-		    rvp_intr_personality->ip_name);
+		    __rvpredict_intr_personality_name);
 	}
 
-	(*rvp_intr_personality->ip_init)();
+	__rvpredict_intr_personality_init();
 }
 
 void
@@ -150,7 +161,7 @@ __rvpredict_intr_disable(void)
 {
 	const void *retaddr = __rvpredict_func_entry(
 	    __builtin_dwarf_cfa(), __builtin_return_address(0));
-	(*rvp_intr_personality->ip_disable)();
+	__rvpredict_intr_personality_disable();
 	__rvpredict_func_exit(retaddr);
 }
 
@@ -158,15 +169,10 @@ __rvpredict_intr_disable(void)
 int
 __rvpredict_splhigh(void)
 {
-	int (*m)(void);
-
 	const void *retaddr = __rvpredict_func_entry(
 	    __builtin_dwarf_cfa(), __builtin_return_address(0));
-	if ((m = rvp_intr_personality->ip_splhigh) == NULL)
-		errx(EXIT_FAILURE, "No splhigh in %s interrupt personality.",
-		    rvp_intr_personality->ip_name);
 
-	const int retval = (*m)();
+	const int retval = __rvpredict_intr_personality_splhigh();
 	__rvpredict_func_exit(retaddr);
 	return retval;
 }
@@ -174,15 +180,10 @@ __rvpredict_splhigh(void)
 void
 __rvpredict_splx(int level)
 {
-	void (*m)(int);
 	const void *retaddr = __rvpredict_func_entry(
 	    __builtin_dwarf_cfa(), __builtin_return_address(0));
 
-	if ((m = rvp_intr_personality->ip_splx) == NULL)
-		errx(EXIT_FAILURE, "No splhigh in %s interrupt personality.",
-		    rvp_intr_personality->ip_name);
-
-	(*m)(level);
+	__rvpredict_intr_personality_splx(level);
 	__rvpredict_func_exit(retaddr);
 }
 
@@ -191,7 +192,7 @@ __rvpredict_intr_enable(void)
 {
 	const void *retaddr = __rvpredict_func_entry(
 	    __builtin_dwarf_cfa(), __builtin_return_address(0));
-	(*rvp_intr_personality->ip_enable)();
+	__rvpredict_intr_personality_enable();
 	__rvpredict_func_exit(retaddr);
 }
 

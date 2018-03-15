@@ -7,13 +7,25 @@
 #include <time.h>	/* for `struct itimerspec` */
 
 #include "intr.h"
+#include "nbcompat.h"
 
-static void renesas_78k0_init(void);
-static void renesas_78k0_reinit(void);
-static void __rvpredict_renesas_78k0_enable(void);
-static void __rvpredict_renesas_78k0_disable(void);
-static void __rvpredict_renesas_78k0_fire_all(void);
-void __rvpredict_renesas_78k0_handler(int);
+static void renesas_78k0_init(void) __used;
+static void renesas_78k0_reinit(void) __used;
+static void __rvpredict_renesas_78k0_enable(void) __used;
+static void __rvpredict_renesas_78k0_disable(void) __used;
+static void __rvpredict_renesas_78k0_fire_all(void) __used;
+static void __rvpredict_renesas_78k0_handler(int);
+
+const char __rvpredict_intr_personality_name[] = "78k0";
+
+__strong_alias(__rvpredict_intr_personality_init, renesas_78k0_init)
+__strong_alias(__rvpredict_intr_personality_reinit, renesas_78k0_reinit)
+__strong_alias(__rvpredict_intr_personality_enable,
+    __rvpredict_renesas_78k0_enable)
+__strong_alias(__rvpredict_intr_personality_fire_all,
+    __rvpredict_renesas_78k0_fire_all)
+__strong_alias(__rvpredict_intr_personality_disable,
+    __rvpredict_renesas_78k0_disable)
 
 /* 78k0 interrupt state */
 struct _renesas_78k0_state {
@@ -28,17 +40,6 @@ struct _renesas_78k0_state {
 typedef struct _renesas_78k0_state renesas_78k0_state_t;
 
 static renesas_78k0_state_t state = {.enabled = false, .hipri = false};
-
-const rvp_intr_personality_t renesas_78k0_intr_personality = {
-	  .ip_name = "78k0"
-	, .ip_init = renesas_78k0_init
-	, .ip_reinit = renesas_78k0_reinit
-	, .ip_enable = __rvpredict_renesas_78k0_enable
-	, .ip_splhigh = NULL
-	, .ip_splx = NULL
-	, .ip_fire_all = __rvpredict_renesas_78k0_fire_all
-	, .ip_disable = __rvpredict_renesas_78k0_disable
-};
 
 static sigset_t mask0, maskall, maskhigh, masklow;
 

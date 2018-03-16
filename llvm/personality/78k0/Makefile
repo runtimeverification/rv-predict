@@ -10,6 +10,7 @@
 #
 
 LIB?=rvpi_78k0
+INCS=rvpredict_intr_78k0.h
 
 .PATH: $(.CURDIR)/../../ngrt
 

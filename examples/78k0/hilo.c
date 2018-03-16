@@ -1,13 +1,9 @@
-#include <intr_exports.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include "nbcompat.h"
-
-#define	DI()	__rvpredict_intr_disable()
-#define	EI()	__rvpredict_intr_enable()
 
 #define update(__lvalue) do {	\
 	(__lvalue) ^= 1;	\

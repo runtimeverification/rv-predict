@@ -15,7 +15,7 @@ cplusplus=no
 sources=no
 link=yes
 compile=yes
-intr_personality=basic
+intr_personality=none
 just_print=no
 
 prog=$(basename $0)
@@ -91,6 +91,9 @@ fi
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]
 then
 	pass="-Xclang -load -Xclang $pass_dir/rvpinstrument.so -g"
+	if [ ${intr_personality:-none} != none ]; then
+		pass="${pass} -include rvpredict_intr_${intr_personality}${bits:-}.h"
+	fi
 fi
 
 # -ldl for dlsym()
@@ -98,7 +101,7 @@ fi
 # -latomic for atomic_is_lock_free()
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -latomic -pthread -lrvpi_${intr_personality}${bits:-} -g"
+	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -ldl -lrt -latomic -pthread -g"
 fi
 
 if [ ${just_print} = yes ]; then

@@ -1,4 +1,3 @@
-#include <intr_exports.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>

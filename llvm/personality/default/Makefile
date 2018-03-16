@@ -9,8 +9,7 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-LIB?=rvpi_basic
-INCS=rvpredict_intr_basic.h
+LIB?=rvpi_default
 
 .PATH: $(.CURDIR)/../../ngrt
 
@@ -23,7 +22,7 @@ COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../ngrt -I$(.CURDIR)/../../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
-SRCS+=basic_intr.c
-LINKS=${LIBDIR}/librvpi_basic.a ${LIBDIR}/librvpi_basic64.a
+SRCS+=default_intr.c
+LINKS=${LIBDIR}/librvpi_default.a ${LIBDIR}/librvpi_default64.a
 
 .include <mkc.lib.mk>

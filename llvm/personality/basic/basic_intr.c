@@ -21,8 +21,9 @@ static void __rvpredict_basic_splx(int) __used;
 static void __rvpredict_basic_fire_all(void) __used;
 static void __rvpredict_basic_disable(void) __used;
 
-const char __rvpredict_intr_personality_name[] = "basic";
+static __used const char basic_personality_name[] = "basic";
 
+__strong_alias(__rvpredict_intr_personality_name, basic_personality_name)
 __strong_alias(__rvpredict_intr_personality_init, basic_init)
 __strong_alias(__rvpredict_intr_personality_reinit, basic_reinit)
 __strong_alias(__rvpredict_intr_personality_enable, __rvpredict_basic_enable)

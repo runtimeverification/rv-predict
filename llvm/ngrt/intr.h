@@ -16,8 +16,6 @@ typedef struct _rvp_static_intr {
 	volatile _Atomic uint32_t	si_times;
 } rvp_static_intr_t;
 
-typedef struct _rvp_intr_personality rvp_intr_personality_t;
-
 void rvp_static_intr_fire_all(void);
 void __rvpredict_intr_register(void (*)(void), int32_t);
 struct itimerspec rvp_static_intr_interval(void);
@@ -37,9 +35,6 @@ extern int rvp_static_nassigned;
 extern bool rvp_static_intr_debug;
 extern rvp_static_intr_t rvp_static_intr[128];
 extern const char __rvpredict_intr_personality_name[];
-
-extern const rvp_intr_personality_t basic_intr_personality;
-extern const rvp_intr_personality_t renesas_78k0_intr_personality;
 
 #endif /* _RVP_INTR_H_ */
 

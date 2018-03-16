@@ -14,20 +14,8 @@
 #include "intr.h"	/* for prototypes */
 #include "ring.h"	/* for rvp_ring_t */
 #include "thread.h"	/* for rvp_ring_for_curthr() */
-#include "intr_exports.h"
+#include "rvpredict_intr.h"
 #include "nbcompat.h"
-
-static int default_splhigh(void) __used;
-static void default_splx(int) __used;
-static void notimpl(void) __used;
-
-__weak_alias(__rvpredict_intr_personality_splhigh, default_splhigh)
-__weak_alias(__rvpredict_intr_personality_splx, default_splx)
-__weak_alias(__rvpredict_intr_personality_enable, notimpl)
-__weak_alias(__rvpredict_intr_personality_disable, notimpl)
-__weak_alias(__rvpredict_intr_personality_init, notimpl)
-__weak_alias(__rvpredict_intr_personality_reinit, notimpl)
-__weak_alias(__rvpredict_intr_personality_fire_all, notimpl)
 
 rvp_static_intr_t rvp_static_intr[128];
 
@@ -72,31 +60,6 @@ void
 rvp_static_intr_fire_all(void)
 {
 	__rvpredict_intr_personality_fire_all();
-}
-
-static int
-default_splhigh(void)
-{
-	warnx("Interrupt personality %s has no splhigh implementation.",
-	    __rvpredict_intr_personality_name);
-	abort();
-}
-
-static void
-default_splx(int level)
-{
-	warnx("Interrupt personality %s has no splx implementation.",
-	    __rvpredict_intr_personality_name);
-	abort();
-}
-
-static void
-notimpl(void)
-{
-	warnx("An interrupt-simulation routine was called for "
-	    "which Interrupt personality %s has no implementation.",
-	    __rvpredict_intr_personality_name);
-	abort();
 }
 
 void

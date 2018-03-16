@@ -12,7 +12,7 @@
 LIB?=rvprt
 
 STRIPFLAG=
-INCS=intr_exports.h
+INCS=rvpredict_intr.h
 CC?=clang
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic

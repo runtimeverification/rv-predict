@@ -7,25 +7,8 @@
 #include <time.h>	/* for `struct itimerspec` */
 
 #include "intr.h"
+#include "rvpredict_intr.h"
 #include "nbcompat.h"
-
-static void renesas_78k0_init(void) __used;
-static void renesas_78k0_reinit(void) __used;
-static void __rvpredict_renesas_78k0_enable(void) __used;
-static void __rvpredict_renesas_78k0_disable(void) __used;
-static void __rvpredict_renesas_78k0_fire_all(void) __used;
-static void __rvpredict_renesas_78k0_handler(int);
-
-const char __rvpredict_intr_personality_name[] = "78k0";
-
-__strong_alias(__rvpredict_intr_personality_init, renesas_78k0_init)
-__strong_alias(__rvpredict_intr_personality_reinit, renesas_78k0_reinit)
-__strong_alias(__rvpredict_intr_personality_enable,
-    __rvpredict_renesas_78k0_enable)
-__strong_alias(__rvpredict_intr_personality_fire_all,
-    __rvpredict_renesas_78k0_fire_all)
-__strong_alias(__rvpredict_intr_personality_disable,
-    __rvpredict_renesas_78k0_disable)
 
 /* 78k0 interrupt state */
 struct _renesas_78k0_state {
@@ -39,11 +22,20 @@ struct _renesas_78k0_state {
 
 typedef struct _renesas_78k0_state renesas_78k0_state_t;
 
+#define renesas_78k0_personality_name __rvpredict_intr_personality_name 
+#define renesas_78k0_init __rvpredict_intr_personality_init
+#define renesas_78k0_reinit __rvpredict_intr_personality_reinit
+#define __rvpredict_renesas_78k0_enable __rvpredict_intr_personality_enable
+#define __rvpredict_renesas_78k0_disable __rvpredict_intr_personality_disable
+#define __rvpredict_renesas_78k0_fire_all __rvpredict_intr_personality_fire_all
+
+const char renesas_78k0_personality_name[] = "78k0";
+
 static renesas_78k0_state_t state = {.enabled = false, .hipri = false};
 
 static sigset_t mask0, maskall, maskhigh, masklow;
 
-static void
+void
 renesas_78k0_init(void)
 {
 	if (sigemptyset(&mask0) != 0)
@@ -56,7 +48,7 @@ renesas_78k0_init(void)
 		errx(EXIT_FAILURE, "%s: sigemptyset", __func__);
 }
 
-void
+static void
 __rvpredict_renesas_78k0_handler(int signum)
 {
 	int i;
@@ -81,7 +73,7 @@ __rvpredict_renesas_78k0_handler(int signum)
 	}
 }
 
-static void
+void
 renesas_78k0_reinit(void)
 {
 	int i, rc;
@@ -161,7 +153,7 @@ renesas_78k0_reinit(void)
 	rvp_static_nassigned = rvp_static_nintrs;
 }
 
-static void
+void
 __rvpredict_renesas_78k0_enable(void)
 {
 	renesas_78k0_state_t ostate = state;
@@ -188,7 +180,7 @@ __rvpredict_renesas_78k0_enable(void)
 	rvp_static_intr_fire_all();
 }
 
-static void
+void
 __rvpredict_renesas_78k0_disable(void)
 {
 	renesas_78k0_state_t ostate = state;
@@ -210,7 +202,7 @@ __rvpredict_renesas_78k0_disable(void)
 	}
 }
 
-static void
+void
 __rvpredict_renesas_78k0_fire_all(void)
 {
 	int i;

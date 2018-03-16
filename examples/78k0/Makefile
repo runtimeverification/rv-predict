@@ -19,6 +19,7 @@ PROGS+=	lolo
 PROGS+=	hilo
 .endif
 
+LDFLAGS+=--intr-personality=78k0
 CFLAGS+=--intr-personality=78k0
 CFLAGS+=-std=c11
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L

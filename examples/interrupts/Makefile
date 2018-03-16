@@ -21,6 +21,8 @@ PROGS+=	sim
 .endif
 
 CC=clang
+CFLAGS+=--intr-personality=basic
+LDFLAGS+=--intr-personality=basic
 CFLAGS+=-std=c11
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L
 CPPFLAGS+=-I$(.CURDIR)/../c11

@@ -1,6 +1,9 @@
 package com.runtimeverification.rvpredict.smt.concurrent;
 
 import java.util.concurrent.Semaphore;
+
+import com.runtimeverification.rvpredict.performance.Profiler;
+import com.runtimeverification.rvpredict.performance.ProfilerToken;
 import org.apache.commons.lang3.mutable.MutableObject;
 
 import java.util.ArrayList;
@@ -196,11 +199,13 @@ public class SingleResourceProducerTransformerConsumer {
                         // Signal that a new resource is needed.
                         producer.stateChangeSignal.release();
                     }
-                    try {
+                    try (ProfilerToken ignored =
+                                 Profiler.instance().start("Consumer " + getName() + " - process")) {
                         resourceTransformer.process(
                                 acquiredResource,
                                 (resource, result) -> producer.addTask(() -> resourceConsumer.consume(resource, result))
                         );
+
                     } catch (Exception e) {
                         producer.addException(e);
                         return;

@@ -74,6 +74,8 @@ args=
 
 for arg in "$@"; do
 	case "$arg" in
+	--just-print)
+		;;
 	--intr-personality=*)
 		;;
 	*)
@@ -92,7 +94,7 @@ if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]
 then
 	pass="-Xclang -load -Xclang $pass_dir/rvpinstrument.so -g"
 	if [ ${intr_personality:-none} != none ]; then
-		pass="${pass} -include rvpredict_intr_${intr_personality}${bits:-}.h"
+		pass="-include rvpredict_intr_${intr_personality}${bits:-}.h ${pass}"
 	fi
 fi
 

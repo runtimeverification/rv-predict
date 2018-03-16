@@ -6,6 +6,7 @@
 
 FILESDIR=$(DATADIR)/examples/rv-predict-c/78k0
 INCSDIR=$(FILESDIR)
+INCS=78k0_predict.h
 FILES=Makefile
 FILES+=README.md
 FILES+=$(SRCS.78k0)
@@ -25,6 +26,7 @@ CFLAGS+=-std=c11
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L
 CPPFLAGS+=-I$(.CURDIR)/../c11
 CPPFLAGS+=-I$(HOME)/include
+CPPFLAGS+=-include 78k0_predict.h
 WARNS=4
 
 SRCS.78k0=78k0.c

@@ -11,7 +11,7 @@
 
 static int racy, racefree;
 
-static void __rv_interrupt_handler(irq0, 0)
+void
 lopri_handler(void)
 {
 	const char enter_msg[] = "( low priority interrupt\n";

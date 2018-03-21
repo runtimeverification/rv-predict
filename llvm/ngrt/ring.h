@@ -418,7 +418,7 @@ int rvp_ring_get_iovs(rvp_ring_t *, rvp_interruption_t *, struct iovec **,
     const struct iovec *, uint32_t *);
 int rvp_ring_discard_iovs(rvp_ring_t *, rvp_interruption_t *,
     const struct iovec **, const struct iovec *, uint32_t *);
-bool rvp_ring_flush_to_fd(rvp_ring_t *, int, rvp_lastctx_t *);
+int rvp_ring_flush_to_fd(rvp_ring_t *, int, rvp_lastctx_t *);
 ssize_t rvp_ring_discard_by_bytes(rvp_ring_t *, const ssize_t, uint32_t *);
 rvp_interruption_t *rvp_ring_put_interruption(rvp_ring_t *, rvp_ring_t *, int);
 

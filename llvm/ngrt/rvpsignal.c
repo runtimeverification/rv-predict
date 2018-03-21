@@ -185,32 +185,6 @@ rvp_signal_lookup(int signum)
 	return atomic_load_explicit(&signal_tbl[signum], memory_order_acquire);
 }
 
-#if 0
-bool
-rvp_signal_rings_flush_to_fd(int fd, rvp_lastctx_t *lc)
-{
-	rvp_ring_t *r;
-	bool any_emptied = false;
-
-	for (r = signal_rings; r != NULL; r = r->r_next) {
-		rvp_ring_state_t state = RVP_RING_S_DIRTY;
-		/* Take ownership of a dirty ring (-> in-use), flush,
-		 * and change its state to clean, OR
-		 * skip a clean ring, OR
-		 * flush an in-use ring.
-		 */
-		if (atomic_compare_exchange_strong(&r->r_state, &state,
-		    RVP_RING_S_INUSE)) {
-			any_emptied |= rvp_ring_flush_to_fd(r, fd, lc);
-			r->r_state = RVP_RING_S_CLEAN;
-		} else if (state == RVP_RING_S_INUSE) {
-			any_emptied |= rvp_ring_flush_to_fd(r, fd, lc);
-		}
-	}
-	return any_emptied;
-}
-#endif
-
 static rvp_ring_t *
 rvp_signal_ring_acquire_scan(rvp_thread_t *t, uint32_t idepth)
 {

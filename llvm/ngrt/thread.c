@@ -368,6 +368,8 @@ rvp_serializer_create(void)
 	assert(thread_head->t_next == NULL);
 	/* I don't use rvp_thread_flush_to_fd() here because I do not
 	 * want to log a change of thread here under any circumstances.
+	 *
+	 * XXX check return code
 	 */
 	rvp_ring_flush_to_fd(&thread_head->t_ring, serializer_fd, NULL);
 	serializer_lc = (rvp_lastctx_t){

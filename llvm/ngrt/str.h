@@ -3,11 +3,16 @@
 
 #include <string.h>
 
+#include "tracefmt.h"
 #include "interpose.h"
 
 void *__rvpredict_memcpy(void *, const void *, size_t);
 void *__rvpredict_memmove(void *, const void *, size_t);
 void *__rvpredict_memset(void *, int, size_t);
+
+void *__rvpredict_internal_memcpy(void *, const void *, size_t);
+void *__rvpredict_internal_memmove(void *, const void *, size_t);
+void *__rvpredict_internal_memset(void *, int, size_t);
 
 void *__rvpredict_memmove1(const void *,
     const rvp_addr_t, const rvp_addr_t, size_t);

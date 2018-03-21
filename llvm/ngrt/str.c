@@ -7,10 +7,6 @@
 #include "text.h"
 #include "tracefmt.h"
 
-void *__rvpredict_internal_memcpy(void *, const void *, size_t);
-void *__rvpredict_internal_memmove(void *, const void *, size_t);
-void *__rvpredict_internal_memset(void *, int, size_t);
-
 REAL_DEFN(void *, memcpy, void *, const void *, size_t) =
     __rvpredict_internal_memcpy;
 REAL_DEFN(void *, memmove, void *, const void *, size_t) =

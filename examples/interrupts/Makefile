@@ -12,15 +12,20 @@ FILES+=README.md
 FILES+=$(SRCS.1)
 FILES+=$(SRCS.2)
 FILES+=$(SRCS.3)
+FILES+=$(SRCS.4)
+FILES+=$(SRCS.5)
+FILES+=$(SRCS.6)
 FILES+=$(SRCS.sim)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
-PROGS=	1 2 3
+PROGS=	1 2 3 4 5 6
 PROGS+=	sim
 .endif
 
 CC=clang
+CFLAGS+=--intr-personality=basic
+LDFLAGS+=--intr-personality=basic
 CFLAGS+=-std=c11
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L
 CPPFLAGS+=-I$(.CURDIR)/../c11
@@ -28,11 +33,15 @@ CPPFLAGS+=-I$(HOME)/include
 #CPPFLAGS.spcq+=-D__STDC_NO_ATOMICS__
 WARNS=4
 
-SRCS.sim=sim.c
 SRCS.1=1.c lib.c
 SRCS.2=2.c lib.c
 SRCS.3=3.c lib.c
+SRCS.4=4.c lib.c
+SRCS.5=5.c lib.c
+SRCS.6=6.c lib.c
+SRCS.sim=sim.c
 
 .include "../rvp.mk"
 
 .include <mkc.prog.mk>
+.include <mkc.subdir.mk>

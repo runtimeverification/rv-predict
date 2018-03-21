@@ -15,6 +15,8 @@ cplusplus=no
 sources=no
 link=yes
 compile=yes
+intr_personality=none
+just_print=no
 
 prog=$(basename $0)
 
@@ -36,6 +38,14 @@ for arg in "$@"; do
 		fi
 		printf "RV-Predict/C version %s\n\n" $version 
 		break;;
+	--just-print)
+		just_print=yes
+		continue
+		;;
+	--intr-personality=*)
+		intr_personality=${arg##--intr-personality=}
+		continue
+		;;
 	-M|-E)	# -M implies -E, and -E skips normal compilation
 		compile=no
 		link=no
@@ -60,6 +70,19 @@ for arg in "$@"; do
 	esac
 done
 
+args=
+
+for arg in "$@"; do
+	case "$arg" in
+	--just-print)
+		;;
+	--intr-personality=*)
+		;;
+	*)
+		args="${args} ${arg}"
+		;;
+	esac
+done
 
 if [ ${cplusplus:-no} = yes ]; then
 	compiler="clang++-4.0 -std=c++11"
@@ -70,6 +93,9 @@ fi
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]
 then
 	pass="-Xclang -load -Xclang $pass_dir/rvpinstrument.so -g"
+	if [ ${intr_personality:-none} != none ]; then
+		pass="-include rvpredict_intr_${intr_personality}${bits:-}.h ${pass}"
+	fi
 fi
 
 # -ldl for dlsym()
@@ -77,7 +103,13 @@ fi
 # -latomic for atomic_is_lock_free()
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -ldl -lrt -latomic -pthread -g"
+	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -ldl -lrt -latomic -pthread -g"
 fi
 
-$compiler ${pass:-} "$@" ${runtime:-}
+if [ ${just_print} = yes ]; then
+	pfx=echo
+else
+	pfx=
+fi
+
+$pfx $compiler ${pass:-} ${args} ${runtime:-}

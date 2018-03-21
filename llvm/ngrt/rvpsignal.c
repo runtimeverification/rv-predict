@@ -736,8 +736,11 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		;
 	else if (oldset != NULL)
 		rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
-	else
-		rvp_thread_trace_setmask(t, how, nmask, retaddr);
+	else if (how == SIG_BLOCK || how == SIG_SETMASK) {
+		rvp_thread_trace_setmask(t, how, maskchg & ~rvp_unmaskable,
+		    retaddr);
+	} else
+		rvp_thread_trace_setmask(t, how, maskchg, retaddr);
 
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;

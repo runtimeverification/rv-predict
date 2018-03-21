@@ -41,6 +41,10 @@
 
 #ifndef __NetBSD__
 
+#ifndef __used
+#define __used    __attribute__((__used__))
+#endif /* __used */
+
 /*
  * On multiprocessor systems we can gain an improvement in performance
  * by being mindful of which cachelines data is placed in.

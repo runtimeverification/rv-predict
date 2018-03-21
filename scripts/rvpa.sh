@@ -12,7 +12,7 @@ _usage()
 {
 	cat 1>&2 <<EOF
 usage: $(basename $0) [--window size]
-    [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--]
+    [--no-shorten|--no-symbol|--no-trim] [--]
     program [trace-file]
 EOF
 }

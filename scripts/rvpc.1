@@ -4,7 +4,7 @@
 .\"
 .\" The uncommented requests are required for all man pages.
 .\" The commented requests should be uncommented and used where appropriate.
-.Dd July 19, 2017
+.Dd Mar 19, 2018
 .Dt rvpc 1
 .Os Linux
 .Sh NAME
@@ -74,6 +74,69 @@ to analyze offline.
 See
 .Sx ENVIRONMENT ,
 below.
+.Pp
+Command-line options modify the behavior of
+.Nm :
+.Bl -tag -width "mmversion"
+.It Fl Fl version
+Print the version of
+.Nm
+and the version of
+.Xr clang 1
+and then exit.
+.It Fl Fl intr-personality Ns = Ns Ar personality
+.Tn RV-Predict/C
+compiles and/or links with the given interrupt personality, which is
+one of the following:
+.Pp
+.Bl -tag -width "basic"
+.It 78k0
+Under the
+.Tn "Renesas 78k0"
+interrupts model,
+.Tn RV-Predict/C
+provides macros
+.Fn EI
+and
+.Fn DI
+for enabling and disabling interrupts.
+.Pp
+An attribute
+.Fn __rv_interrupt_handler irqname priority
+may be applied to a function declaration/definition to indicate that the
+function is an interrupt service routine
+.Pq ISR
+for the interrupt request
+.Pq IRQ
+.Fa irqname .
+.Fa priority
+tells the priority for the IRQ, one of
+.Dv renesas_78k0_priority_low
+or
+.Dv renesas_78k0_priority_high ,
+for the interrupt.
+.Pp
+.Tn RV-Predict/C
+provides
+.Fn "__rvpredict_isr_fire" "void (*isr)(void)"
+for unit tests to use to trigger an asynchronous call to
+.Fa isr ,
+which must be a function that has an
+.Fn __rv_interrupt_handler
+annotation.
+If
+.Fa isr
+is not allowed to run under the current condition of the
+.Tn 78k0 
+registers, then its execution will be deferred.
+.It basic
+This is a barebones interrupt model that is not yet intended for use by
+end users.
+.It none
+This is the default.
+If a program that is compiled with this interrupt personality uses
+interrupt macros or functions, then its behavior is undefined.
+.El
 .Sh EXIT STATUS
 See
 .Xr clang 1

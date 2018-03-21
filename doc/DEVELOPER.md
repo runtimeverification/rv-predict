@@ -2,6 +2,23 @@
 
 ## Configuring a build environment
 
+Some of the Maven targets (e.g., `install`) perform testing in an
+LXC container.  On some of RV's development hosts (e.g., rvwork-1),
+you must belong to group `lxd` to use the containers.  To make sure
+that you belong to the right groups, type
+
+```
+groups <your username>
+```
+
+If your session started before you were added to the `lxd` group,
+then you may need to start a new session.  To see which groups
+your session effectively belongs to, type
+
+```
+groups
+```
+
 On Ubuntu, install the prerequisite packages:
 
 ```

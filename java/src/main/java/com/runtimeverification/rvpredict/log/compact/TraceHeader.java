@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.log.compact;
 
 import java.io.IOException;
+import java.io.DataInputStream;
 import java.io.InputStream;
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -10,7 +11,8 @@ public class TraceHeader {
     private final int pointerWidthInBytes;
     private final int defaultDataWidthInBytes;
 
-    public TraceHeader(InputStream stream) throws IOException, InvalidTraceDataException {
+    public TraceHeader(InputStream _stream) throws IOException, InvalidTraceDataException {
+        DataInputStream stream = new DataInputStream(_stream);
         byte[] magic = read4Bytes("magic", stream);
         checkBytesValue("magic", magic, "RVP_");
 
@@ -51,12 +53,10 @@ public class TraceHeader {
         }
     }
 
-    private static byte[] read4Bytes(String description, InputStream stream)
+    private static byte[] read4Bytes(String description, DataInputStream stream)
             throws IOException, InvalidTraceDataException {
         byte[] bytes = new byte[4];
-        if (4 != stream.read(bytes)) {
-            throw new InvalidTraceDataException("Short read for " + description + ".");
-        }
+        stream.readFully(bytes);
         return bytes;
     }
 

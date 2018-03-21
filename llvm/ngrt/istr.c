@@ -99,10 +99,13 @@
  * All rights reserved.
  */
 
+#include <assert.h>
 #include <stdlib.h>
 
 #include "str.h"
 #include "tracefmt.h"
+
+#define CHECK_GE(__l, __r)	assert((__l) >= (__r))
 
 #if 0
 s64 __rvpredict_internal_atoll(const char *nptr) {
@@ -136,34 +139,33 @@ int __rvpredict_internal_memcmp(const void* s1, const void* s2, uptr n) {
 }
 #endif
 
-void *__rvpredict_internal_memcpy(void *dest, const void *src, size_t n) {
-  char *d = (char*)dest;
-  const char *s = (const char *)src;
-  size_t i;
-  for (i = 0; i < n; ++i)
-    d[i] = s[i];
-  return dest;
+void *
+__rvpredict_internal_memcpy(void *dest, const void *src, size_t n)
+{
+	char *d = (char*)dest;
+	const char *s = (const char *)src;
+	size_t i;
+
+	for (i = 0; i < n; ++i)
+		d[i] = s[i];
+	return dest;
 }
 
-#include <assert.h>
+void *
+__rvpredict_internal_memmove(void *dest, const void *src, const size_t n)
+{
+	char *d = (char*)dest;
+	const char *s = (const char *)src;
+	size_t i;
 
-#define CHECK_GE(__l, __r)	assert((__l) >= (__r))
-
-void *__rvpredict_internal_memmove(void *dest, const void *src, size_t n) {
-  char *d = (char*)dest;
-  const char *s = (const char *)src;
-  ssize_t i, signed_n = (ssize_t)n;
-  CHECK_GE(signed_n, 0);
-  if (d < s) {
-    for (i = 0; i < signed_n; ++i)
-      d[i] = s[i];
-  } else {
-    if (d > s && signed_n > 0)
-      for (i = signed_n - 1; i >= 0 ; --i) {
-        d[i] = s[i];
-      }
-  }
-  return dest;
+	if (d < s) {
+		for (i = 0; i < n; ++i)
+			d[i] = s[i];
+	} else if (d > s) {
+		for (i = 0; i < n; i++)
+			d[n - 1 - i] = s[n - 1 - i];
+	}
+	return dest;
 }
 
 #if 0
@@ -178,17 +180,23 @@ void __rvpredict_internal_bzero_aligned16(void *s, uptr n) {
 }
 #endif
 
-void *__rvpredict_internal_memset(void* s, int c, size_t n) {
-  // The next line prevents Clang from making a call to memset() instead of the
-  // loop below.
-  // FIXME: building the runtime with -ffreestanding is a better idea. However
-  // there currently are linktime problems due to PR12396.
-  char volatile *t = (char*)s;
-  size_t i;
-  for (i = 0; i < n; ++i, ++t) {
-    *t = c;
-  }
-  return s;
+void *
+__rvpredict_internal_memset(void *s, int c, size_t n)
+{
+        /* The next line prevents Clang from making a call to memset()
+         * instead of the loop below.
+	 *
+         * FIXME: building the runtime with -ffreestanding is a better
+         * idea. However there currently are linktime problems due to
+         * PR12396.
+	 */
+	char volatile *t = (char*)s;
+	size_t i;
+
+	for (i = 0; i < n; ++i, ++t) {
+		*t = c;
+	}
+	return s;
 }
 
 #if 0

@@ -593,7 +593,7 @@ rvp_ring_drop_empties(rvp_ring_t *r, rvp_interruption_t *bracket)
 	return first == last && !unfinished;
 }
 
-bool
+int
 rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 {
 	ssize_t nwritten;
@@ -647,11 +647,11 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	(void)rvp_ring_get_iovs(r, NULL, &iovp, lastiov, &idepth0);
 
 	if (iovp == first_ring_iov)
-		return false;
+		return 0;
 
 	nwritten = writeallv(fd, iov, scratch_iov, iovp - &iov[0]);
 	if (nwritten == -1)
-		err(EXIT_FAILURE, "%s: writeallv", __func__);
+		return -1;
 
 	rvp_trace_size += nwritten;
 
@@ -670,5 +670,5 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	} else
 		assert(idepth0 == 0);
 
-	return true;
+	return 1;
 }

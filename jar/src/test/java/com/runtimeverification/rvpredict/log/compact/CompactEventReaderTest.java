@@ -61,8 +61,8 @@ public class CompactEventReaderTest {
         }));
         MoreAsserts.assertException(
                 "Expected exception for invalid first event deltop.",
-                InvalidTraceDataException.class,
-                "event descriptor",
+                EOFException.class,
+                null,
                 () -> new CompactEventReader(inputStream));
     }
 
@@ -83,8 +83,8 @@ public class CompactEventReaderTest {
         }));
         MoreAsserts.assertException(
                 "Expected exception for invalid first event deltop.",
-                InvalidTraceDataException.class,
-                "thread id",
+                EOFException.class,
+                null,
                 () -> new CompactEventReader(inputStream));
     }
 
@@ -156,7 +156,7 @@ public class CompactEventReaderTest {
         MoreAsserts.assertException(
                 "Expected exception for invalid event descriptor.",
                 IOException.class,
-                "event descriptor",
+                null,
                 reader::readEvent);
     }
 

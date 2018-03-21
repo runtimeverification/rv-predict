@@ -28,6 +28,7 @@ import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.DataInputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -124,16 +125,12 @@ public class CompactEventReader implements IEventReader {
 
         public List<ReadonlyEventInterface> read(
                 Context context, CompactEventFactory compactEventFactory,
-                TraceHeader header, InputStream stream)
+                TraceHeader header, DataInputStream stream)
                 throws InvalidTraceDataException, IOException {
             if (buffer == null) {
                 buffer = new byte[reader.size(header)];
             }
-            int readSize = stream.read(buffer);
-            if (buffer.length != readSize) {
-                throw new InvalidTraceDataException(
-                        "Short read for " + this + ", expected " + buffer.length + " bytes, got " + readSize + ".");
-            }
+            stream.readFully(buffer);
             return reader.readEvent(
                     context, context.newOriginalEventId(), compactEventFactory, header,
                     ByteBuffer.wrap(buffer).order(header.getByteOrder()));
@@ -189,7 +186,7 @@ public class CompactEventReader implements IEventReader {
     private TraceHeader header;
     private CompactEventFactory factory;
     private Context context;
-    private InputStream inputStream;
+    private DataInputStream inputStream;
     private ByteBuffer pcBuffer;
     private Address pc;
     private long minDeltaAndEventType;
@@ -201,8 +198,8 @@ public class CompactEventReader implements IEventReader {
     public CompactEventReader(Path path) throws IOException, InvalidTraceDataException {
         this(new BufferedInputStream(new FileInputStream(path.toFile())));
     }
-    public CompactEventReader(InputStream inputStream) throws IOException, InvalidTraceDataException {
-        this.inputStream = inputStream;
+    public CompactEventReader(InputStream _inputStream) throws IOException, InvalidTraceDataException {
+        inputStream = new DataInputStream(_inputStream);
         header = new TraceHeader(inputStream);
         pc = new Address(header);
         pcBuffer = ByteBuffer.allocate(pc.size()).order(header.getByteOrder());
@@ -237,15 +234,10 @@ public class CompactEventReader implements IEventReader {
         readEvent();
     }
 
-    private void readData(InputStream inputStream, ReadableData data, String description)
+    private void readData(DataInputStream inputStream, ReadableData data, String description)
             throws IOException, InvalidTraceDataException {
         ByteBuffer dataBuffer = ByteBuffer.allocate(data.size()).order(header.getByteOrder());
-        int readSize = inputStream.read(dataBuffer.array());
-        if (readSize != dataBuffer.capacity()) {
-            throw new InvalidTraceDataException(
-                    "Cannot read the " + description + ", expected " + dataBuffer.capacity()
-                            + " bytes, got " + readSize + ".");
-        }
+        inputStream.readFully(dataBuffer.array());
         data.read(dataBuffer);
     }
 
@@ -255,16 +247,7 @@ public class CompactEventReader implements IEventReader {
         while (currentEvent >= events.size()) {
             currentEvent = 0;
             try {
-                int readCount = inputStream.read(pcBuffer.array());
-                if (readCount == -1) {
-                    events = null;
-                    throw new EOFException();
-                }
-                if (readCount != pcBuffer.capacity()) {
-                    throw new InvalidTraceDataException(
-                            "Incomplete event descriptor, expected " + pcBuffer.capacity() + " bytes, got "
-                                    + readCount + ".");
-                }
+                inputStream.readFully(pcBuffer.array());
                 pcBuffer.rewind();
                 pc.read(pcBuffer);
                 DeltaAndEventType deltaAndEventType =

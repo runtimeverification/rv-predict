@@ -274,8 +274,17 @@ serialize(void *arg __unused)
 			    blocksets_last);
 			any_emptied = false;
 			for (t = thread_head; t != NULL; t = t->t_next) {
-				any_emptied |= rvp_ring_flush_to_fd(&t->t_ring,
-				    fd, &serializer_lc);
+				switch (rvp_ring_flush_to_fd(&t->t_ring,
+				    fd, &serializer_lc)) {
+				case -1:
+					warn("RV-Predict/C event serialization failed");
+					abort();
+				case 0:
+					break;
+				case 1:
+					any_emptied = true;
+					break;
+				}
 			}
 		} while (any_emptied);
 

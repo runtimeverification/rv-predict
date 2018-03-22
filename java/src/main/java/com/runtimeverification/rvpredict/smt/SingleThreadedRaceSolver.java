@@ -80,12 +80,19 @@ public class SingleThreadedRaceSolver implements RaceSolver {
             WindowData windowData,
             BoolFormula assertion,
             SolutionReporter solutionReporter) throws Exception {
-        startWindowIfNeeded(windowData);
-        try (ProfilerToken ignored1 = Profiler.instance().start("Main solver loop")) {
+        try (ProfilerToken ignored1 =
+                     Profiler.instance().start("Preparing the window " + Thread.currentThread().getName())) {
+            startWindowIfNeeded(windowData);
+        } finally {
+        }
+        try (ProfilerToken ignored1 =
+                     Profiler.instance().start("Main solver loop " + Thread.currentThread().getName())) {
             fastSolver.push();
             fastSolver.add(z3filter.filter(assertion));
             if (fastSolver.check() == Status.SATISFIABLE) {
-                try (ProfilerToken ignored2 = Profiler.instance().start("Secondary solver loop")) {
+                try (ProfilerToken ignored2 =
+                             Profiler.instance().start(
+                                     "Secondary solver loop " + Thread.currentThread().getName())) {
                     soundSolver.push();
                     soundSolver.add(z3filter.filter(assertion));
                     if (soundSolver.check() == Status.SATISFIABLE) {
@@ -124,6 +131,8 @@ public class SingleThreadedRaceSolver implements RaceSolver {
             if (currentWindowData.get().getWindowId() != windowData.getWindowId()) {
                 endWindow();
                 currentWindowData = Optional.of(windowData);
+            } else {
+                return;
             }
         } else {
             currentWindowData = Optional.of(windowData);
@@ -197,7 +206,8 @@ public class SingleThreadedRaceSolver implements RaceSolver {
         String z3LibraryPath = getNativeLibraryPath() + "/" + z3LibraryName;
         try {
             z3LibraryTarget.getParent().toFile().mkdirs();
-            Path z3LibraryTempPath = Files.createTempFile(z3LibraryTarget.getParent(), "rvpredict-z3-", ".library");
+            Path z3LibraryTempPath =
+                    Files.createTempFile(z3LibraryTarget.getParent(), "rvpredict-z3-", ".library");
             File z3LibraryTempFile = z3LibraryTempPath.toFile();
             InputStream in = MaximalRaceDetector.class.getResourceAsStream(z3LibraryPath);
             BufferedInputStream reader = new BufferedInputStream(in);

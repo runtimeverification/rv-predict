@@ -212,7 +212,11 @@ public class MaximalCausalModel {
         List<ReadonlyEventInterface> diffThreadSameAddrDiffValWrites = new ArrayList<>();
         Map<Integer, ReadonlyEventInterface> diffThreadSameAddrFirstDiffValReadPrefix = new HashMap<>();
         trace.getWriteEvents(read.getDataInternalIdentifier()).forEach(write -> {
-            if (trace.getTraceThreadId(write) != trace.getTraceThreadId(read) && !happensBefore(read, write)) {
+            OptionalInt maybeWriteId = trace.getTraceThreadId(write);
+            OptionalInt maybeReadId = trace.getTraceThreadId(read);
+            assert maybeWriteId.isPresent();
+            assert maybeReadId.isPresent();
+            if (maybeWriteId.getAsInt() != maybeReadId.getAsInt() && !happensBefore(read, write)) {
                 if (write.getDataValue() == read.getDataValue()) {
                     diffThreadSameAddrSameValWrites.add(write);
                 } else {
@@ -221,11 +225,17 @@ public class MaximalCausalModel {
             }
         });
         trace.getPrefixReadEvents(read.getDataInternalIdentifier()).forEach(otherRead -> {
-            if (trace.getTraceThreadId(otherRead) != trace.getTraceThreadId(read) && !happensBefore(read, otherRead)) {
+            OptionalInt maybeOtherId = trace.getTraceThreadId(otherRead);
+            OptionalInt maybeReadId = trace.getTraceThreadId(read);
+            assert maybeOtherId.isPresent();
+            assert maybeReadId.isPresent();
+            if (maybeOtherId.getAsInt() != maybeReadId.getAsInt() && !happensBefore(read, otherRead)) {
                 if (otherRead.getDataValue() != read.getDataValue()) {
+                    OptionalInt maybeTtid = trace.getTraceThreadId(otherRead);
+                    assert maybeTtid.isPresent();
                     diffThreadSameAddrFirstDiffValReadPrefix
                             .compute(
-                                    trace.getTraceThreadId(otherRead),
+                                    maybeTtid.getAsInt(),
                                     (k, v) -> v == null || v.getEventId() > otherRead.getEventId() ? otherRead : v);
                 }
             }
@@ -370,7 +380,11 @@ public class MaximalCausalModel {
     private boolean failPecanCheck(Race race) {
         ReadonlyEventInterface e1 = race.firstEvent();
         ReadonlyEventInterface e2 = race.secondEvent();
-        return locksetEngine.hasCommonLock(e1, e2, trace.getTraceThreadId(e1), trace.getTraceThreadId(e2))
+        OptionalInt maybeThread1 = trace.getTraceThreadId(e1);
+        OptionalInt maybeThread2 = trace.getTraceThreadId(e2);
+        assert maybeThread1.isPresent();
+        assert maybeThread2.isPresent();
+        return locksetEngine.hasCommonLock(e1, e2, maybeThread1.getAsInt(), maybeThread2.getAsInt())
                 || happensBefore(e1, e2)
                 || happensBefore(e2, e1);
     }
@@ -502,7 +516,9 @@ public class MaximalCausalModel {
             Map<Integer, Integer> signalParents,
             ReadonlyEventInterface event) {
         List<Race.SignalStackEvent> signalStack = new ArrayList<>();
-        int ttid = trace.getTraceThreadId(event);
+        OptionalInt maybeTtid = trace.getTraceThreadId(event);
+        assert maybeTtid.isPresent();
+        int ttid = maybeTtid.getAsInt();
         signalStack.add(Race.SignalStackEvent.fromEvent(event, ttid));
 
         OptionalLong maybeFirstEventOrder = findEventOrder(ttid, threadToExecution, event);
@@ -541,8 +557,10 @@ public class MaximalCausalModel {
                 ReadonlyEventInterface event = nameToEvent.get(name);
                 EventWithOrder eventWithOrder =
                         new EventWithOrder(event, Long.parseLong(model.getConstInterp(f).toString()));
+                OptionalInt maybeTtid = trace.getTraceThreadId(event);
+                assert maybeTtid.isPresent();
                 threadToExecution
-                        .computeIfAbsent(trace.getTraceThreadId(event), a -> new ArrayList<>())
+                        .computeIfAbsent(maybeTtid.getAsInt(), a -> new ArrayList<>())
                         .add(eventWithOrder);
             }
         }
@@ -611,7 +629,9 @@ public class MaximalCausalModel {
                 return;
             }
             ReadonlyEventInterface startEvent = maybeStartEvent.get();
-            int parentThreadTtid = trace.getTraceThreadId(startEvent);
+            OptionalInt maybeParentThreadTtid = trace.getTraceThreadId(startEvent);
+            assert maybeParentThreadTtid.isPresent();
+            int parentThreadTtid = maybeParentThreadTtid.getAsInt();
             List<EventWithOrder> parentExecution = threadToExecution.get(parentThreadTtid);
             OptionalInt maybeStartEventIndex = OptionalInt.empty();
             for (int i = 0; i < parentExecution.size(); i++) {

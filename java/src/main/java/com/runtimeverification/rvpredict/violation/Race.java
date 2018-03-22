@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 
 /**
@@ -295,7 +296,9 @@ public class Race {
         if (isSignal) {
             primaryComponent.description_format = accessType + " in signal %s" + locksHeldDescription;
             RawComponentField field = new RawComponentField();
-            long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
+            OptionalInt maybeId = trace.getTraceThreadId(e);
+            assert maybeId.isPresent();
+            long sid = trace.getSignalNumber(maybeId.getAsInt());
             field.setSignal((int)sid);
             primaryComponent.description_fields.add(field);
         } else {
@@ -350,7 +353,9 @@ public class Race {
                     otid,
                     getHeldLocksReport(heldLocks, metadata)));
         } else {
-            long sid = trace.getSignalNumber(trace.getTraceThreadId(e));
+            OptionalInt maybeId = trace.getTraceThreadId(e);
+            assert maybeId.isPresent();
+            long sid = trace.getSignalNumber(maybeId.getAsInt());
             sb.append(String.format("    %s in signal S%s%s%n",
                     e.isWrite() ? "Write" : "Read",
                     sid,

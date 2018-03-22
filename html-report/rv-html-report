@@ -83,7 +83,10 @@ parser.add_argument("-o", "--output", help="Directory to output html report to")
 parser.add_argument("--encoding", help="Encoding used by source files in your project")
 args = parser.parse_args()
 if not args.output:
-    args.output = "output"
+    if len(args.input) == 1:
+        args.output = os.path.splitext(os.path.basename(args.input[0]))[0]
+    else:
+        args.output = "output"
 errors = []
 for i in args.input:
     errors.extend(load_json(i))

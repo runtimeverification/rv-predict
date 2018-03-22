@@ -119,6 +119,45 @@ public class TraceTest {
     }
 
     @Test
+    public void testThreadStartsCannotBeRecurrentPatterns() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.createRawTrace(
+                        tu.setPc(PC_BASE),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.threadStart(THREAD_ID_2),
+                        tu.setPc(PC_BASE),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.threadStart(THREAD_ID_3),
+                        tu.setPc(PC_BASE),
+                        tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                        tu.threadStart(THREAD_ID_4),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_2, NO_SIGNAL),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_3, NO_SIGNAL),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1)),
+                tu.createRawTrace(
+                        tu.switchThread(THREAD_ID_4, NO_SIGNAL),
+                        tu.nonAtomicStore(ADDRESS_1, VALUE_1)));
+
+        Trace trace = createTrace(
+                rawTraces, TTID_1_OTID_1_THREAD, TTID_2_OTID_2_THREAD, TTID_3_OTID_3_THREAD, TTID_4_OTID_4_THREAD);
+
+        Assert.assertEquals(4, trace.eventsByThreadID().size());
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(1));
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(2));
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(3));
+        Assert.assertTrue(trace.eventsByThreadID().containsKey(4));
+
+        List<ReadonlyEventInterface> events = trace.getEvents(1);
+        Assert.assertEquals(7, events.size());
+    }
+
+    @Test
     public void testPatternsWithDifferentPcAreNotRecurrent() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
 

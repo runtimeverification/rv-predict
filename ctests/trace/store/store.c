@@ -21,12 +21,9 @@ main(void)
 	volatile _Atomic uint32_t u32 = initial_u32;
 	volatile _Atomic uint64_t u64 = initial_u64;
 
-	assert(atomic_fetch_add(&u16, end_u16 - initial_u16) == initial_u16);
-	assert(atomic_fetch_add(&u32, end_u32 - initial_u32) == initial_u32);
-	assert(atomic_fetch_add(&u64, end_u64 - initial_u64) == initial_u64);
-	assert(u16 == end_u16);
-	assert(u32 == end_u32);
-	assert(u64 == end_u64);
+	u16 = end_u16;
+	u32 = end_u32;
+	u64 = end_u64;
 
 	return EXIT_SUCCESS;
 }

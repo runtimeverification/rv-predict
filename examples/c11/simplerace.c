@@ -24,7 +24,7 @@ thread2(void *arg __unused)
 }
 
 int
-main(int argc __unused, char **argv __unused)
+main(void)
 {
 	pthread_t t1, t2;
 

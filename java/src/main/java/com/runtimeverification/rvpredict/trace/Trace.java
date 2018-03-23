@@ -225,15 +225,13 @@ public class Trace {
         return tidToEvents;
     }
 
-    public Map<Integer, List<MemoryAccessBlock>> memoryAccessBlocksByThreadID() {
-        return tidToMemoryAccessBlocks;
-    }
-
     /**
      * Returns the {@link MemoryAccessBlock} that {@code event} belongs to.
      */
     public MemoryAccessBlock getMemoryAccessBlock(ReadonlyEventInterface event) {
-        List<MemoryAccessBlock> l = tidToMemoryAccessBlocks.get(getTraceThreadId(event));
+        OptionalInt maybeTtid = getTraceThreadId(event);
+        assert maybeTtid.isPresent();
+        List<MemoryAccessBlock> l = tidToMemoryAccessBlocks.get(maybeTtid.getAsInt());
         /* doing binary search on l */
         int low = 0;
         int high = l.size() - 1;
@@ -252,8 +250,17 @@ public class Trace {
         throw new IllegalArgumentException("No such block!");
     }
 
-    public int getTraceThreadId(ReadonlyEventInterface event) {
-        return eventIdToTtid.get(event.getEventId());
+    public OptionalInt getTraceThreadId(ReadonlyEventInterface event) {
+        Integer ttidForEvent = eventIdToTtid.get(event.getEventId());
+        if (ttidForEvent != null) {
+            return OptionalInt.of(ttidForEvent);
+        }
+        // If we reached this point, then the event must come from one of the previous windows, e.g. it can be
+        // a lock that was locked before the current window and not released. This means that its thread/signal
+        // must be active at the beginning of the current window.
+        // One could use state.getTtidForThreadOngoingAtWindowStart to get the thread id, but it's not clear that
+        // this is useful.
+        return OptionalInt.empty();
     }
 
     public ThreadType getThreadType(ReadonlyEventInterface event) {
@@ -329,7 +336,9 @@ public class Trace {
     }
 
     public ReadonlyEventInterface getSameThreadPrevWrite(ReadonlyEventInterface read) {
-        return getPrevWrite(read.getEventId(), getTraceThreadId(read), read.getDataInternalIdentifier());
+        OptionalInt readId = getTraceThreadId(read);
+        assert readId.isPresent();
+        return getPrevWrite(read.getEventId(), readId.getAsInt(), read.getDataInternalIdentifier());
     }
 
     public ReadonlyEventInterface getAllThreadsPrevWrite(ReadonlyEventInterface read) {
@@ -381,16 +390,19 @@ public class Trace {
      * @return a {@code Deque} of call stack events
      */
     public Deque<ReadonlyEventInterface> getStacktraceAt(ReadonlyEventInterface event) {
-        int ttid = getTraceThreadId(event);
+        OptionalInt maybeTtid = getTraceThreadId(event);
         long gid = event.getEventId();
         Deque<ReadonlyEventInterface> stacktrace = new ArrayDeque<>();
         if (!state.config().stacks()) {
             stacktrace.add(event);
-        } else if (gid >= baseGID) {
+        } else if (gid >= baseGID && maybeTtid.isPresent()) {
             /* event is in the current window; reassemble its stack trace */
-            tidToThreadState.getOrDefault(ttid, new ThreadState()).getStacktrace()
+            tidToThreadState.getOrDefault(maybeTtid.getAsInt(), new ThreadState()).getStacktrace()
                     .forEach(stacktrace::addFirst);
-            RawTrace t = rawTraces.stream().filter(p -> p.getThreadInfo().getId() == ttid).findAny().get();
+            Optional<RawTrace> maybeT =
+                    rawTraces.stream().filter(p -> p.getThreadInfo().getId() == maybeTtid.getAsInt()).findAny();
+            assert maybeT.isPresent();
+            RawTrace t = maybeT.get();
             for (int i = 0; i < t.size(); i++) {
                 ReadonlyEventInterface e = t.event(i);
                 if (e.getEventId() > gid) break;
@@ -413,11 +425,15 @@ public class Trace {
      * Returns the locks held by the owner thread when a given {@code ReadonlyEventInterface} occurs.
      */
     public List<ReadonlyEventInterface> getHeldLocksAt(ReadonlyEventInterface event) {
-        int ttid = getTraceThreadId(event);
+        OptionalInt maybeTtid = getTraceThreadId(event);
+        assert maybeTtid.isPresent();
+        int ttid = maybeTtid.getAsInt();
         Map<Long, LockState> lockIdToLockState = tidToThreadState
                 .computeIfAbsent(ttid, key -> new ThreadState()).getLockStates().stream()
                 .collect(Collectors.toMap(LockState::lockId, LockState::copy));
-        RawTrace t = rawTraces.stream().filter(p -> p.getThreadInfo().getId() == ttid).findAny().get();
+        Optional<RawTrace> maybeT = rawTraces.stream().filter(p -> p.getThreadInfo().getId() == ttid).findAny();
+        assert maybeT.isPresent();
+        RawTrace t = maybeT.get();
         for (int i = 0; i < t.size(); i++) {
             ReadonlyEventInterface e = t.event(i);
             if (e.getEventId() >= event.getEventId()) break;
@@ -429,11 +445,11 @@ public class Trace {
             }
         }
 
-        List<ReadonlyEventInterface> lockEvents = lockIdToLockState.values().stream()
+        return lockIdToLockState.values().stream()
                 .filter(LockState::isAcquired)
-                .map(LockState::lock).collect(Collectors.toList());
-        Collections.sort(lockEvents);
-        return lockEvents;
+                .map(LockState::lock)
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     public List<ReadonlyEventInterface> getEstablishSignalEvents(long signalNumber, long signalHandler) {
@@ -648,7 +664,7 @@ public class Trace {
             }
 
             /* sort lock regions for better performance of constraint solving */
-            lockIdToLockRegions.values().forEach(regions -> Collections.sort(regions));
+            lockIdToLockRegions.values().forEach(Collections::sort);
         }
 
         for (int ttid : state.getThreadsForCurrentWindow()) {
@@ -764,7 +780,11 @@ public class Trace {
     }
 
     private boolean eventsAreInThreadOrder(ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
-        return e1.getEventId() < e2.getEventId() && getTraceThreadId(e1) == getTraceThreadId(e2);
+        OptionalInt maybeId1 = getTraceThreadId(e1);
+        OptionalInt maybeId2 = getTraceThreadId(e1);
+        assert maybeId1.isPresent();
+        assert maybeId2.isPresent();
+        return e1.getEventId() < e2.getEventId() && maybeId1.getAsInt() == maybeId2.getAsInt();
     }
 
     private boolean normalThreadsAreInHappensBeforeRelation(int ttid1, int ttid2) {
@@ -854,8 +874,7 @@ public class Trace {
     }
 
     private List<Integer> getThreadsWhereSignalIsEnabled(long signalNumber) {
-        Set<Integer> enabledThreads = new HashSet<>();
-        enabledThreads.addAll(getTtidsWhereSignalIsEnabledAtStart(signalNumber));
+        Set<Integer> enabledThreads = new HashSet<>(getTtidsWhereSignalIsEnabledAtStart(signalNumber));
         tidToEvents.forEach((ttid, events) -> {
             if (enabledThreads.contains(ttid)) {
                 return;

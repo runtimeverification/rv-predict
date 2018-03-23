@@ -113,8 +113,13 @@ public abstract class ReadonlyEvent implements ReadonlyEventInterface {
 
     @Override
     public boolean isSimilarTo(ReadonlyEventInterface event) {
-        return getType() == event.getType() && getLocationId() == event.getLocationId()
-                && unsafeGetDataInternalIdentifier() == event.unsafeGetDataInternalIdentifier() && unsafeGetDataValue() == event.unsafeGetDataValue();
+        return canBeSimilar() && getType() == event.getType() && getLocationId() == event.getLocationId()
+                && unsafeGetDataInternalIdentifier() == event.unsafeGetDataInternalIdentifier()
+                && unsafeGetDataValue() == event.unsafeGetDataValue();
+    }
+
+    private boolean canBeSimilar() {
+        return isReadOrWrite() || isLock() || isUnlock() || isCallStackEvent() || isPreLock();
     }
 
     @Override

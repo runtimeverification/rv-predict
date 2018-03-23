@@ -62,8 +62,8 @@ public class TransitiveClosure {
         public TransitiveClosure build() {
             int numOfGroups = eventToGroupId.size();
             boolean[][] f = new boolean[numOfGroups][numOfGroups];
-            relations.forEach(p -> f[eventToGroupId.get(p.getLeft())]
-                    [eventToGroupId.get(p.getRight())] = true);
+            relations.forEach(p ->
+                    f[eventToGroupId.get(p.getLeft())][eventToGroupId.get(p.getRight())] = true);
             for (int k = 0; k < numOfGroups; k++) {
                 for (int x = 0; x < numOfGroups; x++) {
                     for (int y = 0; y < numOfGroups; y++) {

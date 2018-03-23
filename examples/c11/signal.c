@@ -27,41 +27,75 @@
 #define	__unused	__attribute__((__unused__))
 #endif /* __unused */
 
+static struct {
+	volatile int count;
+	volatile _Atomic bool blocked;
+	volatile _Atomic bool interrupted;
+} shared = {
+	  .count = 0
+	, .blocked = ATOMIC_VAR_INIT(false)
+	, .interrupted = false
+};
+
 bool use_signal = false;
+bool block_with_lock = false, block_with_mask = false,
+    block_with_variable = false;
 unsigned long max_recursion = 0;
 volatile _Atomic unsigned long recursion = 0;
 
-static struct {
-	volatile int count;
-	volatile _Atomic bool alarm_blocked;
-	volatile bool interrupted;
-} shared = {
-	  .count = 0
-	, .alarm_blocked = ATOMIC_VAR_INIT(false)
-	, .interrupted = false
-};
+pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+
+static void
+consume(void)
+{
+	if (shared.blocked)
+		return;
+
+	if (shared.count < 0 || 25 < shared.count)
+		abort();
+}
+
+static void
+produce(void)
+{
+	sigset_t tset;
+
+	if (block_with_variable)
+		shared.blocked = true;
+	if (block_with_mask)
+		signals_mask(SIGALRM, &tset);
+	if (block_with_lock)
+		pthread_mutex_lock(&mtx);
+	shared.count++;
+	if (block_with_variable)
+		shared.blocked = false;
+	if (block_with_mask)
+		signals_restore(&tset);
+	if (block_with_lock)
+		pthread_mutex_unlock(&mtx);
+}
 
 static void
 alarm_handler(int signum __unused)
 {
-	if (shared.alarm_blocked)
-		return;
+	consume();
 
 	if (recursion++ < max_recursion)
 		raise(signum);
-
-	if (shared.count < 0 || 25 < shared.count)
-		abort();
 
 	--recursion;
 }
 
 static void *
-consume(void *arg __unused)
+run_consumer(void *arg __unused)
 {
 	while (!shared.interrupted) {
-		alarm_handler(SIGALRM);
+		if (block_with_lock)
+			pthread_mutex_lock(&mtx);
+		consume();
 		sched_yield();
+		if (block_with_lock)
+			pthread_mutex_unlock(&mtx);
 	}
 	return NULL;
 }
@@ -103,9 +137,6 @@ main(int argc, char **argv)
 	int i, opt;
 	sigset_t oset;
 	pthread_t consumer;
-	bool block_with_lock = false, block_with_mask = false,
-	    block_with_variable = false;
-	pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
 	while ((opt = getopt(argc, argv, "lmr:sv")) != -1) {
 		switch (opt) {
@@ -153,29 +184,17 @@ main(int argc, char **argv)
 		establish(SIGALRM, alarm_handler, max_recursion > 0);
 		if (getitimer(ITIMER_REAL, &it) == -1)
 			err(EXIT_FAILURE, "%s: getitimer", __func__);
-		it.it_interval = (struct timeval){.tv_sec = 0, .tv_usec = 1000 * 1000 / 10};
+		it.it_interval = (struct timeval){.tv_sec = 0,
+		                                  .tv_usec = 1000 * 1000 / 10};
 		it.it_value.tv_usec++;
 		if (setitimer(ITIMER_REAL, &it, NULL) == -1)
 			err(EXIT_FAILURE, "%s: setitimer", __func__);
 		signals_unmask(SIGALRM, NULL);
 	} else {
-		pthread_create(&consumer, NULL, &consume, NULL);
+		pthread_create(&consumer, NULL, &run_consumer, NULL);
 	}
 	for (i = 0; i < 25; i++) {
-		sigset_t tset;
-		if (block_with_variable)
-			shared.alarm_blocked = true;
-		if (block_with_mask)
-			signals_mask(SIGALRM, &tset);
-		if (block_with_lock)
-			pthread_mutex_lock(&mtx);
-		shared.count++;
-		if (block_with_variable)
-			shared.alarm_blocked = false;
-		if (block_with_mask)
-			signals_restore(&tset);
-		if (block_with_lock)
-			pthread_mutex_unlock(&mtx);
+		produce();
 		if (use_signal)
 			pause();
 		else

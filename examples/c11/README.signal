@@ -59,3 +59,14 @@ will run; setting the signal mask will not stop them from racing:
 
 	./signal -m
 
+The `-l` option makes the program hold a mutex while accessing the
+shared variable from a *thread*.  (Mutexes must not be acquired in
+signal handlers.)  A mutex is sufficient to synchronize accesses
+by the threads:
+
+	./signal -l
+
+However, a mutex is not sufficient to synchronize a thread with
+a signal:
+
+	./signal -s -l

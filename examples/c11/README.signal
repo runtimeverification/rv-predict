@@ -10,6 +10,13 @@ The program demonstrates RV-Predict/C's capability to accurately model
 the differences between a single thread racing with a signal handler,
 and one thread racing with a second thread.
 
+Because analysis of thread-signal and signal-signal data races takes takes
+much more CPU time at the same window size than analyzing thread-thread
+data races, Runtime Verification recommends configuring the environment
+to select a smaller window size than usual before running `signal`:
+
+	export RVP_WINDOW_SIZE=250
+
 # Sources
 
 signal.c	the test program

@@ -7,6 +7,8 @@ rmw/: Tests of C11 atomic read-modify-write operations
 	sub/: Tests of C11 atomic add (32- and 64-bit versions so far)
 	xchg/: Tests of C11 atomic exchange (32- and 64-bit versions so far)
 
+store/: Rudimentary tests of stores.
+
 unaligned/: Rudimentary test of unaligned accesses.
 
 memcpy/: Rudimentary test of memcpy.

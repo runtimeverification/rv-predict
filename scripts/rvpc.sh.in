@@ -7,6 +7,59 @@
 set -e
 set -u
 
+# Filter out arguments that should not be passed to the compiler.
+# Quote args to make them safe in the shell.
+# Usage: quotedlist="$(shell_quote args...)"
+#
+# Use the returned string by evaling it inside
+# double quotes, like this:
+#    eval "set -- $quotedlist"
+# or like this:
+#    eval "\$command $quotedlist \$filename"
+#
+filter_noncc_arguments()
+{(
+	local result=''
+	local arg qarg
+	LC_COLLATE=C ; export LC_COLLATE # so [a-zA-Z0-9] works in ASCII
+	for arg in "$@" ; do
+		case "${arg}" in
+		--just-print)
+			continue
+			;;
+		--intr-personality=*)
+			continue
+			;;
+		'')
+			qarg="''"
+			;;
+		*[!-./a-zA-Z0-9]*)
+			# Convert each embedded ' to '\'',
+			# then insert ' at the beginning of the first line,
+			# and append ' at the end of the last line.
+			# Finally, elide unnecessary '' pairs at the
+			# beginning and end of the result and as part of
+			# '\'''\'' sequences that result from multiple
+			# adjacent quotes in he input.
+			qarg="$(printf "%s\n" "$arg" | \
+			    ${SED:-sed} -e "s/'/'\\\\''/g" \
+				-e "1s/^/'/" -e "\$s/\$/'/" \
+				-e "1s/^''//" -e "\$s/''\$//" \
+				-e "s/'''/'/g"
+				)"
+			;;
+		*)
+			# Arg is not the empty string, and does not contain
+			# any unsafe characters.  Leave it unchanged for
+			# readability.
+			qarg="${arg}"
+			;;
+		esac
+		result="${result}${result:+ }${qarg}"
+	done
+	printf "%s\n" "$result"
+)}
+
 ldscript_dir=$(dirname $0)/../share/rv-predict-c
 pass_dir=$(dirname $0)/../--LIBEXECDIR--
 runtime_dir=$(dirname $0)/../lib
@@ -70,19 +123,8 @@ for arg in "$@"; do
 	esac
 done
 
-args=
-
-for arg in "$@"; do
-	case "$arg" in
-	--just-print)
-		;;
-	--intr-personality=*)
-		;;
-	*)
-		args="${args} ${arg}"
-		;;
-	esac
-done
+quoted_list=$(filter_noncc_arguments "$@")
+eval "set -- ${quoted_list}"
 
 if [ ${cplusplus:-no} = yes ]; then
 	compiler="clang++-4.0 -std=c++11"
@@ -112,4 +154,4 @@ else
 	pfx=
 fi
 
-$pfx $compiler ${pass:-} ${args} ${runtime:-}
+$pfx $compiler ${pass:-} "$@" ${runtime:-}

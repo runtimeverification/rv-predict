@@ -88,6 +88,7 @@ public class SingleThreadedRaceSolver implements RaceSolver {
         try (ProfilerToken ignored1 =
                      Profiler.instance().start("Main solver loop " + Thread.currentThread().getName())) {
             fastSolver.push();
+            addWindowSpecificFormulas();
             fastSolver.add(z3filter.filter(assertion));
             if (fastSolver.check() == Status.SATISFIABLE) {
                 try (ProfilerToken ignored2 =
@@ -104,6 +105,7 @@ public class SingleThreadedRaceSolver implements RaceSolver {
             }
         } finally {
             fastSolver.pop();
+            z3filter.clear();
         }
     }
 
@@ -111,10 +113,12 @@ public class SingleThreadedRaceSolver implements RaceSolver {
     public void generateSolution(WindowData windowData, SolutionReporter solutionReporter) throws Exception {
         startWindowIfNeeded(windowData);
         soundSolver.push();
+        addWindowSpecificFormulas();
         if (soundSolver.check() == Status.SATISFIABLE) {
             solutionReporter.solution(soundSolver.getModel());
         }
         soundSolver.pop();
+        z3filter.clear();
     }
 
     @Override
@@ -126,7 +130,7 @@ public class SingleThreadedRaceSolver implements RaceSolver {
         endWindow();
     }
 
-    private void startWindowIfNeeded(WindowData windowData) throws Exception {
+    private void startWindowIfNeeded(WindowData windowData) {
         if (currentWindowData.isPresent()) {
             if (currentWindowData.get().getWindowId() != windowData.getWindowId()) {
                 endWindow();
@@ -140,6 +144,13 @@ public class SingleThreadedRaceSolver implements RaceSolver {
         fastSolver.push();
         soundSolver.push();
         /* translate our formula into Z3 AST format */
+    }
+
+    private void addWindowSpecificFormulas() throws Exception {
+        if (!currentWindowData.isPresent()) {
+            return;
+        }
+        WindowData windowData = currentWindowData.get();
         fastSolver.add(z3filter.filter(windowData.getUnsoundButFastPhiTau()));
         soundSolver.add(z3filter.filter(windowData.getSoundPhiTau()));
         for (BoolFormula entry : windowData.getPhiConc()) {

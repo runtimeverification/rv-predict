@@ -53,6 +53,7 @@ let string_of_error_category (category : error_category) : string =
   | `ConstraintViolation -> "Constraint violation"
   | `IllFormed -> "Ill-formed program"
   | `ImplementationDefined lang -> "Implementation defined behavior"
+  | `ImplementationUndefined lang -> "Implementation-dependent undefined behavior"
   | `LintError -> "Possible unintended behavior"
   | `SyntaxError lang -> "Syntax error"
   | `Undefined lang -> "Undefined behavior"

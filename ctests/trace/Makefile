@@ -1,3 +1,3 @@
-SUBPRJ=limits mask memcpy rmw unaligned
+SUBPRJ=limits mask memcpy rmw store unaligned
 
 .include <mkc.subprj.mk>

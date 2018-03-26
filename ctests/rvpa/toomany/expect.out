@@ -1,4 +1,4 @@
 rvpa: too many arguments
 usage: rvpa [--window size]
-    [--no-shorten|--no-signal|--no-symbol|--no-system|--no-trim] [--]
+    [--no-shorten|--no-symbol|--no-trim] [--]
     program [trace-file]

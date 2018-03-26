@@ -116,6 +116,13 @@ __rvpredict_atomic_store1(uint8_t *addr, uint8_t val, int32_t memory_order __unu
 }
 
 void
+__rvpredict_atomic_store2(uint16_t *addr, uint16_t val, int32_t memory_order __unused)
+{
+	trace_store(__builtin_return_address(0), RVP_OP_ATOMIC_STORE2,
+	    (rvp_addr_t)addr, val);
+}
+
+void
 __rvpredict_atomic_store4(uint32_t *addr, uint32_t val, int32_t memory_order __unused)
 {
 	trace_store(__builtin_return_address(0), RVP_OP_ATOMIC_STORE4,

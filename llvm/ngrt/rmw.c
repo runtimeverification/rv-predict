@@ -7,6 +7,21 @@
 
 /* TBD emit requisite changes of generation. */
 static inline void
+trace_atomic_rmw_narrow(const void *retaddr, rvp_addr_t addr,
+    uint16_t oval, uint16_t nval, int32_t memory_order __unused, rvp_op_t op)
+{
+	rvp_ring_t *r = rvp_ring_for_curthr();
+	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	const uint32_t nmask = __BITS(31, 16), omask = __BITS(15, 0);
+
+	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
+	rvp_buf_put_addr(&b, addr);
+	rvp_buf_put(&b, __SHIFTIN(nval, nmask) | __SHIFTIN(oval, omask));
+	rvp_ring_put_buf(r, b);
+}
+
+/* TBD emit requisite changes of generation. */
+static inline void
 trace_atomic_rmw4(const void *retaddr, rvp_addr_t addr,
     uint32_t oval, uint32_t nval, int32_t memory_order __unused)
 {
@@ -20,6 +35,7 @@ trace_atomic_rmw4(const void *retaddr, rvp_addr_t addr,
 	rvp_ring_put_buf(r, b);
 }
 
+/* TBD emit requisite changes of generation. */
 static inline void
 trace_atomic_rmw8(const void *retaddr, rvp_addr_t addr,
     uint64_t oval, uint64_t nval, int32_t memory_order __unused)
@@ -59,6 +75,24 @@ __rvpredict_atomic_fetch_or4(volatile _Atomic uint32_t *addr,
 	trace_atomic_rmw4(
 	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval | arg,
 	    memory_order);
+}
+
+void
+__rvpredict_atomic_fetch_add1(volatile _Atomic uint8_t *addr,
+    uint8_t oval, uint8_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval + arg,
+	    memory_order, RVP_OP_ATOMIC_RMW1);
+}
+
+void
+__rvpredict_atomic_fetch_add2(volatile _Atomic uint16_t *addr,
+    uint16_t oval, uint16_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval + arg,
+	    memory_order, RVP_OP_ATOMIC_RMW2);
 }
 
 void

@@ -7,7 +7,7 @@ NOMAN=
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
-PATH:=$(.OBJDIR)/../../../toolset/bin:$(PATH)
+PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 RVP_TRACE_FILE:=$(.OBJDIR)/test.trace 
 RVP_TRACE_ONLY:=yes
 
@@ -15,10 +15,10 @@ RVP_TRACE_ONLY:=yes
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
 
-PROG=xchg
+PROG=store
 
 CC?=rvpc
-CPPFLAGS+=-I$(.CURDIR)/../../../../include
+CPPFLAGS+=-I$(.CURDIR)/../../../include
 WARNS=4
 STRIPFLAG=
 
@@ -31,7 +31,7 @@ test.trace:
 	@$(.OBJDIR)/$(PROG) > /dev/null
 
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(.CURDIR)/../../../normalize-humanized-trace
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(.CURDIR)/../../normalize-humanized-trace
 
 CLEANFILES+=test.trace
 

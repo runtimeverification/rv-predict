@@ -9,6 +9,7 @@ type error_category = [
 | ConstraintViolation
 | SyntaxError of language
 | LintError
+| Unknown
 ]
 
 type citation = {

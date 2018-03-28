@@ -59,6 +59,7 @@ let string_of_error_category (category : error_category) : string =
   | `Undefined lang -> "Undefined behavior"
   | `Underspecified lang -> "Behavior underspecified by standard"
   | `Unspecified lang -> "Unspecified value or behavior"
+  | `Unknown -> "Unknown error"
 
 
 let render_citation_url (citation : citation) : string =

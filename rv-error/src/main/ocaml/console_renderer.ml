@@ -10,7 +10,7 @@ let render_id_and_category (buffer : rv_buffer) (category : error_category) (err
   add_string buffer cat ;
   add_string buffer " (" ;
   add_string buffer error_id ;
-  add_string buffer "):"
+  add_string buffer ")"
 
 
 let render_citation (buffer : rv_buffer) (citation : citation) : unit =
@@ -36,6 +36,7 @@ let render_stack_error_impl (this : renderer) (error : stack_error) (str : out_c
   add_char buffer ':' ;
   List.iter (render_trace buffer) error.stack_traces ;
   render_id_and_category buffer error.category error.error_id ;
+  if error.citations <> [] then add_char buffer ':' ;
   List.iter (render_citation buffer) error.citations ;
   add_line buffer   "";
   add_line buffer   "";
@@ -59,6 +60,7 @@ let render_location_error_impl (this : renderer) (error : location_error) (str :
   add_string buffer ": " ;
   add_string buffer error.description ;
   render_id_and_category buffer error.category error.error_id ;
+  if error.citations <> [] then add_char buffer ':' ;
   List.iter (render_citation buffer) error.citations ;
   add_line buffer   "";
   add_line buffer   "";

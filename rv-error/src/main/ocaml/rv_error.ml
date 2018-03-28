@@ -55,6 +55,7 @@ let abbr_of_error_category (category : error_category) : string =
   | `Undefined lang -> "UB" ^ string_of_language lang
   | `Underspecified lang -> "DR" ^ string_of_language lang
   | `Unspecified lang -> "USP" ^ string_of_language lang
+  | `Unknown -> "UNK"
 
 
 let get_real_error_id (error_id : string) (category : error_category) : string =

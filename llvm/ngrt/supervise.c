@@ -21,6 +21,8 @@
 static const char *tmproot = "/tmp";
 static const char *self_exe_pathname = "/proc/self/exe";
 static const char *trace_var = "RVP_TRACE_FILE";
+static const int ignore_signum[] = {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM,
+    SIGTERM};
 int rvp_analysis_fd = -1;
 
 volatile _Atomic bool __read_mostly rvp_initialized = false;
@@ -87,13 +89,14 @@ restore_signals(sigset_t *omask)
 static void
 block_signals(sigset_t *omask)
 {
-	static const int signum[] = {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM,
-	    SIGTERM};
 	int i;
 	sigset_t s;
 
-	for (i = 0; i < __arraycount(signum); i++) {
-		if (sigaddset(&s, signum[i]) == -1)
+	if (sigemptyset(&s) == -1)
+		goto errexit;
+
+	for (i = 0; i < __arraycount(ignore_signum); i++) {
+		if (sigaddset(&s, ignore_signum[i]) == -1)
 			goto errexit;
 	}
 
@@ -101,6 +104,46 @@ block_signals(sigset_t *omask)
 		return;
 errexit:
 	err(EXIT_FAILURE, "%s could not block signals", product_name);
+}
+
+static void
+ignore_signals(struct sigaction *action, size_t nactions)
+{
+	int i;
+	struct sigaction sa;
+
+	memset(&sa, '\0', sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	if (sigemptyset(&sa.sa_mask) == -1)
+		goto errexit;
+
+	if (nactions < __arraycount(ignore_signum)) {
+		errx(EXIT_FAILURE,
+		    "%s: too few `struct sigaction` to hold state", __func__);
+	}
+
+	for (i = 0; i < __arraycount(ignore_signum); i++) {
+		if (real_sigaction(ignore_signum[i], &sa, &action[i]) == -1)
+			goto errexit;
+	}
+
+	return;
+
+errexit:
+	err(EXIT_FAILURE, "%s could not ignore signals", product_name);
+}
+
+static void
+reset_signals(const struct sigaction *action)
+{
+	int i;
+
+	for (i = 0; i < __arraycount(ignore_signum); i++) {
+		if (real_sigaction(ignore_signum[i], &action[i], NULL) == -1) {
+			err(EXIT_FAILURE, "%s could not reset signals",
+			    product_name);
+		}
+	}
 }
 
 static void
@@ -151,9 +194,9 @@ cleanup(char *tmpdir)
 static void
 rvp_online_analysis_start(void)
 {
+	struct sigaction action[__arraycount(ignore_signum)];
 	int status;
 	pid_t supervisee_pid, analysis_pid;
-	sigset_t omask;
 	int pipefd[2];
 
 	char *const binpath =
@@ -180,13 +223,13 @@ rvp_online_analysis_start(void)
 		    "%s could not fork a supervisee process", product_name);
 	}
 
-	block_signals(&omask);
+	ignore_signals(action, __arraycount(action));
 
 	/* the child process runs the program: return to its main routine */
 	if (supervisee_pid == 0) {
 		rvp_analysis_fd = pipewr;
 		(void)close(piperd);
-		restore_signals(&omask);
+		reset_signals(action);
 		return;
 	}
 
@@ -225,13 +268,22 @@ rvp_online_analysis_start(void)
 	}
 
 	/* wait for the analysis to finish */
-	while (waitpid(analysis_pid, NULL, 0) == -1) {
+	while (waitpid(analysis_pid, &status, 0) == -1) {
 		if (errno == EINTR)
 			continue;
 		err(EXIT_FAILURE,
 		    "%s failed unexpectedly "
 		    "while it waited for the analysis process to finish",
 		    product_name);
+	}
+
+	if (WIFSIGNALED(status)) {
+		fprintf(stderr, "analysis engine: %s", strsignal(WTERMSIG(status)));
+#ifdef WCOREDUMP
+		if (WCOREDUMP(status))
+			fprintf(stderr, " (core dumped)");
+#endif /* WCOREDUMP */
+		fputc('\n', stderr);
 	}
 
 	/* wait for the supervisee to finish */

@@ -3,6 +3,7 @@
 #include <limits.h>	/* for SSIZE_MAX */
 #include <signal.h>	/* for pthread_sigmask(3) */
 #include <stdio.h>
+#include <stdarg.h>	/* for vfprintf(3) */
 #include <stdint.h>	/* for intmax_t */
 #include <stdlib.h>	/* for STDIN_FILENO */
 #include <string.h>	/* for strdup(3), strlen(3) */
@@ -192,12 +193,64 @@ cleanup(char *tmpdir)
 }
 
 static void
+sigchld(int signo __unused)
+{
+	return;
+}
+
+static void
+prepare_to_wait_for_analysis(struct sigaction *action, sigset_t *setp)
+{
+	int i;
+	struct sigaction sa = {.sa_handler = sigchld};
+
+	if (sigemptyset(&sa.sa_mask) == -1)
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
+
+	if (sigemptyset(setp) == -1)
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
+
+	for (i = 0; i < __arraycount(ignore_signum); i++) {
+		if (sigaddset(setp, ignore_signum[i]) == -1) {
+			err(EXIT_FAILURE, "%s.%d: sigaddset", __func__,
+			    __LINE__);
+		}
+	}
+	if (sigaddset(setp, SIGCHLD) == -1)
+		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
+
+	if (real_pthread_sigmask(SIG_BLOCK, setp, NULL) == -1)
+		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
+	if (real_sigaction(SIGCHLD, &sa, NULL) == -1)
+		err(EXIT_FAILURE, "%s: sigaction", __func__);
+
+	reset_signals(action);
+}
+
+static int __printflike(1, 2)
+dbg_printf(const char *fmt, ...)
+{
+	va_list ap;
+	int rc;
+
+	if (!rvp_debug_supervisor)
+		return 0;
+
+	va_start(ap, fmt);
+	rc = vfprintf(stderr, fmt, ap);
+	va_end(ap);
+	return rc;
+}
+
+static void
 rvp_online_analysis_start(void)
 {
 	struct sigaction action[__arraycount(ignore_signum)];
-	int status;
+	int astatus, sstatus;
 	pid_t supervisee_pid, analysis_pid;
 	int pipefd[2];
+	sigset_t waitset;
+	int signo;
 
 	char *const binpath =
 	    get_binary_path(/* (argc > 0) ? argv[0] : NULL */);
@@ -246,6 +299,14 @@ rvp_online_analysis_start(void)
 	if (analysis_pid == 0) {
 		char *const args[] = {"rvpa", binpath, "/dev/stdin", NULL};
 
+		if (setpgid(0, 0) == -1) {
+			err(EXIT_FAILURE,
+			    "%s could not put the analysis engine into its own "
+			    "process group", product_name);
+		}
+
+		reset_signals(action);
+
 		/* establish read end of pipe as rvpa's stdin */
 		if (dup2(piperd, STDIN_FILENO) == -1) {
 			err(EXIT_FAILURE, "%s could not establish "
@@ -267,27 +328,8 @@ rvp_online_analysis_start(void)
 		    "%s could not close event pipeline outlet", product_name);
 	}
 
-	/* wait for the analysis to finish */
-	while (waitpid(analysis_pid, &status, 0) == -1) {
-		if (errno == EINTR)
-			continue;
-		err(EXIT_FAILURE,
-		    "%s failed unexpectedly "
-		    "while it waited for the analysis process to finish",
-		    product_name);
-	}
-
-	if (WIFSIGNALED(status)) {
-		fprintf(stderr, "analysis engine: %s", strsignal(WTERMSIG(status)));
-#ifdef WCOREDUMP
-		if (WCOREDUMP(status))
-			fprintf(stderr, " (core dumped)");
-#endif /* WCOREDUMP */
-		fputc('\n', stderr);
-	}
-
 	/* wait for the supervisee to finish */
-	while (waitpid(supervisee_pid, &status, 0) == -1) {
+	while (waitpid(supervisee_pid, &sstatus, 0) == -1) {
 		if (errno == EINTR)
 			continue;
 		err(EXIT_FAILURE,
@@ -296,19 +338,52 @@ rvp_online_analysis_start(void)
 		    product_name);
 	}
 
-	if (WIFSIGNALED(status)) {
-		fprintf(stderr, "%s", strsignal(WTERMSIG(status)));
+	prepare_to_wait_for_analysis(action, &waitset);
+
+	if (waitpid(analysis_pid, &astatus, WNOHANG) == analysis_pid) {
+		dbg_printf("%s: analysis engine quit before we waited\n",
+		    product_name);
+	} else while (sigwait(&waitset, &signo) == 0) {
+		dbg_printf("%s: got signal %d (%s)\n", product_name,
+		    signo, strsignal(signo));
+		if (signo != SIGCHLD) {
+			if (kill(-analysis_pid, signo) == -1)
+				err(EXIT_FAILURE, "%s: kill", __func__);
+			dbg_printf("%s: forwarded signal %d\n",
+			    product_name, signo);
+			continue;
+		}
+		/* wait for the analysis to finish */
+		if (waitpid(analysis_pid, &astatus, 0) == -1) {
+			err(EXIT_FAILURE,
+			    "%s failed unexpectedly while it waited for the "
+			    "analysis process to finish",
+			    product_name);
+		}
+		break;
+	}
+	if (WIFSIGNALED(astatus)) {
+		fprintf(stderr, "analysis engine: %s", strsignal(WTERMSIG(astatus)));
 #ifdef WCOREDUMP
-		if (WCOREDUMP(status))
+		if (WCOREDUMP(astatus))
 			fprintf(stderr, " (core dumped)");
 #endif /* WCOREDUMP */
 		fputc('\n', stderr);
 	}
 
-	if (WIFSIGNALED(status))
+	if (WIFSIGNALED(sstatus)) {
+		fprintf(stderr, "%s", strsignal(WTERMSIG(sstatus)));
+#ifdef WCOREDUMP
+		if (WCOREDUMP(sstatus))
+			fprintf(stderr, " (core dumped)");
+#endif /* WCOREDUMP */
+		fputc('\n', stderr);
+	}
+
+	if (WIFSIGNALED(sstatus))
 		exit(125);	// following xargs(1) here. :-)
-	if (WIFEXITED(status))
-		exit(WEXITSTATUS(status));
+	if (WIFEXITED(sstatus))
+		exit(WEXITSTATUS(sstatus));
 	exit(EXIT_SUCCESS);
 }
 

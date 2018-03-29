@@ -22,7 +22,7 @@
 static const char *tmproot = "/tmp";
 static const char *self_exe_pathname = "/proc/self/exe";
 static const char *trace_var = "RVP_TRACE_FILE";
-static const int ignore_signum[] = {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM,
+static const int killer_signum[] = {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM,
     SIGTERM};
 int rvp_analysis_fd = -1;
 
@@ -96,8 +96,8 @@ block_signals(sigset_t *omask)
 	if (sigemptyset(&s) == -1)
 		goto errexit;
 
-	for (i = 0; i < __arraycount(ignore_signum); i++) {
-		if (sigaddset(&s, ignore_signum[i]) == -1)
+	for (i = 0; i < __arraycount(killer_signum); i++) {
+		if (sigaddset(&s, killer_signum[i]) == -1)
 			goto errexit;
 	}
 
@@ -118,13 +118,13 @@ ignore_signals(struct sigaction *action, size_t nactions)
 	if (sigemptyset(&sa.sa_mask) == -1)
 		goto errexit;
 
-	if (nactions < __arraycount(ignore_signum)) {
+	if (nactions < __arraycount(killer_signum)) {
 		errx(EXIT_FAILURE,
 		    "%s: too few `struct sigaction` to hold state", __func__);
 	}
 
-	for (i = 0; i < __arraycount(ignore_signum); i++) {
-		if (real_sigaction(ignore_signum[i], &sa, &action[i]) == -1)
+	for (i = 0; i < __arraycount(killer_signum); i++) {
+		if (real_sigaction(killer_signum[i], &sa, &action[i]) == -1)
 			goto errexit;
 	}
 
@@ -139,8 +139,8 @@ reset_signals(const struct sigaction *action)
 {
 	int i;
 
-	for (i = 0; i < __arraycount(ignore_signum); i++) {
-		if (real_sigaction(ignore_signum[i], &action[i], NULL) == -1) {
+	for (i = 0; i < __arraycount(killer_signum); i++) {
+		if (real_sigaction(killer_signum[i], &action[i], NULL) == -1) {
 			err(EXIT_FAILURE, "%s could not reset signals",
 			    product_name);
 		}
@@ -210,8 +210,8 @@ prepare_to_wait_for_analysis(struct sigaction *action, sigset_t *setp)
 	if (sigemptyset(setp) == -1)
 		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
 
-	for (i = 0; i < __arraycount(ignore_signum); i++) {
-		if (sigaddset(setp, ignore_signum[i]) == -1) {
+	for (i = 0; i < __arraycount(killer_signum); i++) {
+		if (sigaddset(setp, killer_signum[i]) == -1) {
 			err(EXIT_FAILURE, "%s.%d: sigaddset", __func__,
 			    __LINE__);
 		}
@@ -245,7 +245,7 @@ dbg_printf(const char *fmt, ...)
 static void
 rvp_online_analysis_start(void)
 {
-	struct sigaction action[__arraycount(ignore_signum)];
+	struct sigaction action[__arraycount(killer_signum)];
 	int astatus, sstatus;
 	pid_t supervisee_pid, analysis_pid;
 	int pipefd[2];
@@ -291,14 +291,15 @@ rvp_online_analysis_start(void)
 		    "%s could not close event pipeline inlet", product_name);
 	}
 
-	if ((analysis_pid = fork()) == -1) {
-		err(EXIT_FAILURE,
-		    "%s could not fork an analysis process", product_name);
-	}
+	analysis_pid = fork();
 
 	if (analysis_pid == 0) {
 		char *const args[] = {"rvpa", binpath, "/dev/stdin", NULL};
 
+		/* We move the analysis engine into its own process group
+		 * so that signals generated on the terminal (e.g.,
+		 * Control-C -> SIGINT) are not delivered to it.
+		 */
 		if (setpgid(0, 0) == -1) {
 			err(EXIT_FAILURE,
 			    "%s could not put the analysis engine into its own "
@@ -332,15 +333,36 @@ rvp_online_analysis_start(void)
 	while (waitpid(supervisee_pid, &sstatus, 0) == -1) {
 		if (errno == EINTR)
 			continue;
-		err(EXIT_FAILURE,
-		    "%s failed unexpectedly "
-		    "while it waited for the instrumented program",
-		    product_name);
+		err(EXIT_FAILURE, "%s failed unexpectedly while it waited for "
+		    "the instrumented program", product_name);
 	}
+
+	/* Now that the supervisee (the program under test) has
+	 * finished, the supervisor blocks the signals in the
+	 * `killer_signum` set, reestablishes default signal disposition,
+	 * and then waits either for a signal in `killer_signum` to arrive,
+	 * or for SIGCHLD.
+	 *
+	 * When signals in `killer_signum` arrive, the supervisor forwards
+	 * them to the analysis process and continues waiting.
+	 *
+	 * When SIGCHLD arrives, the supervisor checks to see if the
+	 * analysis process has finished.
+	 *
+	 * It is possible for the analysis process to finish during the
+	 * interval when SIGCHLD is ignored, in which case the supervisor
+	 * will never receive a SIGCHLD for the analysis.  So the supervisor
+	 * checks whether or not the analysis process still runs before it
+	 * waits for signals.
+	 */
 
 	prepare_to_wait_for_analysis(action, &waitset);
 
-	if (waitpid(analysis_pid, &astatus, WNOHANG) == analysis_pid) {
+	if (analysis_pid == -1) {
+		fprintf(stderr, "%s could not start the analysis process.",
+		    product_name);
+		goto supervisee_report;
+	} else if (waitpid(analysis_pid, &astatus, WNOHANG) == analysis_pid) {
 		dbg_printf("%s: analysis engine quit before we waited\n",
 		    product_name);
 	} else while (sigwait(&waitset, &signo) == 0) {
@@ -362,6 +384,10 @@ rvp_online_analysis_start(void)
 		}
 		break;
 	}
+
+	/* Print the status of the analysis engine if it was cancelled
+	 * by a signal.
+	 */
 	if (WIFSIGNALED(astatus)) {
 		fprintf(stderr, "analysis engine: %s", strsignal(WTERMSIG(astatus)));
 #ifdef WCOREDUMP
@@ -371,6 +397,11 @@ rvp_online_analysis_start(void)
 		fputc('\n', stderr);
 	}
 
+supervisee_report:
+
+	/* Print the status of the supervisee if it was cancelled
+	 * by a signal.
+	 */
 	if (WIFSIGNALED(sstatus)) {
 		fprintf(stderr, "%s", strsignal(WTERMSIG(sstatus)));
 #ifdef WCOREDUMP

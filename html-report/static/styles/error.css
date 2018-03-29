@@ -106,8 +106,9 @@ ul.exp-list {
   background-color: #dddcff;
 }
 .exp-list .bar:hover {
-  transition: 0.3s;
-  background: linear-gradient(to right, #c7e2f3, #9fcfe2, #83bcd2);
+  transition: 0.2s;
+  /* background: linear-gradient(to right, #c7e2f3, #9fcfe2, #83bcd2); */
+  background-color: #def2ff;
 }
 
 .exp-list .expand-btn {
@@ -158,6 +159,14 @@ div.stackContainer {
 
 div.memory, div.locks {
   display: inline-block;
+}
+
+div.locks.details {
+  display: none;
+}
+
+div.locks {
+  margin-left: 24px;
 }
 
 div.locks li {

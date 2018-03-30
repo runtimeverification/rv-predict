@@ -66,7 +66,7 @@
 {% block title %}{{filename}}{% endblock %}
 {% block content %}
 <div class="container">
-    <h1><a href="{{output_dir}}/index.html"><img alt="Report Index" class="breadcrumb" src="{{output_dir}}/static/rv_logo.png"/></a> &raquo; {{filename}}</h1>
-    {{ code|highlight(errorlines, fileid)|safe }}
+  <h1><a href="{{output_dir}}/index.html"><img alt="Report Index" class="breadcrumb" src="{{output_dir}}/static/rv_logo.png"/></a> &raquo; {{filename}}</h1>
+  {{ code|highlight(errorlines, fileid)|safe }}
 </div>
 {% endblock %}

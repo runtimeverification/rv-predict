@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint for a function to be declared with a return type other than void or a complete object type. Many implementations will default to a return type of int in these cases, but an explicit return type has been required in function declarations since ISO C99. To fix this, be sure all declarations of function type declare a return type.

@@ -2,12 +2,14 @@ type error_category = [
   Undefined of language
 | Unspecified of language
 | ImplementationDefined of language
+| ImplementationUndefined of language
 | ConditionallySupported
 | IllFormed
 | Underspecified of language
 | ConstraintViolation
 | SyntaxError of language
 | LintError
+| Unknown
 ]
 
 type citation = {

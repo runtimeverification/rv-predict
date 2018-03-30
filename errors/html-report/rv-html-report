@@ -48,7 +48,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                 yield i, txt
                 yield 0, '</a>'
             else:
-                    yield i, txt
+                yield i, txt
             yield 0, '<div class="errors" style="display:none;">'
             for err in self.hl_links[lineno]:
                 yield 0, '<span class="lineno">   </span>'
@@ -83,7 +83,10 @@ parser.add_argument("-o", "--output", help="Directory to output html report to")
 parser.add_argument("--encoding", help="Encoding used by source files in your project")
 args = parser.parse_args()
 if not args.output:
-    args.output = "output"
+    if len(args.input) == 1:
+        args.output = os.path.splitext(os.path.basename(args.input[0]))[0]
+    else:
+        args.output = "output"
 errors = []
 for i in args.input:
     errors.extend(load_json(i))
@@ -160,22 +163,25 @@ for ix, err in enumerate(errors):
             loc = frame[u'loc']
             if loc[u'rel_file'] != "<unknown>":
                 files[loc[u'abs_file']] = loc[u'rel_file']
+    
+    for trace in err[u'stack_traces']:
+        for component in trace[u'components']:
+            if len(component[u'frames']) > 0:
+                frame = component[u'frames'][0]
+                errorsByFile[loc[u'rel_file']][frame[u'loc'][u'line']].append(err)
+
     if (u'loc' in frame):
         loc = frame[u'loc']
         loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
         err[u'missing'] = not os.path.exists(loc[u'abs_file'])
         err[u'file'] = loc[u'rel_file']
         err[u'abs_file'] = loc[u'abs_file']
-        err[u'line'] = loc[u'line']
     else:
         err[u'missing'] = True
         err[u'file'] = u'<unknown>'
-        err[u'line'] = 0
         frame[u'loc'] = null_loc()
     err[u'function'] = frame[u'symbol']
     err[u'primary_component'] = primary_component
-    errorsByFile[err[u'file']][err[u'line']].append(err)
-
 
 def render_code(rel, abs, path, errors, to_js):
     filename = abs

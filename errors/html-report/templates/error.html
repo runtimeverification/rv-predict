@@ -615,17 +615,17 @@
 
           var $toggleMemoryPanelBtn = $('<div class="btn toggle-memory-panel-btn">show variables</div>')
           $toggleMemoryPanelBtn.on('click', function() {
-            var $detail = $('.details', obj) 
-            $detail.toggleClass('show-memory')
+            var $snippetDetails = $('.snippet.details', $obj) 
+            $snippetDetails.toggleClass('show-memory')
 
-            if ($detail.hasClass('show-memory')) {
+            if ($snippetDetails.hasClass('show-memory')) {
               $toggleMemoryPanelBtn.text('hide variables')
 
-              var $memory = $('.memory', $detail)
-              $('.pre', $detail).css('min-height', $memory.height())
+              var $memory = $('.memory', $snippetDetails)
+              $('.pre', $snippetDetails).css('min-height', $memory.height())
             } else {
               $toggleMemoryPanelBtn.text('show variables')
-              $('.pre', $detail).css('min-height', 'inherit')
+              $('.pre', $snippetDetails).css('min-height', 'inherit')
             }
           })
 
@@ -634,11 +634,12 @@
         $($stackFrame).append($memory)
         $($stackFrame).append('<div class="clear"></div>')
         
-        var $detail = $('.details', $obj)
+        var $snippetDetails = $('.snippet.details', $obj)
+        var $locksDetails = $('.locks.details', $obj)
         var $bar = $('.bar', $obj)
         var $expandBtn = $('.expand-btn', $bar)
         function setExpandBtnStatus() {
-          if (!$detail.hasClass('displayed')) {
+          if (!$snippetDetails.hasClass('displayed')) {
             $bar.removeClass('expanded')
             $expandBtn.removeClass('expanded')
             $expandBtn.removeClass('times') // plus sign
@@ -659,8 +660,9 @@
         $expandBtn.on('click', function(event) {
           event.preventDefault()
           event.stopPropagation()
-          $detail.toggle('fast')
-          $detail.toggleClass('displayed')
+          $snippetDetails.toggle('fast')
+          $snippetDetails.toggleClass('displayed')
+          $locksDetails.toggle('fast')
           setExpandBtnStatus()
         })
         $bar.on('click', function(event) { $expandBtn.click() })
@@ -672,8 +674,8 @@
         // Window scroll event. We should always make the memory table stick to the top.
         var containerElem = document.documentElement
         window.addEventListener('scroll', function() {
-          var detailElem = $detail[0],
-              memoryElem = $('.memory', $detail)[0]
+          var detailElem = $snippetDetails[0],
+              memoryElem = $('.memory', $snippetDetails)[0]
           if (!memoryElem) return 
 
           var containerScrollTop = containerElem.scrollTop || window.pageYOffset
@@ -728,7 +730,7 @@
   </div>
   {% if frame.locks %}
   <div class="locks details">
-  <h3>Locks</h3>
+  <h3 style="margin: 8px 0;">Locks</h3>
   <ol class="locks">
   {% for lock in frame.locks %}
     <li>{{lock.id}}</li>

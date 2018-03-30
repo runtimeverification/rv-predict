@@ -1,0 +1,1 @@
+According to ISO C11, it violates a constraint for the expression that specifies the width of a named bit-field member of a struct or union to be zero. In practice this is a compiler error and prevents the application from being built. This issue can be fixed by using an unnamed zero-width bit-field member.

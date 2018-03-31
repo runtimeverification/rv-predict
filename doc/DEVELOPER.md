@@ -132,6 +132,14 @@ or that online analysis cannot keep up with the rate of event production.
 It's also possible to get an instrumented program to write the statistics
 to its standard error stream by sending it a SIGPWR signal.
 
+## Debugging RV-Predict/C process supervision
+
+RV-Predict/C ordinarily forks a new process that runs the user's
+application code while RV-Predict/C either waits for the application
+to finish or else performs "online" data-race analysis.  You can
+see various messages printed to the standard error stream if you set
+`RVP_DEBUG_SUPERVISOR` to `yes` in the environment.
+
 ## Creating the installer for RV-Predict
 
 ```bash

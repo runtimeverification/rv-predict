@@ -48,6 +48,7 @@ static rvp_lastctx_t serializer_lc;
 static bool stopping = false;
 bool rvp_trace_only = true;
 bool rvp_online_analysis = true;
+bool rvp_debug_supervisor = false;
 int64_t rvp_trace_size_limit = INT64_MAX;
 static _Atomic bool info_dump_requested = false;
 
@@ -507,6 +508,8 @@ __rvpredict_init(void)
 {
 	const char *s;
 
+	rvp_debug_supervisor = (s = getenv("RVP_DEBUG_SUPERVISOR")) != NULL &&
+	    strcasecmp(s, "yes") == 0;
 	rvp_online_analysis = (s = getenv("RVP_OFFLINE_ANALYSIS")) == NULL ||
 	    strcasecmp(s, "yes") != 0;
 

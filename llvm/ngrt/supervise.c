@@ -359,7 +359,7 @@ rvp_online_analysis_start(void)
 	prepare_to_wait_for_analysis(action, &waitset);
 
 	if (analysis_pid == -1) {
-		fprintf(stderr, "%s could not start the analysis process.",
+		fprintf(stderr, "%s could not start the analysis process.\n",
 		    product_name);
 		goto supervisee_report;
 	} else if (waitpid(analysis_pid, &astatus, WNOHANG) == analysis_pid) {

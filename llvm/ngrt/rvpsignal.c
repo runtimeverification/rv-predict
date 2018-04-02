@@ -335,7 +335,8 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	t->t_intrmask = omask | (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
+	t->t_intrmask = omask |
+	    (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
 	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a

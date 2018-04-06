@@ -33,6 +33,7 @@ import com.microsoft.z3.FuncDecl;
 import com.microsoft.z3.Model;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.performance.Profiler;
 import com.runtimeverification.rvpredict.performance.ProfilerToken;
 import com.runtimeverification.rvpredict.smt.constraintsources.DisjointLocks;
@@ -406,7 +407,7 @@ public class MaximalCausalModel {
      * @param sigToRaceSuspects The race suspects to check.
      * @return a map from race signatures to real race instances
      */
-    public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects) {
+    public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects, AnalysisLimit analysisLimit) {
         /* specialize the maximal causal model based on race queries */
         Map<Race, BoolFormula> suspectToAsst = new HashMap<>();
         sigToRaceSuspects.values().forEach(suspects -> {
@@ -419,49 +420,85 @@ public class MaximalCausalModel {
             return Collections.emptyMap();
         }
 
+        List<RaceBucket> raceBuckets = new ArrayList<>();
+        for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
+            raceBuckets.add(new RaceBucket(entry.getKey(), entry.getValue()));
+        }
+
         RaceSolver.WindowData windowData =
-                new RaceSolver.WindowData(unsoundButFastPhiTau.build(), soundPhiTau.build(), buildPhiConc());
+            new RaceSolver.WindowData(unsoundButFastPhiTau.build(), soundPhiTau.build(), buildPhiConc());
         Map<String, Race> result = new HashMap<>();
         try (ProfilerToken ignored = Profiler.instance().start("All solver stuff")) {
             MutableBoolean atLeastOneRace = new MutableBoolean(false);
             try {
+                boolean hadPossibleRace = false;
+                do {
+                    hadPossibleRace = false;
+                    for (RaceBucket bucket : raceBuckets) {
+                        Optional<Race> maybeRace = bucket.nextRace();
+                        if (!maybeRace.isPresent()) {
+                            continue;
+                        }
+                        hadPossibleRace = true;
+                        Race race = maybeRace.get();
+                        analysisLimit.runWithException( () ->
+                                raceSolver.checkRace(
+                                        windowData,
+                                        suspectToAsst.get(race),
+                                        model -> {
+                                            result.put(bucket.getNameAndMarkAsSolved(), race);
+                                            atLeastOneRace.setTrue();
+                                            Map<Integer, List<EventWithOrder>> threadToExecution =
+                                                    extractExecution(model, nameToEvent);
+                                            Map<Integer, Integer> signalParents = extractSignalParents(model);
+                                            fillSignalStack(threadToExecution, signalParents, race);
+                                            if (Configuration.debug) {
+                                                dumpOrderingWithLessThreadSwitches(
+                                                        threadToExecution,
+                                                        Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
+                                                        signalParents);
+                                            }
+                                        }));
+                    }
+                } while (!hadPossibleRace);
                 /* check race suspects */
                 for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
                     for (Race race : entry.getValue()) {
-                        raceSolver.checkRace(
-                                windowData,
-                                suspectToAsst.get(race),
-                                model -> {
-                                    result.put(entry.getKey(), race);
-                                    atLeastOneRace.setTrue();
-                                    Map<Integer, List<EventWithOrder>> threadToExecution =
-                                            extractExecution(model, nameToEvent);
-                                    Map<Integer, Integer> signalParents = extractSignalParents(model);
-                                    fillSignalStack(threadToExecution, signalParents, race);
-                                    if (Configuration.debug) {
-                                        dumpOrderingWithLessThreadSwitches(
-                                                threadToExecution,
-                                                Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
-                                                signalParents);
-                                    }
-                                });
+                        analysisLimit.runWithException( () ->
+                            raceSolver.checkRace(
+                                    windowData,
+                                    suspectToAsst.get(race),
+                                    model -> {
+                                        result.put(entry.getKey(), race);
+                                        atLeastOneRace.setTrue();
+                                        Map<Integer, List<EventWithOrder>> threadToExecution =
+                                                extractExecution(model, nameToEvent);
+                                        Map<Integer, Integer> signalParents = extractSignalParents(model);
+                                        fillSignalStack(threadToExecution, signalParents, race);
+                                        if (Configuration.debug) {
+                                            dumpOrderingWithLessThreadSwitches(
+                                                    threadToExecution,
+                                                    Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
+                                                    signalParents);
+                                        }
+                                    }));
                         if (result.containsKey(entry.getKey())) {
                             break;
                         }
                     }
                 }
             } finally {
-                raceSolver.finishAllWork();
+                analysisLimit.runWithException(raceSolver::finishAllWork);
             }
             if (!atLeastOneRace.booleanValue() && Configuration.debug) {
-                raceSolver.generateSolution(
-                        windowData,
-                        model ->
-                                dumpOrderingWithLessThreadSwitches(
-                                        extractExecution(model, nameToEvent),
-                                        Optional.empty(), Optional.empty(),
-                                        extractSignalParents(model))
-                );
+                analysisLimit.runWithException( () ->
+                    raceSolver.generateSolution(
+                            windowData,
+                            model ->
+                                    dumpOrderingWithLessThreadSwitches(
+                                            extractExecution(model, nameToEvent),
+                                            Optional.empty(), Optional.empty(),
+                                            extractSignalParents(model))));
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

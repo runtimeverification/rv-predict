@@ -33,6 +33,7 @@ import com.runtimeverification.rvpredict.engine.main.MaximalRaceDetector;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
+import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.smt.RaceSolver;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
@@ -44,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
@@ -73,6 +75,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
     private long base = 0;
 
     private final int windowSize;
+    private final AnalysisLimit globalAnalysisLimit;
 
     /**
      * Buffers that are alive so far.
@@ -115,6 +118,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         this.config = config;
         this.crntState = new TraceState(config, metadata);
         this.windowSize = config.windowSize;
+        globalAnalysisLimit = new AnalysisLimit("Global", Optional.empty(), config.global_timeout);
         if (config.isHappensBefore()) {
             this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
         } else {
@@ -230,7 +234,9 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
             if (rawTraces.size() == 1) {
                 crntState.fastProcess(rawTraces.iterator().next());
             } else {
-                detector.run(crntState.initNextTraceWindow(rawTraces));
+                AnalysisLimit windowAnalysisLimit =
+                        new AnalysisLimit("Window", Optional.of(globalAnalysisLimit), config.window_timeout);
+                detector.run(crntState.initNextTraceWindow(rawTraces), windowAnalysisLimit);
             }
         } catch (Throwable e) {
             config.logger().debug(e);

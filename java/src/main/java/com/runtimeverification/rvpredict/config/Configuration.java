@@ -419,6 +419,14 @@ public class Configuration implements Constants {
     @Parameter(names = opt_solver_timeout, description = "Solver timeout in seconds", hidden = true, descriptionKey = "2600")
     public int solver_timeout = 60;
 
+    final static String opt_global_timeout = "--global-timeout";
+    @Parameter(names = opt_global_timeout, description = "Timeout for rv-predict, in seconds. 0 mean no timeout.", hidden = true, descriptionKey = "2601")
+    public int global_timeout = 0;
+
+    final static String opt_window_timeout = "--window-timeout";
+    @Parameter(names = opt_window_timeout, description = "Per-window rv-predict timeout in seconds. 0 mean no timeout.", hidden = true, descriptionKey = "2602")
+    public int window_timeout = 60;
+
     final static String opt_parallel_smt = "--parallel-smt";
     @Parameter(names = opt_parallel_smt, description = "How many parallel SMTs to use. Should always be 1 when analysing doing online Java analysis.", hidden = false, descriptionKey = "2700")
     public int parallel_smt = 1;

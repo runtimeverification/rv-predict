@@ -5,6 +5,7 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.trace.OrderedTraceReader;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.violation.Race;
@@ -72,7 +73,7 @@ public class OrderedRaceDetector implements RaceDetector {
     }
 
     @Override
-    public void run(Trace trace) {
+    public void run(Trace trace, AnalysisLimit analysisLimit) {
         traceReader.reset(trace);
         try {
             while (true) {

@@ -5,6 +5,7 @@ import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
@@ -24,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
 import static org.mockito.Mockito.when;
@@ -2262,7 +2264,8 @@ public class MaximalCausalModelTest {
             raceSuspects.add(new Race(e1, e2, trace, mockConfiguration));
             sigToRaceSuspects.put("race", raceSuspects);
 
-            return model.checkRaceSuspects(sigToRaceSuspects);
+            return model.checkRaceSuspects(
+                    sigToRaceSuspects, new AnalysisLimit("Test", Optional.empty(), 0));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

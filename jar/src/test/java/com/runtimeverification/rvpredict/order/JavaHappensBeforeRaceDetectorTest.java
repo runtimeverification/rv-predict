@@ -5,6 +5,7 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
@@ -24,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractEventByType;
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
@@ -313,7 +315,7 @@ public class JavaHappensBeforeRaceDetectorTest {
             }
             traceState.preStartWindow();
             trace = traceState.initNextTraceWindow(rawTraces);
-            detector.run(trace);
+            detector.run(trace, new AnalysisLimit("Test", Optional.empty(), 0));
             Race testRace = new Race(e1, e2, trace, mockConfiguration);
             String testRaceSig = testRace.toString();
             return detector.races.containsKey(testRaceSig);

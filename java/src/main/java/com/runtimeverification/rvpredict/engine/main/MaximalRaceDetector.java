@@ -1,6 +1,7 @@
 package com.runtimeverification.rvpredict.engine.main;
 
 import com.runtimeverification.rvpredict.config.Configuration;
+import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
 import com.runtimeverification.rvpredict.smt.RaceSolver;
 import com.runtimeverification.rvpredict.trace.Trace;
@@ -91,7 +92,7 @@ public class MaximalRaceDetector implements RaceDetector {
     }
 
     @Override
-    public void run(Trace trace) {
+    public void run(Trace trace, AnalysisLimit analysisLimit) {
         if (!trace.mayContainRaces()) {
             return;
         }
@@ -103,7 +104,7 @@ public class MaximalRaceDetector implements RaceDetector {
 
         Map<String, Race> result =
                 MaximalCausalModel.create(trace, raceSolver, config.detectInterruptedThreadRace())
-                        .checkRaceSuspects(sigToRaceSuspects);
+                        .checkRaceSuspects(sigToRaceSuspects, analysisLimit);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {
             String report = race.generateRaceReport();

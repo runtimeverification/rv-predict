@@ -34,6 +34,7 @@ import com.runtimeverification.rvpredict.metadata.CompactMetadata;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
+import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.smt.RaceSolver;
 import com.runtimeverification.rvpredict.trace.LLVMCompactTraceCache;
 import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
@@ -45,6 +46,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static com.runtimeverification.rvpredict.config.Configuration.JAVA_EXECUTABLE;
 import static com.runtimeverification.rvpredict.config.Configuration.RV_PREDICT_JAR;
@@ -94,12 +96,16 @@ public class RVPredict implements AutoCloseable {
 
     public void start() {
         try {
+            AnalysisLimit globalAnalysisLimit =
+                    new AnalysisLimit("Global", Optional.empty(), config.global_timeout);
             traceCache.setup();
             // process the trace window by window
             Trace trace;
             while (true) {
                 if ((trace = traceCache.getTraceWindow()) != null) {
-                    detector.run(trace);
+                    AnalysisLimit windowAnalysisLimit =
+                            new AnalysisLimit("Window", Optional.of(globalAnalysisLimit), config.window_timeout);
+                    detector.run(trace, windowAnalysisLimit);
                 } else {
                     break;
                 }

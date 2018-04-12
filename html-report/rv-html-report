@@ -71,9 +71,11 @@ def highlight_c(code, hl_links, fileid):
 def load_json(filename):
     with open(filename, 'r') as f:
         for line in f:
+            if len(line) == 0:
+                continue
             try:
                 yield json.loads(line)
-            except json.JSONDecodeError:
+            except Exception:
                 print 'error reading: ' + line
 
 dirname = os.path.dirname(os.path.realpath(__file__))

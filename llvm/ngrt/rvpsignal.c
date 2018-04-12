@@ -173,10 +173,12 @@ rvp_signal_alternate_lookup(int signum)
 	    : &signal_storage[signum].sc_alternate[0];
 }
 
-static void
+static rvp_signal_t *
 rvp_signal_select_alternate(int signum, rvp_signal_t *s)
 {
+	rvp_signal_t *os = signal_tbl[signum];
 	atomic_store_explicit(&signal_tbl[signum], s, memory_order_release);
+	return os;
 }
 
 rvp_signal_t *
@@ -353,10 +355,10 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_buf_put(&b, signum);
 	rvp_ring_put_buf(r, b);
 
-	if (s->s_handler != NULL)
-		(*s->s_handler)(signum);
-	else
+	if (s->s_sigaction != NULL)
 		(*s->s_sigaction)(signum, info, ctx);
+	else
+		(*s->s_handler)(signum);
 
 	b = RVP_BUF_INITIALIZER;
 

@@ -128,11 +128,7 @@ rvp_signal_init(void)
 	if (sigaddset(&unmaskable_set, SIGKILL) != 0)
 		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
 
-#if 1
 	rvp_unmaskable = sigset_to_mask(&unmaskable_set);
-#else
-	rvp_unmaskable = 0;
-#endif
 
 	memset(&sa, 0, sizeof(sa));
 	if (sigemptyset(&sa.sa_mask) != 0)

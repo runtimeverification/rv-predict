@@ -5,8 +5,8 @@
 #include <pthread.h>	/* for pthread_{join,create,exit}(3),
 			 * pthread_mutex_{init,lock,trylock,unlock}(3), etc.
 			 */
-#include <signal.h>	/* for sigprocmask(3), sigaction(3), sigsuspend(3),
-			 * etc.
+#include <signal.h>	/* for sigprocmask(3), sigaction(3), signal(3),
+			 * sigsuspend(3), etc.
 			 */
 #include <string.h>	/* for memcpy(3), memmove(3), memset(3) */
 
@@ -54,6 +54,8 @@ INTERPOSE_DECLS(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 
 INTERPOSE_DECLS(int, sigaction, int, const struct sigaction *,
     struct sigaction *);
+
+INTERPOSE_DECLS(sighandler_t, signal, int, sighandler_t);
 
 INTERPOSE_DECLS(int, sigsuspend, const sigset_t *);
 

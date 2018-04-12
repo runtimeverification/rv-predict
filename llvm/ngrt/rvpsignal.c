@@ -20,6 +20,7 @@
 #endif
 
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
+REAL_DEFN(sighandler_t, signal, int, sighandler_t);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, sigsuspend, const sigset_t *);
@@ -88,6 +89,9 @@ rvp_signal_table_init(void)
 void
 rvp_signal_prefork_init(void)
 {
+	ESTABLISH_PTR_TO_REAL(
+	    sighandler_t (*)(int, sighandler_t),
+	    signal);
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const struct sigaction *, struct sigaction *),
 	    sigaction);
@@ -807,6 +811,29 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
+sighandler_t
+__rvpredict_signal(int signo, sighandler_t handler)
+{
+	struct sigaction nsa, osa;
+
+	memset(&nsa, '\0', sizeof(nsa));
+
+	if (sigemptyset(&nsa.sa_mask) == -1)
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
+
+	nsa.sa_handler = handler;
+	if (sigaction(signo, &nsa, &osa) == -1) {
+		/* signal(3) is only defined to set `errno` to `EINVAL`,
+		 * so bail otherwise. 
+		 */
+		if (errno != EINVAL)
+			err(EXIT_FAILURE, "%s: sigaction", __func__);
+
+		return SIG_ERR;
+	}
+	return osa.sa_handler;
+}
+
 /* XXX sigaction(2) is async-signal-safe, so we have to
  * XXX take care to avoid async-signal-UNSAFE functions in
  * XXX our implementation.  rvp_signal_lock() calls
@@ -918,4 +945,5 @@ null_act:
 INTERPOSE(int, sigprocmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, sigaction, int, const struct sigaction *, struct sigaction *);
+INTERPOSE(sighandler_t, signal, int, sighandler_t);
 INTERPOSE(int, sigsuspend, const sigset_t *);

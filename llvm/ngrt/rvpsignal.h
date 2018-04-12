@@ -19,7 +19,6 @@ struct _rvp_sigblockset {
 };
 
 typedef struct _rvp_signal {
-	int			s_signum;
 	rvp_sigblockset_t	*s_blockset;
 	void			(*s_handler)(int);
 	void			(*s_sigaction)(int, siginfo_t *, void *);
@@ -39,9 +38,16 @@ rvp_sigblockset_t *intern_sigset(const sigset_t *);
 void rvp_signal_rings_replenish(void);
 void rvp_sigblocksets_replenish(void);
 bool rvp_signal_rings_flush_to_fd(int, rvp_lastctx_t *);
+int signo_to_bitno(int);
+int bitno_to_signo(int);
 uint64_t sigset_to_mask(const sigset_t *);
 sigset_t *mask_to_sigset(uint64_t, sigset_t *);
 
+void rvp_sigsim_disestablish(int);
+void rvp_sigsim_establish(int);
+void rvp_sigsim_raise_all_in_mask(uint64_t);
+
+extern const char rvp_sigsim_name[];
 extern uint64_t rvp_unmaskable;
 
 #endif /* _RVP_SIGNAL_H_ */

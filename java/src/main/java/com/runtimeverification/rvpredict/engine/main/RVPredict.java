@@ -43,6 +43,7 @@ import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -97,14 +98,18 @@ public class RVPredict implements AutoCloseable {
     public void start() {
         try {
             AnalysisLimit globalAnalysisLimit =
-                    new AnalysisLimit("Global", Optional.empty(), config.global_timeout);
+                    new AnalysisLimit(Clock.systemUTC(), "Global", Optional.empty(), config.global_timeout);
             traceCache.setup();
             // process the trace window by window
             Trace trace;
             while (true) {
                 if ((trace = traceCache.getTraceWindow()) != null) {
                     AnalysisLimit windowAnalysisLimit =
-                            new AnalysisLimit("Window", Optional.of(globalAnalysisLimit), config.window_timeout);
+                            new AnalysisLimit(
+                                    Clock.systemUTC(),
+                                    "Window",
+                                    Optional.of(globalAnalysisLimit),
+                                    config.window_timeout);
                     detector.run(trace, windowAnalysisLimit);
                 } else {
                     break;

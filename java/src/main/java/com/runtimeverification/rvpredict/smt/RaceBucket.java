@@ -26,6 +26,7 @@ class RaceBucket {
     }
 
     String getNameAndMarkAsSolved() {
+        solved = true;
         return name;
     }
 }

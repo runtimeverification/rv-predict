@@ -432,6 +432,7 @@ public class MaximalCausalModel {
             MutableBoolean atLeastOneRace = new MutableBoolean(false);
             try {
                 boolean hadPossibleRace = false;
+                /* check race suspects */
                 do {
                     hadPossibleRace = false;
                     for (RaceBucket bucket : raceBuckets) {
@@ -460,33 +461,7 @@ public class MaximalCausalModel {
                                             }
                                         }));
                     }
-                } while (!hadPossibleRace);
-                /* check race suspects */
-                for (Map.Entry<String, List<Race>> entry : sigToRaceSuspects.entrySet()) {
-                    for (Race race : entry.getValue()) {
-                        analysisLimit.runWithException( () ->
-                            raceSolver.checkRace(
-                                    windowData,
-                                    suspectToAsst.get(race),
-                                    model -> {
-                                        result.put(entry.getKey(), race);
-                                        atLeastOneRace.setTrue();
-                                        Map<Integer, List<EventWithOrder>> threadToExecution =
-                                                extractExecution(model, nameToEvent);
-                                        Map<Integer, Integer> signalParents = extractSignalParents(model);
-                                        fillSignalStack(threadToExecution, signalParents, race);
-                                        if (Configuration.debug) {
-                                            dumpOrderingWithLessThreadSwitches(
-                                                    threadToExecution,
-                                                    Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
-                                                    signalParents);
-                                        }
-                                    }));
-                        if (result.containsKey(entry.getKey())) {
-                            break;
-                        }
-                    }
-                }
+                } while (hadPossibleRace);
             } finally {
                 analysisLimit.runWithException(raceSolver::finishAllWork);
             }

@@ -19,6 +19,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -2265,7 +2266,7 @@ public class MaximalCausalModelTest {
             sigToRaceSuspects.put("race", raceSuspects);
 
             return model.checkRaceSuspects(
-                    sigToRaceSuspects, new AnalysisLimit("Test", Optional.empty(), 0));
+                    sigToRaceSuspects, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

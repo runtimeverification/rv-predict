@@ -1,10 +1,12 @@
 package com.runtimeverification.rvpredict.performance;
 
+import java.time.Clock;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 
 public class AnalysisLimit {
+    private final Clock clock;
     private final String name;
     private final Optional<AnalysisLimit> innerTimer;
     private final OptionalInt timeSeconds;
@@ -14,7 +16,8 @@ public class AnalysisLimit {
         void run() throws Exception;
     }
 
-    public AnalysisLimit(String name, Optional<AnalysisLimit> innerTimer, int timeSeconds) {
+    public AnalysisLimit(Clock clock, String name, Optional<AnalysisLimit> innerTimer, int timeSeconds) {
+        this.clock = clock;
         this.name = name;
         this.innerTimer = innerTimer;
         this.timeSeconds = timeSeconds == 0 ? OptionalInt.empty() : OptionalInt.of(timeSeconds);
@@ -26,7 +29,7 @@ public class AnalysisLimit {
             if (timeout()) {
                 return;
             }
-            long start = System.currentTimeMillis();
+            long start = clock.millis();
             try {
                 runInnerTimer(r);
             } finally {
@@ -38,14 +41,16 @@ public class AnalysisLimit {
     }
 
     private void updateUsedTime(long start) {
-        usedTimeMillis += System.currentTimeMillis() - start;
+        usedTimeMillis += clock.millis() - start;
+        /*
         if (timeout()) {
             System.out.println(name + " timeout.");
         }
+        */
     }
 
     private boolean timeout() {
-        return TimeUnit.SECONDS.toMillis(timeSeconds.getAsInt()) < usedTimeMillis;
+        return timeSeconds.isPresent() && TimeUnit.SECONDS.toMillis(timeSeconds.getAsInt()) < usedTimeMillis;
     }
 
     private void runInnerTimer(Runnable r) {
@@ -61,7 +66,7 @@ public class AnalysisLimit {
             if (timeout()) {
                 return;
             }
-            long start = System.currentTimeMillis();
+            long start = clock.millis();
             try {
                 runInnerTimerWithException(r);
             } finally {

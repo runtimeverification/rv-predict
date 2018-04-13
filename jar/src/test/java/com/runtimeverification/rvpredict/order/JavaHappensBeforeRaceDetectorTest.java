@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.FileNotFoundException;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -315,7 +316,7 @@ public class JavaHappensBeforeRaceDetectorTest {
             }
             traceState.preStartWindow();
             trace = traceState.initNextTraceWindow(rawTraces);
-            detector.run(trace, new AnalysisLimit("Test", Optional.empty(), 0));
+            detector.run(trace, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0));
             Race testRace = new Race(e1, e2, trace, mockConfiguration);
             String testRaceSig = testRace.toString();
             return detector.races.containsKey(testRaceSig);

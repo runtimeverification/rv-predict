@@ -41,6 +41,7 @@ import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
 
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -118,7 +119,8 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         this.config = config;
         this.crntState = new TraceState(config, metadata);
         this.windowSize = config.windowSize;
-        globalAnalysisLimit = new AnalysisLimit("Global", Optional.empty(), config.global_timeout);
+        globalAnalysisLimit =
+                new AnalysisLimit(Clock.systemUTC(),"Global", Optional.empty(), config.global_timeout);
         if (config.isHappensBefore()) {
             this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
         } else {
@@ -235,7 +237,11 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                 crntState.fastProcess(rawTraces.iterator().next());
             } else {
                 AnalysisLimit windowAnalysisLimit =
-                        new AnalysisLimit("Window", Optional.of(globalAnalysisLimit), config.window_timeout);
+                        new AnalysisLimit(
+                                Clock.systemUTC(),
+                                "Window",
+                                Optional.of(globalAnalysisLimit),
+                                config.window_timeout);
                 detector.run(crntState.initNextTraceWindow(rawTraces), windowAnalysisLimit);
             }
         } catch (Throwable e) {

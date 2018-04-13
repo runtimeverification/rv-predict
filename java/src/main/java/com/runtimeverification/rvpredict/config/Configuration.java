@@ -420,11 +420,11 @@ public class Configuration implements Constants {
     public int solver_timeout = 60;
 
     final static String opt_global_timeout = "--global-timeout";
-    @Parameter(names = opt_global_timeout, description = "Timeout for rv-predict, in seconds. 0 mean no timeout.", hidden = true, descriptionKey = "2601")
+    @Parameter(names = opt_global_timeout, description = "Timeout for rv-predict, in seconds. 0 means no timeout.", hidden = true, descriptionKey = "2601")
     public int global_timeout = 0;
 
     final static String opt_window_timeout = "--window-timeout";
-    @Parameter(names = opt_window_timeout, description = "Per-window rv-predict timeout in seconds. 0 mean no timeout.", hidden = true, descriptionKey = "2602")
+    @Parameter(names = opt_window_timeout, description = "Per-window rv-predict timeout in seconds. 0 means no timeout.", hidden = true, descriptionKey = "2602")
     public int window_timeout = 60;
 
     final static String opt_parallel_smt = "--parallel-smt";

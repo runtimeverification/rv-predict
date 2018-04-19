@@ -76,7 +76,7 @@ def load_json(filename):
             except json.JSONDecodeError:
                 print 'error reading: ' + line
 
-dirname = os.path.dirname(os.path.realpath(__file__))
+dirname = "%s/../share/rv-predict-c/html-report" % os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument("input", nargs='+', help="json file generated with kcc -fissue-report")
 parser.add_argument("-o", "--output", help="Directory to output html report to")

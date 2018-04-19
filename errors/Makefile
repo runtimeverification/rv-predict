@@ -3,5 +3,6 @@
 .endif
 
 SUBPRJ=lib:bin	# bin depends on lib
+SUBPRJ+=share
 
 .include <mkc.subprj.mk>

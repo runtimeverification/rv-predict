@@ -124,7 +124,7 @@ while [ $# -ge 1 ]; do
 		window="--window $1"
 		shift
 		;;
-	--solver-timeout)
+	--global-timeout|--solver-timeout|--window-timeout)
 		analyze_passthrough="${analyze_passthrough:-} $1 $2"
 		shift
 		shift

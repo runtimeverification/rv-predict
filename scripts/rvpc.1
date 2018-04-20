@@ -15,9 +15,11 @@ the data-race predictor
 .Sh SYNOPSIS
 .Nm
 .Op Xr clang 1 options
+.Op Fl Fl intr-personality Ns = Ns Ar personality
 .Op Fl o Ar program
 .Nm rvpc++
 .Op Xr clang 1 options
+.Op Fl Fl intr-personality Ns = Ns Ar personality
 .Op Fl o Ar program
 .\" Don't break words
 .Bk
@@ -210,7 +212,14 @@ has no effect if
 .Ev RVP_TRACE_ONLY
 is set to
 .Dq yes .
-.Ev 
+.It Ev RVP_HTML_DIR
+Unless online/offline analysis reports are disabled with
+.Ev RVP_TRACE_ONLY
+is
+.Dq yes ,
+.Ar program
+will write an HTML report under the directory named by
+.Ev RVP_HTML_DIR .
 .It Ev RVP_TRACE_SIZE_LIMIT
 .Ar program
 exits by calling

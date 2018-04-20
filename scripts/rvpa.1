@@ -13,6 +13,9 @@ instrumentation using
 .Op Fl n
 .Op Fl Fl help
 .Op Fl Fl window Ar size
+.Op Fl Fl window Ns = Ns Ar size
+.Op Fl Fl html-dir Ar directory
+.Op Fl Fl html-dir Ns = Ns Ar directory
 .Op Fl Fl no-shorten
 .Op Fl Fl no-signal
 .Op Fl Fl no-symbol
@@ -57,7 +60,18 @@ Print a help message and exit immediately.
 .It Fl n
 Print the Java command that would be run.
 Perform no analysis.
-.It Fl Fl window Ar size
+.It Fl Fl html-dir Ar directory | Fl Fl html-dir Ns = Ns Ar directory
+Reports will be written in HTML format under
+.Ar directory .
+.Pp
+Each
+.Fl Fl html-dir
+parameter overrides all previous
+.Fl Fl html-dir
+and
+.Fl Fl output
+parameters on the command line.
+.It Fl Fl window Ar size | Fl Fl window Ns = Ns Ar size
 .Tn RV-Predict/C
 segments
 .Ar program Ap s
@@ -127,6 +141,14 @@ produces unrefined JSON:
 .Nm
 performs no symbolization, no eliding of system frames, no trimming of
 pathnames, regardless of the other settings on the command line.
+.Pp
+Each
+.Fl Fl html-dir
+parameter overrides all previous
+.Fl Fl html-dir
+and
+.Fl Fl output
+parameters on the command line.
 .It Fl -
 indicates the last option
 for

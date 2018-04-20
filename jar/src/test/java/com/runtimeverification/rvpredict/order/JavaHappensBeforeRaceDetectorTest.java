@@ -316,7 +316,7 @@ public class JavaHappensBeforeRaceDetectorTest {
             }
             traceState.preStartWindow();
             trace = traceState.initNextTraceWindow(rawTraces);
-            detector.run(trace, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0));
+            detector.run(trace, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0, mockConfiguration.logger()));
             Race testRace = new Race(e1, e2, trace, mockConfiguration);
             String testRaceSig = testRace.toString();
             return detector.races.containsKey(testRaceSig);

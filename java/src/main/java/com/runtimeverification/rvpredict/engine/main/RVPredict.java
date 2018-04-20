@@ -98,7 +98,7 @@ public class RVPredict implements AutoCloseable {
     public void start() {
         try {
             AnalysisLimit globalAnalysisLimit =
-                    new AnalysisLimit(Clock.systemUTC(), "Global", Optional.empty(), config.global_timeout);
+                    new AnalysisLimit(Clock.systemUTC(), "Global", Optional.empty(), config.global_timeout, config.logger());
             traceCache.setup();
             // process the trace window by window
             Trace trace;
@@ -109,7 +109,7 @@ public class RVPredict implements AutoCloseable {
                                     Clock.systemUTC(),
                                     "Window",
                                     Optional.of(globalAnalysisLimit),
-                                    config.window_timeout);
+                                    config.window_timeout, config.logger());
                     detector.run(trace, windowAnalysisLimit);
                 } else {
                     break;

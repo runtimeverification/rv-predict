@@ -1,6 +1,7 @@
 package performance;
 
 import com.runtimeverification.rvpredict.performance.AnalysisLimit;
+import com.runtimeverification.rvpredict.util.Logger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -24,7 +25,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void zeroTimerDoesNotExpire() {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 0);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 0, new Logger());
 
         when(mockClock.millis()).thenReturn(0L).thenReturn(secondsToMillis(3600));
         limit.run(mockTask);
@@ -37,7 +38,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void doesNotRunTasksAfterExpiration() {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 10);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 10, new Logger());
 
         when(mockClock.millis()).thenReturn(0L).thenReturn(secondsToMillis(11));
         limit.run(mockTask);
@@ -50,7 +51,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void accumulatesTaskTimes() {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 10);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 10, new Logger());
 
         // Task takes 4 seconds, 4 seconds used in total.
         when(mockClock.millis()).thenReturn(0L).thenReturn(secondsToMillis(4));
@@ -80,7 +81,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void sendsTaskToInnerAnalysisLimit() {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 0);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 0, new Logger());
 
         limit.run(mockTask);
         verify(mockTask, never()).run();
@@ -89,7 +90,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void doesNotSendTaskToInnerAnalysisLimitAfterTimeout() {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 5);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 5, new Logger());
 
         // Task takes 4 seconds, 4 seconds used in total.
         when(mockClock.millis()).thenReturn(secondsToMillis(0)).thenReturn(secondsToMillis(4));
@@ -112,7 +113,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void runsTaskWithException() throws Exception {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 10);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.empty(), 10, new Logger());
 
         // Task takes 4 seconds, 4 seconds used in total.
         when(mockClock.millis()).thenReturn(0L).thenReturn(secondsToMillis(4));
@@ -143,7 +144,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void sendsExceptionTaskToInnerAnalysisLimit() throws Exception {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 0);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 0, new Logger());
 
         limit.runWithException(mockExceptionTask);
         verify(mockExceptionTask, never()).run();
@@ -152,7 +153,7 @@ public class AnalysisLimitTest {
 
     @Test
     public void doesNotSendExceptionTaskToInnerAnalysisLimitAfterTimeout() throws Exception {
-        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 5);
+        AnalysisLimit limit = new AnalysisLimit(mockClock,"Test", Optional.of(mockAnalysisLimit), 5, new Logger());
 
         // Task takes 4 seconds, 4 seconds used in total.
         when(mockClock.millis()).thenReturn(secondsToMillis(0)).thenReturn(secondsToMillis(4));

@@ -2,7 +2,7 @@
 
 set -e
 set -u
-set -x
+#set -x
 
 usage()
 {
@@ -89,6 +89,8 @@ $NBINSTALL -o root -g root -m 0444 ${tmpdir}/version \
 $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/examples
 $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/examples/rv-predict-c
 $NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/man
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/rv-predict-c
+$NBINSTALL -d -o root -g root -m 0755 ${destdir}/usr/share/rv-predict-c/html-report
 $RVPMAKE NBINSTALL="${NBINSTALL}" install
 cd $tmpdir
 dh_makeshlibs

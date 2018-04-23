@@ -16,10 +16,12 @@ the data-race predictor
 .Nm
 .Op Xr clang 1 options
 .Op Fl Fl intr-personality Ns = Ns Ar personality
+.Op Fl Fl sigsim Ns = Ns Ar simulation
 .Op Fl o Ar program
 .Nm rvpc++
 .Op Xr clang 1 options
 .Op Fl Fl intr-personality Ns = Ns Ar personality
+.Op Fl Fl sigsim Ns = Ns Ar simulation
 .Op Fl o Ar program
 .\" Don't break words
 .Bk
@@ -86,6 +88,50 @@ Print the version of
 and the version of
 .Xr clang 1
 and then exit.
+.It Fl Fl sigsim Ns = Ns Ar simulation
+.Tn RV-Predict/C
+cannot find data races that involve signal handlers that do not run, but some
+programs establish more handlers than they routinely run.
+Use a
+.Dq signal simulation
+to compile and/or link a program with a library that simulates
+spontaneous signals.
+.Fl Fl sigsim Ns = Ns Ar simulation
+makes
+.Tn RV-Predict/C
+compile and/or link with the named signals
+.Ar simulation ,
+one of:
+.Pp
+.Bl -tag -width "simple"
+.It none
+This is the default.
+Simulate no signals.
+.It simple
+Intercept
+.Ar program
+when it changes the signal mask
+.Po e.g., calls
+.Xr pthread_sigmask 2 / Xr sigprocmask 2 / Xr sigsuspend 2
+.Pc ,
+establishes or disestablishes signal handlers
+.Po calls Xr sigaction 2 / Xr signal 2
+.Pc .
+After
+.Ar program
+establishes a signal handler, raise the signal if the signal mask allows.
+Before
+.Ar program
+disestablishes a signal handler, raise the signal if the mask allows.
+Before
+.Ar program
+masks a signal where it has established a handler, raise the signal.
+And after
+.Ar program
+unmasks a signal where a handler is established, raise the signal.
+In this way, a signal is raised at least once (and often, twice) between
+every change of signal state.
+.El
 .It Fl Fl intr-personality Ns = Ns Ar personality
 .Tn RV-Predict/C
 compiles and/or links with the given interrupt personality, which is
@@ -138,6 +184,7 @@ end users.
 This is the default.
 If a program that is compiled with this interrupt personality uses
 interrupt macros or functions, then its behavior is undefined.
+.El
 .El
 .Sh EXIT STATUS
 See

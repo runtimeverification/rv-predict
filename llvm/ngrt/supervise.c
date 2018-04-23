@@ -247,7 +247,7 @@ rvp_online_analysis_start(void)
 {
 	struct sigaction action[__arraycount(killer_signum)];
 	int astatus, sstatus;
-	pid_t supervisee_pid, analysis_pid;
+	pid_t supervisee_pid, analysis_pid, parent_pid;
 	int pipefd[2];
 	sigset_t waitset;
 	int signo;
@@ -296,13 +296,13 @@ rvp_online_analysis_start(void)
 	if (analysis_pid == 0) {
 		char *const args[] = {"rvpa", binpath, "/dev/stdin", NULL};
 
-		/* We move the analysis engine into its own process group
+		/* We move the analyzer into its own process group
 		 * so that signals generated on the terminal (e.g.,
 		 * Control-C -> SIGINT) are not delivered to it.
 		 */
 		if (setpgid(0, 0) == -1) {
 			err(EXIT_FAILURE,
-			    "%s could not put the analysis engine into its own "
+			    "%s could not put the analyzer into its own "
 			    "process group", product_name);
 		}
 
@@ -330,12 +330,18 @@ rvp_online_analysis_start(void)
 	}
 
 	/* wait for the supervisee to finish */
-	while (waitpid(supervisee_pid, &sstatus, 0) == -1) {
+	while (waitpid(supervisee_pid, &sstatus, WUNTRACED) == -1) {
 		if (errno == EINTR)
 			continue;
-		err(EXIT_FAILURE, "%s failed unexpectedly while it waited for "
-		    "the instrumented program", product_name);
+		err(EXIT_FAILURE, "%s failed unexpectedly while it "
+		    "waited for the instrumented program",
+		    product_name);
 	}
+
+	parent_pid = getppid();
+
+	dbg_printf("%s.%d: supervisee finished, parent PID %d\n",
+	    __func__, __LINE__, parent_pid);
 
 	/* Now that the supervisee (the program under test) has
 	 * finished, the supervisor blocks the signals in the
@@ -357,20 +363,39 @@ rvp_online_analysis_start(void)
 	 */
 
 	prepare_to_wait_for_analysis(action, &waitset);
+	if (parent_pid == 1) {
+		if (WIFSIGNALED(sstatus)) {
+			signo = WTERMSIG(sstatus);
+			dbg_printf(
+			    "%s belongs to init, forwarding %s to analysis\n",
+			    product_name, strsignal(signo));
+		} else {
+			signo = SIGHUP;
+			dbg_printf(
+			    "%s belongs to init, killing analysis with %s\n",
+			    product_name, strsignal(signo));
+		}
+		if (kill(-analysis_pid, signo) == -1) {
+			err(EXIT_FAILURE, "%s.%d: kill",
+			    __func__, __LINE__);
+		}
+	}
 
 	if (analysis_pid == -1) {
 		fprintf(stderr, "%s could not start the analysis process.\n",
 		    product_name);
 		goto supervisee_report;
-	} else if (waitpid(analysis_pid, &astatus, WNOHANG) == analysis_pid) {
-		dbg_printf("%s: analysis engine quit before we waited\n",
+	} else if (waitpid(analysis_pid, &astatus, WNOHANG) == -1) {
+		err(EXIT_FAILURE, "%s: waitpid(analyzer)",
 		    product_name);
 	} else while (sigwait(&waitset, &signo) == 0) {
 		dbg_printf("%s: got signal %d (%s)\n", product_name,
 		    signo, strsignal(signo));
 		if (signo != SIGCHLD) {
-			if (kill(-analysis_pid, signo) == -1)
-				err(EXIT_FAILURE, "%s: kill", __func__);
+			if (kill(-analysis_pid, signo) == -1) {
+				err(EXIT_FAILURE, "%s.%d: kill",
+				    __func__, __LINE__);
+			}
 			dbg_printf("%s: forwarded signal %d\n",
 			    product_name, signo);
 			continue;
@@ -379,17 +404,19 @@ rvp_online_analysis_start(void)
 		if (waitpid(analysis_pid, &astatus, 0) == -1) {
 			err(EXIT_FAILURE,
 			    "%s failed unexpectedly while it waited for the "
-			    "analysis process to finish",
+			    "analyzer to finish",
 			    product_name);
 		}
 		break;
 	}
 
-	/* Print the status of the analysis engine if it was cancelled
+	dbg_printf("%s.%d: analyzer finished\n", __func__, __LINE__);
+
+	/* Print the status of the analyzer if it was cancelled
 	 * by a signal.
 	 */
 	if (WIFSIGNALED(astatus)) {
-		fprintf(stderr, "analysis engine: %s", strsignal(WTERMSIG(astatus)));
+		fprintf(stderr, "analyzer: %s", strsignal(WTERMSIG(astatus)));
 #ifdef WCOREDUMP
 		if (WCOREDUMP(astatus))
 			fprintf(stderr, " (core dumped)");
@@ -531,7 +558,7 @@ rvp_supervision_start(void)
 
 	if ((pid = fork()) == -1) {
 		err(EXIT_FAILURE,
-		    "%s could not fork an analysis process", product_name);
+		    "%s could not fork an analyzer", product_name);
 	}
 
 	if (pid == 0) {
@@ -543,7 +570,7 @@ rvp_supervision_start(void)
 		}
 		if (execvp("rvpa", args) == -1) {
 			err(EXIT_FAILURE,
-			    "%s could not start an analysis process",
+			    "%s could not start an analyzer",
 			    product_name);
 		}
 		// unreachable
@@ -555,7 +582,7 @@ rvp_supervision_start(void)
 			continue;
 		err(EXIT_FAILURE,
 		    "%s failed unexpectedly "
-		    "while it waited for the analysis process to finish",
+		    "while it waited for the analyzer to finish",
 		    product_name);
 	}
 

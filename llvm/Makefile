@@ -1,4 +1,4 @@
-SUBPRJ=cmade ngrt personality rvpdump
+SUBPRJ=cmade ngrt personality rvpdump sigsim
 INTERNALLIBS=librvu
 LIBDEPS=librvu:ngrt librvu:rvpdump
 

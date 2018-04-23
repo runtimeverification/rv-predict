@@ -11,6 +11,7 @@ import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
+import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
 import org.junit.Assert;
 import org.junit.Before;
@@ -2266,7 +2267,7 @@ public class MaximalCausalModelTest {
             sigToRaceSuspects.put("race", raceSuspects);
 
             return model.checkRaceSuspects(
-                    sigToRaceSuspects, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0));
+                    sigToRaceSuspects, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0, new Logger()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

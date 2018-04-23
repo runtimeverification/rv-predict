@@ -7,6 +7,10 @@
 	    than the one derived from tsan.
 	pass/: standalone instrumentation pass derived from
 	    Thread Sanitizer (tsan)
+	personality/: interrupt personalities implement the state machine
+	    that determines whether or not a program under test can
+	    enter an interrupt service routine (ISR) and forces the
+	    program to "spontaneously" enter eligible ISRs
 	runtime/: standalone runtime derived from tsan.  This is
 	    not built any longer, but we keep it around as a reference.
 	rvpdump/: utility program for displaying RV-Predict/C trace

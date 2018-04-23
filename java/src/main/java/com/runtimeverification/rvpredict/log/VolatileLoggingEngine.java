@@ -120,7 +120,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         this.crntState = new TraceState(config, metadata);
         this.windowSize = config.windowSize;
         globalAnalysisLimit =
-                new AnalysisLimit(Clock.systemUTC(),"Global", Optional.empty(), config.global_timeout);
+                new AnalysisLimit(Clock.systemUTC(),"Global", Optional.empty(), config.global_timeout, config.logger());
         if (config.isHappensBefore()) {
             this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
         } else {
@@ -241,7 +241,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
                                 Clock.systemUTC(),
                                 "Window",
                                 Optional.of(globalAnalysisLimit),
-                                config.window_timeout);
+                                config.window_timeout, config.logger());
                 detector.run(crntState.initNextTraceWindow(rawTraces), windowAnalysisLimit);
             }
         } catch (Throwable e) {

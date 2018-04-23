@@ -1,9 +1,9 @@
 .include <mkc.init.mk>
 
 FILESMODE=0755
-FILES=rvp-error
+FILES=rvp-error rvp-html-report
 
-CLEANFILES+=rvp-error
+CLEANFILES+=$(FILES)
 
 BUILD_DIR_OPT=-build-dir $(.OBJDIR)
 
@@ -25,6 +25,9 @@ test uninstall:
 
 rvp-error: $(SRCDIR)/rv-error
 	@cp $(.ALLSRC) $(.OBJDIR)/rvp-error
+
+rvp-html-report: .PHONY
+	@cp $(.CURDIR)/../html-report/rv-html-report $(.OBJDIR)/rvp-html-report
 
 $(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Nall:Ndepend:Ntest):
 	cd $(SRCDIR) && unset DESTDIR && \

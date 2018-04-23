@@ -18,4 +18,4 @@ CXX=rvpc++
 LDADD+=-pthread
 LDADD+=-g
 
-DBG+=-g -O0
+COPTS+=-g -O0

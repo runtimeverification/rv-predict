@@ -4,6 +4,7 @@ set -e
 set -u
 
 only_print_command=no
+html_dir=
 analyze_passthrough=
 symbolize_passthrough=
 sharedir=$(dirname $0)/../share/rv-predict-c
@@ -68,7 +69,11 @@ symbolize()
 	rvpsymbolize-json ${symbolize_passthrough} "$@" | \
 	{ [ ${filter_trim:-yes} = yes ] && rvptrimframe || cat ; } | \
 	{ [ ${filter_shorten:-yes} = yes ] && rvpshortenpaths || cat ; } | \
-	rvp-error ${sharedir}/${output_format:-console}-metadata.json
+	RV_ISSUE_REPORT=/dev/stdout \
+	    rvp-error ${sharedir}/${output_format:-console}-metadata.json | \
+	{ [ x${html_dir:-} != x ] \
+	    && rvp-html-report -o ${html_dir} /dev/stdin \
+	    || cat 1>&2 ; }
 }
 
 if [ ${RVP_WINDOW_SIZE:-none} != none ]; then
@@ -81,6 +86,11 @@ fi
 
 if [ -n "${RVP_ANALYSIS_ARGS:-}" ]; then
 	set -- ${RVP_ANALYSIS_ARGS} "$@"
+fi
+
+if [ x${RVP_HTML_DIR:-} != x ]; then
+	output_format=json
+	html_dir=${RVP_HTML_DIR:-}
 fi
 
 while [ $# -ge 1 ]; do
@@ -97,11 +107,24 @@ while [ $# -ge 1 ]; do
 		eval filter_${1##--no-}=no
 		shift
 		;;
+	--html-dir)
+		output_format=json
+		shift
+		html_dir="$1"
+		shift
+		;;
+	--html-dir=*)
+		output_format=json
+		eval html_dir=${1##--html-dir=}
+		shift
+		;;
 	--output=raw)
 		raw=yes
+		html_dir=
 		shift
 		;;
 	--output=*)
+		html_dir=
 		eval output_format=${1##--output=}
 		shift
 		case $output_format in
@@ -119,12 +142,16 @@ while [ $# -ge 1 ]; do
 		parallel="--parallel-smt $1"
 		shift
 		;;
+	--window=*)
+		eval window="--window ${1##--window=}"
+		shift
+		;;
 	--window)
 		shift
 		window="--window $1"
 		shift
 		;;
-	--solver-timeout)
+	--global-timeout|--solver-timeout|--window-timeout)
 		analyze_passthrough="${analyze_passthrough:-} $1 $2"
 		shift
 		shift

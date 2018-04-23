@@ -30,6 +30,9 @@ filter_noncc_arguments()
 		--intr-personality=*)
 			continue
 			;;
+		--sigsim=*)
+			continue
+			;;
 		'')
 			qarg="''"
 			;;
@@ -69,6 +72,7 @@ sources=no
 link=yes
 compile=yes
 intr_personality=none
+sigsim=none
 just_print=no
 
 prog=$(basename $0)
@@ -97,6 +101,10 @@ for arg in "$@"; do
 		;;
 	--intr-personality=*)
 		intr_personality=${arg##--intr-personality=}
+		continue
+		;;
+	--sigsim=*)
+		sigsim=${arg##--sigsim=}
 		continue
 		;;
 	-M|-E)	# -M implies -E, and -E skips normal compilation
@@ -145,7 +153,7 @@ fi
 # -latomic for atomic_is_lock_free()
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -ldl -lrt -latomic -pthread -g"
+	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} -ldl -lrt -latomic -pthread -g"
 fi
 
 if [ ${just_print} = yes ]; then

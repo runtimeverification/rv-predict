@@ -20,6 +20,7 @@
 #endif
 
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
+REAL_DEFN(sighandler_t, signal, int, sighandler_t);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, sigsuspend, const sigset_t *);
@@ -89,6 +90,9 @@ void
 rvp_signal_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(
+	    sighandler_t (*)(int, sighandler_t),
+	    signal);
+	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const struct sigaction *, struct sigaction *),
 	    sigaction);
 	ESTABLISH_PTR_TO_REAL(
@@ -124,11 +128,7 @@ rvp_signal_init(void)
 	if (sigaddset(&unmaskable_set, SIGKILL) != 0)
 		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
 
-#if 1
 	rvp_unmaskable = sigset_to_mask(&unmaskable_set);
-#else
-	rvp_unmaskable = 0;
-#endif
 
 	memset(&sa, 0, sizeof(sa));
 	if (sigemptyset(&sa.sa_mask) != 0)
@@ -173,10 +173,12 @@ rvp_signal_alternate_lookup(int signum)
 	    : &signal_storage[signum].sc_alternate[0];
 }
 
-static void
+static rvp_signal_t *
 rvp_signal_select_alternate(int signum, rvp_signal_t *s)
 {
+	rvp_signal_t *os = signal_tbl[signum];
 	atomic_store_explicit(&signal_tbl[signum], s, memory_order_release);
+	return os;
 }
 
 rvp_signal_t *
@@ -335,7 +337,8 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	t->t_intrmask = omask | (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
+	t->t_intrmask = omask |
+	    (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
 	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a
@@ -352,10 +355,10 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_buf_put(&b, signum);
 	rvp_ring_put_buf(r, b);
 
-	if (s->s_handler != NULL)
-		(*s->s_handler)(signum);
-	else
+	if (s->s_sigaction != NULL)
 		(*s->s_sigaction)(signum, info, ctx);
+	else
+		(*s->s_handler)(signum);
 
 	b = RVP_BUF_INITIALIZER;
 
@@ -383,17 +386,29 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	atomic_store_explicit(&t->t_idepth, idepth, memory_order_release);
 }
 
+int
+signo_to_bitno(int signo)
+{
+	return signo - signals_origin;
+}
+
+int
+bitno_to_signo(int bitno)
+{
+	return bitno + signals_origin;
+}
+
 sigset_t *
 mask_to_sigset(uint64_t mask, sigset_t *set)
 {
-	int rc, signum;
+	int rc, signo;
 
 	if (sigemptyset(set) != 0)
 		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
 
-	for (signum = signals_origin; signum < nsignals; signum++) {
-		uint64_t testbit = (uint64_t)1 << (signum - signals_origin);
-		if ((mask & testbit) != 0 && (rc = sigaddset(set, signum)) != 0)
+	for (signo = signals_origin; signo < nsignals; signo++) {
+		uint64_t testbit = (uint64_t)1 << signo_to_bitno(signo);
+		if ((mask & testbit) != 0 && (rc = sigaddset(set, signo)) != 0)
 			err(EXIT_FAILURE, "%s: sigaddset", __func__);
 	}
 	return set;
@@ -402,12 +417,12 @@ mask_to_sigset(uint64_t mask, sigset_t *set)
 uint64_t
 sigset_to_mask(const sigset_t *set)
 {
-	int signum;
+	int signo;
 	uint64_t mask = 0;
 
-	for (signum = signals_origin; signum < nsignals; signum++) {
-		if (sigismember(set, signum) == 1)
-			mask |= (uint64_t)1 << (signum - signals_origin);
+	for (signo = signals_origin; signo < nsignals; signo++) {
+		if (sigismember(set, signo) == 1)
+			mask |= (uint64_t)1 << signo_to_bitno(signo);
 	}
 	return mask;
 }
@@ -668,6 +683,7 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	uint64_t maskchg, nmask, omask;
+	uint64_t masked, unmasked;
 	int rc;
 
 	/* TBD trace a read from `set` and, if `oldset` is not NULL,
@@ -716,8 +732,17 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	} else
 		rvp_thread_trace_setmask(t, how, maskchg, retaddr);
 
+	masked = nmask & ~omask;
+	unmasked = omask & ~nmask;
+
+	if (masked != 0)
+		rvp_sigsim_raise_all_in_mask(masked);
+
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
+
+	if (unmasked != 0)
+		rvp_sigsim_raise_all_in_mask(unmasked);
 
 	t->t_intrmask = nmask;
 
@@ -782,6 +807,29 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
+sighandler_t
+__rvpredict_signal(int signo, sighandler_t handler)
+{
+	struct sigaction nsa, osa;
+
+	memset(&nsa, '\0', sizeof(nsa));
+
+	if (sigemptyset(&nsa.sa_mask) == -1)
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
+
+	nsa.sa_handler = handler;
+	if (sigaction(signo, &nsa, &osa) == -1) {
+		/* signal(3) is only defined to set `errno` to `EINVAL`,
+		 * so bail otherwise. 
+		 */
+		if (errno != EINVAL)
+			err(EXIT_FAILURE, "%s: sigaction", __func__);
+
+		return SIG_ERR;
+	}
+	return osa.sa_handler;
+}
+
 /* XXX sigaction(2) is async-signal-safe, so we have to
  * XXX take care to avoid async-signal-UNSAFE functions in
  * XXX our implementation.  rvp_signal_lock() calls
@@ -792,15 +840,32 @@ int
 __rvpredict_sigaction(int signum, const struct sigaction *act0,
     struct sigaction *oact)
 {
+	rvp_signal_t stmp =
+	    {.s_blockset = NULL, .s_handler = NULL, .s_sigaction = NULL};
 	rvp_signal_t *s;
 	sigset_t mask, savedmask;
 	struct sigaction act_copy;
 	const struct sigaction *act = act0;
 	int rc;
 	rvp_addr_t handler;
+	bool establishing;
 
 	if (act == NULL)
-		goto out;
+		establishing = false;
+	else if ((act->sa_flags & SA_SIGINFO) != 0) {
+		/* sigaction(2) will not disestablish a signal handler
+		 * if SA_SIGINFO is in the flags.
+		 */
+		establishing = true;
+		handler = (rvp_addr_t)(stmp.s_sigaction = act->sa_sigaction);
+	} else {
+		handler = (rvp_addr_t)(stmp.s_handler = act->sa_handler);
+		establishing =
+		    (act->sa_handler != SIG_IGN && act->sa_handler != SIG_DFL);
+	}
+
+	if (!establishing)
+		rvp_sigsim_disestablish(signum);
 
 	/* XXX sigaction(2) is supposed to be async-signal-safe, so instead of
 	 * acquiring a lock here, I should use a signal-safe approach to
@@ -809,18 +874,18 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	 */
 	rvp_signal_lock(signum, &savedmask);
 
-	if ((s = rvp_signal_alternate_lookup(signum)) == NULL)
-		err(EXIT_FAILURE, "%s: rvp_signal_alternate_lookup", __func__);
+	if (act == NULL) {
+		s = rvp_signal_lookup(signum);
+		goto null_act;
+	}
 
-	if ((act->sa_flags & SA_SIGINFO) != 0) {
-		handler = (rvp_addr_t)(s->s_sigaction = act->sa_sigaction);
-	} else {
-		handler = (rvp_addr_t)(s->s_handler = act->sa_handler);
+	s = rvp_signal_alternate_lookup(signum);
 
-		if (s->s_handler == SIG_IGN || s->s_handler == SIG_DFL) {
-			rvp_trace_sigdis(signum, __builtin_return_address(0));
-			goto out;
-		}
+	*s = stmp;
+
+	if ((act->sa_flags & SA_SIGINFO) == 0 && !establishing) {
+		rvp_trace_sigdis(signum, __builtin_return_address(0));
+		goto out;
 	}
 
 	mask = act->sa_mask;
@@ -839,9 +904,13 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	act_copy.sa_sigaction = __rvpredict_handler_wrapper;
 	act = &act_copy;
 
-	rvp_signal_select_alternate(signum, s);
-
 out:
+
+	s = rvp_signal_select_alternate(signum, s);
+
+	/* When the application code disestablishes a signal at
+	 * SIGINFO/SIGPWR, the runtime reestablishes its own handler.
+	 */
 	if (signum == RVP_INFO_SIGNUM && (act->sa_flags & SA_SIGINFO) == 0 &&
 	    s->s_handler == SIG_DFL) {
 		act_copy = *act;
@@ -849,17 +918,21 @@ out:
 		act = &act_copy;
 	}
 
+null_act:
 	rc = real_sigaction(signum, act, oact);
+
+	if (establishing)
+		rvp_sigsim_establish(signum);
+
 	if (oact == NULL || (oact->sa_flags & SA_SIGINFO) == 0 ||
 	    oact->sa_sigaction != __rvpredict_handler_wrapper) {
 		;	// old sigaction not requested, or wrapper not installed
-	} else if (s->s_handler != NULL) {
-		oact->sa_flags &= ~SA_SIGINFO;
-		oact->sa_handler = s->s_handler;
-	} else {
-		assert(s->s_sigaction != NULL);
+	} else if (s->s_sigaction != NULL) {
 		oact->sa_flags |= SA_SIGINFO;
 		oact->sa_sigaction = s->s_sigaction;
+	} else {
+		oact->sa_flags &= ~SA_SIGINFO;
+		oact->sa_handler = s->s_handler;
 	}
 	rvp_signal_unlock(signum, &savedmask);
 	return rc;
@@ -868,4 +941,5 @@ out:
 INTERPOSE(int, sigprocmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, sigaction, int, const struct sigaction *, struct sigaction *);
+INTERPOSE(sighandler_t, signal, int, sighandler_t);
 INTERPOSE(int, sigsuspend, const sigset_t *);

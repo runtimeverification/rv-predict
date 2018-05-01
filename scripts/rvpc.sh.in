@@ -113,6 +113,10 @@ for arg in "$@"; do
 		continue
 		;;
 	-m32)	bits=32
+		echo "${prog}: $arg is not supported." 1>&2
+		echo "${prog}: this version of RV-Predict/C provides only a" \
+		    "64-bit runtime." 1>&2
+		exit 1
 		continue
 		;;
 	-m64)	bits=64

@@ -202,41 +202,6 @@
                 <artifactId>maven-install-plugin</artifactId>
                 <version>2.3.1</version>
             </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>wagon-maven-plugin</artifactId>
-                <version>1.0</version>
-                <executions>
-                    <execution>
-                        <id>upload-deb</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>upload</goal>
-                        </goals>
-                        <configuration>
-                            <serverId>rv-site</serverId>
-                            <url>scp://release@ftp.runtimeverification.com/</url>
-                            <fromDir>${staging.dir.app}</fromDir>
-                            <includes>rv-predict-c_*-1_amd64.deb</includes>
-                            <toDir>/var/www/predict/${project.version}/c</toDir>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>upload-jar</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>upload</goal>
-                        </goals>
-                        <configuration>
-                            <serverId>rv-site</serverId>
-                            <url>scp://release@ftp.runtimeverification.com/</url>
-                            <fromDir>target</fromDir>
-                            <includes>rv-predict-c-installer*.jar</includes>
-                            <toDir>/var/www/predict/${project.version}/c</toDir>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
         </plugins>
     </build>
     <profiles>
@@ -263,6 +228,96 @@
                                 <configuration>
                                     <executable>${project.basedir}/scripts/test-installer</executable>
                                     <workingDirectory>${project.basedir}/..</workingDirectory>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>deploy-c-installer</id>
+            <activation>
+                <property>
+                    <name>!deploy_nightly</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>wagon-maven-plugin</artifactId>
+                        <version>1.0</version>
+                        <executions>
+                            <execution>
+                                <id>upload-deb</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>upload-single</goal>
+                                </goals>
+                                <configuration>
+                                    <serverId>rv-site</serverId>
+                                    <url>scp://release@ftp.runtimeverification.com/</url>
+                                    <fromFile>target/rv-predict-c_${info.appVersion}-1_amd64.deb</fromFile>
+                                    <toFile>/var/www/predict/${info.appVersion}/c/rv-predict-c_${info.appVersion}-1_amd64.deb</toFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>upload-jar</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>upload-single</goal>
+                                </goals>
+                                <configuration>
+                                    <serverId>rv-site</serverId>
+                                    <url>scp://release@ftp.runtimeverification.com/</url>
+                                    <fromFile>target/rv-predict-c-installer-${info.appVersion}.jar</fromFile>
+                                    <toFile>/var/www/predict/${info.appVersion}/c/rv-predict-c-installer-${info.appVersion}.jar</toFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>deploy-c-nightly-installer</id>
+            <activation>
+                <property>
+                    <name>deploy_nightly</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>wagon-maven-plugin</artifactId>
+                        <version>1.0</version>
+                        <executions>
+                            <execution>
+                                <id>upload-deb</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>upload-single</goal>
+                                </goals>
+                                <configuration>
+                                    <serverId>rv-site</serverId>
+                                    <url>scp://release@ftp.runtimeverification.com/</url>
+                                    <fromFile>target/rv-predict-c_${info.appVersion}-1_amd64.deb</fromFile>
+                                    <toFile>/var/www/predict/nightly/c/rv-predict-c-nightly.deb</toDir>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>upload-jar</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>upload-single</goal>
+                                </goals>
+                                <configuration>
+                                    <serverId>rv-site</serverId>
+                                    <url>scp://release@ftp.runtimeverification.com/</url>
+                                    <fromFile>target/rv-predict-c-installer-${info.appVersion}.jar</fromFile>
+                                    <toFile>/var/www/predict/night/c/rv-predict-c-nightly.jar</toFile>
                                 </configuration>
                             </execution>
                         </executions>

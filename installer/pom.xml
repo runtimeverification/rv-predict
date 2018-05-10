@@ -206,8 +206,8 @@
                                 <configuration>
                                     <serverId>rv-site</serverId>
                                     <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromFile>target/rv-predict-installer-${info.appVersion}.jar</fromFile>
-                                    <toFile>/var/www/predict/${info.appVersion}/rv-predict-installer-${info.appVersion}.jar</toFile>
+                                    <fromFile>target/rv-predict-installer-${project.version}.jar</fromFile>
+                                    <toFile>/var/www/predict/${project.version}/rv-predict-installer-${project.version}.jar</toFile>
                                 </configuration>
                             </execution>
                         </executions>
@@ -238,7 +238,7 @@
                                 <configuration>
                                     <serverId>rv-site</serverId>
                                     <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromFile>target/rv-predict-installer-${info.appVersion}.jar</fromFile>
+                                    <fromFile>target/rv-predict-installer-${project.version}.jar</fromFile>
                                     <toFile>/var/www/predict/nightly/rv-predict-installer-nightly.jar</toFile>
                                 </configuration>
                             </execution>

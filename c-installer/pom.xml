@@ -317,7 +317,7 @@
                                     <serverId>rv-site</serverId>
                                     <url>scp://release@ftp.runtimeverification.com/</url>
                                     <fromFile>target/rv-predict-c-installer-${project.version}.jar</fromFile>
-                                    <toFile>/var/www/predict/night/c/rv-predict-c-nightly.jar</toFile>
+                                    <toFile>/var/www/predict/nightly/c/rv-predict-c-nightly.jar</toFile>
                                 </configuration>
                             </execution>
                         </executions>

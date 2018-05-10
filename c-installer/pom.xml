@@ -304,7 +304,7 @@
                                     <serverId>rv-site</serverId>
                                     <url>scp://release@ftp.runtimeverification.com/</url>
                                     <fromFile>target/rv-predict-c_${info.appVersion}-1_amd64.deb</fromFile>
-                                    <toFile>/var/www/predict/nightly/c/rv-predict-c-nightly.deb</toDir>
+                                    <toFile>/var/www/predict/nightly/c/rv-predict-c-nightly.deb</toFile>
                                 </configuration>
                             </execution>
                             <execution>

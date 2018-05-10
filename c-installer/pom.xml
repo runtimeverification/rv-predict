@@ -258,7 +258,7 @@
                                 <configuration>
                                     <serverId>rv-site</serverId>
                                     <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromFile>target/rv-predict-c_${project.version}-1_amd64.deb</fromFile>
+                                    <fromFile>${staging.dir.app}/rv-predict-c_${project.version}-1_amd64.deb</fromFile>
                                     <toFile>/var/www/predict/${project.version}/c/rv-predict-c_${project.version}-1_amd64.deb</toFile>
                                 </configuration>
                             </execution>
@@ -303,7 +303,7 @@
                                 <configuration>
                                     <serverId>rv-site</serverId>
                                     <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromFile>target/rv-predict-c_${project.version}-1_amd64.deb</fromFile>
+                                    <fromFile>${staging.dir.app}/rv-predict-c_${project.version}-1_amd64.deb</fromFile>
                                     <toFile>/var/www/predict/nightly/c/rv-predict-c-nightly.deb</toFile>
                                 </configuration>
                             </execution>

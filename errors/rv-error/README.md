@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2017-2018 Runtime Verification, Inc. (RV-Match team). All Rights Reserved. -->
+<!-- Copyright (c) 2017-2018 Runtime Verification, Inc. (RV Toolkit team). All Rights Reserved. -->
 
 # RV-Error tool
 
@@ -16,7 +16,7 @@ opam install ocp-ocamlres ocamlbuild-atdgen csv uri atdgen
 ## Description
 
 This tool is designed to handle logic to generate error reports
-for RV-Match and RV-Predict. You can build it with `mvn package`.
+for the RV Toolkit. You can build it with `mvn package`.
 The `bin` directory should be added to your path in your shell profile.
 
 It can be invoked in the following way manually:

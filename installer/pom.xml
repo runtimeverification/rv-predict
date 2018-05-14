@@ -204,23 +204,13 @@
             </build>
         </profile>
         <profile>
-            <id>deploy-installer</id>
-            <activation>
-                <property>
-                    <name>!deploy_nightly</name>
-                </property>
-            </activation>
+            <id>deploy</id>
             <properties>
                 <toJarFile>/var/www/predict/${project.version}/rv-predict-installer-${project.version}.jar</toJarFile>
             </properties>
         </profile>
         <profile>
-            <id>deploy-nightly-installer</id>
-            <activation>
-                <property>
-                    <name>deploy_nightly</name>
-                </property>
-            </activation>
+            <id>deploy-nightly</id>
             <properties>
                 <toJarFile>/var/www/predict/nightly/rv-predict-installer-nightly.jar</toJarFile>
             </properties>

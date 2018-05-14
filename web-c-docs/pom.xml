@@ -104,23 +104,13 @@
     </build>
     <profiles>
         <profile>
-            <id>deploy-c-docs</id>
-            <activation>
-                <property>
-                    <name>!deploy_nightly</name>
-                </property>
-            </activation>
+            <id>deploy</id>
             <properties>
                 <toDocsDir>/var/www/predict/${project.version}/c/docs</toDocsDir>
             </properties>
         </profile>
         <profile>
-            <id>deploy-nightly-c-docs</id>
-            <activation>
-                <property>
-                    <name>deploy_nightly</name>
-                </property>
-            </activation>
+            <id>deploy-nightly</id>
             <properties>
                 <toDocsDir>/var/www/predict/nightly/c/docs</toDocsDir>
             </properties>

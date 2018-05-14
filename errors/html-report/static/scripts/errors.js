@@ -92,7 +92,7 @@ d3.select("#container").append("div")
 
 d3.select("#FilterableTable").append("h1")
   .attr("id", "title")
-  .text("RV-Match report")
+  .text("RV Toolkit report")
 
 d3.select("#FilterableTable").append("div")
   .attr("id", "SearchBar")

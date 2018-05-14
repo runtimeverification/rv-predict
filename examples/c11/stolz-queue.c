@@ -36,7 +36,7 @@ typedef struct ringbuffer {
     _Atomic u32 read_idx;
 } ringbuffer;
 
-u32 buffer_next(u32 idx) {
+static u32 buffer_next(u32 idx) {
     //return (idx+1) % BUFFER_SIZE;
     if (idx < BUFFER_SIZE - 1){
         return idx+1;
@@ -93,7 +93,7 @@ int main( void )
 }
 
 char data = 'a';
-char accquire_data() {
+static char acquire_data() {
     nanosleep( &xOneSecond, NULL );
     if (data > 'z' ) data = 'a';
     return data++;
@@ -114,7 +114,7 @@ void* prvProducerTask( void *pvParameters )
         read_idx = atomic_load(&buffer.read_idx);
         
         if ( buffer_next(write_idx) != read_idx ) {
-            buffer.buffer[write_idx] = accquire_data();
+            buffer.buffer[write_idx] = acquire_data();
             atomic_store(&buffer.write_idx, buffer_next(write_idx));
             report("Producer: Value %c written to buffer[%d].\n", buffer.buffer[write_idx], write_idx);
         }

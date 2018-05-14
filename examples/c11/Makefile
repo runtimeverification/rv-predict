@@ -14,6 +14,7 @@ FILES+=$(SRCS.spinning-loop) $(SRCS.square-sum) $(SRCS.memcpy)
 FILES+=$(SRCS.simple-state-machine)
 FILES+=$(SRCS.simplerace) $(SRCS.lpcq) $(SRCS.spcq) $(SRCS.signal)
 FILES+=$(SRCS.slpcq)
+FILES+=$(SRCS.stolz-queue)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"

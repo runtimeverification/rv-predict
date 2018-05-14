@@ -19,7 +19,7 @@ FILESMODE=0644
 .if $(MKBIN:Uno) == "yes"
 PROGS=	dot-product double-checked-locking lpcq memcpy signal
 PROGS+=	simple-state-machine simplerace slpcq spcq spinning-loop square-sum
-#PROGS+=	stolz-queue
+PROGS+=	stolz-queue
 .endif
 
 CC=clang

@@ -17,7 +17,6 @@ instrumentation using
 .Op Fl Fl html-dir Ar directory
 .Op Fl Fl html-dir Ns = Ns Ar directory
 .Op Fl Fl no-shorten
-.Op Fl Fl no-signal
 .Op Fl Fl no-symbol
 .Op Fl Fl no-system
 .Op Fl Fl no-trim
@@ -94,9 +93,6 @@ in reports,
 long paths to source files are not shortened by replacing the first 
 path components with an ellipsis,
 .Dq ... .
-.It Fl Fl no-signal
-disables symbolization of signal numbers: e.g., S1 is not converted to
-.Dv SIGHUP .
 .It Fl Fl no-symbol
 disables symbolization altogether: instruction & data addresses
 are not converted to file names, line and column numbers.
@@ -108,7 +104,6 @@ When
 .Fl Fl no-symbol
 is passed, options
 .Fl Fl no-shorten ,
-.Fl Fl no-signal ,
 .Fl Fl no-system ,
 and
 .Fl Fl no-trim

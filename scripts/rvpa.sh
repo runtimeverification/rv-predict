@@ -12,9 +12,8 @@ sharedir=$(dirname $0)/../share/rv-predict-c
 _usage()
 {
 	cat 1>&2 <<EOF
-usage: $(basename $0) [--window size]
-    [--no-shorten|--no-symbol|--no-trim] [--]
-    program [trace-file]
+usage: $(basename $0) [--window size] [--no-shorten|--no-symbol|--no-trim]
+    [--html-dir directory] [--] program [trace-file]
 EOF
 }
 

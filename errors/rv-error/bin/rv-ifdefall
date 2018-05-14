@@ -1,7 +1,7 @@
 #!/bin/sh
 # outputs data to the cache folder containing all the suppressions for
 # all the files included in the preprocessed output passed to the script.
-# This tool should be invoked by the rv-match and rv-predict frontends
+# This tool should be invoked by the Match and Predict frontends
 # in order to process ifdef suppressions, which are then read from the
 # cache folder by the error backend.
 

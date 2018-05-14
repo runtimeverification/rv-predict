@@ -180,6 +180,26 @@
                             </execution>
                         </executions>
                     </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>wagon-maven-plugin</artifactId>
+                        <version>1.0</version>
+                        <executions>
+                            <execution>
+                                <id>upload-jar</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>upload-single</goal>
+                                </goals>
+                                <configuration>
+                                    <serverId>rv-site</serverId>
+                                    <url>scp://release@ftp.runtimeverification.com/</url>
+                                    <fromFile>target/rv-predict-installer-${project.version}.jar</fromFile>
+                                    <toFile>${toJarFile}</toFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
@@ -190,30 +210,9 @@
                     <name>!deploy_nightly</name>
                 </property>
             </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>wagon-maven-plugin</artifactId>
-                        <version>1.0</version>
-                        <executions>
-                            <execution>
-                                <id>upload-jar</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>upload-single</goal>
-                                </goals>
-                                <configuration>
-                                    <serverId>rv-site</serverId>
-                                    <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromFile>target/rv-predict-installer-${project.version}.jar</fromFile>
-                                    <toFile>/var/www/predict/${project.version}/rv-predict-installer-${project.version}.jar</toFile>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <toJarFile>/var/www/predict/${project.version}/rv-predict-installer-${project.version}.jar</toJarFile>
+            </properties>
         </profile>
         <profile>
             <id>deploy-nightly-installer</id>
@@ -222,30 +221,9 @@
                     <name>deploy_nightly</name>
                 </property>
             </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>wagon-maven-plugin</artifactId>
-                        <version>1.0</version>
-                        <executions>
-                            <execution>
-                                <id>upload-jar</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>upload-single</goal>
-                                </goals>
-                                <configuration>
-                                    <serverId>rv-site</serverId>
-                                    <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromFile>target/rv-predict-installer-${project.version}.jar</fromFile>
-                                    <toFile>/var/www/predict/nightly/rv-predict-installer-nightly.jar</toFile>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <toJarFile>/var/www/predict/nightly/rv-predict-installer-nightly.jar</toJarFile>
+            </properties>
         </profile>
     </profiles>
 </project>

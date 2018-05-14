@@ -79,6 +79,27 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>wagon-maven-plugin</artifactId>
+                <version>1.0</version>
+                <executions>
+                    <execution>
+                        <id>upload-docs</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>upload</goal>
+                        </goals>
+                        <configuration>
+                            <serverId>rv-site</serverId>
+                            <url>scp://release@ftp.runtimeverification.com/</url>
+                            <fromDir>target/docs</fromDir>
+                            <includes>**</includes>
+                            <toDir>${toDocsDir}</toDir>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
     <profiles>
@@ -89,31 +110,9 @@
                     <name>!deploy_nightly</name>
                 </property>
             </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>wagon-maven-plugin</artifactId>
-                        <version>1.0</version>
-                        <executions>
-                            <execution>
-                                <id>upload-docs</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>upload</goal>
-                                </goals>
-                                <configuration>
-                                    <serverId>rv-site</serverId>
-                                    <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromDir>target/docs</fromDir>
-                                    <includes>**</includes>
-                                    <toDir>/var/www/predict/${project.version}/docs</toDir>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <toDocsDir>/var/www/predict/${project.version}/docs</toDocsDir>
+            </properties>
         </profile>
         <profile>
             <id>deploy-nightly-docs</id>
@@ -122,31 +121,9 @@
                     <name>deploy_nightly</name>
                 </property>
             </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>wagon-maven-plugin</artifactId>
-                        <version>1.0</version>
-                        <executions>
-                            <execution>
-                                <id>upload-nightly-docs</id>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>upload</goal>
-                                </goals>
-                                <configuration>
-                                    <serverId>rv-site</serverId>
-                                    <url>scp://release@ftp.runtimeverification.com/</url>
-                                    <fromDir>target/docs</fromDir>
-                                    <includes>**</includes>
-                                    <toDir>/var/www/predict/nightly/docs</toDir>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
+            <properties>
+                <toDocsDir>/var/www/predict/nightly/docs</toDocsDir>
+            </properties>
         </profile>
     </profiles>
 </project>

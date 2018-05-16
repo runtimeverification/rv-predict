@@ -1,14 +1,9 @@
 # 78k0 data-race demonstration
 
-Build all examples with `mkcmake`.  For best results, run with
-`RVP_WINDOW_SIZE=150` in the environment.  Example:
+To build all examples, run `mkcmake`.  There are four example programs:
 
-```
-mkcmake
-RVP_WINDOW_SIZE=150 ./78k0
-```
-
-`78k0`: a program with a single thread, high- and low-priority
+`simple`
+:   a program with a single thread, high- and low-priority
     interrupts that all modify non-atomic shared variables.  Races are
     expected on the variable called `racy`, because the application
     thread and both of the interrupt handlers modify it without
@@ -16,9 +11,32 @@ RVP_WINDOW_SIZE=150 ./78k0
     `racefree`, however, because it is always modified with interrupts
     disabled.
 
-`hilo`: a _slight_ simplification of `78k0` that does not modify any
+`complex`
+:   like `simple` but it manipulates the interrupt-enable control
+    flag (IE) more frequently.  The trace is more complicated and more
+    costly to analyze than the trace for `simple`.
+ 
+    For best results, run `complex` with `RVP_WINDOW_SIZE=150` in the
+    environment.  Example:
+ 
+    ```
+    mkcmake
+    RVP_WINDOW_SIZE=150 ./complex
+    ```
+
+`hilo`
+:   a _slight_ simplification of `78k0` that does not modify any
     variable in `78k0`.  Interrupts race only against interrupts in this
     example.
 
-`lolo`: a simplification of example `78k0` that involves just one,
+    For best results, run `hilo` with `RVP_WINDOW_SIZE=150` in the
+    environment.  Example:
+
+    ```
+    mkcmake
+    RVP_WINDOW_SIZE=150 ./hilo
+    ```
+
+`lolo`
+:   a simplification of example `78k0` that involves just one,
     low-priority interrupt handler.

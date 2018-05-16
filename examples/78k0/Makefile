@@ -9,15 +9,17 @@ INCSDIR=$(FILESDIR)
 INCS=78k0_predict.h
 FILES=Makefile
 FILES+=README.md
-FILES+=$(SRCS.78k0)
+FILES+=$(SRCS.complex)
 FILES+=$(SRCS.lolo)
 FILES+=$(SRCS.hilo)
+FILES+=$(SRCS.simple)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
-PROGS+=	78k0
+PROGS+=	complex
 PROGS+=	lolo
 PROGS+=	hilo
+PROGS+=	simple
 .endif
 
 LDFLAGS+=--intr-personality=78k0
@@ -29,9 +31,10 @@ CPPFLAGS+=-I$(HOME)/include
 CPPFLAGS+=-include 78k0_predict.h
 WARNS=4
 
-SRCS.78k0=78k0.c
+SRCS.complex=complex.c
 SRCS.lolo=lolo.c
 SRCS.hilo=hilo.c
+SRCS.simple=simple.c
 
 .include "../rvp.mk"
 

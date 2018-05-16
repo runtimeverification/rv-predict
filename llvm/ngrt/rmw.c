@@ -22,6 +22,21 @@ trace_atomic_rmw_narrow(const void *retaddr, rvp_addr_t addr,
 
 /* TBD emit requisite changes of generation. */
 static inline void
+trace_atomic_rmw1(const void *retaddr, rvp_addr_t addr,
+    uint8_t oval, uint8_t nval, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(retaddr,addr,oval,nval,memory_order,RVP_OP_ATOMIC_RMW1); 
+}
+
+static inline void
+trace_atomic_rmw2(const void *retaddr, rvp_addr_t addr,
+    uint16_t oval, uint16_t nval, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(retaddr,addr,oval,nval,memory_order,RVP_OP_ATOMIC_RMW2); 
+}
+
+/* TBD emit requisite changes of generation. */
+static inline void
 trace_atomic_rmw4(const void *retaddr, rvp_addr_t addr,
     uint32_t oval, uint32_t nval, int32_t memory_order __unused)
 {
@@ -48,6 +63,24 @@ trace_atomic_rmw8(const void *retaddr, rvp_addr_t addr,
 	rvp_buf_put_u64(&b, oval);
 	rvp_buf_put_u64(&b, nval);
 	rvp_ring_put_buf(r, b);
+}
+
+void
+__rvpredict_atomic_exchange1(volatile _Atomic uint8_t *addr,
+    uint8_t oval, uint8_t nval, int32_t memory_order __unused)
+{
+	trace_atomic_rmw1(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, nval,
+	    memory_order);
+}
+
+void
+__rvpredict_atomic_exchange2(volatile _Atomic uint16_t *addr,
+    uint16_t oval, uint16_t nval, int32_t memory_order __unused)
+{
+	trace_atomic_rmw2(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, nval,
+	    memory_order);
 }
 
 void

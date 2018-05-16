@@ -15,7 +15,7 @@ RVP_TRACE_ONLY:=yes
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
 
-PROG=store
+PROG=atomic_load
 
 CC?=rvpc
 CPPFLAGS+=-I$(.CURDIR)/../../../include

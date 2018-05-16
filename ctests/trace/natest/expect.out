@@ -1,0 +1,13 @@
+tid 1.0 {} begin thread generation 0
+tid 1.0 in main at .../natest/natest.c:21 enter function cfa . return {}
+tid 1.0 in main at .../natest/natest.c:22 store 1 0x39 -> u8 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:23 store 2 0x0040 -> u16 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:24 store 4 0x00000041 -> u32 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:25 store 8 0x0000000000000043 -> u64 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:30 atomic store 1 0x10 -> u8 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:30 atomic store 2 0x1000 -> u16 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:35:6 atomic store 4 0x00000100 -> u32 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:36:6 atomic store 8 0x0000000f00000000 -> u64 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:38:9 atomic load 1 0x10 <- u8 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:39:10 atomic load 4 0x00000100 <- u32 at natest.c;main
+tid 1.0 in main at .../natest/natest.c:21 exit function

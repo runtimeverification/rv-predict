@@ -15,7 +15,7 @@ RVP_TRACE_ONLY:=yes
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
 
-PROG=store
+PROG=xchange_t816
 
 CC?=rvpc
 CPPFLAGS+=-I$(.CURDIR)/../../../include

@@ -22,9 +22,8 @@
  */
 
 struct {
-	_Atomic bool protected;
 	int count;
-} shared = {.protected = false, .count = 0};
+} shared = {.count = 0};
 
 static void
 handler(int signum __unused)

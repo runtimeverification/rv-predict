@@ -1,5 +1,6 @@
-
-
+/*
+ * atomic_load: Test of atomic load 
+ */
 #include <assert.h>	/* for PRIu32 */
 #include <inttypes.h>	/* for PRIu32 */
 #include <stdatomic.h>	/* for uint8_t, uint32_t */

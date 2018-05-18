@@ -1,3 +1,6 @@
+/*
+ * xchange_816: Test atomic exchange of 8 and 16 bit words
+ */
 #include <assert.h>	/* for PRIu32 */
 #include <inttypes.h>	/* for PRIu32 */
 #include <stdatomic.h>	/* for uint8_t, uint32_t */

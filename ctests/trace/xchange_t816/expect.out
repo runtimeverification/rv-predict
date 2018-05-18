@@ -1,27 +1,27 @@
 tid 1.0 {} begin thread generation 0
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:24 enter function cfa . return {}
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:25 atomic load 1 0x33 <- initial_u8 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:25 store 1 0x33 -> u_lcl_u8 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:26 atomic load 2 0x7032 <- initial_u16 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:26 store 2 0x7032 -> u_lcl_u16 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:27 atomic load 4 0x70800034 <- initial_u32 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:27 store 4 0x70800034 -> u_lcl_u32 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:28 atomic load 8 0x70080001fffe0038 <- initial_u64 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:28 store 8 0x70080001fffe0038 -> u_lcl_u64 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:30 atomic rmw 8 0x0000000000000040 <- u_glbl_u64 at xchange_t816.c <- 0x10080001eeef0064
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:31 atomic rmw 4 0x00000020 <- u_glbl_u32 at xchange_t816.c <- 0x10400032
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:32 atomic rmw 2 0x0010 <- u_glbl_u16 at xchange_t816.c <- 0x1006
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:33 atomic rmw 1 0x08 <- u_glbl_u8 at xchange_t816.c <- 0x10
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:35 atomic rmw 8 0x70080001fffe0038 <- u_lcl_u64 at xchange_t816.c;main <- 0x50080001eeef0064
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:36 atomic rmw 4 0x70800034 <- u_lcl_u32 at xchange_t816.c;main <- 0x50400032
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:37 atomic rmw 2 0x7032 <- u_lcl_u16 at xchange_t816.c;main <- 0x5006
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:38 atomic rmw 1 0x33 <- u_lcl_u8 at xchange_t816.c;main <- 0x50
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:41:25 atomic load 8 0x10080001eeef0064 <- u_glbl_u64 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:41:13 atomic store 8 0x10080001eeef0065 -> u_lcl_u64 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:42:25 atomic load 4 0x10400032 <- u_glbl_u32 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:42:13 atomic store 4 0x10400033 -> u_lcl_u32 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:43 atomic load 2 0x1006 <- u_glbl_u16 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:43:13 atomic store 2 0x1007 -> u_lcl_u16 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:44:25 atomic load 1 0x10 <- u_glbl_u8 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:44:13 atomic store 1 0x11 -> u_lcl_u8 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:24 exit function
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:27 enter function cfa . return {}
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:28 atomic load 1 0x33 <- initial_u8 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:28 store 1 0x33 -> u_lcl_u8 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:29 atomic load 2 0x7032 <- initial_u16 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:29 store 2 0x7032 -> u_lcl_u16 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:30 atomic load 4 0x70800034 <- initial_u32 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:30 store 4 0x70800034 -> u_lcl_u32 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:31 atomic load 8 0x70080001fffe0038 <- initial_u64 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:31 store 8 0x70080001fffe0038 -> u_lcl_u64 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:33 atomic rmw 8 0x0000000000000040 <- u_glbl_u64 at xchange_t816.c <- 0x10080001eeef0064
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:34 atomic rmw 4 0x00000020 <- u_glbl_u32 at xchange_t816.c <- 0x10400032
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:35 atomic rmw 2 0x0010 <- u_glbl_u16 at xchange_t816.c <- 0x1006
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:36 atomic rmw 1 0x08 <- u_glbl_u8 at xchange_t816.c <- 0x10
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:38 atomic rmw 8 0x70080001fffe0038 <- u_lcl_u64 at xchange_t816.c;main <- 0x50080001eeef0064
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:39 atomic rmw 4 0x70800034 <- u_lcl_u32 at xchange_t816.c;main <- 0x50400032
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:40 atomic rmw 2 0x7032 <- u_lcl_u16 at xchange_t816.c;main <- 0x5006
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:41 atomic rmw 1 0x33 <- u_lcl_u8 at xchange_t816.c;main <- 0x50
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:44:25 atomic load 8 0x10080001eeef0064 <- u_glbl_u64 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:44:13 atomic store 8 0x10080001eeef0065 -> u_lcl_u64 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:45:25 atomic load 4 0x10400032 <- u_glbl_u32 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:45:13 atomic store 4 0x10400033 -> u_lcl_u32 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:46 atomic load 2 0x1006 <- u_glbl_u16 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:46:13 atomic store 2 0x1007 -> u_lcl_u16 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:47:25 atomic load 1 0x10 <- u_glbl_u8 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:47:13 atomic store 1 0x11 -> u_lcl_u8 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:27 exit function

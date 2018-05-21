@@ -14,3 +14,13 @@ unaligned/: Rudimentary test of unaligned accesses.
 memcpy/: Rudimentary test of memcpy.
 
 mask/: Intended to test traces of getting/setting signal masks.  Unfinished.
+
+atomic_store: 
+atomic_load: Test of atomic load and stores
+
+natest:	Test of nonatomic load and store
+
+xchange_test:
+xchange_t816:  Test read/modify/write
+
+gnutest_sig: Tests signals using the gnu test program sigaction.c as base

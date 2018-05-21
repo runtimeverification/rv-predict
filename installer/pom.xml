@@ -205,6 +205,9 @@
         </profile>
         <profile>
             <id>deploy</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <toJarFile>/var/www/predict/${project.version}/rv-predict-installer-${project.version}.jar</toJarFile>
             </properties>

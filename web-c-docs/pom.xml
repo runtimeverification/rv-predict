@@ -105,6 +105,9 @@
     <profiles>
         <profile>
             <id>deploy</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <toDocsDir>/var/www/predict/${project.version}/c/docs</toDocsDir>
             </properties>

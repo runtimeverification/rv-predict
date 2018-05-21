@@ -79,7 +79,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Upload over SCP during deploy phase -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>wagon-maven-plugin</artifactId>
@@ -96,11 +95,28 @@
                             <url>scp://release@ftp.runtimeverification.com/</url>
                             <fromDir>target/docs</fromDir>
                             <includes>**</includes>
-                            <toDir>/var/www/predict/${project.version}/docs</toDir>
+                            <toDir>${toDocsDir}</toDir>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>deploy</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <toDocsDir>/var/www/predict/${project.version}/docs</toDocsDir>
+            </properties>
+        </profile>
+        <profile>
+            <id>deploy-nightly</id>
+            <properties>
+                <toDocsDir>/var/www/predict/nightly/docs</toDocsDir>
+            </properties>
+        </profile>
+    </profiles>
 </project>

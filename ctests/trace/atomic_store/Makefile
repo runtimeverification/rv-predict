@@ -1,7 +1,8 @@
 #
 #
+
 .include "../head.mk"
 
-PROG=store
+PROG=atomic_store
 
 .include "../tail.mk"

@@ -1,0 +1,11 @@
+tid 1.0 {} begin thread generation 0
+tid 1.0 in main at .../atomic_store/atomic_store.c:35 enter function cfa . return {}
+tid 1.0 in main at .../atomic_store/atomic_store.c:53 atomic store 1 0xfe -> glbl_u8 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:54:11 atomic store 2 0x0040 -> glbl_u16 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:55:11 atomic store 4 0x00000041 -> glbl_u32 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:56:11 atomic store 8 0x0000000000000043 -> glbl_u64 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:59 store 1 0x10 -> glbl_u_u8 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:60 store 2 0x1000 -> glbl_u_u16 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:61 store 4 0x00000100 -> glbl_u_u32 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:62 store 8 0x0000000f00000000 -> glbl_u_u64 at atomic_store.c
+tid 1.0 in main at .../atomic_store/atomic_store.c:35 exit function

@@ -2,6 +2,6 @@
 #
 .include "../head.mk"
 
-PROG=store
+PROG=xchange_test
 
 .include "../tail.mk"

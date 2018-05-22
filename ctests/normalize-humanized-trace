@@ -3,5 +3,7 @@
 grep -v 'change of generation -> [[:digit:]]\+$' | \
 grep -v ' nop$' | \
 grep -v ' memoize signal mask #' | \
+grep -v ' signal depth -> ' | \
 sed 's/{0x[0-9a-z]\+}/{}/g' | \
+sed 's/0 generation [0-9]\+$//g' | \
 sed 's/cfa [0-9a-z]\+ /cfa . /g'

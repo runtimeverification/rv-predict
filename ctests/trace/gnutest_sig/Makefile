@@ -2,6 +2,6 @@
 #
 .include "../head.mk"
 
-PROG=store
+PROG=gnutest_sig
 
 .include "../tail.mk"

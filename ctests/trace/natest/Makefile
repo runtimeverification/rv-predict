@@ -1,7 +1,7 @@
 #
-#
+# 
 .include "../head.mk"
 
-PROG=store
+PROG=natest
 
 .include "../tail.mk"

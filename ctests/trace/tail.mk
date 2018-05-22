@@ -1,9 +1,9 @@
 #
-# Tail portion of Makefiles in the test directory
+# Tail portion of Makefiles in the trace tests directory
 #
 
 CC?=rvpc
-CPPFLAGS+=-I$(.CURDIR)/../../../include
+CPPFLAGS+=-I$(CTEST_dir)/../include
 WARNS=4
 STRIPFLAG=
 
@@ -16,7 +16,7 @@ test.trace: $(PROG)
 	@$(.OBJDIR)/$(PROG) > /dev/null
 
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(.CURDIR)/../../normalize-humanized-trace
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(CTEST_dir)/normalize-humanized-trace
 
 CLEANFILES+=test.trace
 

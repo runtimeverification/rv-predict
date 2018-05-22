@@ -1,3 +1,4 @@
+unaligned
 *.d
 .depend
 .Makefile.tags

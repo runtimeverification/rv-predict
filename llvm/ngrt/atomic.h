@@ -35,13 +35,6 @@ rvp_rmw8_func_t __rvpredict_atomic_fetch_and8;
 rvp_rmw16_func_t __rvpredict_atomic_fetch_and16;
 
 /* void fn(T *addr, T val, T arg, int32_t memory_order) */ 
-rvp_rmw1_func_t __rvpredict_atomic_fetch_nand1;
-rvp_rmw2_func_t __rvpredict_atomic_fetch_nand2;
-rvp_rmw4_func_t __rvpredict_atomic_fetch_nand4;
-rvp_rmw8_func_t __rvpredict_atomic_fetch_nand8;
-rvp_rmw16_func_t __rvpredict_atomic_fetch_nand16;
-
-/* void fn(T *addr, T val, T arg, int32_t memory_order) */ 
 rvp_rmw1_func_t __rvpredict_atomic_fetch_or1;
 rvp_rmw2_func_t __rvpredict_atomic_fetch_or2;
 rvp_rmw4_func_t __rvpredict_atomic_fetch_or4;

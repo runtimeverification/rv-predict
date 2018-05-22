@@ -1,8 +1,8 @@
+memcpy
 *.d
 .depend
 .Makefile.tags
-memcpy
-memcpy.test.out
+*.test.out
 *.o
 tags
 test.trace

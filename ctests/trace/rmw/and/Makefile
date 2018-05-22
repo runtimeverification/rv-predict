@@ -3,6 +3,6 @@ PATH:=$(.OBJDIR)/../../../toolset/bin:$(PATH)
 CPPFLAGS+=-I$(.CURDIR)/../../../../include
 CTEST_dir=../../..
 
-PROG=sub
+PROG=and
 
 .include "../../tail.mk"

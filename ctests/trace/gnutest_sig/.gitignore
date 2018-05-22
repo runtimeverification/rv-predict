@@ -1,1 +1,8 @@
 gnutest_sig
+*.d
+.depend
+.Makefile.tags
+*.test.out
+*.o
+tags
+test.trace

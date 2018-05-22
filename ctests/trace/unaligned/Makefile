@@ -1,8 +1,8 @@
 #
 #
-.include <../head.mk>
+.include "../head.mk"
 
 PROG=unaligned
 
 
-.include <../tail.mk>
+.include "../tail.mk"

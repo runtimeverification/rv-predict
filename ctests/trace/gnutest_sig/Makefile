@@ -1,7 +1,7 @@
 #
 #
-.include <../head.mk>
+.include "../head.mk"
 
 PROG=gnutest_sig
 
-.include <../tail.mk>
+.include "../tail.mk"

@@ -1,7 +1,7 @@
 #
 #
-.include <../head.mk>
+.include "../head.mk"
 
 PROG=store
 
-.include <../tail.mk>
+.include "../tail.mk"

@@ -1,7 +1,7 @@
 #
 #
-.include <../head.mk>
+.include "../head.mk"
 
 PROG=xchange_test
 
-.include <../tail.mk>
+.include "../tail.mk"

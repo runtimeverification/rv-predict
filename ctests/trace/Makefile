@@ -1,3 +1,3 @@
-SUBPRJ=limits mask memcpy rmw store unaligned natest  atomic_load atomic_store xchange_test xchange_t816 gnutest_sig
+SUBPRJ=atomic_load atomic_store gnutest_sig limits mask memcpy natest rmw store unaligned xchange_t816 xchange_test
 
 .include <mkc.subprj.mk>

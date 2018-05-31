@@ -178,6 +178,7 @@ for ix, err in enumerate(errors):
         err[u'missing'] = not os.path.exists(loc[u'abs_file'])
         err[u'file'] = loc[u'rel_file']
         err[u'abs_file'] = loc[u'abs_file']
+        err[u'line'] = loc[u'line']
     else:
         err[u'missing'] = True
         err[u'file'] = u'<unknown>'

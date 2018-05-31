@@ -1,17 +1,17 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
+import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.ThreadType;
-import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
-import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.trace.producers.base.MinEventIdForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
-import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
-import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidSet;
 
 import java.util.HashMap;
 import java.util.List;
@@ -35,10 +35,10 @@ import java.util.stream.Collectors;
  */
 public class InterruptedEvents extends ComputingProducer<InterruptedEvents.State> {
     private final RawTracesByTtid rawTracesByTtid;
-    private final TtidsForCurrentWindow ttidsForCurrentWindow;
+    private final TtidSet ttidsForCurrentWindow;
     private final ThreadInfosComponent threadInfosComponent;
-    private final TtidSetDifference threadStartsInTheCurrentWindow;
-    private final TtidSetDifference threadEndsInTheCurrentWindow;
+    private final TtidSet threadStartsInTheCurrentWindow;
+    private final TtidSet threadEndsInTheCurrentWindow;
     private final MinEventIdForWindow minEventIdForWindow;
 
     protected static class State implements ProducerState {
@@ -54,12 +54,15 @@ public class InterruptedEvents extends ComputingProducer<InterruptedEvents.State
         }
     }
 
-    public InterruptedEvents(
+    public <T1 extends Producer & TtidSet,
+            T2 extends Producer & TtidSet,
+            T3 extends Producer & TtidSet>
+    InterruptedEvents(
             ComputingProducerWrapper<RawTracesByTtid> rawTracesByTtid,
-            ComputingProducerWrapper<TtidsForCurrentWindow> ttidsForCurrentWindow,
+            ComputingProducerWrapper<T1> ttidsForCurrentWindow,
             ComputingProducerWrapper<ThreadInfosComponent> threadInfosComponent,
-            ComputingProducerWrapper<TtidSetDifference> threadStartsInTheCurrentWindow,
-            ComputingProducerWrapper<TtidSetDifference> threadEndsInTheCurrentWindow,
+            ComputingProducerWrapper<T2> threadStartsInTheCurrentWindow,
+            ComputingProducerWrapper<T3> threadEndsInTheCurrentWindow,
             ComputingProducerWrapper<MinEventIdForWindow> minEventIdForWindow) {
         super(new State());
         this.rawTracesByTtid = rawTracesByTtid.getAndRegister(this);

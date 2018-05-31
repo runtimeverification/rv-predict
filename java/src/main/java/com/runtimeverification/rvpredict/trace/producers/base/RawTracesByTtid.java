@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace.producers.base;
 
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
@@ -10,7 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class RawTracesByTtid extends ComputingProducer<RawTracesByTtid.State> {
-    private final RawTraces rawTraces;
+    private final RawTracesCollection rawTraces;
 
     protected static class State implements ProducerState {
         private final Map<Integer, RawTrace> ttidToRawTrace = new HashMap<>();
@@ -21,7 +22,7 @@ public class RawTracesByTtid extends ComputingProducer<RawTracesByTtid.State> {
         }
     }
 
-    public RawTracesByTtid(ComputingProducerWrapper<RawTraces> rawTraces) {
+    public <T extends Producer & RawTracesCollection> RawTracesByTtid(ComputingProducerWrapper<T> rawTraces) {
         super(new State());
         this.rawTraces = rawTraces.getAndRegister(this);
     }

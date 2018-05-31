@@ -28,7 +28,6 @@
  * *****************************************************************************/
 package com.runtimeverification.rvpredict.trace;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Table;
 import com.runtimeverification.rvpredict.log.Event;
@@ -860,19 +859,8 @@ public class Trace {
     }
 
     private List<Integer> getThreadsWhereSignalIsEnabled(long signalNumber) {
-        Set<Integer> enabledThreads = new HashSet<>(getTtidsWhereSignalIsEnabledAtStart(signalNumber));
-        tidToEvents.forEach((ttid, events) -> {
-            if (enabledThreads.contains(ttid)) {
-                return;
-            }
-            for (ReadonlyEventInterface event : events) {
-                if (Signals.signalEnableChange(event, signalNumber).orElse(Boolean.FALSE)) {
-                    enabledThreads.add(ttid);
-                    return;
-                }
-            }
-        });
-        return ImmutableList.copyOf(enabledThreads);
+        return state.getTraceProducers()
+                .threadsWhereSignalIsEnabled.getComputed().threadsForSignal(signalNumber);
     }
 
     public boolean threadsCanOverlap(int ttid1, int ttid2) {
@@ -914,8 +902,14 @@ public class Trace {
         return state.getTraceProducers().startAndJoinEventsForWindow.getComputed().getJoinEvent(ttid);
     }
 
-    public Collection<Integer> getThreadsForCurrentWindow() {
-        return state.getThreadsForCurrentWindow();
+    public Collection<Integer> getMergedThreadsForCurrentWindow() {
+        // TODO(virgil): Maybe make a producer out of this.
+        Set<Integer> ttids = state.getTraceProducers().mergedRawTraces.getComputed().getTraces()
+                .stream()
+                .map(trace -> trace.getThreadInfo().getId())
+                .collect(Collectors.toSet());
+        ttids.addAll(state.getThreadsForCurrentWindow());
+        return ttids;
     }
 
     public Optional<ReadonlyEventInterface> getPreviousWindowEstablishEvent(long signalNumber, long signalHandler) {

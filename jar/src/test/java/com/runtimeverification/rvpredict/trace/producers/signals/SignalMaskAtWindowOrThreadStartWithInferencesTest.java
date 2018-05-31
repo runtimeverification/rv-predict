@@ -7,7 +7,7 @@ import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.producerframework.TestProducerModule;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.testutils.SignalMasksAtWindowStartUtils;
-import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidSetLeaf;
 import com.runtimeverification.rvpredict.util.Constants;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +32,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
 
     @Mock private SignalMaskAtWindowStart<? extends ProducerState> mockSignalMaskAtWindowStart;
     @Mock private SignalEnabledAtStartInferenceTransitiveClosure mockSignalEnabledAtStartInferenceTransitiveClosure;
-    @Mock private TtidsForCurrentWindow mockTtidsForCurrentWindow;
+    @Mock private TtidSetLeaf mockTtidsForCurrentWindow;
 
     private final TestProducerModule module = new TestProducerModule();
 
@@ -50,7 +50,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
                 .thenReturn(Collections.emptyMap());
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(Collections.emptyMap());
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptyList());
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptySet());
         module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalMasks(), isEmptyMap());
@@ -77,7 +77,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
                 .thenReturn(Collections.emptyMap());
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(Collections.emptyMap());
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singletonList(TTID_1));
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singleton(TTID_1));
         module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalMasks(), hasMapSize(1));
@@ -105,7 +105,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
                 .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_1, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(ImmutableMap.of(SIGNAL_NUMBER_2, ImmutableMap.of(TTID_1, Constants.INVALID_EVENT_ID)));
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singletonList(TTID_1));
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singleton(TTID_1));
         module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalMasks(), hasMapSize(1));
@@ -137,7 +137,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
                 .thenReturn(Collections.emptyMap());
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(Collections.emptyMap());
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singletonList(TTID_1));
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singleton(TTID_1));
         module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalMasks(), hasMapSize(1));
@@ -153,7 +153,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
                 .thenReturn(Collections.emptyMap());
         when(mockSignalEnabledAtStartInferenceTransitiveClosure.getSignalToTtidWhereDisabledAtStart())
                 .thenReturn(Collections.emptyMap());
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptyList());
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptySet());
         module.reset();
 
         Assert.assertThat(producer.getComputed().getSignalMasks(), isEmptyMap());
@@ -164,7 +164,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferencesTest {
             ProducerModule module,
             SignalMaskAtWindowStart<? extends ProducerState> signalMaskAtWindowStart,
             SignalEnabledAtStartInferenceTransitiveClosure signalEnabledAtStartInferenceTransitiveClosure,
-            TtidsForCurrentWindow ttidsForCurrentWindow) {
+            TtidSetLeaf ttidsForCurrentWindow) {
         return new ComputingProducerWrapper<>(
                 new SignalMaskAtWindowOrThreadStartWithInferences(
                         new ComputingProducerWrapper<>(signalMaskAtWindowStart, module),

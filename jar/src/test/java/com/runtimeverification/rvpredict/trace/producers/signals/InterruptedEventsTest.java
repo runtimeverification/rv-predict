@@ -13,7 +13,7 @@ import com.runtimeverification.rvpredict.trace.producers.base.MinEventIdForWindo
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
-import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidSetLeaf;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,7 +48,7 @@ public class InterruptedEventsTest {
     private static final long GENERATION_1 = 701;
 
     @Mock private RawTracesByTtid mockRawTracesByTtid;
-    @Mock private TtidsForCurrentWindow mockTtidsForCurrentWindow;
+    @Mock private TtidSetLeaf mockTtidsForCurrentWindow;
     @Mock private ThreadInfosComponent mockThreadInfosComponent;
     @Mock private TtidSetDifference mockThreadStartsInTheCurrentWindow;
     @Mock private TtidSetDifference mockThreadEndsInTheCurrentWindow;
@@ -736,9 +736,9 @@ public class InterruptedEventsTest {
     }
 
     private void fillTtidsForCurrentWindowFromTraces(
-            TtidsForCurrentWindow mockTtidsForCurrentWindow, RawTrace... rawTraces) {
+            TtidSetLeaf mockTtidsForCurrentWindow, RawTrace... rawTraces) {
         when(mockTtidsForCurrentWindow.getTtids()).thenReturn(
-                Arrays.stream(rawTraces).map(trace -> trace.getThreadInfo().getId()).collect(Collectors.toList()));
+                Arrays.stream(rawTraces).map(trace -> trace.getThreadInfo().getId()).collect(Collectors.toSet()));
     }
 
     private ComputingProducerWrapper<InterruptedEvents> createAndRegister(
@@ -754,7 +754,7 @@ public class InterruptedEventsTest {
     }
 
     private ComputingProducerWrapper<InterruptedEvents> createAndRegister(
-            TtidsForCurrentWindow ttidsForCurrentWindow,
+            TtidSetLeaf ttidsForCurrentWindow,
             TtidSetDifference threadStartsInTheCurrentWindow,
             TtidSetDifference threadEndsInTheCurrentWindow,
             RawTrace... rawTraces) {
@@ -774,14 +774,14 @@ public class InterruptedEventsTest {
 
     private ComputingProducerWrapper<InterruptedEvents> createAndRegister(
             RawTracesByTtid rawTracesByTtid,
-            TtidsForCurrentWindow ttidsForCurrentWindow,
+            TtidSetLeaf ttidsForCurrentWindow,
             ThreadInfosComponent threadInfosComponent,
             TtidSetDifference threadStartsInTheCurrentWindow,
             TtidSetDifference threadEndsInTheCurrentWindow,
             MinEventIdForWindow minEventIdForWindow) {
         ComputingProducerWrapper<RawTracesByTtid> rawTracesByTtidWrapper =
                 new ComputingProducerWrapper<>(rawTracesByTtid, module);
-        ComputingProducerWrapper<TtidsForCurrentWindow> ttidsForCurrentWindowWrapper =
+        ComputingProducerWrapper<TtidSetLeaf> ttidsForCurrentWindowWrapper =
                 new ComputingProducerWrapper<>(ttidsForCurrentWindow, module);
         ComputingProducerWrapper<ThreadInfosComponent> threadInfosComponentWrapper =
                 new ComputingProducerWrapper<>(threadInfosComponent, module);

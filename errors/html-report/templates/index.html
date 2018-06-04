@@ -24,7 +24,6 @@
       {"name": "error"},
       {"name": "function", "className": "function"},
       {"name": "file"},
-      {"name": "line"},
       {"name": "frequency"}
     ],
     initComplete: function(settings, json) {
@@ -150,12 +149,58 @@
         }
         sortColumns()
       }
+      /**
+       * Format `File` column to fix sorting the line numbers in lexical order
+       */
+      function formatFileColumn() {
+        var $header = $(table.header()[0])
+        var $ths = $('th', $header)
+        var offset = 0;
+        for (; offset < $ths.length; offset++) {
+          if ($ths[offset].innerText.trim().toLowerCase().match(/^File$/i)) {
+            break;
+          }
+        }
+        var data = {}; // key is filename, value is max lineNumber
+        var $trs = $('tr', table.body()[0])
+        for (var i = 0; i < $trs.length; i++) {
+          var tr = $trs[i]
+          var td = tr.children[offset]
+          var text = td.innerText
+          var index = text.lastIndexOf(":")
+          var filename = text.slice(0, index)
+          var line = parseInt(text.slice(index+1)) || 0
+          if (!(filename in data) || line > data[filename]) {
+            data[filename] = line
+          }
+        }
+        for (var i = 0; i < $trs.length; i++) {
+          var tr = $trs[i]
+          var td = tr.children[offset]
+          var text = td.innerText
+          var index = text.lastIndexOf(":")
+          var filename = text.slice(0, index)
+          var line = parseInt(text.slice(index+1)) || 0
+          var difference = data[filename].toString().length - line.toString().length
+          var newText = filename + ":"
+          for (var j = 0; j < difference; j++) {
+            newText += String.fromCharCode(12)
+          }
+          newText += line
+          var a = td.querySelector('a')
+          if (a) {
+            a.innerText = newText
+            table.row(tr).data()[offset] = a.outerHTML
+          }
+        }
+      }
 
       table.on('column-reorder', function(e, settings, details) {
         rebindTableHeaderClickEvents()
         sortColumns()
       })
 
+      formatFileColumn()
       initColumnsSorting()
       rebindTableHeaderClickEvents()
     }
@@ -173,7 +218,7 @@
   try {
     if (typeof(Storage) !== "undefined") {
       if (sessionStorage.myTable_searchValue) {
-        $("#table-search").val(sessionStorage.myTable_searchValue);
+        $("#table-search").val(sessionStorage.myTable_searchValue || '');
       }
       if (sessionStorage.myTable_scrollTop) {
         $(window).scrollTop(sessionStorage.myTable_scrollTop);
@@ -182,7 +227,7 @@
   } catch(error) {}
 
   $("#table-search")
-    .on("keyup", function() { // filter according to key pressed
+    .on("keyup", function(event) { // filter according to key pressed
       var text = this.value.trim();
       var regex;
       var words = text.split(/\s/);
@@ -220,11 +265,14 @@
 
 {% block content %}
 <div id="table-header">
-<div class="float-left">
+<div>
 <h1><img class="home-icon" src="static/rv_logo.png" alt="Runtime Verification"/> RV Toolkit Error Report</h1>
 </div>
-<div id="table-filter" class="dataTables_filter">
-  <input id="table-search" class="" placeholder="Search" aria-controls="myTable" type="search">
+<div id="table-filter" class="dataTables_filter group">
+  <input id="table-search" class="" aria-controls="myTable" type="search" required>
+  <span class="highlight"></span>
+  <span class="bar"></span>
+  <label>Search</label>
 </div>
 </div>
 <table id="myTable" class="tablesorter myTable">
@@ -234,7 +282,6 @@
       <th class="dt-left">Error</th>
       <th class="dt-left">Function</th>
       <th class="dt-left">File</th>
-      <th class="dt-right">Line</th>
       <th class="dt-right">Error Frequency</th>
     </tr>
   </thead>
@@ -246,24 +293,13 @@
       <td>{{err.function}}</td>
       <td>
       {% if not err.missing %}
-        <a href=".{{err.abs_file}}.html?lineno={{err.line}}">{{err.file}}</a>
+        <a href=".{{err.abs_file}}.html?lineno={{err.line}}">{{err.file}}:{{err.line}}</a>
       {% else %}
         {{err.file}}
       {% endif %}
       </td>
-      <td class="dt-right">{{err.line}}</td>
       <td class="dt-right">{{err.frequency}}</td>
     </tr>
 {% endfor %}
-  <tfoot>
-    <tr>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
-    </tr>
-  </tfoot>
 </table>
 {% endblock %}

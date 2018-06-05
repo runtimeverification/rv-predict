@@ -21,6 +21,7 @@ public interface Visitor<TResult> {
     void visit(ConcretePhiVariable node) throws Exception;
     void visit(OrderVariable node) throws Exception;
     void visit(InterruptedThreadVariable node) throws Exception;
+    void visit(InterruptionDepthVariable node) throws Exception;
     void visit(SignalEnabledOnThreadStartVariable node) throws Exception;
     void visit(SMTASTNode node) throws Exception;
 }

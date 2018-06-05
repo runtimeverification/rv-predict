@@ -16,8 +16,6 @@ public class Z3Filter {
 
     private final Context context;
 
-    private final int windowSize;
-
     private final Visitor visitor;
 
     private final Map<Long, BoolExpr> concPhiVariables;
@@ -26,15 +24,17 @@ public class Z3Filter {
 
     private final Map<Long, IntExpr> interruptedThreadVariables;
 
+    private final Map<Long, IntExpr> interruptionDepthVariables;
+
     private final List<IDisposable> disposables;
 
     public Z3Filter(Context context, int windowSize) {
         this.context = context;
-        this.windowSize = windowSize;
         this.visitor = new Visitor();
         this.concPhiVariables = new HashMap<>(windowSize);
         this.orderVariables = new HashMap<>(windowSize);
         this.interruptedThreadVariables = new HashMap<>(windowSize);
+        this.interruptionDepthVariables = new HashMap<>(windowSize);
         this.disposables = new ArrayList<>();
     }
 
@@ -77,6 +77,12 @@ public class Z3Filter {
         @Override
         public void visit(InterruptedThreadVariable variable) throws Z3Exception {
             result = interruptedThreadVariables.computeIfAbsent(
+                    variable.getId(), k -> context.mkIntConst(variable.toString()));
+        }
+
+        @Override
+        public void visit(InterruptionDepthVariable variable) throws Z3Exception {
+            result = interruptionDepthVariables.computeIfAbsent(
                     variable.getId(), k -> context.mkIntConst(variable.toString()));
         }
 

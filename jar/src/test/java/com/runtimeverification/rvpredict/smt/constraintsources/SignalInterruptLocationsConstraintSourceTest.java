@@ -182,11 +182,14 @@ public class SignalInterruptLocationsConstraintSourceTest {
                 true);  // detectInterruptedThreadRace,
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o5", "20", "o3", "30", "citv102", Integer.toString(TTID_1))));
+                    "o5", "20", "o3", "30", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o5", "20", "o3", "20", "citv102", Integer.toString(TTID_1))));
+                    "o5", "20", "o3", "20", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o5", "20", "o3", "10", "citv102", Integer.toString(TTID_1))));
+                    "o5", "20", "o3", "10", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -210,9 +213,11 @@ public class SignalInterruptLocationsConstraintSourceTest {
                 true);  // detectInterruptedThreadRace,
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o5", "20", "o3", "30", "citv102", Integer.toString(TTID_1))));
+                    "o5", "20", "o3", "30", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o5", "20", "o3", "30", "citv102", Integer.toString(TTID_2))));
+                    "o5", "20", "o3", "30", "citv102", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -241,28 +246,36 @@ public class SignalInterruptLocationsConstraintSourceTest {
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "10", "o4", "20", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "30", "o4", "50", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "40", "o4", "50", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "40", "o4", "60", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "40", "o4", "60", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "70", "o4", "80", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "90", "o4", "100", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "30", "o3", "100", "o4", "110", "o7", "60", "o9", "90",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -288,10 +301,12 @@ public class SignalInterruptLocationsConstraintSourceTest {
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o2", "1", "o3", "2", "o4", "3", "o6", "4",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o2", "1", "o3", "2", "o4", "3", "o6", "4",
-                    "citv102", Integer.toString(TTID_2))));
+                    "citv102", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv102", "1")));
         });
 
         when(mockSignalNumberToTtidsWhereEnabledAtStart.apply(SIGNAL_NUMBER_1)).thenReturn(ImmutableSet.of());
@@ -325,10 +340,12 @@ public class SignalInterruptLocationsConstraintSourceTest {
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "1", "o3", "2", "o4", "3", "o2", "4", "o6", "5",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o3", "1", "o4", "2", "o1", "3", "o2", "4", "o6", "5",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -354,9 +371,11 @@ public class SignalInterruptLocationsConstraintSourceTest {
 
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o4", "10", "o7", "20", "citv102", Integer.toString(TTID_1))));
+                    "o4", "10", "o7", "20", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o4", "20", "o7", "10", "citv102", Integer.toString(TTID_1))));
+                    "o4", "20", "o7", "10", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -382,9 +401,11 @@ public class SignalInterruptLocationsConstraintSourceTest {
 
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o4", "10", "o6", "20", "citv102", Integer.toString(TTID_1))));
+                    "o4", "10", "o6", "20", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o4", "20", "o6", "10", "citv102", Integer.toString(TTID_1))));
+                    "o4", "20", "o6", "10", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -409,11 +430,14 @@ public class SignalInterruptLocationsConstraintSourceTest {
 
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o3", "10", "o4", "20", "o11", "30", "citv102", Integer.toString(TTID_1))));
+                    "o3", "10", "o4", "20", "o11", "30", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o3", "10", "o4", "50", "o11", "30", "citv102", Integer.toString(TTID_1))));
+                    "o3", "10", "o4", "50", "o11", "30", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
-                    "o3", "40", "o4", "50", "o11", "30", "citv102", Integer.toString(TTID_1))));
+                    "o3", "40", "o4", "50", "o11", "30", "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -444,15 +468,18 @@ public class SignalInterruptLocationsConstraintSourceTest {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "10", "o11", "40", "o12", "70",
                     "o3", "20", "o4", "30",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "10", "o11", "40", "o12", "70",
                     "o3", "20", "o4", "60",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "10", "o11", "40", "o12", "70",
                     "o3", "50", "o4", "60",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -487,21 +514,25 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o1", "1", "o2", "100",
                     "o3", "10", "o4", "40", "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "1", "sm_103_6", "0")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "1", "o2", "100",
                     "o3", "10", "o4", "40", "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "1", "sm_103_6", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "1", "o2", "100",
                     "o3", "10", "o4", "40", "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "0", "sm_103_6", "0")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "1", "o2", "100",
                     "o3", "10", "o4", "40", "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "0", "sm_103_6", "1")));
         });
     }
@@ -539,6 +570,7 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o6", "40", "o8", "50",
                     "o13", "5",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "1", "sm_103_6", "0")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
@@ -546,6 +578,7 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o6", "40", "o8", "80",
                     "o13", "5",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "1", "sm_103_6", "0")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
@@ -553,6 +586,7 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o6", "70", "o8", "80",
                     "o13", "5",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "1", "sm_103_6", "0")));
         });
     }
@@ -592,19 +626,22 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o3", "30", "o5", "40", "o11", "70", "o12", "100",
                     "o6", "50", "o8", "60",
                     "o13", "5",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o11", "70", "o12", "100",
                     "o6", "50", "o8", "90",
                     "o13", "5",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o11", "70", "o12", "100",
                     "o6", "80", "o8", "90",
                     "o13", "5",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
         });
     }
 
@@ -642,18 +679,21 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "50", "o8", "60",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "0", "sm_103_6", "0")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "33", "o8", "60",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "0", "sm_103_6", "0")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "33", "o8", "36",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "0", "sm_103_6", "0")));
         });
     }
@@ -689,17 +729,20 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o1", "10", "o17", "60", "o18", "70",
                     "o5", "20", "o8", "30",
                     "o3", "40", "o6", "50",
-                    "citv102", Integer.toString(TTID_2))));
+                    "citv102", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv101", "1", "cidv102", "2")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o17", "60", "o18", "90",
                     "o5", "20", "o8", "30",
                     "o3", "40", "o6", "80",
-                    "citv102", Integer.toString(TTID_2))));
+                    "citv102", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv101", "1", "cidv102", "2")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o17", "60", "o18", "80",
                     "o5", "20", "o8", "30",
                     "o3", "70", "o6", "80",
-                    "citv102", Integer.toString(TTID_2))));
+                    "citv102", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv101", "1", "cidv102", "2")));
         });
     }
 
@@ -736,17 +779,20 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "50", "o8", "60",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "50", "o8", "90",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "80", "o8", "90",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
         });
     }
 
@@ -777,11 +823,13 @@ public class SignalInterruptLocationsConstraintSourceTest {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "10", "o8", "20",
                     "o3", "30", "o6", "40",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o5", "10", "o8", "20",
                     "o3", "30", "o6", "40",
-                    "citv102", Integer.toString(TTID_2))));
+                    "citv102", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -818,12 +866,14 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "50", "o8", "60",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o1", "10", "o2", "20",
                     "o3", "30", "o5", "40", "o10", "70",
                     "o6", "50", "o8", "60",
-                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(TTID_2))));
+                    "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2")));
         });
     }
 
@@ -850,24 +900,28 @@ public class SignalInterruptLocationsConstraintSourceTest {
             Assert.assertTrue(constraint.evaluate(
                     ModelConstraintUtils.mockVariableSource(
                             "o2", "10", "o3", "20", "o4", "30", "o6", "40", "o8", "50",
-                            "citv102", Integer.toString(TTID_1))));
+                            "citv102", Integer.toString(TTID_1),
+                            "cidv100", "0", "cidv102", "1")));
             Assert.assertTrue(constraint.evaluate(
                     ModelConstraintUtils.mockVariableSource(
                             "o2", "10", "o3", "20", "o6", "30", "o4", "40", "o8", "50",
-                            "citv102", Integer.toString(TTID_1))));
+                            "citv102", Integer.toString(TTID_1),
+                            "cidv100", "0", "cidv102", "1")));
         });
         runTestForConstraintTypes(
                 constraintSource, Collections.singletonList(ConstraintType.SOUND), constraint ->
                         Assert.assertFalse(constraint.evaluate(
                                 ModelConstraintUtils.mockVariableSource(
                                         "o2", "10", "o3", "20", "o6", "30", "o8", "40", "o4", "50",
-                                        "citv102", Integer.toString(TTID_1)))));
+                                        "citv102", Integer.toString(TTID_1),
+                                        "cidv100", "0", "cidv102", "1"))));
         runTestForConstraintTypes(
                 constraintSource, Collections.singletonList(ConstraintType.UNSOUND_BUT_FAST), constraint ->
                         Assert.assertTrue(constraint.evaluate(
                                 ModelConstraintUtils.mockVariableSource(
                                         "o2", "10", "o3", "20", "o6", "30", "o8", "40", "o4", "50",
-                                        "citv102", Integer.toString(TTID_1)))));
+                                        "citv102", Integer.toString(TTID_1),
+                                        "cidv100", "0", "cidv102", "1"))));
     }
 
     @Test
@@ -896,10 +950,12 @@ public class SignalInterruptLocationsConstraintSourceTest {
         runTestForConstraintTypes(constraintSource, ALL_CONSTRAINT_TYPES, constraint -> {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
-                    "citv102", Integer.toString(TTID_1))));
+                    "citv102", Integer.toString(TTID_1),
+                    "cidv100", "0", "cidv102", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
-                    "citv102", Integer.toString(TTID_2))));
+                    "citv102", Integer.toString(TTID_2),
+                    "cidv100", "0", "cidv102", "1")));
         });
     }
 
@@ -933,18 +989,22 @@ public class SignalInterruptLocationsConstraintSourceTest {
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "1", "sm_103_6", "0")));
             Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "1", "sm_103_6", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "0", "sm_103_6", "0")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2",
                     "sm_102_6", "0", "sm_103_6", "1")));
         });
     }
@@ -983,16 +1043,19 @@ public class SignalInterruptLocationsConstraintSourceTest {
                     "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
                     "citv104", Integer.toString(SIGNAL_TTID_4),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2", "cidv104", "3",
                     "sm_102_6", "1", "sm_103_7", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
                     "citv104", Integer.toString(SIGNAL_TTID_4),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2", "cidv104", "3",
                     "sm_102_6", "0", "sm_103_7", "1")));
             Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
                     "o6", "20", "o8", "30",
                     "citv102", Integer.toString(TTID_1), "citv103", Integer.toString(SIGNAL_TTID_3),
                     "citv104", Integer.toString(SIGNAL_TTID_4),
+                    "cidv100", "0", "cidv102", "1", "cidv103", "2", "cidv104", "3",
                     "sm_102_6", "1", "sm_103_7", "0")));
         });
     }

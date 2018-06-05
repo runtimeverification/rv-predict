@@ -424,13 +424,25 @@ public class Configuration implements Constants {
     public int global_timeout = 0;
 
     final static String opt_window_timeout = "--window-timeout";
-
     @Parameter(names = opt_window_timeout, description = "Per-window rv-predict timeout in seconds. 0 means no timeout.", hidden = true, descriptionKey = "2602")
     public int window_timeout = 60;
 
     final static String opt_parallel_smt = "--parallel-smt";
     @Parameter(names = opt_parallel_smt, description = "How many parallel SMTs to use. Should always be 1 when analysing doing online Java analysis.", hidden = false, descriptionKey = "2700")
     public int parallel_smt = 1;
+
+    private final static String opt_max_interrupt_depth = "--max-interrupt-depth";
+    @Parameter(
+            names = opt_max_interrupt_depth,
+            description = "How deep can a signal interrupt a signal which interrupts a signal which interrupts ... "
+                    + "which interrupts a signal which interrupts a thread. "
+                    + "0 means that interrupt depth checking is disabled, "
+                    + "1 means that signals can only interrupt threads, 2 means that signals can also interrupt "
+                    + "signals which interrupt threads. If a window contains an interrupt depth greater than "
+                    + "--max-interrupt-depth, then we're using the larger value for that window.",
+            hidden = false,
+            descriptionKey = "2700")
+    private int max_interrupt_depth = 0;
 
     final static String opt_debug = "--debug";
     @Parameter(names = opt_debug, description = "Output developer debugging information", hidden = true, descriptionKey = "3000")
@@ -816,6 +828,10 @@ public class Configuration implements Constants {
 
     public boolean stacks() {
         return !nostacks;
+    }
+
+    public int maxInterruptDepth() {
+        return max_interrupt_depth;
     }
 
     public boolean detectInterruptedThreadRace() {

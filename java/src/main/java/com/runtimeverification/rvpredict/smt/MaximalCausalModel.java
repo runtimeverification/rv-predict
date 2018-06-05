@@ -39,6 +39,8 @@ import com.runtimeverification.rvpredict.performance.ProfilerToken;
 import com.runtimeverification.rvpredict.smt.constraintsources.DisjointLocks;
 import com.runtimeverification.rvpredict.smt.constraintsources.InterThreadOrdering;
 import com.runtimeverification.rvpredict.smt.constraintsources.IntraThreadOrdering;
+import com.runtimeverification.rvpredict.smt.constraintsources.NonSignalsHaveDepth0ConstraintSource;
+import com.runtimeverification.rvpredict.smt.constraintsources.SignalDepthLimit;
 import com.runtimeverification.rvpredict.smt.constraintsources.SignalInterruptLocationsConstraintSource;
 import com.runtimeverification.rvpredict.smt.constraintsources.SignalStartMask;
 import com.runtimeverification.rvpredict.smt.constraintsources.SignalsDoNotOverlapWhenInterruptingTheSameThread;
@@ -107,21 +109,23 @@ public class MaximalCausalModel {
     private final RaceSolver raceSolver;
 
     private final boolean detectInterruptedThreadRace;
+    private final int maxSignalDepth;
 
     public static MaximalCausalModel create(
-            Trace trace, RaceSolver raceSolver, boolean detectInterruptedThreadRace) {
+            Trace trace, RaceSolver raceSolver, boolean detectInterruptedThreadRace, int maxSignalDepth) {
         MaximalCausalModel model = new MaximalCausalModel(
-                trace, raceSolver, detectInterruptedThreadRace);
+                trace, raceSolver, detectInterruptedThreadRace, maxSignalDepth);
 
         model.addConstraints();
         return model;
     }
 
     private MaximalCausalModel(
-            Trace trace, RaceSolver raceSolver, boolean detectInterruptedThreadRace) {
+            Trace trace, RaceSolver raceSolver, boolean detectInterruptedThreadRace, int maxSignalDepth) {
         this.trace = trace;
         this.raceSolver = raceSolver;
         this.detectInterruptedThreadRace = detectInterruptedThreadRace;
+        this.maxSignalDepth = maxSignalDepth;
         trace.eventsByThreadID().forEach((tid, events) ->
                 events.forEach(event -> nameToEvent.put(OrderVariable.get(event).toString(), event)));
     }
@@ -165,6 +169,14 @@ public class MaximalCausalModel {
                         trace::getTtidsWhereSignalIsEnabledAtStart,
                         trace::getTtidsWhereSignalIsDisabledAtStart,
                         detectInterruptedThreadRace))
+                .add(new NonSignalsHaveDepth0ConstraintSource(
+                        trace.getThreadsForCurrentWindow(),
+                        trace::getThreadType))
+                .add(new SignalDepthLimit(
+                        maxSignalDepth,
+                        trace.eventsByThreadID().keySet(),
+                        trace::getThreadType,
+                        trace::getSignalDepth))
                 .add(new SignalStartMask(
                         trace.eventsByThreadID(),
                         trace::getThreadType,
@@ -431,7 +443,7 @@ public class MaximalCausalModel {
         try (ProfilerToken ignored = Profiler.instance().start("All solver stuff")) {
             MutableBoolean atLeastOneRace = new MutableBoolean(false);
             try {
-                boolean hadPossibleRace = false;
+                boolean hadPossibleRace;
                 /* check race suspects */
                 do {
                     hadPossibleRace = false;

@@ -36,8 +36,21 @@
 #ifndef _RVP_NBCOMPAT_H_
 #define _RVP_NBCOMPAT_H_
 
-#include <sys/param.h>
 #include <stddef.h>
+#ifdef STANDALONE
+#ifndef MIN
+#define	MIN(__x, __y)	(((__x) < (__y)) ? (__x) : (__y))
+#endif
+
+#ifndef MAX
+#define	MAX(__x, __y)	(((__x) > (__y)) ? (__x) : (__y))
+#endif
+#else	/* STANDALONE */
+#include <sys/param.h>	/* for MIN, MAX, NBBY */
+#endif	/* STANDALONE */
+
+#include <sys/cdefs.h>
+#include <limits.h>
 
 #ifndef __NetBSD__
 
@@ -109,8 +122,13 @@
  *        basic block reordering that this affects can often generate
  *        larger code.
  */
+#ifndef __predict_true
 #define __predict_true(exp)     __builtin_expect((exp) != 0, 1)
+#endif
+
+#ifndef __predict_false
 #define __predict_false(exp)    __builtin_expect((exp) != 0, 0)
+#endif
 
 /* On some systems, for assembly language to refer to a C symbol,
  * you have to add an underscore (_) to the name.  _C_LABEL() and

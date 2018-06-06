@@ -13,14 +13,22 @@
 #include "text.h"
 #include "trace.h"
 
-#if defined(SIGINFO)
+#if defined(STANDALONE)
+#define RVP_INFO_SIGNUM SIGHUP
+#elif defined(SIGINFO)
 #define	RVP_INFO_SIGNUM	SIGINFO
 #else
 #define	RVP_INFO_SIGNUM	SIGPWR
 #endif
 
+#ifdef SA_NODEFER
+const int sa_nodefer = SA_NODEFER;
+#else
+const int sa_nodefer = 0;
+#endif
+
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
-REAL_DEFN(sighandler_t, signal, int, sighandler_t);
+REAL_DEFN(rvp_sighandler_t, signal, int, rvp_sighandler_t);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, sigsuspend, const sigset_t *);
@@ -90,7 +98,7 @@ void
 rvp_signal_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(
-	    sighandler_t (*)(int, sighandler_t),
+	    rvp_sighandler_t (*)(int, rvp_sighandler_t),
 	    signal);
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const struct sigaction *, struct sigaction *),
@@ -112,23 +120,10 @@ rvp_siginfo_handler(int signum __unused)
 	rvp_info_dump_request();
 }
 
-void
-rvp_signal_init(void)
+static void
+rvp_establish_siginfo_handler(void)
 {
-	rvp_signal_table_init();
 	struct sigaction osa, sa;
-	sigset_t unmaskable_set;
-
-	if (sigemptyset(&unmaskable_set) != 0)
-		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
-
-	if (sigaddset(&unmaskable_set, SIGSTOP) != 0)
-		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
-
-	if (sigaddset(&unmaskable_set, SIGKILL) != 0)
-		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
-
-	rvp_unmaskable = sigset_to_mask(&unmaskable_set);
 
 	memset(&sa, 0, sizeof(sa));
 	if (sigemptyset(&sa.sa_mask) != 0)
@@ -142,6 +137,26 @@ rvp_signal_init(void)
 		    "%s: signal %d unexpectedly had a non-default action",
 		    __func__, RVP_INFO_SIGNUM);
 	}
+}
+
+void
+rvp_signal_init(void)
+{
+	rvp_signal_table_init();
+	sigset_t unmaskable_set;
+
+	if (sigemptyset(&unmaskable_set) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
+
+	if (sigaddset(&unmaskable_set, SIGSTOP) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
+
+	if (sigaddset(&unmaskable_set, SIGKILL) != 0)
+		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
+
+	rvp_unmaskable = sigset_to_mask(&unmaskable_set);
+
+	rvp_establish_siginfo_handler();
 }
 
 static void
@@ -807,8 +822,8 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
-sighandler_t
-__rvpredict_signal(int signo, sighandler_t handler)
+rvp_sighandler_t
+__rvpredict_signal(int signo, rvp_sighandler_t handler)
 {
 	struct sigaction nsa, osa;
 
@@ -828,6 +843,22 @@ __rvpredict_signal(int signo, sighandler_t handler)
 		return SIG_ERR;
 	}
 	return osa.sa_handler;
+}
+
+static const struct sigaction *
+rvp_reestablish_siginfo_handler(int signum, const struct sigaction *act,
+    struct sigaction *act_copy, const rvp_signal_t *s)
+{
+	/* When the application code disestablishes a signal at
+	 * SIGINFO/SIGPWR, the runtime reestablishes its own handler.
+	 */
+	if (signum == RVP_INFO_SIGNUM && (act->sa_flags & SA_SIGINFO) == 0 &&
+	    s->s_handler == SIG_DFL) {
+		*act_copy = *act;
+		act_copy->sa_handler = rvp_siginfo_handler;
+		return act_copy;
+	}
+	return act;
 }
 
 /* XXX sigaction(2) is async-signal-safe, so we have to
@@ -891,7 +922,7 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	mask = act->sa_mask;
 
 	// add signum to the set unless this signal can preempt itself 
-	if ((act->sa_flags & SA_NODEFER) == 0)
+	if ((act->sa_flags & sa_nodefer) == 0)
 		sigaddset(&mask, signum);
 	
 	s->s_blockset = intern_sigset(&mask);
@@ -908,15 +939,7 @@ out:
 
 	s = rvp_signal_select_alternate(signum, s);
 
-	/* When the application code disestablishes a signal at
-	 * SIGINFO/SIGPWR, the runtime reestablishes its own handler.
-	 */
-	if (signum == RVP_INFO_SIGNUM && (act->sa_flags & SA_SIGINFO) == 0 &&
-	    s->s_handler == SIG_DFL) {
-		act_copy = *act;
-		act_copy.sa_handler = rvp_siginfo_handler;
-		act = &act_copy;
-	}
+	act = rvp_reestablish_siginfo_handler(signum, act, &act_copy, s);
 
 null_act:
 	rc = real_sigaction(signum, act, oact);
@@ -941,5 +964,5 @@ null_act:
 INTERPOSE(int, sigprocmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, sigaction, int, const struct sigaction *, struct sigaction *);
-INTERPOSE(sighandler_t, signal, int, sighandler_t);
+INTERPOSE(rvp_sighandler_t, signal, int, rvp_sighandler_t);
 INTERPOSE(int, sigsuspend, const sigset_t *);

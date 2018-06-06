@@ -1,7 +1,6 @@
 #ifndef _RVP_INTERPOSE_H_
 #define _RVP_INTERPOSE_H_
 
-#include <dlfcn.h>	/* for dlsym(3) */
 #include <pthread.h>	/* for pthread_{join,create,exit}(3),
 			 * pthread_mutex_{init,lock,trylock,unlock}(3), etc.
 			 */
@@ -10,11 +9,11 @@
 			 */
 #include <string.h>	/* for memcpy(3), memmove(3), memset(3) */
 
-#define	REAL_DECL(__rettype, __func, ...)				\
-	extern __rettype (*real_##__func)(__VA_ARGS__)
+#include "real.h"
 
-#define	REAL_DEFN(__rettype, __func, ...)				\
-	__rettype (*real_##__func)(__VA_ARGS__)
+#if defined(_FORTIFY_SOURCE) && _FORTIFY_SOURCE != 0
+#error "_FORTIFY_SOURCE != 0 is not compatible with RV-Predict/C"
+#endif
 
 #define	INTERPOSITION_ATTRIBUTE	__attribute__((visibility("default")))
 
@@ -22,21 +21,13 @@
 INTERPOSITION_ATTRIBUTE __rettype __rvpredict_##__func(__VA_ARGS__)
 
 #define	INTERPOSE_DECLS(__rettype, __func, ...)				\
-extern __rettype (*real_##__func)(__VA_ARGS__);				\
+REAL_DECL(__rettype, __func, __VA_ARGS__);				\
 __rettype __rvpredict_##__func(__VA_ARGS__)
-
-#if defined(_FORTIFY_SOURCE) && _FORTIFY_SOURCE != 0
-#error "_FORTIFY_SOURCE != 0 is not compatible with RV-Predict/C"
-#endif
 
 #define	INTERPOSE(__rettype, __func, ...)				\
 __rettype __func(__VA_ARGS__) __attribute__((weak,			\
 			             alias("__rvpredict_" #__func),	\
 				     visibility("default")))
-
-#define	ESTABLISH_PTR_TO_REAL(__fntype, __fn)	do {		\
-	real_##__fn = (__fntype)dlsym(RTLD_NEXT, #__fn);	\
-} while (/*CONSTCOND*/false)
 
 INTERPOSE_DECLS(int, pthread_join, pthread_t, void **);
 INTERPOSE_DECLS(int, pthread_create, pthread_t *, const pthread_attr_t *,
@@ -55,7 +46,9 @@ INTERPOSE_DECLS(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE_DECLS(int, sigaction, int, const struct sigaction *,
     struct sigaction *);
 
-INTERPOSE_DECLS(sighandler_t, signal, int, sighandler_t);
+typedef void (*rvp_sighandler_t)(int);
+
+INTERPOSE_DECLS(rvp_sighandler_t, signal, int, rvp_sighandler_t);
 
 INTERPOSE_DECLS(int, sigsuspend, const sigset_t *);
 

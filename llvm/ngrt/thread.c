@@ -9,7 +9,7 @@
 #include <stdint.h> /* for uint32_t */
 #include <stdlib.h> /* for EXIT_FAILURE */
 #include <stdio.h> /* for fprintf(3) */
-#include <string.h> /* for strerror(3), strcasecmp(3) */
+#include <string.h> /* for strerror(3), strcmp(3) */
 #include <unistd.h> /* for sysconf */
 
 #include "init.h"
@@ -186,6 +186,12 @@ rvp_dump_info(void)
 	rvp_ring_stats_dump_total();
 }
 
+static bool
+isyes(const char *s)
+{
+	return strcmp(s, "yes") == 0 || strcmp(s, "YES") == 0;
+}
+
 static void
 rvp_stop_transmitter(void)
 {
@@ -204,8 +210,7 @@ rvp_stop_transmitter(void)
 		}
 	}
 	stopping = false;
-	if ((s = getenv("RVP_INFO_ATEXIT")) != NULL &&
-	    strcasecmp(s, "yes") == 0)
+	if ((s = getenv("RVP_INFO_ATEXIT")) != NULL && isyes(s))
 		(void)pthread_once(&rvp_dump_info_once, rvp_dump_info);
 	thread_unlock(&oldmask);
 }
@@ -509,12 +514,11 @@ __rvpredict_init(void)
 	const char *s;
 
 	rvp_debug_supervisor = (s = getenv("RVP_DEBUG_SUPERVISOR")) != NULL &&
-	    strcasecmp(s, "yes") == 0;
+	    isyes(s);
 	rvp_online_analysis = (s = getenv("RVP_OFFLINE_ANALYSIS")) == NULL ||
-	    strcasecmp(s, "yes") != 0;
+	    !isyes(s);
 
-	rvp_trace_only = (s = getenv("RVP_TRACE_ONLY")) != NULL &&
-	    strcasecmp(s, "yes") == 0;
+	rvp_trace_only = (s = getenv("RVP_TRACE_ONLY")) != NULL && isyes(s);
 
 	if (rvp_trace_only) {
 		(void)pthread_once(&rvp_prefork_init_once, rvp_prefork_init);

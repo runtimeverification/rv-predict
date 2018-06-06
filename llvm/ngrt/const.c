@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdatomic.h>
 
 const int32_t __rvpredict_memory_order_relaxed = memory_order_relaxed;

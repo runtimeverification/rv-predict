@@ -7,12 +7,12 @@
 #include "text.h"
 #include "tracefmt.h"
 
-REAL_DEFN(void *, memcpy, void *, const void *, size_t) =
-    __rvpredict_internal_memcpy;
-REAL_DEFN(void *, memmove, void *, const void *, size_t) =
-    __rvpredict_internal_memmove;
-REAL_DEFN(void *, memset, void *, int, size_t) =
-    __rvpredict_internal_memset;
+REAL_DEFN(void *, memcpy, void *, const void *, size_t) /* =
+    __rvpredict_internal_memcpy */;
+REAL_DEFN(void *, memmove, void *, const void *, size_t) /* =
+    __rvpredict_internal_memmove */;
+REAL_DEFN(void *, memset, void *, int, size_t) /* =
+    __rvpredict_internal_memset */;
 
 void
 rvp_str_prefork_init(void)

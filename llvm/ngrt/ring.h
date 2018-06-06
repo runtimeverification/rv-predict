@@ -4,12 +4,15 @@
 #define _RVP_RING_H_
 
 #include <sched.h>
+#include <signal.h>
+#include <stdint.h>	/* for uint64_t */
 #include <stdatomic.h>	/* for atomic_store_explicit */
 #include <stdbool.h>
 #include <stdint.h>	/* for uint32_t */
 #include <string.h>	/* for memcpy(3) */
 #include <unistd.h>	/* for size_t */
-#include <sys/uio.h>	/* for struct iovec */
+
+#include "iovec.h"
 
 #include "buf.h"
 #include "relay.h"
@@ -414,10 +417,10 @@ rvp_interruption_close(rvp_interruption_t *it, int eidx)
 void rvp_rings_init(void);
 int rvp_ring_stdinit(rvp_ring_t *);
 bool rvp_ring_drop_empties(rvp_ring_t *, rvp_interruption_t *);
-int rvp_ring_get_iovs(rvp_ring_t *, rvp_interruption_t *, struct iovec **,
-    const struct iovec *, uint32_t *);
+int rvp_ring_get_iovs(rvp_ring_t *, rvp_interruption_t *, rvp_iovec_t **,
+    const rvp_iovec_t *, uint32_t *);
 int rvp_ring_discard_iovs(rvp_ring_t *, rvp_interruption_t *,
-    const struct iovec **, const struct iovec *, uint32_t *);
+    const rvp_iovec_t **, const rvp_iovec_t *, uint32_t *);
 int rvp_ring_flush_to_fd(rvp_ring_t *, int, rvp_lastctx_t *);
 ssize_t rvp_ring_discard_by_bytes(rvp_ring_t *, const ssize_t, uint32_t *);
 rvp_interruption_t *rvp_ring_put_interruption(rvp_ring_t *, rvp_ring_t *, int);

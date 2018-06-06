@@ -1,13 +1,13 @@
 #include <err.h>
 #include <errno.h>
-#include <limits.h>	/* for SSIZE_MAX */
 #include <signal.h>	/* for pthread_sigmask(3) */
 #include <stdio.h>
 #include <stdarg.h>	/* for vfprintf(3) */
 #include <stdint.h>	/* for intmax_t */
 #include <stdlib.h>	/* for STDIN_FILENO */
 #include <string.h>	/* for strdup(3), strlen(3) */
-#include <sys/param.h>	/* for MIN */
+#include <sys/param.h>	/* for MIN---must precede limits.h! */
+#include <limits.h>	/* for SSIZE_MAX---must follow sys/param.h! */
 #include <sys/stat.h>	/* for lstat(2), fts(3) */
 #include <sys/types.h>	/* for waitpid(2), fts(3) */
 #include <fts.h>

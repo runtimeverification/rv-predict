@@ -17,6 +17,34 @@ CC?=clang
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-prototypes
+
+#CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
+
+.if 1
+# cross compilation
+_SYSROOT=$(HOME)/rv/sysroot-newlib-linaro-2017.01-aarch64-elf
+CPPFLAGS+=-D_POSIX_THREADS
+CPPFLAGS+=-D_POSIX_REALTIME_SIGNALS
+STANDALONE?=yes
+#_SYSROOT=$(HOME)/rv/sysroot-glibc-linaro-2.21-2017.01-aarch64-linux-gnu
+
+CFLAGS+=-target aarch64-eabi-none 
+CFLAGS+=-L$(_SYSROOT)/usr/lib
+CPPFLAGS+=-I$(_SYSROOT)/usr/include
+CPPFLAGS+=-Wno-gnu-include-next
+CPPFLAGS+=-Wno-builtin-requires-header
+#CPPFLAGS+=-D__wur= -D__off64_t=_off64_t -D__THROWNL=
+CPPFLAGS+=-Wno-keyword-macro
+CPPFLAGS+=-Wno-zero-length-array
+.endif
+
+.if $(STANDALONE:Uno) == yes
+CPPFLAGS+=-DSTANDALONE
+CPPFLAGS+=-I$(.CURDIR)/static
+.else
+CPPFLAGS+=-I$(.CURDIR)/dynamic
+.endif
+
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
@@ -25,7 +53,9 @@ CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS+=access.c const.c deltops.c func.c lock.c notimpl.c
 SRCS+=opinit.c
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c
+.if $(STANDALONE:Uno) == no
 SRCS+=supervise.c
+.endif
 SRCS+=thread.c trace.c
 SRCS+=intr.c
 SRCS+=io.c

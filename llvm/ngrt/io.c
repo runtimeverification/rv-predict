@@ -11,6 +11,7 @@
 #include <fcntl.h>	/* for open(2) */
 
 #include "io.h"
+#include "io_private.h"
 #include "nbcompat.h"	/* for __arraycount, offsetof */
 
 static inline void __printflike(1, 2)
@@ -20,7 +21,7 @@ dbg_printf(const char *fmt __unused, ...)
 }
 
 static ssize_t
-iovsum(const struct iovec *iov, int iovcnt)
+iovsum(const rvp_iovec_t *iov, int iovcnt)
 {
 	int i;
 	ssize_t sum = 0;
@@ -46,11 +47,11 @@ writeall(int fd, const void *buf, size_t nbytes)
 }
 
 static void
-advance_iov(struct iovec **iovp, int *iovcntp, ssize_t nbytes)
+advance_iov(rvp_iovec_t **iovp, int *iovcntp, ssize_t nbytes)
 {
 	int i;
 	const int iovcnt = *iovcntp;
-	struct iovec *iov;
+	rvp_iovec_t *iov;
 
 	for (iov = *iovp, i = 0; nbytes > 0 && i < iovcnt; iov++, i++) {
 		if (iov->iov_len > nbytes) {
@@ -68,10 +69,10 @@ advance_iov(struct iovec **iovp, int *iovcntp, ssize_t nbytes)
 	*iovcntp = iovcnt - i;
 }
 
-static ssize_t
-xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
+ssize_t
+xferallv(int fd, ssize_t (*xferv)(int, const rvp_iovec_t *, int),
     const int err_ret,
-    const struct iovec *iov0, struct iovec *scratch, int iovcnt)
+    const rvp_iovec_t *iov0, rvp_iovec_t *scratch, int iovcnt)
 {
 	ssize_t nexpected = iovsum(iov0, iovcnt),
 		nxferd,
@@ -83,7 +84,7 @@ xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
 		return nxferd;
 	}
 
-	struct iovec *niov = memcpy(scratch, iov0, sizeof(iov0[0]) * iovcnt),
+	rvp_iovec_t *niov = memcpy(scratch, iov0, sizeof(iov0[0]) * iovcnt),
 	    *iov = niov;
 
 	for (ntotal = nxferd; ntotal < nexpected; ntotal += nxferd) {
@@ -107,16 +108,4 @@ xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
 		    __func__, __LINE__, ntotal, nexpected);
 	}
 	return ntotal;
-}
-
-ssize_t
-readallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
-{
-	return xferallv(fd, readv, 0, iov0, scratch, iovcnt);
-}
-
-ssize_t
-writeallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
-{
-	return xferallv(fd, writev, -1, iov0, scratch, iovcnt);
 }

@@ -1,4 +1,4 @@
-#include <signal.h>	/* for pthread_sigmask(3) */
+#include <signal.h>	/* for pthread_sigmask(3), pthread_kill(3) */
 #include <string.h>	/* for strerror(3) */
 #include <unistd.h>	/* for pause(2) */
 
@@ -37,7 +37,7 @@ relay(void *arg __unused)
 		}
 		rc = sigwait(&sigset, &rcvd_signum);
 		if (rc != 0) {
-			errx(EXIT_FAILURE, "%s: pthread_kill: %s", __func__,
+			errx(EXIT_FAILURE, "%s: sigwait: %s", __func__,
 			    strerror(rc));
 		}
 		assert(rcvd_signum == expected_signum);

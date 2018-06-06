@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <sys/uio.h>	/* for writev(2) */
-
 #include "io.h"
 #include "ring.h"
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop */
@@ -152,11 +150,11 @@ rvp_ring_drop_interruption(rvp_ring_t *r)
  * event may be split by another thread's events.
  */
 static int
-rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
-    const struct iovec *lastiov, int first, int last, uint32_t *idepthp)
+rvp_ring_get_iovs_between(rvp_ring_t *r, rvp_iovec_t ** const iovp,
+    const rvp_iovec_t *lastiov, int first, int last, uint32_t *idepthp)
 {
 	uint32_t *end = &r->r_items[last], *start = &r->r_items[first];
-	struct iovec *iov = *iovp;
+	rvp_iovec_t *iov = *iovp;
 	bool writeback_depth = false;
 
 	if (start == end)
@@ -178,7 +176,7 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 			, .depth = r->r_idepth
 		};
 
-		*iov++ = (struct iovec){
+		*iov++ = (rvp_iovec_t){
 			  .iov_base = &r->r_sigdepth
 			, .iov_len = sizeof(r->r_sigdepth)
 		};
@@ -186,13 +184,13 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 	}
 
 	if (start < end) {
-		*iov++ = (struct iovec){
+		*iov++ = (rvp_iovec_t){
 			  .iov_base = start
 			, .iov_len = (end - start) *
 				     sizeof(start[0])
 		};
 	} else {	/* start > end */
-		*iov++ = (struct iovec){
+		*iov++ = (rvp_iovec_t){
 			  .iov_base = start
 			, .iov_len = (r->r_last + 1 - start) *
 				     sizeof(start[0])
@@ -201,7 +199,7 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 		if (iov == lastiov)
 			return -1;
 
-		*iov++ = (struct iovec){
+		*iov++ = (rvp_iovec_t){
 			  .iov_base = r->r_items
 			, .iov_len = (end - r->r_items) *
 				     sizeof(r->r_items[0])
@@ -239,10 +237,10 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
  */
 int
 rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
-    struct iovec **iovp, const struct iovec *lastiov, uint32_t *idepthp)
+    rvp_iovec_t **iovp, const rvp_iovec_t *lastiov, uint32_t *idepthp)
 {
-	struct iovec *iov;
-	struct iovec * const iov0 = *iovp;
+	rvp_iovec_t *iov;
+	rvp_iovec_t * const iov0 = *iovp;
 	rvp_interruption_t *it = NULL;
 	const int pidx = r->r_producer - r->r_items;
 	const int cidx = r->r_consumer - r->r_items;
@@ -336,11 +334,11 @@ rvp_ring_get_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
 }
 
 static int
-rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
-    const struct iovec *lastiov, int cidx, uint32_t *idepthp)
+rvp_ring_discard_iovs_between(rvp_ring_t *r, const rvp_iovec_t ** const iovp,
+    const rvp_iovec_t *lastiov, int cidx, uint32_t *idepthp)
 {
 	uint32_t *consumer = &r->r_items[cidx], *producer;
-	const struct iovec *iov = *iovp;
+	const rvp_iovec_t *iov = *iovp;
 	bool writeback_depth = false;
 
 	if (iov == lastiov)
@@ -399,10 +397,10 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
  */
 int
 rvp_ring_discard_iovs(rvp_ring_t *r, rvp_interruption_t *bracket,
-    const struct iovec **iovp, const struct iovec *lastiov, uint32_t *idepthp)
+    const rvp_iovec_t **iovp, const rvp_iovec_t *lastiov, uint32_t *idepthp)
 {
-	const struct iovec *iov;
-	const struct iovec * const iov0 = *iovp;
+	const rvp_iovec_t *iov;
+	const rvp_iovec_t * const iov0 = *iovp;
 	rvp_interruption_t *it = NULL;
 	const int pidx = r->r_producer - r->r_items;
 	const int cidx = r->r_consumer - r->r_items;
@@ -606,18 +604,18 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		  .deltop = rvp_jumpless_op.jo_sigdepth
 		, .depth = r->r_idepth
 	};
-	struct iovec iov[20] = {
-		  [0] = (struct iovec){
+	rvp_iovec_t iov[20] = {
+		  [0] = (rvp_iovec_t){
 			  .iov_base = &threadswitch
 			, .iov_len = sizeof(threadswitch)
 		}
-		, [1] = (struct iovec){
+		, [1] = (rvp_iovec_t){
 			  .iov_base = &sigdepth
 			, .iov_len = sizeof(sigdepth)
 		}
 	};
-	struct iovec scratch_iov[__arraycount(iov)];
-	struct iovec *iovp = &iov[0];
+	rvp_iovec_t scratch_iov[__arraycount(iov)];
+	rvp_iovec_t *iovp = &iov[0];
 
 	if (lc == NULL)
 		;
@@ -633,7 +631,7 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 		iov[0] = iov[1];
 		iovp++; /* emit 'sigdepth' to r->r_idepth */
 	}
-	const struct iovec *first_ring_iov, *iiov,
+	const rvp_iovec_t *first_ring_iov, *iiov,
 	    *lastiov = &iov[__arraycount(iov)];
 
 	first_ring_iov = iovp;
@@ -660,7 +658,7 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 
 	assert(nwritten > 0);
 
-	const struct iovec *check_iov = first_ring_iov;
+	const rvp_iovec_t *check_iov = first_ring_iov;
 	assert(rvp_ring_discard_iovs(r, NULL, &check_iov, iovp, &idepth1) <= 0);
 	assert(idepth0 == idepth1);
 

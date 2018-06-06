@@ -2,7 +2,7 @@
 #define _RVP_SIGNAL_H_
 
 #include <stdint.h>	/* for uint32_t */
-#include <signal.h>	/* for siginfo_t, sigset_t, sighandler_t */
+#include <signal.h>	/* for siginfo_t, sigset_t */
 
 #include "thread.h"
 
@@ -29,7 +29,7 @@ void rvp_signal_ring_put(rvp_thread_t *, rvp_ring_t *);
 
 rvp_signal_t *rvp_signal_lookup(int);
 
-sighandler_t __rvpredict_signal(int, sighandler_t);
+rvp_sighandler_t __rvpredict_signal(int, rvp_sighandler_t);
 int __rvpredict_sigaction(int, const struct sigaction *, struct sigaction *);
 int __rvpredict_sigprocmask(int, const sigset_t *, sigset_t *);
 int __rvpredict_pthread_sigmask(int, const sigset_t *, sigset_t *);

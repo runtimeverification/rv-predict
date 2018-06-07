@@ -54,7 +54,10 @@ import com.runtimeverification.rvpredict.trace.MemoryAccessBlock;
 import com.runtimeverification.rvpredict.trace.ThreadType;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.util.Constants;
+import com.runtimeverification.rvpredict.violation.FoundRace;
 import com.runtimeverification.rvpredict.violation.Race;
+import com.runtimeverification.rvpredict.violation.SignalStackEvent;
+import com.runtimeverification.rvpredict.violation.SkippedRace;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
 import java.util.ArrayList;
@@ -417,9 +420,12 @@ public class MaximalCausalModel {
      * their signatures.
      *
      * @param sigToRaceSuspects The race suspects to check.
-     * @return a map from race signatures to real race instances
+     * @param analysisLimit Used to limit SMT usage.
+     * @param result Output containing the races that were found and the potential races
+     *               that were ignored due to timeout.
      */
-    public Map<String, Race> checkRaceSuspects(Map<String, List<Race>> sigToRaceSuspects, AnalysisLimit analysisLimit) {
+    public void checkRaceSuspects(
+            Map<String, List<Race>> sigToRaceSuspects, AnalysisLimit analysisLimit, RaceCheckResult result) {
         /* specialize the maximal causal model based on race queries */
         Map<Race, BoolFormula> suspectToAsst = new HashMap<>();
         sigToRaceSuspects.values().forEach(suspects -> {
@@ -429,7 +435,7 @@ public class MaximalCausalModel {
 
         sigToRaceSuspects.entrySet().removeIf(e -> e.getValue().isEmpty());
         if (sigToRaceSuspects.isEmpty()) {
-            return Collections.emptyMap();
+            return;
         }
 
         List<RaceBucket> raceBuckets = new ArrayList<>();
@@ -439,7 +445,6 @@ public class MaximalCausalModel {
 
         RaceSolver.WindowData windowData =
             new RaceSolver.WindowData(unsoundButFastPhiTau.build(), soundPhiTau.build(), buildPhiConc());
-        Map<String, Race> result = new HashMap<>();
         try (ProfilerToken ignored = Profiler.instance().start("All solver stuff")) {
             MutableBoolean atLeastOneRace = new MutableBoolean(false);
             try {
@@ -454,44 +459,45 @@ public class MaximalCausalModel {
                         }
                         hadPossibleRace = true;
                         Race race = maybeRace.get();
-                        analysisLimit.runWithException( () ->
-                                raceSolver.checkRace(
+                        analysisLimit.runWithException(
+                                () -> raceSolver.checkRace(
                                         windowData,
                                         suspectToAsst.get(race),
                                         model -> {
-                                            result.put(bucket.getNameAndMarkAsSolved(), race);
                                             atLeastOneRace.setTrue();
                                             Map<Integer, List<EventWithOrder>> threadToExecution =
                                                     extractExecution(model, nameToEvent);
                                             Map<Integer, Integer> signalParents = extractSignalParents(model);
-                                            fillSignalStack(threadToExecution, signalParents, race);
+                                            FoundRace foundRace =
+                                                    createFoundRace(threadToExecution, signalParents, race);
+                                            result.race(bucket.getNameAndMarkAsSolved(), foundRace);
                                             if (Configuration.debug) {
                                                 dumpOrderingWithLessThreadSwitches(
                                                         threadToExecution,
                                                         Optional.of(race.firstEvent()), Optional.of(race.secondEvent()),
                                                         signalParents);
                                             }
-                                        }));
+                                        }),
+                                timerName -> result.timeout(bucket.getName(), timerName, createSkippedRace(race)));
                     }
                 } while (hadPossibleRace);
             } finally {
-                analysisLimit.runWithException(raceSolver::finishAllWork);
+                analysisLimit.runWithException(raceSolver::finishAllWork, k -> {});
             }
             if (!atLeastOneRace.booleanValue() && Configuration.debug) {
-                analysisLimit.runWithException( () ->
-                    raceSolver.generateSolution(
-                            windowData,
-                            model ->
-                                    dumpOrderingWithLessThreadSwitches(
-                                            extractExecution(model, nameToEvent),
-                                            Optional.empty(), Optional.empty(),
-                                            extractSignalParents(model))));
+                analysisLimit.runWithException(
+                        () -> raceSolver.generateSolution(
+                                windowData,
+                                model ->
+                                        dumpOrderingWithLessThreadSwitches(
+                                                extractExecution(model, nameToEvent),
+                                                Optional.empty(), Optional.empty(),
+                                                extractSignalParents(model))),
+                        k -> {});
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
-        return result;
     }
 
     private Collection<BoolFormula> buildPhiConc() {
@@ -515,12 +521,21 @@ public class MaximalCausalModel {
         return signalParents;
     }
 
-    private void fillSignalStack(
+    private SkippedRace createSkippedRace(Race race) {
+        return new SkippedRace(
+                race.firstEvent(),
+                SignalStackEvent.fromEventAndTrace(race.firstEvent(), trace),
+                SignalStackEvent.fromEventAndTrace(race.secondEvent(), trace));
+    }
+
+    private FoundRace createFoundRace(
             Map<Integer, List<EventWithOrder>> threadToExecution,
             Map<Integer, Integer> signalParents,
             Race race) {
-        race.setFirstSignalStack(computeSignalStack(threadToExecution, signalParents, race.firstEvent()));
-        race.setSecondSignalStack(computeSignalStack(threadToExecution, signalParents, race.secondEvent()));
+        return new FoundRace(
+                race.firstEvent(), race.secondEvent(),
+                computeSignalStack(threadToExecution, signalParents, race.firstEvent()),
+                computeSignalStack(threadToExecution, signalParents, race.secondEvent()));
     }
 
     private OptionalLong findEventOrder(
@@ -535,15 +550,15 @@ public class MaximalCausalModel {
         return OptionalLong.empty();
     }
 
-    private List<Race.SignalStackEvent> computeSignalStack(
+    private List<SignalStackEvent> computeSignalStack(
             Map<Integer, List<EventWithOrder>> threadToExecution,
             Map<Integer, Integer> signalParents,
             ReadonlyEventInterface event) {
-        List<Race.SignalStackEvent> signalStack = new ArrayList<>();
+        List<SignalStackEvent> signalStack = new ArrayList<>();
         OptionalInt maybeTtid = trace.getTraceThreadId(event);
         assert maybeTtid.isPresent();
         int ttid = maybeTtid.getAsInt();
-        signalStack.add(Race.SignalStackEvent.fromEvent(event, ttid));
+        signalStack.add(SignalStackEvent.fromEventAndTrace(event, trace));
 
         OptionalLong maybeFirstEventOrder = findEventOrder(ttid, threadToExecution, event);
         assert maybeFirstEventOrder.isPresent();
@@ -563,9 +578,15 @@ public class MaximalCausalModel {
             ttid = parentTtid;
             if (parentEvent != null) {
                 currentEventOrder = parentEvent.getOrderId();
-                signalStack.add(Race.SignalStackEvent.fromEvent(parentEvent.getEvent(), parentTtid));
+                signalStack.add(SignalStackEvent.fromEventAndTrace(parentEvent.getEvent(), trace));
             } else {
-                signalStack.add(Race.SignalStackEvent.fromBeforeFirstEvent(parentTtid));
+                signalStack.add(SignalStackEvent.fromBeforeFirstEvent(
+                        parentTtid,
+                        // TODO(virgil): Use an actual stack trace. We should preserve them between windows.
+                        Collections.emptyList(),
+                        trace.getThreadType(ttid),
+                        trace.getOriginalThreadIdForTraceThreadId(ttid),
+                        trace.maybeGetSignalNumber(ttid)));
             }
         }
         return signalStack;

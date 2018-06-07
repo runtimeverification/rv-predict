@@ -3,9 +3,13 @@ package com.runtimeverification.rvpredict.engine.main;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.smt.MaximalCausalModel;
+import com.runtimeverification.rvpredict.smt.RaceCheckResult;
 import com.runtimeverification.rvpredict.smt.RaceSolver;
 import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.violation.FoundRace;
 import com.runtimeverification.rvpredict.violation.Race;
+import com.runtimeverification.rvpredict.violation.RaceSerializer;
+import com.runtimeverification.rvpredict.violation.ReportType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,18 +25,20 @@ public class MaximalRaceDetector implements RaceDetector {
 
     private final Configuration config;
 
-    private final Map<String, Race> sigToRealRace = new HashMap<>();
-
     private final List<String> reports = new ArrayList<>();
 
     private final RaceSolver raceSolver;
+    private final RaceCheckResult result;
+    private final RaceSerializer serializer;
 
     /**
      * Takes ownership of the race solver.
      */
-    public MaximalRaceDetector(Configuration config, RaceSolver raceSolver) {
+    public MaximalRaceDetector(Configuration config, RaceSolver raceSolver, RaceSerializer serializer) {
         this.config = config;
         this.raceSolver = raceSolver;
+        this.serializer = serializer;
+        this.result = new RaceCheckResult();
     }
 
     @Override
@@ -80,7 +86,7 @@ public class MaximalRaceDetector implements RaceDetector {
                             if (!config.suppressPattern.matcher(race.getRaceDataSig())
                                     .matches()) {
                                 String raceSig = race.toString();
-                                if (!sigToRealRace.containsKey(raceSig)) {
+                                if (!result.hadRace(raceSig)) {
                                     sigToRaceCandidates.computeIfAbsent(raceSig,
                                             x -> new ArrayList<>()).add(race);
                                 }
@@ -102,15 +108,27 @@ public class MaximalRaceDetector implements RaceDetector {
             return;
         }
 
-        Map<String, Race> result =
-                MaximalCausalModel
-                        .create(trace, raceSolver, config.detectInterruptedThreadRace(), config.maxInterruptDepth())
-                        .checkRaceSuspects(sigToRaceSuspects, analysisLimit);
-        sigToRealRace.putAll(result);
-        result.forEach((sig, race) -> {
-            String report = race.generateRaceReport();
+        result.startNewWindow();
+        MaximalCausalModel.create(trace, raceSolver, config.detectInterruptedThreadRace(), config.maxInterruptDepth())
+                .checkRaceSuspects(sigToRaceSuspects, analysisLimit, result);
+        Map<String, FoundRace> races = result.getNewRaces();
+        races.forEach((sig, race) -> {
+            String report = race.generateRaceReport(serializer, getReportType());
             reports.add(report);
             config.logger().reportRace(report);
+        });
+    }
+
+    private ReportType getReportType() {
+        return config.isJsonReport() ? ReportType.JSON : ReportType.USER_READABLE;
+    }
+
+    @Override
+    public void finish() {
+        result.getTimeoutRaces().forEach((sig, timeoutRace) -> {
+            String report = timeoutRace.generateTimeoutReport(getReportType(), serializer);
+            reports.add(report);
+            config.logger().reportTimeoutRace(report);
         });
     }
 }

@@ -1,13 +1,12 @@
 package com.runtimeverification.rvpredict.util;
 
+import com.google.common.base.Strings;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Paths;
-
-import com.google.common.base.Strings;
 
 /**
  * @author TraianSF
@@ -24,11 +23,11 @@ public class Logger {
 
     public Logger() {
         PrintStream blackhole = new PrintStream(new OutputStream() {
-            public void write(int b) throws IOException {
+            public void write(int b) {
             }
-            public void write(byte[] b) throws IOException {
+            public void write(byte[] b) {
             }
-            public void write(byte[] b, int off, int len) throws IOException {
+            public void write(byte[] b, int off, int len) {
             }
         });
         debug = blackhole;
@@ -59,6 +58,10 @@ public class Logger {
     }
 
     public void reportRace(String report) {
+        result.println(report);
+    }
+
+    public void reportTimeoutRace(String report) {
         result.println(report);
     }
 

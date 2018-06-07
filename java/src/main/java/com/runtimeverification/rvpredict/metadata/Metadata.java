@@ -3,7 +3,6 @@ package com.runtimeverification.rvpredict.metadata;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.trace.Trace;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.FileNotFoundException;
@@ -11,8 +10,10 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,8 +90,11 @@ public class Metadata implements MetadataInterface, Serializable {
     }
 
     @Override
-    public String getRaceDataSig(ReadonlyEventInterface e1,
-        ReadonlyEventInterface e2, Trace trace, Configuration config) {
+    public String getRaceDataSig(
+            ReadonlyEventInterface e1,
+            Collection<ReadonlyEventInterface> stackTrace1,
+            Collection<ReadonlyEventInterface> stackTrace2,
+            Configuration config) {
         String locSig = getRaceDataSigHelper(e1, config);
         switch (locSig.charAt(0)) {
             case '#':
@@ -108,7 +112,7 @@ public class Metadata implements MetadataInterface, Serializable {
     }
 
     @Override
-    public String getLockSig(ReadonlyEventInterface event, Trace trace) {
+    public String getLockSig(ReadonlyEventInterface event, Collection<ReadonlyEventInterface> stackTrace) {
         return event.getLockRepresentation().toString();
     }
 
@@ -175,38 +179,16 @@ public class Metadata implements MetadataInterface, Serializable {
     }
 
     @Override
-    public long getParentOTID(long otid) {
+    public OptionalLong getParentOTID(long otid) {
         Pair<Long, Long> info = otidToCreationInfo.get(otid);
-        return info == null ? 0 : info.getLeft();
+        return info == null ? OptionalLong.empty() : OptionalLong.of(info.getLeft());
     }
 
     @Override
-    public long getOriginalThreadCreationLocId(long otid) {
+    public OptionalLong getOriginalThreadCreationLocId(long otid) {
         Pair<Long, Long> info = otidToCreationInfo.get(otid);
-        return info == null ? -1 : info.getRight();
+        return info == null ? OptionalLong.empty() : OptionalLong.of(info.getRight());
     }
-
-    /*
-    static class RemappingObjectInputStream extends ObjectInputStream {
-        private static final String RV_PREFIX = "com.runtimeverification.rvpredict.internal.";
-
-        private RemappingObjectInputStream(InputStream in) throws IOException {
-            super(in);
-        }
-
-        @Override
-        protected ObjectStreamClass readClassDescriptor() throws IOException, ClassNotFoundException {
-            ObjectStreamClass resultClassDescriptor = super.readClassDescriptor();
-
-            if (resultClassDescriptor.getName().startsWith(RV_PREFIX)) {
-                resultClassDescriptor = ObjectStreamClass.lookup(
-                        Class.forName(resultClassDescriptor.getName().substring(RV_PREFIX.length())));
-            }
-
-            return resultClassDescriptor;
-        }
-    }
-    */
 
     /**
      * Deserializes the {@code Metadata} object stored at the specified location.
@@ -219,7 +201,7 @@ public class Metadata implements MetadataInterface, Serializable {
      * @return the {@code Metadata} object
      */
     public static Metadata readFrom(Path path) {
-        try (ObjectInputStream metadataIS = new /*Remapping*/ObjectInputStream(
+        try (ObjectInputStream metadataIS = new ObjectInputStream(
                 LZ4Utils.createDecompressionStream(path))) {
             return (Metadata) metadataIS.readObject();
         } catch (FileNotFoundException e) {

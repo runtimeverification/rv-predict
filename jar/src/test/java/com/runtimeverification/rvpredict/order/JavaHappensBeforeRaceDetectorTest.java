@@ -13,6 +13,7 @@ import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Logger;
 import com.runtimeverification.rvpredict.violation.Race;
+import com.runtimeverification.rvpredict.violation.RaceSerializer;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -21,7 +22,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.io.FileNotFoundException;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,7 +45,6 @@ public class JavaHappensBeforeRaceDetectorTest {
     private static final long BASE_PC = 400;
     private static final long THREAD_1 = 1;
     private static final long THREAD_2 = 2;
-    private static final long THREAD_3 = 3;
     private static final int NO_SIGNAL = 0;
     private static final long LOCK_1 = 500;
 
@@ -54,6 +53,7 @@ public class JavaHappensBeforeRaceDetectorTest {
     @Mock private Configuration mockConfiguration;
     @Mock private Context mockContext;
     @Mock private Metadata mockMetadata;
+    @Mock private RaceSerializer mockRaceSerializer;
 
     @Before
     public void setUp() {
@@ -64,7 +64,7 @@ public class JavaHappensBeforeRaceDetectorTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_3_VOLATILE)).thenReturn(4L);
         when(mockMetadata.isVolatile(anyLong())).
                 then(invocation -> invocation.getArguments()[0].equals(Long.valueOf(4L)));
-        when(mockMetadata.getLocationSig(anyLong())).thenReturn("unknown location");
+        when(mockRaceSerializer.getLocationSig(anyLong())).thenReturn("unknown location");
         Logger logger = new Logger();
         when(mockConfiguration.logger()).thenReturn(logger);
     }
@@ -306,20 +306,28 @@ public class JavaHappensBeforeRaceDetectorTest {
         mockConfiguration.windowSize = WINDOW_SIZE;
         TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
         ThreadInfos threadInfos = traceState.getThreadInfos();
-        JavaHappensBeforeRaceDetector detector = new JavaHappensBeforeRaceDetector(mockConfiguration, mockMetadata);
+        JavaHappensBeforeRaceDetector detector =
+                new JavaHappensBeforeRaceDetector(mockConfiguration, mockMetadata, mockRaceSerializer);
 
-        Trace trace = null;
         assert !rawTracesList.isEmpty();
         for (List<RawTrace> rawTraces : rawTracesList) {
             for (RawTrace rawTrace : rawTraces) {
                 threadInfos.registerThreadInfo(rawTrace.getThreadInfo());
             }
             traceState.preStartWindow();
-            trace = traceState.initNextTraceWindow(rawTraces);
-            detector.run(trace, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0, mockConfiguration.logger()));
+            Trace trace = traceState.initNextTraceWindow(rawTraces);
+            detector.run(
+                    trace,
+                    new AnalysisLimit(
+                            Clock.systemUTC(),
+                            "Test",
+                            Optional.empty(),
+                            0, mockConfiguration.logger()));
             Race testRace = new Race(e1, e2, trace, mockConfiguration);
             String testRaceSig = testRace.toString();
-            return detector.races.containsKey(testRaceSig);
+            if (detector.races.containsKey(testRaceSig)) {
+                return true;
+            }
         }
         return false;
     }

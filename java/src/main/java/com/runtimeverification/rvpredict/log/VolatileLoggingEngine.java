@@ -31,7 +31,10 @@ package com.runtimeverification.rvpredict.log;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.engine.main.MaximalRaceDetector;
 import com.runtimeverification.rvpredict.engine.main.RaceDetector;
+import com.runtimeverification.rvpredict.metadata.CompactTraceSignatureProcessor;
+import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
 import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.smt.RaceSolver;
@@ -40,6 +43,7 @@ import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Constants;
 import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.violation.RaceSerializer;
 
 import java.time.Clock;
 import java.util.ArrayList;
@@ -121,10 +125,19 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         this.windowSize = config.windowSize;
         globalAnalysisLimit =
                 new AnalysisLimit(Clock.systemUTC(),"Global", Optional.empty(), config.global_timeout, config.logger());
-        if (config.isHappensBefore()) {
-            this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
+        SignatureProcessor signatureProcessor;
+        if (config.isCompactTrace()) {
+            signatureProcessor = new CompactTraceSignatureProcessor();
+        } else if (config.isLLVMPrediction()) {
+            signatureProcessor = new LLVMSignatureProcessor();
         } else {
-            this.detector = new MaximalRaceDetector(config, RaceSolver.create(config));
+            signatureProcessor = new SignatureProcessor();
+        }
+        RaceSerializer serializer = new RaceSerializer(config, signatureProcessor, metadata);
+        if (config.isHappensBefore()) {
+            this.detector = new JavaHappensBeforeRaceDetector(config, metadata, serializer);
+        } else {
+            this.detector = new MaximalRaceDetector(config, RaceSolver.create(config), serializer);
         }
         bufferCleaner = new BufferCleaner();
         bufferCleaner.start();
@@ -158,6 +171,7 @@ public class VolatileLoggingEngine implements ILoggingEngine, Constants {
         } else {
             reports.forEach(r -> config.logger().report(r, Logger.MSGTYPE.REPORT));
         }
+        detector.finish();
         try {
             detector.close();
         } catch (Exception e) {

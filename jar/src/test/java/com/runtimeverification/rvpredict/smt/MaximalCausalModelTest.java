@@ -12,6 +12,7 @@ import com.runtimeverification.rvpredict.trace.ThreadInfos;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
 import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.violation.FoundRace;
 import com.runtimeverification.rvpredict.violation.Race;
 import org.junit.Assert;
 import org.junit.Before;
@@ -2365,7 +2366,7 @@ public class MaximalCausalModelTest {
             List<RawTrace> rawTraces,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             TraceUtils tu, boolean detectInterruptedThreadRace) {
-        Map<String, Race> races = findRaces(
+        Map<String, FoundRace> races = findRaces(
                 Collections.singletonList(rawTraces),
                 e1, e2,
                 Collections.emptyList(),
@@ -2380,7 +2381,7 @@ public class MaximalCausalModelTest {
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             TraceUtils tu, boolean detectInterruptedThreadRace,
             int maxSignalDepth) {
-        Map<String, Race> races = findRaces(
+        Map<String, FoundRace> races = findRaces(
                 Collections.singletonList(rawTraces),
                 e1, e2,
                 Collections.emptyList(),
@@ -2395,7 +2396,7 @@ public class MaximalCausalModelTest {
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             TraceUtils tu,
             boolean detectInterruptedThreadRace) {
-        Map<String, Race> races =
+        Map<String, FoundRace> races =
                 findRaces(
                         rawTraces,
                         e1, e2,
@@ -2411,7 +2412,7 @@ public class MaximalCausalModelTest {
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             TraceUtils tu, List<ReadonlyEventInterface> previousSigestEvents,
             boolean detectInterruptedThreadRace) {
-        Map<String, Race> races = findRaces(
+        Map<String, FoundRace> races = findRaces(
                 Collections.singletonList(rawTraces),
                 e1, e2,
                 previousSigestEvents,
@@ -2421,8 +2422,7 @@ public class MaximalCausalModelTest {
         return races.size() > 0;
     }
 
-
-    private Map<String, Race> findRaces(
+    private Map<String, FoundRace> findRaces(
             List<List<RawTrace>> rawTracesList,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             List<ReadonlyEventInterface> previousSigestEvents,
@@ -2461,8 +2461,12 @@ public class MaximalCausalModelTest {
             raceSuspects.add(new Race(e1, e2, trace, mockConfiguration));
             sigToRaceSuspects.put("race", raceSuspects);
 
-            return model.checkRaceSuspects(
-                    sigToRaceSuspects, new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0, new Logger()));
+            RaceCheckResult result = new RaceCheckResult();
+            model.checkRaceSuspects(
+                    sigToRaceSuspects,
+                    new AnalysisLimit(Clock.systemUTC(), "Test", Optional.empty(), 0, new Logger()),
+                    result);
+            return result.getNewRaces();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

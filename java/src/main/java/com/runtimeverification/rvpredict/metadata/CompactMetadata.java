@@ -3,8 +3,6 @@ package com.runtimeverification.rvpredict.metadata;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
-import com.runtimeverification.rvpredict.trace.Trace;
-
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.Arrays;
@@ -13,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CompactMetadata implements MetadataInterface {
@@ -34,23 +33,26 @@ public class CompactMetadata implements MetadataInterface {
     }
 
     @Override
-    public long getOriginalThreadCreationLocId(long otid) {
+    public OptionalLong getOriginalThreadCreationLocId(long otid) {
         Pair<Long, Long> info = otidToCreationInfo.get(otid);
-        return info == null ? -1 : info.getRight();
+        return info == null ? OptionalLong.empty() : OptionalLong.of(info.getRight());
     }
 
     @Override
-    public long getParentOTID(long otid) {
+    public OptionalLong getParentOTID(long otid) {
         Pair<Long, Long> info = otidToCreationInfo.get(otid);
-        return info == null ? 0 : info.getLeft();
+        return info == null ? OptionalLong.empty() : OptionalLong.of(info.getLeft());
     }
 
     @Override
-    public String getRaceDataSig(ReadonlyEventInterface e1,
-            ReadonlyEventInterface e2, Trace trace, Configuration config) {
+    public String getRaceDataSig(
+            ReadonlyEventInterface e1,
+            Collection<ReadonlyEventInterface> stackTrace1,
+            Collection<ReadonlyEventInterface> stackTrace2,
+            Configuration config) {
         StringBuilder sb = new StringBuilder();
         long idx = e1.getDataObjectExternalIdentifier();
-        formatAddressWithBracketing(idx, Arrays.asList(trace.getStacktraceAt(e1), trace.getStacktraceAt(e2)), sb);
+        formatAddressWithBracketing(idx, Arrays.asList(stackTrace1, stackTrace2), sb);
         return sb.toString();
     }
 
@@ -60,7 +62,7 @@ public class CompactMetadata implements MetadataInterface {
     }
 
     @Override
-    public String getLockSig(ReadonlyEventInterface event, Trace trace) {
+    public String getLockSig(ReadonlyEventInterface event, Collection<ReadonlyEventInterface> stackTrace) {
         StringBuilder sb = new StringBuilder();
         LockRepresentation lockRepresentation = event.getLockRepresentation();
         /* Don't print this "<Type>Lock@" prefix, for now, because it really
@@ -73,7 +75,7 @@ public class CompactMetadata implements MetadataInterface {
             sb.append("@");
         }
         formatAddressWithBracketing(
-                lockRepresentation.getLockAddress(), Collections.singletonList(trace.getStacktraceAt(event)), sb);
+                lockRepresentation.getLockAddress(), Collections.singletonList(stackTrace), sb);
         return sb.toString();
     }
 

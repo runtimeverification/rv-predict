@@ -193,6 +193,12 @@ public class TraceUtils {
                 mockContext, Constants.INVALID_EVENT_ID, canonicalFrameAddress, callSiteAddress);
     }
 
+    public List<ReadonlyEventInterface> exitFunction() {
+        prepareContextForEvent(threadId, signalDepth);
+        return compactEventFactory.exitFunction(
+                mockContext, Constants.INVALID_EVENT_ID);
+    }
+
     public static ReadonlyEventInterface extractSingleEvent(List<ReadonlyEventInterface> events) {
         Assert.assertEquals(1, events.size());
         return events.get(0);

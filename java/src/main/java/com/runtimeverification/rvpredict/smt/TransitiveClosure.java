@@ -10,7 +10,6 @@ import org.apache.commons.lang3.tuple.Pair;
 
 
 public class TransitiveClosure {
-
     /**
      * Map from event to its group ID in the contracted graph.
      */
@@ -26,7 +25,7 @@ public class TransitiveClosure {
         this.relation = inRelation;
     }
 
-    public boolean inRelation(ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
+    boolean inRelation(ReadonlyEventInterface e1, ReadonlyEventInterface e2) {
         return relation[eventToGroupId.get(e1)][eventToGroupId.get(e2)];
     }
 
@@ -38,6 +37,8 @@ public class TransitiveClosure {
 
         private final Map<ReadonlyEventInterface, Integer> eventToGroupId;
 
+        private int groupCountSize = 0;
+
         private final List<Pair<ReadonlyEventInterface, ReadonlyEventInterface>> relations = new ArrayList<>();
 
         private Builder(int size) {
@@ -45,7 +46,8 @@ public class TransitiveClosure {
         }
 
         public void createNewGroup(ReadonlyEventInterface e) {
-            eventToGroupId.put(e, eventToGroupId.size());
+            eventToGroupId.put(e, groupCountSize);
+            groupCountSize++;
         }
 
         /**
@@ -60,7 +62,8 @@ public class TransitiveClosure {
         }
 
         public TransitiveClosure build() {
-            int numOfGroups = eventToGroupId.size();
+            int numOfGroups = groupCountSize;
+
             boolean[][] f = new boolean[numOfGroups][numOfGroups];
             relations.forEach(p ->
                     f[eventToGroupId.get(p.getLeft())][eventToGroupId.get(p.getRight())] = true);

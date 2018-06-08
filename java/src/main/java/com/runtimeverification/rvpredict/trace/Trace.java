@@ -41,12 +41,10 @@ import com.runtimeverification.rvpredict.trace.maps.MemoryAddrToStateMap;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.util.Logger;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -387,38 +385,26 @@ public class Trace {
      *
      * @param event
      *            the event
-     * @return a {@code Deque} of call stack events
+     * @return a {@code Collection} of call stack events
      */
-    public Deque<ReadonlyEventInterface> getStacktraceAt(ReadonlyEventInterface event) {
+    public Collection<ReadonlyEventInterface> getStacktraceAt(ReadonlyEventInterface event) {
+        if (!state.config().stacks()) {
+            return Collections.singletonList(event);
+        }
         OptionalInt maybeTtid = getTraceThreadId(event);
         long gid = event.getEventId();
-        Deque<ReadonlyEventInterface> stacktrace = new ArrayDeque<>();
-        if (!state.config().stacks()) {
-            stacktrace.add(event);
-        } else if (gid >= baseGID && maybeTtid.isPresent()) {
-            /* event is in the current window; reassemble its stack trace */
-            tidToThreadState.getOrDefault(maybeTtid.getAsInt(), new ThreadState()).getStacktrace()
-                    .forEach(stacktrace::addFirst);
-            Optional<RawTrace> maybeT =
-                    rawTraces.stream().filter(p -> p.getThreadInfo().getId() == maybeTtid.getAsInt()).findAny();
-            assert maybeT.isPresent();
-            RawTrace t = maybeT.get();
-            for (int i = 0; i < t.size(); i++) {
-                ReadonlyEventInterface e = t.event(i);
-                if (e.getEventId() > gid) break;
-                if (e.getType() == EventType.INVOKE_METHOD) {
-                    stacktrace.addFirst(e);
-                } else if (e.getType() == EventType.FINISH_METHOD) {
-                    stacktrace.removeFirst();
-                }
-            }
-            stacktrace.addFirst(event);
-        } else {
+        if (gid < baseGID || !maybeTtid.isPresent()) {
             /* event is from previous windows */
-            stacktrace.add(event);
-            stacktrace.add(new Event(0, 0, -1, 0, 0, EventType.INVOKE_METHOD));
+            return Arrays.asList(
+                    event,
+                    new Event(0, 0, -1, 0, 0, EventType.INVOKE_METHOD));
         }
-        return stacktrace;
+        /* event is in the current window; reassemble its stack trace */
+        return state.getTraceProducers().stackTraces.getComputed()
+                .getStackTraceAfterEventBuilder(maybeTtid.getAsInt(), gid)
+                .add(event)
+                .build()
+                .reverse();
     }
 
     /**
@@ -668,7 +654,7 @@ public class Trace {
         }
 
         for (int ttid : state.getThreadsForCurrentWindow()) {
-            tidToEvents.computeIfAbsent(ttid, k -> Collections.emptyList());
+            tidToEvents.putIfAbsent(ttid, Collections.emptyList());
         }
 
         /* debugging code: print out events in order */

@@ -14,6 +14,7 @@ import com.runtimeverification.rvpredict.trace.producers.base.OtidToSignalDepthT
 import com.runtimeverification.rvpredict.trace.producers.base.RawTraces;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
+import com.runtimeverification.rvpredict.trace.producers.base.StackTraces;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
@@ -153,6 +154,11 @@ public class TraceProducers extends ProducerModule {
     public final ComputingProducerWrapper<TtidsToSignalEnabling> ttidsToSignalEnabling =
             new ComputingProducerWrapper<>(
                     new TtidsToSignalEnabling(signalMaskAtWindowStartWithInferences),
+                    this);
+
+    public final ComputingProducerWrapper<StackTraces> stackTraces =
+            new ComputingProducerWrapper<>(
+                    new StackTraces(rawTraces),
                     this);
 
     public void startWindow(

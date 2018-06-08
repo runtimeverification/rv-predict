@@ -64,8 +64,7 @@ public class CompactEventFactory {
 
     private ReadonlyEventInterface dataManipulationEvent(
             Context context, long originalEventId, int dataSizeInBytes, long dataAddress, long dataAddressId,
-            long value, EventType compactType)
-            throws InvalidTraceDataException {
+            long value, EventType compactType) {
         return new CompactEvent(context, compactType, originalEventId) {
             @Override
             int getDataSizeInBytes() {
@@ -348,8 +347,7 @@ public class CompactEventFactory {
         });
     }
 
-    public List<ReadonlyEventInterface> blockSignals(Context context, long originalEventId, long signalMaskNumber)
-            throws InvalidTraceDataException {
+    public List<ReadonlyEventInterface> blockSignals(Context context, long originalEventId, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(
                 new CompactEvent(context, EventType.BLOCK_SIGNALS, originalEventId) {
@@ -365,8 +363,7 @@ public class CompactEventFactory {
                 });
     }
 
-    public List<ReadonlyEventInterface> unblockSignals(Context context, long originalEventId, long signalMaskNumber)
-            throws InvalidTraceDataException {
+    public List<ReadonlyEventInterface> unblockSignals(Context context, long originalEventId, long signalMaskNumber) {
         long signalMask = context.getMemoizedSignalMask(signalMaskNumber);
         return Collections.singletonList(
                 new CompactEvent(context, EventType.UNBLOCK_SIGNALS, originalEventId) {
@@ -441,7 +438,7 @@ public class CompactEventFactory {
         });
     }
 
-    List<ReadonlyEventInterface> exitFunction(Context context, long originalEventId) {
+    public List<ReadonlyEventInterface> exitFunction(Context context, long originalEventId) {
         return Collections.singletonList(new CompactEvent(context, EventType.FINISH_METHOD, originalEventId) {
         });
     }

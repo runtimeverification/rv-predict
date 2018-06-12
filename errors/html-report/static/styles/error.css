@@ -13,6 +13,10 @@ body {
   overflow-y: scroll;
 }
 
+.error-description-header {
+  margin-left: 54px;
+}
+
 .trace {
   padding: 6px 48px 6px 0;
   background-color: #e6e6e6;
@@ -37,7 +41,7 @@ h3.component {
 /********************/
 ul.exp-list {
     margin-top: 0;
-    padding-left: 48px;
+    padding-left: 54px;
 }
 .exp-list ul, .exp-list li {
     padding-left: 0;
@@ -101,14 +105,6 @@ ul.exp-list {
 }
 .exp-list .bar a {
   padding: 0 4px;
-}
-.exp-list .bar a:hover {
-  background-color: #dddcff;
-}
-.exp-list .bar:hover {
-  transition: 0.2s;
-  /* background: linear-gradient(to right, #c7e2f3, #9fcfe2, #83bcd2); */
-  background-color: #def2ff;
 }
 
 .exp-list .expand-btn {
@@ -219,7 +215,7 @@ div.locks li {
 }
 
 .btn.toggle-memory-panel-btn {
-  width: 74px;
+  width: 86px;
   margin-left: 12px;
   font-size: 11px;
   float: right;
@@ -416,8 +412,9 @@ div.memory .variables::-webkit-scrollbar-thumb {
 .bottom-section {
   display: flex;
   width: 100%;
-  flex-flow: row;
   flex-direction: row;
+  padding-left: 54px;
+  box-sizing: border-box;
 }
 
 .bottom-section > div {
@@ -431,23 +428,27 @@ div.memory .variables::-webkit-scrollbar-thumb {
 
 
 .bottom-section .error-description p {
-  padding-left: 24px;
+  padding-left: 0;
   line-height: 1.4em;
 }
 
 .bottom-section .citation {
-  margin-left: 48px;
+  margin-left: 0;
   margin-right: 0;
   line-height: 1.4em;
 }
 
 .bottom-section .citation .cite {
-  padding-left: 48px;
+  padding-left: 0;
 }
 
 @media screen and (max-width: 40.063em) { /* mobile */
   body {
     padding: 0 12px 24px;
+  }
+
+  .error-description-header {
+    margin-left: 0;
   }
 
   h3.component,
@@ -473,6 +474,7 @@ div.memory .variables::-webkit-scrollbar-thumb {
 
   .bottom-section {
     flex-direction: column;
+    padding-left: 0;
   }
 
   .bottom-section .error-description {
@@ -484,6 +486,6 @@ div.memory .variables::-webkit-scrollbar-thumb {
     margin: 0;
   }
   .bottom-section .citation .cite {
-    padding-left: 24px;
+    padding-left: 0;
   }
 }

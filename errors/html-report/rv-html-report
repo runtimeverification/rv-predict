@@ -71,9 +71,11 @@ def highlight_c(code, hl_links, fileid):
 def load_json(filename):
     with open(filename, 'r') as f:
         for line in f:
+            if len(line) == 0:
+                continue
             try:
                 yield json.loads(line)
-            except json.JSONDecodeError:
+            except Exception:
                 print 'error reading: ' + line
 
 dirname = "%s/../share/rv-predict-c/html-report" % os.path.dirname(os.path.realpath(__file__))
@@ -176,6 +178,7 @@ for ix, err in enumerate(errors):
         err[u'missing'] = not os.path.exists(loc[u'abs_file'])
         err[u'file'] = loc[u'rel_file']
         err[u'abs_file'] = loc[u'abs_file']
+        err[u'line'] = loc[u'line']
     else:
         err[u'missing'] = True
         err[u'file'] = u'<unknown>'

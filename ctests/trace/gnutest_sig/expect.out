@@ -1,4 +1,4 @@
-tid 1.0 {} begin thread generation 0
+tid 1.0 {} begin thread
 tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:99 enter function cfa . return {}
 tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:106 establish signal action signal 6 handler 0x00000000402860 mask #4
 tid 1.1 {} enter signal handler signal 6 handler 0x0000000040286

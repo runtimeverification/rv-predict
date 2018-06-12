@@ -1,4 +1,4 @@
-tid 1.0 {} begin thread generation 0
+tid 1.0 {} begin thread
 tid 1.0 in main at .../xchg/xchg.c:17 enter function cfa . return {}
 tid 1.0 in main at .../xchg/xchg.c:18 store 4 0x00000100 -> u32 at xchg.c;main
 tid 1.0 in main at .../xchg/xchg.c:19 store 8 0x0000000f00000000 -> u64 at xchg.c;main

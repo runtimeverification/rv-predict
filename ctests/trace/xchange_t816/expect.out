@@ -1,4 +1,4 @@
-tid 1.0 {} begin thread generation 0
+tid 1.0 {} begin thread
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:27 enter function cfa . return {}
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:28 atomic load 1 0x33 <- initial_u8 at xchange_t816.c
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:28 store 1 0x33 -> u_lcl_u8 at xchange_t816.c;main

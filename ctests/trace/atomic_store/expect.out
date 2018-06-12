@@ -1,4 +1,4 @@
-tid 1.0 {} begin thread generation 0
+tid 1.0 {} begin thread
 tid 1.0 in main at .../atomic_store/atomic_store.c:35 enter function cfa . return {}
 tid 1.0 in main at .../atomic_store/atomic_store.c:53 atomic store 1 0xfe -> glbl_u8 at atomic_store.c
 tid 1.0 in main at .../atomic_store/atomic_store.c:54:11 atomic store 2 0x0040 -> glbl_u16 at atomic_store.c

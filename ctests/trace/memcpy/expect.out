@@ -1,4 +1,4 @@
-tid 1.0 {} begin thread generation 0
+tid 1.0 {} begin thread
 tid 1.0 in main at .../memcpy/memcpy.c:32 enter function cfa . return {}
 tid 1.0 in main at .../memcpy/memcpy.c:34 load 8 0x3736353433323130 <- disjoint.src[0] at memcpy.c
 tid 1.0 in main at .../memcpy/memcpy.c:34 store 8 0x3736353433323130 -> disjoint.dst[0] at memcpy.c

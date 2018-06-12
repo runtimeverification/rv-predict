@@ -21,6 +21,12 @@ COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
+SHLIB_MAJOR=1
+SHLIB_MINOR=9
+MKSHLIB=yes
+MKSTATICLIB=no
+LDFLAGS+=-Wl,--version-script=$(.CURDIR)/version.map
+LDFLAGS+=-Wl,-T$(.CURDIR)/ldscript
 SRCS+=access.c const.c deltops.c func.c lock.c notimpl.c
 SRCS+=opinit.c
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c
@@ -29,7 +35,7 @@ SRCS+=thread.c trace.c
 SRCS+=intr.c
 SRCS+=io.c
 WARNS=4
-LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
+LINKS=${LIBDIR}/librvprt.so ${LIBDIR}/librvprt64.so
 LIBC_A!=$(CC) -print-file-name=libc.a
 
 .if 1

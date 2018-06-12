@@ -14,6 +14,7 @@
 
 #include "init.h"
 #include "interpose.h"
+#include "lock.h"
 #include "relay.h"
 #include "rvpsignal.h"
 #include "supervise.h"
@@ -197,7 +198,7 @@ rvp_stop_transmitter(void)
 	rvp_wake_transmitter_locked();
 	stopping = true;
 	while (nwake > 0) {
-		rc = pthread_cond_wait(&stopcond, &thread_mutex);
+		rc = real_pthread_cond_wait(&stopcond, &thread_mutex);
 		if (rc != 0) {
 			errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",
 			    __func__, strerror(rc));
@@ -248,7 +249,7 @@ serialize(void *arg __unused)
 				    __func__, strerror(rc));
 			}
 
-			rc = pthread_cond_wait(&wakecond, &thread_mutex);
+			rc = real_pthread_cond_wait(&wakecond, &thread_mutex);
 			if (rc != 0) {
 				thread_unlock(&oldmask);
 				errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",
@@ -469,11 +470,11 @@ rvp_postfork_init(void)
 		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
 	if (sigfillset(&allmask) == -1)
 		err(EXIT_FAILURE, "%s: sigfillset", __func__);
-	if (pthread_mutex_init(&thread_mutex, NULL) != 0)
+	if (real_pthread_mutex_init(&thread_mutex, NULL) != 0)
 		err(EXIT_FAILURE, "%s: pthread_mutex_init", __func__);
-	if (pthread_cond_init(&wakecond, NULL) != 0)
+	if (real_pthread_cond_init(&wakecond, NULL) != 0)
 		err(EXIT_FAILURE, "%s: pthread_cond_init", __func__);
-	if (pthread_cond_init(&stopcond, NULL) != 0)
+	if (real_pthread_cond_init(&stopcond, NULL) != 0)
 		err(EXIT_FAILURE, "%s: pthread_cond_init", __func__);
 	/* The 'begin' op for the first thread (tid 1) has to be
 	 * written directly after the header, and it is by virtue of

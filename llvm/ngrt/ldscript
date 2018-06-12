@@ -1,0 +1,10 @@
+SECTIONS
+{
+        __rvpredict_text_begin = . ;
+        .text.rvpredict :
+        {
+                *.os(.text)
+        }
+        __rvpredict_text_end = . ;
+}
+INSERT AFTER .text;

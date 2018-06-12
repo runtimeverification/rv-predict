@@ -20,12 +20,15 @@
  */
 
 struct {
+	_Atomic bool protected;
 	int count;
-} shared = {.count = 0};
+} shared = {.protected = false, .count = 0};
 
 static void
 handler(int signum __unused)
 {
+	if (shared.protected)
+		return;
 	shared.count = 10;
 }
 
@@ -39,7 +42,9 @@ main(int argc __unused, char **argv)
 	establish(handler, basename(argv[0])[0] == 'r');
 
 	for (i = 0; i < 10; i++) {
+		shared.protected = true;
 		shared.count = i;
+		shared.protected = false;
 		pause();
 	}
 

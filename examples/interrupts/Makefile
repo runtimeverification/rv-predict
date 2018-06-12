@@ -15,11 +15,14 @@ FILES+=$(SRCS.3)
 FILES+=$(SRCS.4)
 FILES+=$(SRCS.5)
 FILES+=$(SRCS.6)
+FILES+=$(SRCS.p1)
+FILES+=$(SRCS.p2)
+FILES+=$(SRCS.p3)
 FILES+=$(SRCS.sim)
 FILESMODE=0644
 
 .if $(MKBIN:Uno) == "yes"
-PROGS=	1 2 3 4 5 6
+PROGS=	p1 p2 p3 1 2 3 4 5 6
 PROGS+=	sim
 .endif
 
@@ -33,6 +36,9 @@ CPPFLAGS+=-I$(HOME)/include
 #CPPFLAGS.spcq+=-D__STDC_NO_ATOMICS__
 WARNS=4
 
+SRCS.p1=p1.c lib.c
+SRCS.p2=p2.c lib.c
+SRCS.p3=p3.c lib.c
 SRCS.1=1.c lib.c
 SRCS.2=2.c lib.c
 SRCS.3=3.c lib.c

@@ -250,6 +250,7 @@ rvp_online_analysis_start(void)
 	pid_t supervisee_pid, analysis_pid, parent_pid;
 	int pipefd[2];
 	sigset_t waitset;
+	pid_t quit_pid;
 	int signo;
 
 	char *const binpath =
@@ -385,9 +386,11 @@ rvp_online_analysis_start(void)
 		fprintf(stderr, "%s could not start the analysis process.\n",
 		    product_name);
 		goto supervisee_report;
-	} else if (waitpid(analysis_pid, &astatus, WNOHANG) == -1) {
+	} else if ((quit_pid = waitpid(analysis_pid, &astatus, WNOHANG)) == -1) {
 		err(EXIT_FAILURE, "%s: waitpid(analyzer)",
 		    product_name);
+	} else if (quit_pid == analysis_pid) {
+		;
 	} else while (sigwait(&waitset, &signo) == 0) {
 		dbg_printf("%s: got signal %d (%s)\n", product_name,
 		    signo, strsignal(signo));

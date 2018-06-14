@@ -1211,10 +1211,12 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_ENTERSIG:
 		printf(
 		    "%s %s signal %" PRIu32
-		    " handler %#016" PRIxPTR " generation %" PRIu64 "\n",
+		    " handler %s generation %" PRIu64 "\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_entersig.signum,
-		    ub->ub_entersig.handler, ub->ub_entersig.generation);
+		    (*emitters->insnptr_to_string)(ps, buf[1], sizeof(buf[1]),
+		        ub->ub_entersig.handler),
+		    ub->ub_entersig.generation);
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
@@ -1231,11 +1233,12 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 		break;
 	case RVP_OP_SIGEST:
 		printf("%s %s signal %" PRIu32
-		    " handler %#016" PRIxPTR " mask #%" PRIu32 "\n",
+		    " handler %s mask #%" PRIu32 "\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    ub->ub_sigest.signum,
-		    ub->ub_sigest.handler,
+		    (*emitters->insnptr_to_string)(ps, buf[1], sizeof(buf[1]),
+		        ub->ub_sigest.handler),
 		    ub->ub_sigest.masknum);
 		break;
 	case RVP_OP_SIGMASKMEMO:

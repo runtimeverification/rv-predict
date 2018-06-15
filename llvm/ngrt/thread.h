@@ -32,6 +32,7 @@ struct _rvp_thread {
 	 */
 	uint64_t _Atomic	t_intrmask;
 	uint32_t _Atomic	t_idepth;
+	bool _Atomic		t_in_maskchg;
 	rvp_ring_t * _Atomic	t_intr_ring;
 	rvp_ring_stats_t	t_stats;
 };

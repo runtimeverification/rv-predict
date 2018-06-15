@@ -337,8 +337,21 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
-	t->t_intrmask = omask |
-	    (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
+	if (t->t_in_maskchg) {
+		sigset_t tmpmask;
+
+		if (real_pthread_sigmask(SIG_SETMASK, NULL, &tmpmask) == -1)
+			abort();
+		t->t_intrmask = sigset_to_mask(&tmpmask) & ~rvp_unmaskable;
+#if 0
+	} else if ((omask & __BIT(signo_to_bitno(signum))) != 0) {
+		abort();
+#endif
+	} else {
+		t->t_intrmask = omask |
+		    (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
+	}
+
 	r->r_lgen = oldr->r_lgen;
 
 	/* When the serializer reaches this ring, it will emit a
@@ -738,6 +751,11 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	if (masked != 0)
 		rvp_sigsim_raise_all_in_mask(masked);
 
+	const bool omaskchg = t->t_in_maskchg;
+
+	if (!omaskchg)
+		t->t_in_maskchg = true;
+
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
@@ -745,6 +763,9 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		rvp_sigsim_raise_all_in_mask(unmasked);
 
 	t->t_intrmask = nmask;
+
+	if (!omaskchg)
+		t->t_in_maskchg = false;
 
 	if (oldset != NULL) {
 		const uint64_t actual_omask = sigset_to_mask(oldset);

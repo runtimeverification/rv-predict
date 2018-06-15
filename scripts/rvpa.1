@@ -70,6 +70,35 @@ parameter overrides all previous
 and
 .Fl Fl output
 parameters on the command line.
+.It Fl Fl interrupts-target Ar number | Fl Fl interrupt-target Ar number
+.It Fl Fl interrupts-target Ns = Ns Ar number | Fl Fl interrupt-target Ns = Ns Ar number 
+If there are fewer than
+.Ar number
+occurrences of any interrupt
+.Va I
+in a window
+.Va W ,
+then
+.Tn RV-Predict/C
+will copy occurrences of
+.Va I
+from prior windows into window
+.Va W
+until either there are
+.Ar number
+occurrences in
+.Va W
+or there are no more occurrences to copy.
+.Pp
+The default setting of
+.Ar number
+is 0:
+no occurrences are copied from prior windows.
+Increasing
+.Ar number
+can improve the prediction power of
+.Tn RV-Predict/C ,
+however, it will also prolong computation for each window.
 .It Fl Fl window Ar size | Fl Fl window Ns = Ns Ar size
 .Tn RV-Predict/C
 segments

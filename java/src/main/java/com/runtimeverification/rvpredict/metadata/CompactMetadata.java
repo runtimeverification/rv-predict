@@ -63,7 +63,10 @@ public class CompactMetadata implements MetadataInterface {
     public String getLockSig(ReadonlyEventInterface event, Trace trace) {
         StringBuilder sb = new StringBuilder();
         LockRepresentation lockRepresentation = event.getLockRepresentation();
-        if (lockRepresentation.getLockType() != LockRepresentation.LockType.WRITE_LOCK) {
+        /* Don't print this "<Type>Lock@" prefix, for now, because it really
+         * confuses the symbolization / report generation.
+         */
+        if (false && lockRepresentation.getLockType() != LockRepresentation.LockType.WRITE_LOCK) {
             // All the compact trace locks should be write locks, this code is just in case
             // something unexpected happens.
             sb.append(lockRepresentation.getLockName());

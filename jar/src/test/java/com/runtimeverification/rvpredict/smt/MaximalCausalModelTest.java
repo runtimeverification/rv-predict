@@ -2185,6 +2185,115 @@ public class MaximalCausalModelTest {
         Assert.assertTrue(hasRace(rawTraces, event1, event2, tu, true));
     }
 
+    @Test
+    public void raceWithPreviousSignals() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        when(mockConfiguration.desiredInterruptsPerSignalAndWindow()).thenReturn(1);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<List<RawTrace>> rawTraces = Arrays.asList(
+                Arrays.asList(
+                    tu.createRawTrace(
+                            tu.setSignalMask(ALL_SIGNALS_DISABLED_MASK),
+                            tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, ALL_SIGNALS_DISABLED_MASK),
+                            tu.setSignalMask(SIGNAL_1_ENABLED_MASK),
+                            tu.enableSignal(SIGNAL_NUMBER_2)),
+                    tu.createRawTrace(
+                            tu.switchThread(THREAD_1, ONE_SIGNAL),
+                            tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                            tu.getSignalMask(SIGNALS_1_AND_2_ENABLED_MASK),
+                            e1 = tu.nonAtomicStore(ADDRESS_2, VALUE_1),
+                            tu.exitSignal())),
+                Collections.singletonList(
+                        tu.createRawTrace(
+                                tu.switchThread(THREAD_1, NO_SIGNAL),
+                                e2 = tu.nonAtomicStore(ADDRESS_2, VALUE_1))));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRaceMultipleWindows(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void signalsInterruptingTheSameThreadCannotOverlapWithPreviousSignals() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        when(mockConfiguration.desiredInterruptsPerSignalAndWindow()).thenReturn(10);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<List<RawTrace>> rawTraces = Arrays.asList(
+                Arrays.asList(
+                    tu.createRawTrace(
+                            tu.disableSignal(SIGNAL_NUMBER_1),
+                            tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                            tu.enableSignal(SIGNAL_NUMBER_1)),
+                    tu.createRawTrace(
+                            tu.switchThread(THREAD_1, ONE_SIGNAL),
+                            tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                            e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                            tu.exitSignal())),
+                Arrays.asList(
+                        tu.createRawTrace(
+                                false,
+                                tu.switchThread(THREAD_1, NO_SIGNAL),
+                                tu.disableSignal(SIGNAL_NUMBER_1),
+                                tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                                tu.enableSignal(SIGNAL_NUMBER_1)),
+                        tu.createRawTrace(
+                                tu.switchThread(THREAD_1, ONE_SIGNAL),
+                                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                                e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                                tu.exitSignal())
+                ));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRaceMultipleWindows(rawTraces, event1, event2, tu, true));
+    }
+
+    @Test
+    public void previousSignalFromThreadThatEndedCanInterruptFutureThread() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        when(mockConfiguration.desiredInterruptsPerSignalAndWindow()).thenReturn(10);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<List<RawTrace>> rawTraces = Arrays.asList(
+                Arrays.asList(
+                        tu.createRawTrace(
+                                tu.disableSignal(SIGNAL_NUMBER_1),
+                                tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                                tu.enableSignal(SIGNAL_NUMBER_1)),
+                        tu.createRawTrace(
+                                tu.switchThread(THREAD_1, ONE_SIGNAL),
+                                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                                e1 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                                tu.exitSignal()),
+                        tu.createRawTrace(
+                                tu.switchThread(THREAD_2, NO_SIGNAL),
+                                tu.threadJoin(THREAD_1))
+                ),
+                Collections.singletonList(
+                        tu.createRawTrace(
+                                false,
+                                tu.switchThread(THREAD_2, NO_SIGNAL),
+                                tu.enableSignal(SIGNAL_NUMBER_1),
+                                e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                                tu.exitSignal()))
+                );
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertTrue(hasRaceMultipleWindows(rawTraces, event1, event2, tu, true));
+    }
+
     // TODO: Tests with writes that enable certain reads, both with and without signals.
     // TODO: Test that a signals stops their thread, i.e. it does not conflict with its own thread in a complex way,
     // i.e. it does not race with the interruption point, but it enables a subsequent read which allows one to

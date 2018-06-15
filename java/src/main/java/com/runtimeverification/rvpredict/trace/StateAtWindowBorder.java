@@ -1,13 +1,16 @@
 package com.runtimeverification.rvpredict.trace;
 
+import com.google.common.collect.EvictingQueue;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskForEvents;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -34,7 +37,16 @@ class StateAtWindowBorder {
     private final Map<Integer, SignalMask> signalMasks = new HashMap<>();
     private final Map<Long, ReadonlyEventInterface> signalNumberToLastWindowEstablishEvents
             = new HashMap<>();
+
+    private final Map<Long, EvictingQueue<RawTrace>> signalNumberToTraces
+            = new HashMap<>();
+
     private OptionalLong minEventIdForWindow = OptionalLong.empty();
+    private int maxSignalEventQueue;
+
+    StateAtWindowBorder(int maxSignalEventQueue) {
+        this.maxSignalEventQueue = maxSignalEventQueue;
+    }
 
     void copyFrom(StateAtWindowBorder other) {
         ongoingThreadsCache.clear();
@@ -45,6 +57,10 @@ class StateAtWindowBorder {
         threadsJoined.addAll(other.threadsJoined);
         signalNumberToLastWindowEstablishEvents.clear();
         signalNumberToLastWindowEstablishEvents.putAll(other.signalNumberToLastWindowEstablishEvents);
+
+        signalNumberToTraces.clear();
+        other.signalNumberToTraces.forEach((key, value) -> signalNumberToTraces.put(key, cloneSignalTraceQueue(value)));
+
         threadsForCurrentWindow.clear();
         threadsForCurrentWindow.addAll(other.threadsForCurrentWindow);
         signalMasks.clear();
@@ -94,6 +110,18 @@ class StateAtWindowBorder {
         ongoingThreadsCache.remove(ttid);
     }
 
+    void onSignalThread(RawTrace rawTrace) {
+        OptionalLong maybeSignalNumber = rawTrace.getThreadInfo().getSignalNumber();
+        if (maybeSignalNumber.isPresent()
+                && containsEvent(rawTrace, EventType.ENTER_SIGNAL)
+                && containsEvent(rawTrace, EventType.EXIT_SIGNAL)) {
+            signalNumberToTraces.computeIfAbsent(
+                    maybeSignalNumber.getAsLong(),
+                    k-> EvictingQueue.create(maxSignalEventQueue)
+            ).add(rawTrace.cloneAsPreviousWindowTrace());
+        }
+    }
+
     void processEvent(ReadonlyEventInterface event, int ttid) {
         if (event.isSignalEvent()) {
             if (event.getType() == EventType.ESTABLISH_SIGNAL) {
@@ -119,7 +147,7 @@ class StateAtWindowBorder {
         return threadsJoined.contains(ttid);
     }
 
-    Collection<Integer> getThreadsForCurrentWindow() {
+    Set<Integer> getThreadsForCurrentWindow() {
         return threadsForCurrentWindow;
     }
 
@@ -129,11 +157,33 @@ class StateAtWindowBorder {
         return localMinEventIdForWindow.getAsLong();
     }
 
+    List<RawTrace> getFormerSignalTraces() {
+        List<RawTrace> formerInterruptions = new ArrayList<>();
+        signalNumberToTraces.values().forEach(formerInterruptions::addAll);
+        return formerInterruptions;
+    }
+
+    private EvictingQueue<RawTrace> cloneSignalTraceQueue(EvictingQueue<RawTrace> traces) {
+        EvictingQueue<RawTrace> newTraces = EvictingQueue.create(maxSignalEventQueue);
+        newTraces.addAll(traces);
+        return newTraces;
+    }
+
+    private boolean containsEvent(RawTrace rawTrace, EventType type) {
+        for (int i = 0; i < rawTrace.size(); i++) {
+            if (rawTrace.event(i).getType() == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void processEvent(long eventId) {
         if (!minEventIdForWindow.isPresent()) {
             minEventIdForWindow = OptionalLong.of(eventId);
+        } else {
+            minEventIdForWindow = OptionalLong.of(Math.min(eventId, minEventIdForWindow.getAsLong()));
         }
-        minEventIdForWindow = OptionalLong.of(Math.min(eventId, minEventIdForWindow.getAsLong()));
     }
 
     private void establishSignal(ReadonlyEventInterface event) {

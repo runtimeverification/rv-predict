@@ -7,19 +7,20 @@ import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.ThreadInfos;
+import com.runtimeverification.rvpredict.trace.producers.base.DesiredThreadCountForSignal;
 import com.runtimeverification.rvpredict.trace.producers.base.InterThreadSyncEvents;
 import com.runtimeverification.rvpredict.trace.producers.base.MinEventIdForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.OtidToMainTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.OtidToSignalDepthToTtidAtWindowStart;
+import com.runtimeverification.rvpredict.trace.producers.base.PreviousSignalsTraceMerger;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTraces;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
 import com.runtimeverification.rvpredict.trace.producers.base.StackTraces;
-import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetLeaf;
-import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidToStartAndJoinEventsForWindow;
 import com.runtimeverification.rvpredict.trace.producers.signals.InterruptedEvents;
 import com.runtimeverification.rvpredict.trace.producers.signals.SignalEnabledAtStartInferenceFromInterruptions;
 import com.runtimeverification.rvpredict.trace.producers.signals.SignalEnabledAtStartInferenceFromReads;
@@ -29,18 +30,26 @@ import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskAtWin
 import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskAtWindowStartLeaf;
 import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskAtWindowStartWithoutInferences;
 import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskForEvents;
+import com.runtimeverification.rvpredict.trace.producers.signals.ThreadsWhereSignalIsEnabled;
 import com.runtimeverification.rvpredict.trace.producers.signals.TtidsToSignalEnabling;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+// pw as a prefix means that a given producer works with traces from the previous windows which may be added to the
+// current one.
+// 'merged' as a prefix means that a given producer works with traces both from the previous windows and from the
+// current one.
 public class TraceProducers extends ProducerModule {
-    public final LeafProducerWrapper<List<RawTrace>, RawTraces> rawTraces =
+    private final LeafProducerWrapper<List<RawTrace>, RawTraces> currentWindowRawTraces =
             new LeafProducerWrapper<>(new RawTraces(), this);
-    private final LeafProducerWrapper<Collection<Integer>, TtidsForCurrentWindow> ttidsForCurrentWindow =
-            new LeafProducerWrapper<>(new TtidsForCurrentWindow(), this);
+    private final LeafProducerWrapper<List<RawTrace>, RawTraces> pwSignalsRawTraces =
+            new LeafProducerWrapper<>(new RawTraces(), this);
+    private final LeafProducerWrapper<Integer, DesiredThreadCountForSignal> desiredThreadCountForSignal =
+            new LeafProducerWrapper<>(new DesiredThreadCountForSignal(), this);
+    private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsForCurrentWindow =
+            new LeafProducerWrapper<>(new TtidSetLeaf(), this);
     public final LeafProducerWrapper<ThreadInfos, ThreadInfosComponent> threadInfosComponent =
             new LeafProducerWrapper<>(new ThreadInfosComponent(), this);
     private final LeafProducerWrapper<Map<Integer, SignalMask>,  SignalMaskAtWindowStartLeaf>
@@ -58,7 +67,7 @@ public class TraceProducers extends ProducerModule {
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
 
     public final ComputingProducerWrapper<InterThreadSyncEvents> interThreadSyncEvents =
-            new ComputingProducerWrapper<>(new InterThreadSyncEvents(rawTraces), this);
+            new ComputingProducerWrapper<>(new InterThreadSyncEvents(currentWindowRawTraces), this);
     public final ComputingProducerWrapper<TtidToStartAndJoinEventsForWindow> startAndJoinEventsForWindow =
             new ComputingProducerWrapper<>(
                     new TtidToStartAndJoinEventsForWindow(interThreadSyncEvents, otidToMainTtid), this);
@@ -83,9 +92,9 @@ public class TraceProducers extends ProducerModule {
             new ComputingProducerWrapper<>(
                     new SignalMaskAtWindowStartWithoutInferences(signalMaskAtWindowStartLeaf), this);
     public final ComputingProducerWrapper<MinEventIdForWindow> minEventIdForWindow =
-            new ComputingProducerWrapper<>(new MinEventIdForWindow(rawTraces), this);
+            new ComputingProducerWrapper<>(new MinEventIdForWindow(currentWindowRawTraces), this);
     private final ComputingProducerWrapper<RawTracesByTtid> rawTracesByTtid =
-            new ComputingProducerWrapper<>(new RawTracesByTtid(rawTraces), this);
+            new ComputingProducerWrapper<>(new RawTracesByTtid(currentWindowRawTraces), this);
     private final ComputingProducerWrapper<SortedTtidsWithParentFirst> sortedTtidsWithParentFirst =
             new ComputingProducerWrapper<>(
                     new SortedTtidsWithParentFirst(ttidsForCurrentWindow, threadInfosComponent),
@@ -119,7 +128,9 @@ public class TraceProducers extends ProducerModule {
     private final ComputingProducerWrapper<SignalEnabledAtStartInferenceFromReads>
             signalEnabledAtStartInferenceFromReads =
             new ComputingProducerWrapper<>(
-                    new SignalEnabledAtStartInferenceFromReads(rawTraces, signalMaskForEventsWithoutInferences),
+                    new SignalEnabledAtStartInferenceFromReads(
+                            currentWindowRawTraces,
+                            signalMaskForEventsWithoutInferences),
                     this);
     private final ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure>
             signalEnabledAtStartInferenceTransitiveClosure =
@@ -142,6 +153,7 @@ public class TraceProducers extends ProducerModule {
                             signalEnabledAtStartInferenceTransitiveClosure,
                             ttidsForCurrentWindow),
                     this);
+    // TODO: this should also contain the merged ones, otherwise we can't interrupt previous window signals.
     public final ComputingProducerWrapper<SignalMaskForEvents> signalMaskForEvents =
             new ComputingProducerWrapper<>(
                     new SignalMaskForEvents(
@@ -155,19 +167,38 @@ public class TraceProducers extends ProducerModule {
             new ComputingProducerWrapper<>(
                     new TtidsToSignalEnabling(signalMaskAtWindowStartWithInferences),
                     this);
+    public final ComputingProducerWrapper<ThreadsWhereSignalIsEnabled> threadsWhereSignalIsEnabled =
+            new ComputingProducerWrapper<>(
+                    new ThreadsWhereSignalIsEnabled(
+                            signalMaskForEvents,
+                            ttidsForCurrentWindow,
+                            rawTracesByTtid,
+                            signalMaskAtWindowStartWithInferences),
+                    this);
+
+    public final ComputingProducerWrapper<PreviousSignalsTraceMerger> mergedRawTraces =
+            new ComputingProducerWrapper<>(
+                    new PreviousSignalsTraceMerger(
+                            currentWindowRawTraces, pwSignalsRawTraces,
+                            threadsWhereSignalIsEnabled,
+                            desiredThreadCountForSignal),
+                    this);
 
     public final ComputingProducerWrapper<StackTraces> stackTraces =
             new ComputingProducerWrapper<>(
-                    new StackTraces(rawTraces),
+                    new StackTraces(mergedRawTraces),
                     this);
 
     public void startWindow(
-            List<RawTrace> rawTraces, Collection<Integer> threadsForCurrentWindow, ThreadInfos threadInfos,
+            List<RawTrace> previousSignalsRawTraces, List<RawTrace> currentWindowRawTraces,
+            Set<Integer> threadsForCurrentWindow, ThreadInfos threadInfos,
             Map<Integer, SignalMask> signalMaskAtWindowStart,
             Set<Integer> ttidsStartedAtWindowStart, Set<Integer> ttidsStartedAtWindowEnd,
-            Set<Integer> ttidsFinishedAtWindowStart, Set<Integer> ttidsFinishedAtWindowEnd) {
+            Set<Integer> ttidsFinishedAtWindowStart, Set<Integer> ttidsFinishedAtWindowEnd,
+            int desiredThreadCountForSignal) {
         reset();
-        this.rawTraces.set(rawTraces);
+        this.pwSignalsRawTraces.set(previousSignalsRawTraces);
+        this.currentWindowRawTraces.set(currentWindowRawTraces);
         this.ttidsForCurrentWindow.set(threadsForCurrentWindow);
         this.threadInfosComponent.set(threadInfos);
         this.signalMaskAtWindowStartLeaf.set(signalMaskAtWindowStart);
@@ -176,5 +207,6 @@ public class TraceProducers extends ProducerModule {
         this.ttidsStartedAtWindowEnd.set(ttidsStartedAtWindowEnd);
         this.ttidsFinishedAtWindowStart.set(ttidsFinishedAtWindowStart);
         this.ttidsFinishedAtWindowEnd.set(ttidsFinishedAtWindowEnd);
+        this.desiredThreadCountForSignal.set(desiredThreadCountForSignal);
     }
 }

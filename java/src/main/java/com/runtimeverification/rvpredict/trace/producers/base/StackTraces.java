@@ -6,6 +6,7 @@ import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 
 import java.util.ArrayDeque;
@@ -17,8 +18,9 @@ import java.util.Optional;
 import java.util.OptionalInt;
 
 public class StackTraces extends ComputingProducer<StackTraces.State> {
-    private final RawTraces rawTraces;
-    public StackTraces(ComputingProducerWrapper<RawTraces> rawTraces) {
+    private final RawTracesCollection rawTraces;
+    public <T extends Producer & RawTracesCollection>StackTraces(
+            ComputingProducerWrapper<T> rawTraces) {
         super(new State());
         this.rawTraces = rawTraces.getAndRegister(this);
     }

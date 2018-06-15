@@ -2,13 +2,14 @@ package com.runtimeverification.rvpredict.trace.producers.base;
 
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 
 import java.util.OptionalLong;
 
 public class MinEventIdForWindow extends ComputingProducer<MinEventIdForWindow.State> {
-    private final RawTraces rawTraces;
+    private final RawTracesCollection rawTraces;
 
     protected static class State implements ProducerState {
         private OptionalLong maybeMinId = OptionalLong.empty();
@@ -19,7 +20,7 @@ public class MinEventIdForWindow extends ComputingProducer<MinEventIdForWindow.S
         }
     }
 
-    public MinEventIdForWindow(ComputingProducerWrapper<RawTraces> rawTraces) {
+    public <T extends Producer & RawTracesCollection> MinEventIdForWindow(ComputingProducerWrapper<T> rawTraces) {
         super(new State());
         this.rawTraces = rawTraces.getAndRegister(this);
     }

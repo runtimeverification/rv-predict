@@ -1,11 +1,12 @@
 package com.runtimeverification.rvpredict.trace.producers.base;
 
 import com.runtimeverification.rvpredict.algorithm.TopologicalSort;
+import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
+import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
 import com.runtimeverification.rvpredict.trace.ThreadType;
-import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
-import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SortedTtidsWithParentFirst extends ComputingProducer<SortedTtidsWithParentFirst.State> {
-    private final TtidsForCurrentWindow ttidsForCurrentWindow;
+    private final TtidSet ttidsForCurrentWindow;
     private final ThreadInfosComponent threadInfosComponent;
 
     protected static class State implements ProducerState {
@@ -31,8 +32,8 @@ public class SortedTtidsWithParentFirst extends ComputingProducer<SortedTtidsWit
         }
     }
 
-    public SortedTtidsWithParentFirst(
-            ComputingProducerWrapper<TtidsForCurrentWindow> ttidsForCurrentWindow,
+    public <T extends Producer & TtidSet> SortedTtidsWithParentFirst(
+            ComputingProducerWrapper<T> ttidsForCurrentWindow,
             ComputingProducerWrapper<ThreadInfosComponent> threadInfosComponent) {
         super(new State());
         this.ttidsForCurrentWindow = ttidsForCurrentWindow.getAndRegister(this);
@@ -90,8 +91,8 @@ public class SortedTtidsWithParentFirst extends ComputingProducer<SortedTtidsWit
         List<ThreadInfo> signals = ttidsForCurrentWindow.getTtids().stream()
                 .map(threadInfosComponent::getThreadInfo)
                 .filter(threadInfo -> threadInfo.getThreadType() == ThreadType.SIGNAL)
+                .sorted(Comparator.comparingInt(ThreadInfo::getSignalDepth))
                 .collect(Collectors.toList());
-        signals.sort(Comparator.comparingInt(ThreadInfo::getSignalDepth));
         for (ThreadInfo threadInfo : signals) {
             getState().sortedTtidsWithParentFirst.add(threadInfo.getId());
         }

@@ -52,12 +52,23 @@ extern __rettype							\
 	    __VA_ARGS__);						\
 	__asm(".symver __rvpredict" #__major #__minor #__teeny "_" #__fn ", " #__fn __delim "GLIBC_" #__major "." #__minor "." #__teeny)
 
-#define	INTERPOSE_DEFAULT_VER3(__major, __minor, __teeny, __rettype, __fn, ...)\
-	_INTERPOSE_VER3_IMPL(__major, __minor, __teeny, "@@",		\
-	                     __rettype, __fn, __VA_ARGS__)
-
+/* Emit assembly that maps the glibc versioned symbol to Predict's
+ * versioned implementation---e.g., maps pthread_cond_wait@GLIBC_2.3.2
+ * to __rvpredict232_pthread_cond_wait.
+ */
 #define	INTERPOSE_VER3(__major, __minor, __teeny, __rettype, __fn, ...) \
 	_INTERPOSE_VER3_IMPL(__major, __minor, __teeny, "@",		\
+	                     __rettype, __fn, __VA_ARGS__)
+
+/* Emit assembly that maps the glibc versioned symbol to Predict's
+ * versioned implementation---e.g., maps pthread_cond_wait@@GLIBC_2.3.2
+ * to __rvpredict232_pthread_cond_wait.
+ *
+ * Indicate that this version is the default using the `@@`
+ * delimiter.
+ */
+#define	INTERPOSE_DEFAULT_VER3(__major, __minor, __teeny, __rettype, __fn, ...)\
+	_INTERPOSE_VER3_IMPL(__major, __minor, __teeny, "@@",		\
 	                     __rettype, __fn, __VA_ARGS__)
 
 // asm(".symver " __rvpredict##__major##__minor##__teeny##_##__fn " " #__fn "@GLIBC_" #__major "." #__minor "." #__teeny 

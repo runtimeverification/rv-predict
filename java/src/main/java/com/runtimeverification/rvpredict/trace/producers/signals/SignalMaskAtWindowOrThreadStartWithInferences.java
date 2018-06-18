@@ -1,10 +1,11 @@
 package com.runtimeverification.rvpredict.trace.producers.signals;
 
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.signals.SignalMismatchError;
-import com.runtimeverification.rvpredict.trace.producers.base.TtidsForCurrentWindow;
+import com.runtimeverification.rvpredict.trace.producers.base.TtidSet;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,7 +14,7 @@ public class SignalMaskAtWindowOrThreadStartWithInferences
         extends SignalMaskAtWindowStart<SignalMaskAtWindowOrThreadStartWithInferences.State> {
     private final SignalMaskAtWindowStart<? extends ProducerState> signalMaskAtWindowStart;
     private final SignalEnabledAtStartInferenceTransitiveClosure signalEnabledAtStartInferenceTransitiveClosure;
-    private final TtidsForCurrentWindow ttidsForCurrentWindow;
+    private final TtidSet ttidsForCurrentWindow;
 
     protected static class State implements ProducerState {
         private final Map<Integer, SignalMask> signalMasks = new HashMap<>();
@@ -25,12 +26,12 @@ public class SignalMaskAtWindowOrThreadStartWithInferences
 
     }
 
-    public SignalMaskAtWindowOrThreadStartWithInferences(
+    public <T extends Producer & TtidSet> SignalMaskAtWindowOrThreadStartWithInferences(
             ComputingProducerWrapper<? extends SignalMaskAtWindowStart<? extends ProducerState>>
                     signalMaskAtWindowStart,
             ComputingProducerWrapper<SignalEnabledAtStartInferenceTransitiveClosure>
                     signalEnabledAtStartInferenceTransitiveClosure,
-            ComputingProducerWrapper<TtidsForCurrentWindow> ttidsForCurrentWindow) {
+            ComputingProducerWrapper<T> ttidsForCurrentWindow) {
         super(new State());
         this.signalMaskAtWindowStart = signalMaskAtWindowStart.getAndRegister(this);
         this.signalEnabledAtStartInferenceTransitiveClosure =

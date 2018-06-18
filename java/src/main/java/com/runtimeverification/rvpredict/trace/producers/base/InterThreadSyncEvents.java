@@ -3,13 +3,14 @@ package com.runtimeverification.rvpredict.trace.producers.base;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class InterThreadSyncEvents extends ComputingProducer<InterThreadSyncEvents.State> {
-    private final RawTraces rawTraces;
+    private final RawTracesCollection rawTraces;
 
     protected static class State implements ProducerState {
         private final List<ReadonlyEventInterface> syncEvents = new ArrayList<>();
@@ -20,7 +21,7 @@ public class InterThreadSyncEvents extends ComputingProducer<InterThreadSyncEven
         }
     }
 
-    public InterThreadSyncEvents(ComputingProducerWrapper<RawTraces> rawTraces) {
+    public <T extends Producer & RawTracesCollection> InterThreadSyncEvents(ComputingProducerWrapper<T> rawTraces) {
         super(new State());
         this.rawTraces = rawTraces.getAndRegister(this);
     }

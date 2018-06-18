@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace.producers.base;
 
+import com.google.common.collect.Sets;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.TestProducerModule;
 import com.runtimeverification.rvpredict.trace.ThreadInfo;
@@ -9,7 +10,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.OptionalInt;
 
@@ -45,7 +45,7 @@ public class SortedTtidsWithParentFirstTest {
     private static final ThreadInfo SIGNAL_5_INFO =
             ThreadInfo.createSignalInfo(TTID_5, THREAD_1, SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, TWO_SIGNALS);
 
-    @Mock private TtidsForCurrentWindow mockTtidsForCurrentWindow;
+    @Mock private TtidSetLeaf mockTtidsForCurrentWindow;
     @Mock private ThreadInfosComponent mockThreadInfosComponent;
 
     private final TestProducerModule module = new TestProducerModule();
@@ -56,7 +56,7 @@ public class SortedTtidsWithParentFirstTest {
                 initProducer(module, mockTtidsForCurrentWindow, mockThreadInfosComponent);
         module.reset();
 
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptyList());
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptySet());
 
         Assert.assertThat(producer.getComputed().getTtids(), isEmpty());
     }
@@ -68,7 +68,7 @@ public class SortedTtidsWithParentFirstTest {
         module.reset();
 
         fillMockThreadInfosComponentFromThreadInfos(mockThreadInfosComponent, THREAD_1_INFO);
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singletonList(THREAD_1_INFO.getId()));
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singleton(THREAD_1_INFO.getId()));
 
         Assert.assertThat(
                 producer.getComputed().getTtids(),
@@ -83,7 +83,7 @@ public class SortedTtidsWithParentFirstTest {
 
         fillMockThreadInfosComponentFromThreadInfos(
                 mockThreadInfosComponent, THREAD_1_INFO, THREAD_3_INFO, THREAD_2_INFO);
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Arrays.asList(
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Sets.newHashSet(
                 THREAD_3_INFO.getId(), THREAD_2_INFO.getId(), THREAD_1_INFO.getId()));
 
         Assert.assertThat(
@@ -99,7 +99,7 @@ public class SortedTtidsWithParentFirstTest {
 
         fillMockThreadInfosComponentFromThreadInfos(
                 mockThreadInfosComponent, THREAD_1_INFO, THREAD_3_INFO, THREAD_2_INFO);
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Arrays.asList(
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Sets.newHashSet(
                 THREAD_3_INFO.getId(), THREAD_1_INFO.getId()));
 
         Assert.assertThat(
@@ -116,7 +116,7 @@ public class SortedTtidsWithParentFirstTest {
         fillMockThreadInfosComponentFromThreadInfos(
                 mockThreadInfosComponent, THREAD_1_INFO, THREAD_3_INFO, THREAD_2_INFO,
                 SIGNAL_5_INFO, SIGNAL_4_INFO);
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Arrays.asList(
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Sets.newHashSet(
                 SIGNAL_5_INFO.getId(), SIGNAL_4_INFO.getId(),
                 THREAD_3_INFO.getId(), THREAD_2_INFO.getId(), THREAD_1_INFO.getId()));
 
@@ -134,7 +134,7 @@ public class SortedTtidsWithParentFirstTest {
 
         module.reset();
         fillMockThreadInfosComponentFromThreadInfos(mockThreadInfosComponent, THREAD_1_INFO);
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.singletonList(THREAD_1_INFO.getId()));
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Sets.newHashSet(THREAD_1_INFO.getId()));
 
         Assert.assertThat(
                 producer.getComputed().getTtids(),
@@ -143,13 +143,13 @@ public class SortedTtidsWithParentFirstTest {
         module.reset();
 
         clearMockThreadInfosComponent(mockThreadInfosComponent);
-        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptyList());
+        when(mockTtidsForCurrentWindow.getTtids()).thenReturn(Collections.emptySet());
         Assert.assertThat(producer.getComputed().getTtids(), isEmpty());
     }
 
     private static ComputingProducerWrapper<SortedTtidsWithParentFirst> initProducer(
             TestProducerModule module,
-            TtidsForCurrentWindow mockTtidsForCurrentWindow,
+            TtidSetLeaf mockTtidsForCurrentWindow,
             ThreadInfosComponent mockThreadInfosComponent) {
         return new ComputingProducerWrapper<>(
                 new SortedTtidsWithParentFirst(

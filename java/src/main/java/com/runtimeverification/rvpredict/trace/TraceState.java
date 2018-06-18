@@ -52,8 +52,8 @@ public class TraceState {
 
     private final TraceProducers traceProducers = new TraceProducers();
 
-    private final StateAtWindowBorder stateAtCurrentWindowStart = new StateAtWindowBorder();
-    private final StateAtWindowBorder stateAtCurrentWindowEnd = new StateAtWindowBorder();
+    private final StateAtWindowBorder stateAtCurrentWindowStart;
+    private final StateAtWindowBorder stateAtCurrentWindowEnd;
 
     private final ThreadInfos threadInfos = new ThreadInfos();
 
@@ -109,6 +109,9 @@ public class TraceState {
         this.t_atLeastOneSigsetAllowsSignalCache = new HashMap<>();
         this.t_signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
         this.t_threadId                = 1;
+
+        stateAtCurrentWindowStart = new StateAtWindowBorder(config.desiredInterruptsPerSignalAndWindow());
+        stateAtCurrentWindowEnd = new StateAtWindowBorder(config.desiredInterruptsPerSignalAndWindow());
     }
 
     public Configuration config() {
@@ -121,6 +124,7 @@ public class TraceState {
 
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
         processWindow(rawTraces);
+        rawTraces = traceProducers.mergedRawTraces.getComputed().getTraces();
 
         t_eventIdToTtid.clear();
         t_tidToEvents.clear();
@@ -242,7 +246,11 @@ public class TraceState {
 
     private void processWindow(List<RawTrace> traces) {
         traces.forEach(rawTrace -> {
-            int ttid = rawTrace.getThreadInfo().getId();
+            ThreadInfo threadInfo = rawTrace.getThreadInfo();
+            if (threadInfo.getSignalDepth() > 0) {
+                stateAtCurrentWindowEnd.onSignalThread(rawTrace);
+            }
+            int ttid = threadInfo.getId();
             if (rawTrace.size() > 0) {
                 stateAtCurrentWindowEnd.threadEvent(ttid);
             }
@@ -257,12 +265,14 @@ public class TraceState {
             }
         });
         traceProducers.startWindow(
+                stateAtCurrentWindowStart.getFormerSignalTraces(),
                 traces, stateAtCurrentWindowEnd.getThreadsForCurrentWindow(), threadInfos,
                 stateAtCurrentWindowStart.getSignalMasks(),
                 stateAtCurrentWindowStart.getStartedThreads(),
                 stateAtCurrentWindowEnd.getStartedThreads(),
                 stateAtCurrentWindowStart.getFinishedThreads(),
-                stateAtCurrentWindowEnd.getFinishedThreads());
+                stateAtCurrentWindowEnd.getFinishedThreads(),
+                config.desiredInterruptsPerSignalAndWindow());
         stateAtCurrentWindowEnd.processSignalMasks(traceProducers.signalMaskForEvents.getComputed());
     }
 

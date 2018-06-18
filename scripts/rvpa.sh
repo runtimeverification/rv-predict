@@ -13,7 +13,8 @@ _usage()
 {
 	cat 1>&2 <<EOF
 usage: $(basename $0) [--window size] [--no-shorten|--no-symbol|--no-trim]
-    [--html-dir directory] [--] program [trace-file]
+    [--html-dir directory] [--interrupts-target number] [--]
+    program [trace-file]
 EOF
 }
 
@@ -136,6 +137,16 @@ while [ $# -ge 1 ]; do
 			;;
 		esac
 		;;
+	--interrupt-target=*|--interrupts-target=*)
+		eval interrupts_target=${1##--interrupt-target=}
+		eval interrupts_target=${interrupts_target##--interrupts-target=}
+		shift
+		;;
+	--interrupt-target|--interrupts-target)
+		shift
+		interrupts_target="--desired-interrupts-per-signal-and-window $1"
+		shift
+		;;
 	--parallel-smt)
 		shift
 		parallel="--parallel-smt $1"
@@ -197,6 +208,7 @@ if ! test -e ${progpath}; then
 fi
 
 rvpredict ${analyze_passthrough:-} ${window:---window 2000} ${parallel:-} \
+    ${interrupts_target:-} \
     --json-report \
     --compact-trace ${trace_file:-./rvpredict.trace} | \
     { [ ${only_print_command:-no} = no ] && symbolize $progpath 2>&1 || cat ; }

@@ -9,8 +9,10 @@ FILES=xyz
 # $(.OBJDIR)/bin/rvpc will not find rvpinstrument.so.
 #
 $(TARGETS:Nclean:Ncleandir):
+.for __t in all install
 	$(MAKE) ONLY_TEST_DEPENDENCIES=yes DESTDIR=$(.OBJDIR) PREFIX= \
-	    LIBDIR=/lib -C $(.CURDIR)/../.. all install
+	    LIBDIR=/lib -C $(.CURDIR)/../.. ${__t}
+.endfor
 
 CLEANDIRS+=bin include lib libexec man share
 

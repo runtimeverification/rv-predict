@@ -409,9 +409,13 @@ public class Configuration implements Constants {
     @Parameter(names = opt_detect_interrupted_thread_race, description = "Detect races between a data access event in a signal/interrupt and a data access event in the interrupted thread.", descriptionKey = "2450", arity = 1)
     private boolean detectInterruptedThreadRace = true;
 
+    private final static String opt_desired_interrupts_per_signal_and_window = "--desired-interrupts-per-signal-and-window";
+    @Parameter(names = opt_desired_interrupts_per_signal_and_window, description = "Soft target for the number of interrupts for a signal and window.", descriptionKey = "2500", arity = 1)
+    private int desiredInterruptsPerSignalAndWindow = 0;
+
     /*
     final static String opt_smt_solver = "--solver";
-    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2500")
+    @Parameter(names = opt_smt_solver, description = "SMT solver to use. <solver> is one of [z3].", hidden = true, descriptionKey = "2550")
     public String smt_solver = "z3";
     */
 
@@ -836,6 +840,10 @@ public class Configuration implements Constants {
 
     public boolean detectInterruptedThreadRace() {
         return detectInterruptedThreadRace;
+    }
+
+    public int desiredInterruptsPerSignalAndWindow() {
+        return desiredInterruptsPerSignalAndWindow;
     }
 
     public boolean withoutGeneration() { return withoutGeneration; }

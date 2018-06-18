@@ -215,7 +215,7 @@ InterruptAnnotation::runOnModule(Module &M)
 		//
 		// anno_ctnr = [ annotation, ... ]
 		//
-		auto v = dyn_cast<GlobalVariable>(object_annotation->getOperand(0));
+		auto v = dyn_cast<GlobalVariable>(object_annotation->getOperand(0)->getOperand(0));
 		if (v == nullptr)
 			continue;
 

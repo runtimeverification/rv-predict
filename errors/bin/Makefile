@@ -20,7 +20,7 @@ cleandir distclean:
 tags:
 	@touch $(.CURDIR)/tags
 
-test uninstall:
+test:
 	@echo "Nothing to do for $(.TARGET)"
 
 rvp-error: $(SRCDIR)/rv-error

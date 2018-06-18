@@ -703,8 +703,8 @@
 </script>
 {% endblock %}
 {% block content %}
-<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/></a>{% if not err.primary_component.frames[0].loc.missing %} &raquo; <a href="{{output_dir}}{{err.primary_component.frames[0].loc.abs_file}}.html">{{err.primary_component.frames[0].loc.rel_file}}</a>{% endif %} &raquo; Error {{err.index}}</h1>
-<h2>{{err.description}}</h2>
+<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/> RV Toolkit Error Report</a>{% if not err.primary_component.frames[0].loc.missing %}  &nbsp;&rsaquo; &nbsp; <a href="{{output_dir}}{{err.primary_component.frames[0].loc.abs_file}}.html">{{err.primary_component.frames[0].loc.rel_file}}</a>{% endif %} &nbsp;&rsaquo;&nbsp; Error {{err.index}}</h1>
+<h2 class="error-description-header">{{err.description}}</h2>
 {% macro lock_lines(locks) %}{% for lock in locks %}{{lock.locked_at.loc.line}} {% endfor %}{% endmacro %}
 {% macro source_snippet(frame, initial, at, header) %}
 <li class="{{initial}}" data-fileid="{{fileids[frame.loc.abs_file]}}" data-line="{{frame.loc.line}}" data-context-start="{{frame.loc.line-4}}" data-context-end="{{frame.loc.line+4}}" data-locks="{{lock_lines(frame.locks)}}" data-local-variables="{{frame.local_vars|json_stringify}}">
@@ -791,14 +791,36 @@ Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
 {% endfor %}
 <div class="bottom-section">
   <div class="error-description">
-    <h2>{{err.friendly_cat}} ({{err.error_id}})</h2>
-    <p>{{err.long_desc}}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>{{err.friendly_cat}} ({{err.error_id}})</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{err.long_desc}}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
   <div class="citation">
-    <h2>Citations</h2>    
-    {% for cite in err.citations %}
-    <div class="cite">See <a href="http://rvdoc.org/{{cite.document}}/{{cite.section}}">{{cite.document}} section {{cite.section}}{% if cite.paragraph %}:{{cite.paragraph}}{% endif %}</a></div>
-    {% endfor %}
+    <table>
+      <thead>
+        <tr>
+          <th>Citations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cite in err.citations %}
+        <tr>
+            <td>
+                See <a href="http://rvdoc.org/{{cite.document}}/{{cite.section}}">{{cite.document}} section {{cite.section}}{% if cite.paragraph %}:{{cite.paragraph}}{% endif %}</a>
+            </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 {% endblock %}

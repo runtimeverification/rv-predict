@@ -4,7 +4,7 @@ import com.runtimeverification.rvpredict.producerframework.LeafProducer;
 
 import java.util.Set;
 
-public class TtidSetLeaf extends LeafProducer<Set<Integer>> {
+public class TtidSetLeaf extends LeafProducer<Set<Integer>> implements TtidSet {
     public boolean contains(int ttid) {
         return get().contains(ttid);
     }

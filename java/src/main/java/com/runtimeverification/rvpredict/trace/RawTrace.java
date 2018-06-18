@@ -38,6 +38,10 @@ public class RawTrace {
         }
     }
 
+    RawTrace cloneAsPreviousWindowTrace() {
+        return new RawTrace(start, start + size, events, threadInfo);
+    }
+
     public int getSignalDepth() {
         return threadInfo.getSignalDepth();
     }

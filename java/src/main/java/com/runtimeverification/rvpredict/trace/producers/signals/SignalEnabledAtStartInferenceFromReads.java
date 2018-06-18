@@ -3,11 +3,12 @@ package com.runtimeverification.rvpredict.trace.producers.signals;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducer;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
+import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.signals.SignalMismatchError;
 import com.runtimeverification.rvpredict.signals.Signals;
-import com.runtimeverification.rvpredict.trace.producers.base.RawTraces;
+import com.runtimeverification.rvpredict.trace.producers.base.RawTracesCollection;
 import com.runtimeverification.rvpredict.util.Constants;
 
 import java.util.HashMap;
@@ -15,7 +16,7 @@ import java.util.Map;
 
 public class SignalEnabledAtStartInferenceFromReads
         extends ComputingProducer<SignalEnabledAtStartInferenceFromReads.State> {
-    private final RawTraces rawTraces;
+    private final RawTracesCollection rawTraces;
     private final SignalMaskForEvents signalMaskForEvents;
 
     protected static class State implements ProducerState {
@@ -29,8 +30,9 @@ public class SignalEnabledAtStartInferenceFromReads
         }
     }
 
-    public SignalEnabledAtStartInferenceFromReads(
-            ComputingProducerWrapper<RawTraces> rawTraces,
+    public <T extends Producer & RawTracesCollection>
+    SignalEnabledAtStartInferenceFromReads(
+            ComputingProducerWrapper<T> rawTraces,
             ComputingProducerWrapper<SignalMaskForEvents> signalMaskForEvents) {
         super(new State());
         this.rawTraces = rawTraces.getAndRegister(this);

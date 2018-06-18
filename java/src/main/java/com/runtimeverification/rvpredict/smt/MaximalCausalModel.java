@@ -151,7 +151,7 @@ public class MaximalCausalModel {
 
         trace.getLockIdToLockRegions().forEach((lockId, lockRegions) -> lockRegions.forEach(locksetEngine::add));
 
-        List<Integer> allSignalTtids = trace.getThreadsForCurrentWindow().stream()
+        List<Integer> allSignalTtids = trace.getMergedThreadsForCurrentWindow().stream()
                 .filter(ttid -> trace.getThreadType(ttid) == ThreadType.SIGNAL)
                 .collect(Collectors.toList());
 

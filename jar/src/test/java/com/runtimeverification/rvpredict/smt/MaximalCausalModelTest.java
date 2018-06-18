@@ -29,8 +29,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -82,6 +84,7 @@ public class MaximalCausalModelTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_2)).thenReturn(3L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_3)).thenReturn(4L);
+        when(mockMetadata.getOriginalThreadCreationLocId(anyLong())).thenReturn(OptionalLong.empty());
         mockConfiguration.solver_timeout = TIMEOUT_SECONDS;
     }
 

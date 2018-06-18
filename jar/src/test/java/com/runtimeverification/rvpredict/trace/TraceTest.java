@@ -22,6 +22,7 @@ import java.util.OptionalInt;
 import java.util.OptionalLong;
 
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -82,6 +83,8 @@ public class TraceTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(1L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_2)).thenReturn(2L);
         when(mockContext.createUniqueDataAddressId(ADDRESS_3)).thenReturn(3L);
+
+        when(mockMetadata.getOriginalThreadCreationLocId(anyLong())).thenReturn(OptionalLong.empty());
 
         mockConfiguration.windowSize = 100;
     }

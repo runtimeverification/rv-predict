@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractEventByType;
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractSingleEvent;
@@ -64,6 +65,7 @@ public class JavaHappensBeforeRaceDetectorTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_3_VOLATILE)).thenReturn(4L);
         when(mockMetadata.isVolatile(anyLong())).
                 then(invocation -> invocation.getArguments()[0].equals(Long.valueOf(4L)));
+        when(mockMetadata.getOriginalThreadCreationLocId(anyLong())).thenReturn(OptionalLong.empty());
         when(mockRaceSerializer.getLocationSig(anyLong())).thenReturn("unknown location");
         Logger logger = new Logger();
         when(mockConfiguration.logger()).thenReturn(logger);

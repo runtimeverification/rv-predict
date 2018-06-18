@@ -67,6 +67,7 @@ public class FoundRaceTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
         when(mockMetadata.getLocationSig(anyLong())).thenReturn("");
         when(mockMetadata.getVariableSig(anyLong())).thenReturn("");
+        when(mockMetadata.getParentOTID(anyLong())).thenReturn(OptionalLong.empty());
         when(mockConfiguration.isCompactTrace()).thenReturn(true);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockConfiguration.stacks()).thenReturn(true);

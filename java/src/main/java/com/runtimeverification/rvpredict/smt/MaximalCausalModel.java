@@ -170,7 +170,7 @@ public class MaximalCausalModel {
                         trace::getTtidsWhereSignalIsDisabledAtStart,
                         detectInterruptedThreadRace))
                 .add(new NonSignalsHaveDepth0ConstraintSource(
-                        trace.getThreadsForCurrentWindow(),
+                        trace.getMergedThreadsForCurrentWindow(),
                         trace::getThreadType))
                 .add(new SignalDepthLimit(
                         maxSignalDepth,

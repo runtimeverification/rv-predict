@@ -10,11 +10,9 @@ import com.runtimeverification.rvpredict.trace.maps.ThreadIDToObjectMap;
 import com.runtimeverification.rvpredict.trace.producers.TraceProducers;
 import org.apache.commons.lang3.mutable.MutableInt;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -37,12 +35,6 @@ public class TraceState {
      */
     private ThreadIDToObjectMap<MutableInt> tidToClinitDepth = new ThreadIDToObjectMap<>(
             DEFAULT_NUM_OF_THREADS, MutableInt::new);
-
-    /**
-     * Map from thread ID to the current stack trace elements.
-     */
-    private ThreadIDToObjectMap<Deque<ReadonlyEventInterface>> tidToStacktrace = new ThreadIDToObjectMap<>(
-            DEFAULT_NUM_OF_THREADS, ArrayDeque::new);
 
     /**
      * Map from (thread ID, lock ID) to lock state.
@@ -69,7 +61,7 @@ public class TraceState {
 
     private final Map<Integer, List<MemoryAccessBlock>> t_tidToMemoryAccessBlocks;
 
-    private final Map<Integer, ThreadState> t_tidToThreadState;
+    private final Map<Integer, Collection<LockState>> t_tidToLockState;
 
     private final MemoryAddrToStateMap t_addrToState;
 
@@ -98,7 +90,7 @@ public class TraceState {
         this.t_eventIdToTtid           = new LinkedHashMap<>();
         this.t_tidToEvents             = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_tidToMemoryAccessBlocks = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
-        this.t_tidToThreadState        = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
+        this.t_tidToLockState          = new LinkedHashMap<>(DEFAULT_NUM_OF_THREADS);
         this.t_addrToState             = new MemoryAddrToStateMap(config.windowSize);
         this.t_tidToAddrToEvents       = HashBasedTable.create(DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_ADDR);
         this.t_tidToAddrToPrefixReadEvents = HashBasedTable.create(DEFAULT_NUM_OF_THREADS, DEFAULT_NUM_OF_ADDR);
@@ -109,9 +101,10 @@ public class TraceState {
         this.t_atLeastOneSigsetAllowsSignalCache = new HashMap<>();
         this.t_signalNumberToSignalHandlerToEstablishSignalEvents = new HashMap<>();
         this.t_threadId                = 1;
-
-        stateAtCurrentWindowStart = new StateAtWindowBorder(config.desiredInterruptsPerSignalAndWindow());
-        stateAtCurrentWindowEnd = new StateAtWindowBorder(config.desiredInterruptsPerSignalAndWindow());
+        this.stateAtCurrentWindowStart =
+                new StateAtWindowBorder(config.desiredInterruptsPerSignalAndWindow(), metadata);
+        this.stateAtCurrentWindowEnd =
+                new StateAtWindowBorder(config.desiredInterruptsPerSignalAndWindow(), metadata);
     }
 
     public Configuration config() {
@@ -129,7 +122,7 @@ public class TraceState {
         t_eventIdToTtid.clear();
         t_tidToEvents.clear();
         t_tidToMemoryAccessBlocks.clear();
-        t_tidToThreadState.clear();
+        t_tidToLockState.clear();
         t_addrToState.clear();
         t_tidToAddrToEvents.clear();
         t_tidToAddrToPrefixReadEvents.clear();
@@ -143,7 +136,7 @@ public class TraceState {
                 t_eventIdToTtid,
                 t_tidToEvents,
                 t_tidToMemoryAccessBlocks,
-                t_tidToThreadState,
+                t_tidToLockState,
                 t_addrToState,
                 t_tidToAddrToEvents,
                 t_tidToAddrToPrefixReadEvents,
@@ -181,18 +174,8 @@ public class TraceState {
             tidToClinitDepth.get(ttid).decrement();
             break;
         case INVOKE_METHOD:
-            tidToStacktrace.computeIfAbsent(ttid).add(event.copy());
-            tidToStacktrace = ThreadIDToObjectMap.growOnFull(tidToStacktrace);
             break;
         case FINISH_METHOD:
-	    ReadonlyEventInterface lastEvent = tidToStacktrace.get(ttid).removeLast();
-            long locId = lastEvent.getLocationId();
-            if (locId != event.getLocationId()) {
-                throw new IllegalStateException("Unmatched method entry/exit events!" +
-                        (Configuration.debug ?
-                        "\n\tENTRY:" + metadata.getLocationSig(locId) + " gid " + lastEvent.getEventId() +
-                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocationId()) + " gid " + event.getEventId() : ""));
-            }
             break;
         default:
             throw new IllegalArgumentException("Unexpected event type: " + event.getType());
@@ -207,14 +190,11 @@ public class TraceState {
         }
     }
 
-    public ThreadState getThreadStateSnapshot(int ttid) {
-        /* copy stack trace */
-        Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(ttid);
-        stacktrace = stacktrace == null ? new ArrayDeque<>() : new ArrayDeque<>(stacktrace);
+    Collection<LockState> getLockStateSnapshot(int ttid) {
         /* copy each lock state */
         List<LockState> lockStates = new ArrayList<>();
         tidToLockIdToLockState.row(ttid).values().forEach(st -> lockStates.add(st.copy()));
-        return new ThreadState(stacktrace, lockStates);
+        return lockStates;
     }
 
     /**
@@ -272,6 +252,7 @@ public class TraceState {
                 stateAtCurrentWindowEnd.getStartedThreads(),
                 stateAtCurrentWindowStart.getFinishedThreads(),
                 stateAtCurrentWindowEnd.getFinishedThreads(),
+                stateAtCurrentWindowStart.getStackTraces(),
                 config.desiredInterruptsPerSignalAndWindow());
         stateAtCurrentWindowEnd.processSignalMasks(traceProducers.signalMaskForEvents.getComputed());
     }
@@ -280,7 +261,7 @@ public class TraceState {
      * Updates the location at which a lock was acquired to the most recent reportable location on the call stack.
      * @param event a lock acquiring event.  Assumed to be the latest in the current trace window.
      */
-    protected ReadonlyEventInterface updateLockLocToUserLoc(ReadonlyEventInterface event, int ttid) {
+    ReadonlyEventInterface updateLockLocToUserLoc(ReadonlyEventInterface event, int ttid) {
         long locId = findUserCallLocation(event, ttid);
         if (locId != event.getLocationId()) {
             event = event.destructiveWithLocationId(locId);
@@ -292,7 +273,7 @@ public class TraceState {
      * Updates the location about thread creation to the most recent reportable location on the call stack.
      * @param event an event creating a new thread.  Assumed to be the latest in the current trace window.
      */
-    protected void updateThreadLocToUserLoc(ReadonlyEventInterface event, int ttid) {
+    void updateThreadLocToUserLoc(ReadonlyEventInterface event, int ttid) {
         long locId = findUserCallLocation(event, ttid);
         if (locId != metadata.getOriginalThreadCreationLocId(event.getSyncedThreadId())) {
             metadata().addOriginalThreadCreationInfo(event.getSyncedThreadId(), ttid, locId);
@@ -307,10 +288,8 @@ public class TraceState {
         if (locId >= 0 && !config().isExcludedLibrary(metadata().getLocationSig(locId))) {
             return locId;
         }
-        Deque<ReadonlyEventInterface> stacktrace = tidToStacktrace.get(ttid);
-        if (stacktrace == null) {
-            return -1;
-        }
+        Collection<ReadonlyEventInterface> stacktrace =
+                traceProducers.stackTraces.getComputed().getStackTraceAfterEventBuilder(ttid, e.getEventId()).build();
         String sig;
         for (ReadonlyEventInterface event : stacktrace) {
             locId = event.getLocationId();
@@ -376,7 +355,7 @@ public class TraceState {
         return threadInfos;
     }
 
-    public OptionalInt getTtidForThreadOngoingAtWindowStart(long otid, int signalDepth) {
+    OptionalInt getTtidForThreadOngoingAtWindowStart(long otid, int signalDepth) {
         Integer ttid = otidToSignalDepthToTtidAtWindowStartCache
                 .getOrDefault(otid, Collections.emptyMap())
                 .get(signalDepth);
@@ -402,7 +381,7 @@ public class TraceState {
         return Optional.empty();
     }
 
-    public Collection<Integer> getThreadsForCurrentWindow() {
+    Collection<Integer> getThreadsForCurrentWindow() {
         return stateAtCurrentWindowEnd.getThreadsForCurrentWindow();
     }
 

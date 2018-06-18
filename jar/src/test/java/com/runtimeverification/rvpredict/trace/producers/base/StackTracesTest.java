@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace.producers.base;
 
+import com.google.common.collect.ImmutableList;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
@@ -14,8 +15,10 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.stream.Collectors;
@@ -41,6 +44,7 @@ public class StackTracesTest {
     private static final long VALUE_1 = 901L;
 
     @Mock private RawTraces mockRawTraces;
+    @Mock private StackTracesLeaf mockExistingTraces;
 
     @Mock private Context mockContext;
 
@@ -56,10 +60,11 @@ public class StackTracesTest {
 
     @Test
     public void noStacksForEmptyTraces() {
-        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces);
+        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces, mockExistingTraces);
         module.reset();
 
         when(mockRawTraces.getTraces()).thenReturn(Collections.emptyList());
+        when(mockExistingTraces.getStackTraces()).thenReturn(Collections.emptyMap());
 
         Assert.assertThat(
                 producer.getComputed().getStackTraceAfterEventBuilder(TTID_1, EVENT_ID_1).build(),
@@ -69,7 +74,7 @@ public class StackTracesTest {
     @Test
     public void addsStartedFunctionsToStack() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
-        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces);
+        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces, mockExistingTraces);
         module.reset();
 
         List<ReadonlyEventInterface> event1List;
@@ -112,7 +117,7 @@ public class StackTracesTest {
     @Test
     public void removesExitedFunctionFromStack() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
-        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces);
+        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces, mockExistingTraces);
         module.reset();
 
         List<ReadonlyEventInterface> event1List;
@@ -162,7 +167,7 @@ public class StackTracesTest {
     @Test
     public void doesNotCrashWhenExitingTooManyFunctions() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
-        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces);
+        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces, mockExistingTraces);
         module.reset();
 
         List<ReadonlyEventInterface> event1List;
@@ -200,6 +205,40 @@ public class StackTracesTest {
                 isEmpty());
     }
 
+    @Test
+    public void startsWithExistingStackTraces() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_ID_1, NO_SIGNAL, PC_BASE);
+        ComputingProducerWrapper<StackTraces> producer = initProducer(module, mockRawTraces, mockExistingTraces);
+        module.reset();
+
+        List<ReadonlyEventInterface> event1List;
+        List<ReadonlyEventInterface> event2List;
+        List<ReadonlyEventInterface> stack1List = tu.enterFunction(CANONICAL_FRAME_ADDRESS_1, CALL_SITE_ADDRESS_1);
+        List<ReadonlyEventInterface> stack2List = tu.enterFunction(CANONICAL_FRAME_ADDRESS_2, CALL_SITE_ADDRESS_1);
+        List<ReadonlyEventInterface> stack3List;
+        RawTrace trace = tu.createRawTrace(
+                tu.setPc(PC_BASE),
+                event1List = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                stack3List = tu.enterFunction(CANONICAL_FRAME_ADDRESS_3, CALL_SITE_ADDRESS_1),
+                event2List = tu.nonAtomicLoad(ADDRESS_1, VALUE_1)
+        );
+
+        Deque<ReadonlyEventInterface> existingStackEvents = new ArrayDeque<>(ImmutableList.of(
+                extractSingleEvent(stack1List),
+                extractSingleEvent(stack2List)));
+        when(mockExistingTraces.getStackTraces())
+                .thenReturn(Collections.singletonMap(trace.getThreadInfo().getId(), existingStackEvents));
+        when(mockRawTraces.getTraces()).thenReturn(Collections.singletonList(trace));
+
+        Assert.assertThat(
+                getStackTraceIDs(producer, trace, event1List),
+                containsInOrder(getId(stack1List), getId(stack2List)));
+
+        Assert.assertThat(
+                getStackTraceIDs(producer, trace, event2List),
+                containsInOrder(getId(stack1List), getId(stack2List), getId(stack3List)));
+    }
+
     private static long getId(List<ReadonlyEventInterface> event) {
         return extractSingleEvent(event).getEventId();
     }
@@ -217,10 +256,12 @@ public class StackTracesTest {
 
     private static ComputingProducerWrapper<StackTraces> initProducer(
             TestProducerModule module,
-            RawTraces rawTraces) {
+            RawTraces rawTraces,
+            StackTracesLeaf existingTraces) {
         return new ComputingProducerWrapper<>(
                 new StackTraces(
-                        new ComputingProducerWrapper<>(rawTraces, module)),
+                        new ComputingProducerWrapper<>(rawTraces, module),
+                        new ComputingProducerWrapper<>(existingTraces, module)),
                 module);
     }
 }

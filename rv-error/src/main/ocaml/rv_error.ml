@@ -49,11 +49,13 @@ let abbr_of_error_category (category : error_category) : string =
   | `ConstraintViolation -> "CV"
   | `IllFormed -> "ILF"
   | `ImplementationDefined lang -> "IMPL" ^ string_of_language lang
+  | `ImplementationUndefined lang -> "IMPLUB" ^ string_of_language lang
   | `LintError -> "L"
   | `SyntaxError lang -> "SE" ^ string_of_language lang
   | `Undefined lang -> "UB" ^ string_of_language lang
   | `Underspecified lang -> "DR" ^ string_of_language lang
   | `Unspecified lang -> "USP" ^ string_of_language lang
+  | `Unknown -> "UNK"
 
 
 let get_real_error_id (error_id : string) (category : error_category) : string =
@@ -199,7 +201,7 @@ let cache_suppress (loc : location option) : suppression list =
       let path = Filename.concat (Filename.concat rv_suppress_location loc.abs_file) "ifdef.json" in
       if Sys.file_exists path
       then
-        let data = Ag_util.Json.from_file Error_j.read_metadata path in
+        let data = Atdgen_runtime.Util.Json.from_file Error_j.read_metadata path in
       data.suppressions
       else []
     with e ->

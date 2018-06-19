@@ -1,6 +1,7 @@
 #include <link.h>
 
 #include "buf.h"
+#include "dynamic_library.h"
 #include "ring.h"
 #include "thread.h"
 #include "trace.h"

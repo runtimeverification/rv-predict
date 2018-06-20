@@ -10,7 +10,7 @@ yes n | opam init
 opam update 
 opam switch 4.03.0
 eval $(opam config env)
-OPAMYES=true opam install ocp-ocamlres ocamlbuild-atdgen csv uri atdgen atdj
+OPAMYES=true opam install ocp-ocamlres ocamlbuild-atdgen csv uri "atdgen>=2" atdj
 
 home_slash=${HOME}/
 bindir=${objdir}/.tools/bin

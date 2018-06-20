@@ -201,7 +201,7 @@ let cache_suppress (loc : location option) : suppression list =
       let path = Filename.concat (Filename.concat rv_suppress_location loc.abs_file) "ifdef.json" in
       if Sys.file_exists path
       then
-        let data = Ag_util.Json.from_file Error_j.read_metadata path in
+        let data = Atdgen_runtime.Util.Json.from_file Error_j.read_metadata path in
       data.suppressions
       else []
     with e ->

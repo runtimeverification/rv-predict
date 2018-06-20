@@ -1,4 +1,4 @@
-<!-- Copyright (c) 2017-2018 Runtime Verification, Inc. (RV Toolkit team). All Rights Reserved. -->
+<!-- Copyright (c) 2017-2018 Runtime Verification, Inc. All rights reserved. -->
 
 # RV-Error tool
 

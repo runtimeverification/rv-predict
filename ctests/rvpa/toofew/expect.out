@@ -1,3 +1,4 @@
 rvpa: too few arguments
 usage: rvpa [--window size] [--no-shorten|--no-symbol|--no-trim]
-    [--html-dir directory] [--] program [trace-file]
+    [--html-dir directory] [--interrupts-target number] [--]
+    program [trace-file]

@@ -40,7 +40,7 @@ import qualified Data.Vector as V
    =    loads each relevant line into record (Rec), and hands the record off to us
    =    for processing.
    = 3. Simple minded routines to dump table
-   = 4. Read table and generate a makefile
+   = 4. Read table and generate a makefile fragments
    =
    = Notes:
    = * See isOpIgnorable (below) for csv lines totally ignored

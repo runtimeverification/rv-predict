@@ -7,6 +7,7 @@ CPPFLAGS+=-I$(CTEST_dir)/../include
 WARNS=4
 STRIPFLAG=
 
+
 COPTS+=-O3 -g -O0
 LDADD+=-pthread
 

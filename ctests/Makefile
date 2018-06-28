@@ -1,4 +1,4 @@
-SUBDIR=toolset .WAIT forkfail regression rvpa rvsyms stats trace
+SUBDIR=toolset .WAIT regression rvpa rvsyms stats trace forkfail
 
 MKINSTALL=no
 

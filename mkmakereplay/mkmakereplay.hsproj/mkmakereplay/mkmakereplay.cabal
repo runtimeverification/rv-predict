@@ -1,0 +1,20 @@
+name: mkmakereplay
+version: 1.0
+cabal-version: 1.22
+build-type: Simple
+license: AllRightsReserved
+stability: experimental
+x-ghc-framework-version: 8.0.2-9.6-1
+x-last-ide-version: HfM1.6.0
+
+executable mkmakereplay
+    main-is: Mkmake.hs
+    build-depends:
+        vector -any,
+        base -any,
+        containers -any,
+        filepath -any,
+        cassava -any,
+        bytestring -any
+    default-language: Haskell2010
+

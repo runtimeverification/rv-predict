@@ -9,10 +9,10 @@
 #include <stdlib.h>
 #include "nbcompat.h"
 
-static const uint8_t  initial_u8 = 0x39;
-static const uint16_t initial_u16 = 0x40;
-static const uint32_t initial_u32 = 0x41;
-static const uint64_t initial_u64 = 0x43;
+#define initial_u8	0x39
+#define initial_u16	0x40
+#define initial_u32	0x41
+#define initial_u64	0x43
 
 static const uint8_t  end_u8 = 0x10;
 static const uint16_t end_u16 = 0x1000;
@@ -39,10 +39,10 @@ main(void)
 	uint32_t u32 = initial_u32;
 	uint64_t u64 = initial_u64;
 
-	uint8_t  lcl_u8;
-	uint16_t lcl_u16;
-	uint32_t lcl_u32;
-	uint64_t lcl_u64;
+	uint8_t  lcl_u8 __unused;
+	uint16_t lcl_u16 __unused;
+	uint32_t lcl_u32 __unused;
+	uint64_t lcl_u64 __unused;
 
 	lcl_u8  = u8;
 	lcl_u16 = u16;

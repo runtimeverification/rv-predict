@@ -499,6 +499,30 @@ print_op(const Dwarf_Loc *lr, dwarf_walk_ctx_t *ctx)
 	}
 }
 
+static void
+lineinfo(Dwarf_Line line, Dwarf_Addr *addrp, Dwarf_Unsigned *linenop,
+    Dwarf_Signed *colnop, char **filenamep)
+{
+	Dwarf_Error err;
+
+	if (dwarf_lineaddr(line, addrp, &err) != DW_DLV_OK) {
+		errx(EXIT_FAILURE, "%s: dwarf_lineaddr: %s", __func__,
+		    dwarf_errmsg(err));
+	}
+	if (dwarf_lineno(line, linenop, &err) != DW_DLV_OK) {
+		errx(EXIT_FAILURE, "%s: dwarf_lineno: %s", __func__,
+		    dwarf_errmsg(err));
+	}
+	if (dwarf_lineoff(line, colnop, &err) != DW_DLV_OK) {
+		errx(EXIT_FAILURE, "%s: dwarf_lineoff: %s", __func__,
+		    dwarf_errmsg(err));
+	}
+	if (dwarf_linesrc(line, filenamep, &err) != DW_DLV_OK) {
+		errx(EXIT_FAILURE, "%s: dwarf_linesrc: %s", __func__,
+		    dwarf_errmsg(err));
+	}
+}
+
 static bool
 check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
     char **filenamep, unsigned int *linep, int *colp)
@@ -518,23 +542,17 @@ check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
 	if (dwarf_srclines(die, &line, &nlines, &err) != DW_DLV_OK)
 		return false;
 
-	for (i = 0; i < nlines; i++) {
-		if (dwarf_lineaddr(line[i], &addr, &err) != DW_DLV_OK) {
-			errx(EXIT_FAILURE, "%s: dwarf_lineaddr: %s", __func__,
-			    dwarf_errmsg(err));
-		}
-		if (dwarf_lineno(line[i], &lineno, &err) != DW_DLV_OK) {
-			errx(EXIT_FAILURE, "%s: dwarf_lineno: %s", __func__,
-			    dwarf_errmsg(err));
-		}
-		if (dwarf_lineoff(line[i], &colno, &err) != DW_DLV_OK) {
-			errx(EXIT_FAILURE, "%s: dwarf_lineoff: %s", __func__,
-			    dwarf_errmsg(err));
-		}
-		if (dwarf_linesrc(line[i], &filename, &err) != DW_DLV_OK) {
-			errx(EXIT_FAILURE, "%s: dwarf_linesrc: %s", __func__,
-			    dwarf_errmsg(err));
-		}
+	if (0 < nlines) {
+		lineinfo(line[0], &addr, &lineno, &colno, &filename);
+		if (addr == ctx->insnptr)
+			goto found;
+	}
+	for (i = 1; i < nlines; i++) {
+		paddr = addr;
+		pfilename = filename;
+		plineno = lineno;
+
+		lineinfo(line[i], &addr, &lineno, &colno, &filename);
 		if (addr == ctx->insnptr)
 			break;
 		if (paddr < ctx->insnptr && ctx->insnptr < addr) {
@@ -544,12 +562,10 @@ check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
 			colno = -1;
 			break;
 		}
-		paddr = addr;
-		pfilename = filename;
-		plineno = lineno;
 	}
 	dwarf_srclines_dealloc(dbg, line, nlines);
 	if (i < nlines) {
+found:
 		*filenamep = filename;
 		*linep = lineno;
 		*colp = colno;
@@ -579,7 +595,6 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	                            &nlocdescs, &error) == DW_DLV_OK) {
 		int j;
 		bool insn_match = false;
-		const char *delim = "at ";
 		struct {
 			Dwarf_Addr lopc, hipc;
 		} inner;
@@ -619,7 +634,6 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 		} else for (j = 0; j < ld->ld_cents; j++) {
 			Dwarf_Loc *lr = &ld->ld_s[j];
 			print_op(lr, ctx);
-			delim = " or at";
 		}
 #if 0
 		for (i = 0; i < nlocdescs; i++)
@@ -630,14 +644,11 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	                                  &error)) == DW_DLV_OK) {
 		int i, j;
 
-		const char *odelim = " ";
-
 		for (i = 0; i < nlocdescs; i++) {
 			ld = locdescp[i];
 			struct {
 				Dwarf_Addr lopc, hipc;
 			} inner;
-			bool insn_match = false;
 
 			inner.lopc = ld->ld_lopc;
 			inner.hipc = ld->ld_hipc;
@@ -651,12 +662,9 @@ check_location(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 				inner.hipc += ctx->rstate.lopc;
 			}
 
-			odelim = ", ";
-
 			if (ctx->have_insnptr &&
 			    inner.lopc <= ctx->insnptr &&
 			    ctx->insnptr < inner.hipc) {
-				insn_match = true;
 			}
 
 			for (j = 0; j < ld->ld_cents; j++) {

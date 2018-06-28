@@ -3,6 +3,9 @@ LIB?=rvpsigsim_$(SIGSIM)
 .PATH: $(.CURDIR)/../../ngrt
 
 CC?=clang
+.if $(CC) == gcc
+CPPFLAGS+=-U_FORTIFY_SOURCE
+.endif
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-prototypes

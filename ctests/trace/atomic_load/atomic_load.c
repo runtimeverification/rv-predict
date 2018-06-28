@@ -25,16 +25,15 @@ main(void)
 	uint32_t u32 = initial_u32;
 	uint64_t u64 = initial_u64;
 
-	uint8_t  lcl_u8;
-	uint16_t lcl_u16;
-	uint32_t lcl_u32;
-	uint64_t lcl_u64;
+	uint8_t  lcl_u8 __unused;
+	uint16_t lcl_u16 __unused;
+	uint32_t lcl_u32 __unused;
+	uint64_t lcl_u64 __unused;
 
 	lcl_u8  = u8;
 	lcl_u16 = u16;
 	lcl_u32 = u32;
 	lcl_u64 = u64;
-
 
 	return EXIT_SUCCESS;
 }

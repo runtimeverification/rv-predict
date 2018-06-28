@@ -164,12 +164,12 @@ __rvpredict_intr_register(void (*handler)(void), int32_t prio)
 {
 	if (rvp_static_intr_debug) {
 		fprintf(stderr, "%s: handler %p prio %" PRId32 "\n",
-		    __func__, (const void *)handler, prio);
+		    __func__, (const void *)(uintptr_t)handler, prio);
 	}
 	if (rvp_static_nintrs >= __arraycount(rvp_static_intr)) {
 		errx(EXIT_FAILURE,
 		    "%s: no room for handler %p prio %" PRId32 "\n",
-		    __func__, (const void *)handler, prio);
+		    __func__, (const void *)(uintptr_t)handler, prio);
 	}
 	rvp_static_intr[rvp_static_nintrs++] =
 	    (rvp_static_intr_t){.si_handler = handler, .si_prio = prio,

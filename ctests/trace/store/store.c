@@ -4,6 +4,7 @@
 #include <stdint.h>	/* for uint8_t, uint32_t */
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "nbcompat.h"
 
 static const uint8_t initial_u8 = 0x39;
@@ -19,10 +20,10 @@ static const uint64_t end_u64 = (uint64_t)0xf << 32;
 int
 main(void)
 {
-	volatile _Atomic uint8_t u8 = initial_u8;
-	volatile _Atomic uint16_t u16 = initial_u16;
-	volatile _Atomic uint32_t u32 = initial_u32;
-	volatile _Atomic uint64_t u64 = initial_u64;
+	volatile _Atomic uint8_t u8 __unused = initial_u8;
+	volatile _Atomic uint16_t u16 __unused = initial_u16;
+	volatile _Atomic uint32_t u32 __unused = initial_u32;
+	volatile _Atomic uint64_t u64 __unused = initial_u64;
 
 	u8 = end_u8;
 	/* In `expect.out`, the next store is ascribed to the previous line

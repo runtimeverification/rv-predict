@@ -20,3 +20,10 @@ CTEST_dir=$(.CURDIR)/../..
 .export PATH
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
+
+# Code coverage
+.if $(MKCOVERAGE:U"no")=="yes"
+CFLAGS+=-fprofile-instr-generate -fcoverage-mapping 
+LDFLAGS+=-fprofile-instr-generate -fcoverage-mapping
+.endif
+#

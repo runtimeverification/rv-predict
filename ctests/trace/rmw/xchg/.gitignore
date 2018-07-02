@@ -1,3 +1,4 @@
 xchg
+*.profraw
 *.test.out
 test.trace

@@ -1,4 +1,6 @@
 memcpy
+*.profraw
+*.profraw
 *.d
 .depend
 .Makefile.tags

@@ -34,7 +34,40 @@ SECTIONS
 	{
 		*(.data.registers)
 	}
-	__data_registers_end = . ;
+	__data_registers_end = . ;  
+
+        __rvpredict_cov_begin = . ;
+
+        __start___llvm_prf_data = . ;
+        __llvm_prf_data :
+        {
+		*(__llvm_prf_data)
+        }
+        __stop___llvm_prf_data = . ;
+
+        __start___llvm_prf_cnts = . ;
+        __llvm_prf_cnts :
+        {
+		*(__llvm_prf_cnts)
+        }
+        __stop___llvm_prf_cnts = . ;
+
+        __start___llvm_prf_names = . ;
+        __llvm_prf_names :
+        {
+		*(__llvm_prf_names)
+        }
+        __stop___llvm_prf_names = . ;
+
+        __start___llvm_prf_vnds = . ;
+        __llvm_prf_vnds :
+        {
+		*(__llvm_prf_vnds)
+        }
+        __stop___llvm_prf_vnds = . ;
+
+        __rvpredict_cov_end = . ;
+
 
 	. = ALIGN(COHERENCY_UNIT);
 	.data.read_mostly :
@@ -51,5 +84,6 @@ SECTIONS
 		librvprt.a(.text)
 	}
 	__rvpredict_text_end = . ;
+
 }
 INSERT AFTER .text;

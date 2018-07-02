@@ -1,4 +1,5 @@
 natest
+*.profraw
 *.d
 .depend
 .Makefile.tags

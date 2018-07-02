@@ -1,4 +1,5 @@
 atomic_load
+*.profraw
 *.d
 .depend
 .Makefile.tags

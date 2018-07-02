@@ -1,4 +1,5 @@
 atomic_store
+*.profraw
 *.d
 .depend
 .Makefile.tags

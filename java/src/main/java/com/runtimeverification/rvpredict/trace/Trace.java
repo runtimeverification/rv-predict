@@ -421,7 +421,7 @@ public class Trace {
         RawTrace t = maybeT.get();
         for (int i = 0; i < t.size(); i++) {
             ReadonlyEventInterface e = t.event(i);
-            if (e.getEventId() >= event.getEventId()) break;
+            if (e.getEventId() > event.getEventId()) break;
             if (e.isLock() && !e.isWaitAcq()) {
                 lockIdToLockState.computeIfAbsent(e.getLockId(), LockState::new)
                         .acquire(e);

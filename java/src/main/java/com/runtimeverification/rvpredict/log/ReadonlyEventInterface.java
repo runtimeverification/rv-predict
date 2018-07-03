@@ -85,6 +85,8 @@ public interface ReadonlyEventInterface extends Comparable<ReadonlyEventInterfac
     boolean isCallStackEvent();
     boolean isInvokeMethod();
     boolean isSignalEvent();
+    boolean isSignalLockEvent();
+    boolean isSignalUnlockEvent();
     long getLockId();
     boolean isSimilarTo(ReadonlyEventInterface event);
     boolean isSignalMaskRead();

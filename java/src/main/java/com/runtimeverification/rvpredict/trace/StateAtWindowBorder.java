@@ -1,13 +1,17 @@
 package com.runtimeverification.rvpredict.trace;
 
 import com.google.common.collect.EvictingQueue;
+import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.EventType;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
+import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.signals.SignalMask;
 import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskForEvents;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,17 +39,19 @@ class StateAtWindowBorder {
     private final Set<Integer> threadsStarted = new HashSet<>();
     private final Set<Integer> threadsJoined = new HashSet<>();
     private final Map<Integer, SignalMask> signalMasks = new HashMap<>();
+    private Map<Integer, Deque<ReadonlyEventInterface>> tidToStacktrace = new HashMap<>();
     private final Map<Long, ReadonlyEventInterface> signalNumberToLastWindowEstablishEvents
             = new HashMap<>();
-
     private final Map<Long, EvictingQueue<RawTrace>> signalNumberToTraces
             = new HashMap<>();
+    private final MetadataInterface metadata;
 
     private OptionalLong minEventIdForWindow = OptionalLong.empty();
     private int maxSignalEventQueue;
 
-    StateAtWindowBorder(int maxSignalEventQueue) {
+    StateAtWindowBorder(int maxSignalEventQueue, MetadataInterface metadata) {
         this.maxSignalEventQueue = maxSignalEventQueue;
+        this.metadata = metadata;
     }
 
     void copyFrom(StateAtWindowBorder other) {
@@ -65,6 +71,8 @@ class StateAtWindowBorder {
         threadsForCurrentWindow.addAll(other.threadsForCurrentWindow);
         signalMasks.clear();
         signalMasks.putAll(other.signalMasks);
+        tidToStacktrace.clear();
+        other.tidToStacktrace.forEach((tid, trace) -> tidToStacktrace.put(tid, new ArrayDeque<>(trace)));
         minEventIdForWindow = other.minEventIdForWindow;
     }
 
@@ -130,6 +138,21 @@ class StateAtWindowBorder {
                 registerSignal(ttid);
             } else if (event.getType() == EventType.EXIT_SIGNAL) {
                 joinThread(ttid);
+            }
+        } else if (event.getType() == EventType.INVOKE_METHOD) {
+            Deque<ReadonlyEventInterface> stackTrace = tidToStacktrace.computeIfAbsent(ttid, k -> new ArrayDeque<>());
+            assert stackTrace.isEmpty() || stackTrace.peekLast().getEventId() < event.getEventId();
+            stackTrace.add(event.copy());
+        } else if (event.getType() == EventType.FINISH_METHOD) {
+            Deque<ReadonlyEventInterface> stackTrace = tidToStacktrace.get(ttid);
+            assert stackTrace != null;
+            ReadonlyEventInterface lastEvent = stackTrace.removeLast();
+            long locId = lastEvent.getLocationId();
+            if (locId != event.getLocationId()) {
+                throw new IllegalStateException("Unmatched method entry/exit events!" +
+                        (Configuration.debug ?
+                                "\n\tENTRY:" + metadata.getLocationSig(locId) + " gid " + lastEvent.getEventId() +
+                                        "\n\tEXIT:" + metadata.getLocationSig(event.getLocationId()) + " gid " + event.getEventId() : ""));
             }
         }
         processEvent(event.getEventId());
@@ -203,5 +226,9 @@ class StateAtWindowBorder {
 
     Set<Integer> getFinishedThreads() {
         return threadsJoined;
+    }
+
+    Map<Integer, Deque<ReadonlyEventInterface>> getStackTraces() {
+        return tidToStacktrace;
     }
 }

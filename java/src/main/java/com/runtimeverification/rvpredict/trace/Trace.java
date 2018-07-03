@@ -87,7 +87,7 @@ public class Trace {
      * It is computed as the value in the {@link #state} before the first
      * event of that thread occurs in this trace segment.
      */
-    private final Map<Integer, ThreadState> tidToThreadState;
+    private final Map<Integer, Collection<LockState>> tidToLockState;
 
     /**
      * Map from memory addresses referenced in this trace segment to their states.
@@ -142,7 +142,7 @@ public class Trace {
             Map<Long, Integer> eventIdToTtid,
             Map<Integer, List<ReadonlyEventInterface>> tidToEvents,
             Map<Integer, List<MemoryAccessBlock>> tidToMemoryAccessBlocks,
-            Map<Integer, ThreadState> tidToThreadState,
+            Map<Integer, Collection<LockState>> tidToLockState,
             MemoryAddrToStateMap addrToState,
             Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToEvents,
             Table<Integer, Long, List<ReadonlyEventInterface>> tidToAddrToPrefixReadEvents,
@@ -157,7 +157,7 @@ public class Trace {
         this.eventIdToTtid = eventIdToTtid;
         this.tidToEvents = tidToEvents;
         this.tidToMemoryAccessBlocks = tidToMemoryAccessBlocks;
-        this.tidToThreadState = tidToThreadState;
+        this.tidToLockState = tidToLockState;
         this.addrToState = addrToState;
         this.ttidToAddrToWriteEvents = tidToAddrToEvents;
         this.ttidToAddrToPrefixReadEvents = tidToAddrToPrefixReadEvents;
@@ -413,8 +413,8 @@ public class Trace {
         OptionalInt maybeTtid = getTraceThreadId(event);
         assert maybeTtid.isPresent();
         int ttid = maybeTtid.getAsInt();
-        Map<Long, LockState> lockIdToLockState = tidToThreadState
-                .computeIfAbsent(ttid, key -> new ThreadState()).getLockStates().stream()
+        Map<Long, LockState> lockIdToLockState = tidToLockState
+                .computeIfAbsent(ttid, key -> new ArrayList<>()).stream()
                 .collect(Collectors.toMap(LockState::lockId, LockState::copy));
         Optional<RawTrace> maybeT = rawTraces.stream().filter(p -> p.getThreadInfo().getId() == ttid).findAny();
         assert maybeT.isPresent();
@@ -445,7 +445,6 @@ public class Trace {
 
     private void processEvents() {
         if (rawTraces.size() == 1) {
-            state.fastProcess(rawTraces.iterator().next());
             return;
         }
 
@@ -454,7 +453,7 @@ public class Trace {
         for (RawTrace rawTrace : rawTraces) {
             ThreadInfo threadInfo = rawTrace.getThreadInfo();
             int ttid = threadInfo.getId();
-            tidToThreadState.put(ttid, state.getThreadStateSnapshot(ttid));
+            tidToLockState.put(ttid, state.getLockStateSnapshot(ttid));
             boolean isInsideClinit = state.isInsideClassInitializer(ttid);
 
             for (int i = 0; i < rawTrace.size(); i++) {

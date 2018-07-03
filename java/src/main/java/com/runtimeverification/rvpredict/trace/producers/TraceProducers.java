@@ -1,5 +1,6 @@
 package com.runtimeverification.rvpredict.trace.producers;
 
+import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.producerframework.ComputingProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.LeafProducerWrapper;
 import com.runtimeverification.rvpredict.producerframework.ProducerModule;
@@ -17,6 +18,7 @@ import com.runtimeverification.rvpredict.trace.producers.base.RawTraces;
 import com.runtimeverification.rvpredict.trace.producers.base.RawTracesByTtid;
 import com.runtimeverification.rvpredict.trace.producers.base.SortedTtidsWithParentFirst;
 import com.runtimeverification.rvpredict.trace.producers.base.StackTraces;
+import com.runtimeverification.rvpredict.trace.producers.base.StackTracesLeaf;
 import com.runtimeverification.rvpredict.trace.producers.base.ThreadInfosComponent;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetDifference;
 import com.runtimeverification.rvpredict.trace.producers.base.TtidSetLeaf;
@@ -33,6 +35,7 @@ import com.runtimeverification.rvpredict.trace.producers.signals.SignalMaskForEv
 import com.runtimeverification.rvpredict.trace.producers.signals.ThreadsWhereSignalIsEnabled;
 import com.runtimeverification.rvpredict.trace.producers.signals.TtidsToSignalEnabling;
 
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,6 +68,8 @@ public class TraceProducers extends ProducerModule {
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
     private final LeafProducerWrapper<Set<Integer>, TtidSetLeaf> ttidsFinishedAtWindowEnd =
             new LeafProducerWrapper<>(new TtidSetLeaf(), this);
+    private final LeafProducerWrapper<Map<Integer, Deque<ReadonlyEventInterface>>, StackTracesLeaf> startStackTraces =
+            new LeafProducerWrapper<>(new StackTracesLeaf(), this);
 
     public final ComputingProducerWrapper<InterThreadSyncEvents> interThreadSyncEvents =
             new ComputingProducerWrapper<>(new InterThreadSyncEvents(currentWindowRawTraces), this);
@@ -186,7 +191,7 @@ public class TraceProducers extends ProducerModule {
 
     public final ComputingProducerWrapper<StackTraces> stackTraces =
             new ComputingProducerWrapper<>(
-                    new StackTraces(mergedRawTraces),
+                    new StackTraces(mergedRawTraces, startStackTraces),
                     this);
 
     public void startWindow(
@@ -195,6 +200,7 @@ public class TraceProducers extends ProducerModule {
             Map<Integer, SignalMask> signalMaskAtWindowStart,
             Set<Integer> ttidsStartedAtWindowStart, Set<Integer> ttidsStartedAtWindowEnd,
             Set<Integer> ttidsFinishedAtWindowStart, Set<Integer> ttidsFinishedAtWindowEnd,
+            Map<Integer, Deque<ReadonlyEventInterface>> startStackTraces,
             int desiredThreadCountForSignal) {
         reset();
         this.pwSignalsRawTraces.set(previousSignalsRawTraces);
@@ -207,6 +213,7 @@ public class TraceProducers extends ProducerModule {
         this.ttidsStartedAtWindowEnd.set(ttidsStartedAtWindowEnd);
         this.ttidsFinishedAtWindowStart.set(ttidsFinishedAtWindowStart);
         this.ttidsFinishedAtWindowEnd.set(ttidsFinishedAtWindowEnd);
+        this.startStackTraces.set(startStackTraces);
         this.desiredThreadCountForSignal.set(desiredThreadCountForSignal);
     }
 }

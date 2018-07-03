@@ -1268,12 +1268,13 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 }
 
 /*
- * Consumes nothing and returns the number of bytes that the buffer is
+ * If the operation code indicates a trace that is longer than `*nfullp`
+ * bytes, consume nothing and return the number of bytes that the buffer is
  * short of a full trace.
  *
- * Otherwise, consumes the trace at the start of the buffer `ub`, prints
- * the trace, shifts the bytes of the buffer left by the number of bytes
- * consumed, and returns 0.
+ * Otherwise, consume the trace at the start of the buffer `ub`, print
+ * the trace, shift the bytes of the buffer left by the number of bytes
+ * consumed, and return 0.
  */
 static size_t
 consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)

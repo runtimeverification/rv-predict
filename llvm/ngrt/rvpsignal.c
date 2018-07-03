@@ -336,29 +336,75 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_interruption_t *it = rvp_ring_put_interruption(oldr, r,
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	const rvp_maskchg_t *mcp;
+	const uint64_t blocked_by_signal =
+	    sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable;
+	const uint64_t typical_mask = omask | blocked_by_signal;
+	sigset_t tmpmask;
+	bool inconsistent;
 
-	if (t->t_in_maskchg) {
-		sigset_t tmpmask;
-
-		if (real_pthread_sigmask(SIG_SETMASK, NULL, &tmpmask) == -1)
-			abort();
-		t->t_intrmask = sigset_to_mask(&tmpmask) & ~rvp_unmaskable;
-#if 0
+	/* If `t->t_maskchg != NULL`, then this handler has
+	 * interrupted a change of mask that was underway.  The
+	 * mask in `t->t_intrmask` may be inconsistent with the
+	 * OS mask.  The inconsistency may not appear until a
+	 * pthread_sigmask() call in this signal handler returns
+	 * an OS mask that's different than what `t->t_intrmask`
+	 * suggests.
+	 *
+	 * We try to determine as efficiently as possible
+	 * (avoiding a system call, if possible) whether the mask 
+	 * is inconsistent.  If the mask is inconsistent, then
+	 * we log the mask change that was underway and update
+	 * `t->t_intrmask`.
+	 *
+	 * Entering the handler for `signum` while it is blocked
+	 * in `t->t_intrmask` is an inconsistency that is
+	 * inexpensive to detect.
+	 */
+	if ((mcp = t->t_maskchg) == NULL) {
+		t->t_intrmask = typical_mask;
+		inconsistent = false;
 	} else if ((omask & __BIT(signo_to_bitno(signum))) != 0) {
+		omask = mcp->mc_nmask;
+		t->t_intrmask = omask | blocked_by_signal;
+		inconsistent = true;
+	} else if (real_pthread_sigmask(SIG_SETMASK, NULL, &tmpmask) == -1)
 		abort();
-#endif
-	} else {
-		t->t_intrmask = omask |
-		    (sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable);
-	}
+	else if (sigset_to_mask(&tmpmask) != typical_mask) {
+		omask = mcp->mc_nmask;
+		t->t_intrmask = sigset_to_mask(&tmpmask) & ~rvp_unmaskable;
+		inconsistent = true;
+	} else
+		inconsistent = false;
 
 	r->r_lgen = oldr->r_lgen;
 
+	if (inconsistent) {
+		// change to the interrupted sequence's depth, `mcp->mc_idepth`
+		rvp_buf_put_voidptr(&b,
+		    rvp_vec_and_op_to_deltop(0, RVP_OP_SIGDEPTH));
+		rvp_buf_put(&b, mcp->mc_idepth);
+		// emit the mask-change trace
+		rvp_buf_put_buf(&b, &mcp->mc_buf);
+		// restore the interrupt depth
+		rvp_buf_put_voidptr(&b,
+		    rvp_vec_and_op_to_deltop(0, RVP_OP_SIGDEPTH));
+		rvp_buf_put(&b, idepth + 1);
+		/* Unless some thread raced in and logged the mask change,
+		 * write it to the log.
+		 */ 
+		if (atomic_compare_exchange_strong(&t->t_maskchg, &mcp, NULL))
+			rvp_ring_put_buf(r, b);
+		b = RVP_BUF_INITIALIZER;
+	}
 	/* When the serializer reaches this ring, it will emit a
-	 * change of PC, a change of thread, and a change in outstanding
+	 * change of thread, and a change in outstanding
 	 * interrupts, if necessary, before emitting the events on the ring.
+	 *
+	 * We set the last PC to a deltop to force a jump once we
+	 * enter the user's signal handler.
 	 */
-	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
+	rvp_ring_reset_pc(r);
 	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_ENTERSIG));
 	rvp_buf_put_voidptr(&b,
 	    (s->s_handler != NULL)
@@ -681,6 +727,7 @@ static int
 rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
     const sigset_t *set, sigset_t *oldset)
 {
+	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_thread_t *t = rvp_thread_for_curthr();
 	uint64_t maskchg, nmask, omask;
 	uint64_t masked, unmasked;
@@ -722,15 +769,30 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 
 	nmask &= ~rvp_unmaskable;
 
+	const rvp_maskchg_t *omaskchg;
+	rvp_maskchg_t mc = {.mc_nmask = nmask, .mc_idepth = r->r_idepth};
+
 	if (set == NULL)
 		;
-	else if (oldset != NULL)
-		rvp_thread_trace_getsetmask(t, omask, nmask, retaddr);
-	else if (how == SIG_BLOCK || how == SIG_SETMASK) {
-		rvp_thread_trace_setmask(t, how, maskchg & ~rvp_unmaskable,
+	else if (oldset != NULL) {
+		/* Force a jump to be logged so that the buffered events
+		 * are self-contained.
+		 */
+		rvp_ring_reset_pc(r);
+		rvp_bufinit_getsetmask(&mc.mc_buf, &r->r_lastpc, omask, nmask,
 		    retaddr);
-	} else
-		rvp_thread_trace_setmask(t, how, maskchg, retaddr);
+	} else if (how == SIG_BLOCK || how == SIG_SETMASK) {
+		rvp_ring_reset_pc(r);
+		rvp_bufinit_newmask(&mc.mc_buf, &r->r_lastpc, how,
+		    maskchg & ~rvp_unmaskable, retaddr);
+	} else {
+		rvp_ring_reset_pc(r);
+		rvp_bufinit_newmask(&mc.mc_buf, &r->r_lastpc, how, maskchg,
+		    retaddr);
+	}
+
+	if (set != NULL)
+		omaskchg = atomic_exchange(&t->t_maskchg, &mc);
 
 	masked = nmask & ~omask;
 	unmasked = omask & ~nmask;
@@ -738,21 +800,22 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	if (masked != 0)
 		rvp_sigsim_raise_all_in_mask(masked);
 
-	const bool omaskchg = t->t_in_maskchg;
-
-	if (!omaskchg)
-		t->t_in_maskchg = true;
-
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
 	if (unmasked != 0)
 		rvp_sigsim_raise_all_in_mask(unmasked);
 
-	t->t_intrmask = nmask;
+	const rvp_maskchg_t *expected_mc = &mc;
 
-	if (!omaskchg)
-		t->t_in_maskchg = false;
+	if (set == NULL)
+		;	// nothing to do
+	else if (atomic_compare_exchange_strong(&t->t_maskchg,
+	    &expected_mc, omaskchg)) {
+		rvp_ring_put_buf(r, mc.mc_buf);
+		rvp_ring_request_service(r);
+		t->t_intrmask = nmask;
+	}
 
 	if (oldset != NULL) {
 		const uint64_t actual_omask = sigset_to_mask(oldset);

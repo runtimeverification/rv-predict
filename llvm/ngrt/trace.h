@@ -23,4 +23,10 @@ extern int64_t rvp_trace_size_limit;
 extern int64_t rvp_trace_size;
 extern rvp_jumpless_op_t rvp_jumpless_op;
 
+static inline void
+rvp_ring_reset_pc(rvp_ring_t *r)
+{
+	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);
+}
+
 #endif /* _RVP_TRACE_H_ */

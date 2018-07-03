@@ -1,0 +1,39 @@
+#!/usr/bin/awk -f
+
+BEGIN {
+	change_count = 0
+	effective_depth = 0
+}
+
+/signal depth -> 1/ {
+	if (change_count == 0)
+		original_depth = effective_depth
+	change_line[change_count++] = $0
+	effective_depth = 1
+	next
+}
+
+/signal depth -> 0/ {
+	if (change_count == 0)
+		original_depth = effective_depth
+	change_line[change_count++] = $0
+	effective_depth = 0
+	next
+}
+
+{
+	if (change_count > 0) {
+		if (effective_depth != original_depth)
+			print change_line[change_count - 1]
+		change_count = 0
+	}
+	print
+}
+
+END {
+	if (change_count > 0) {
+		if (effective_depth != original_depth)
+			print change_line[change_count - 1]
+		change_count = 0
+	}
+}

@@ -445,7 +445,6 @@ public class Trace {
 
     private void processEvents() {
         if (rawTraces.size() == 1) {
-            state.fastProcess(rawTraces.iterator().next());
             return;
         }
 

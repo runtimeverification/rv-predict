@@ -72,7 +72,7 @@ class StateAtWindowBorder {
         signalMasks.clear();
         signalMasks.putAll(other.signalMasks);
         tidToStacktrace.clear();
-        tidToStacktrace.putAll(other.tidToStacktrace);
+        other.tidToStacktrace.forEach((tid, trace) -> tidToStacktrace.put(tid, new ArrayDeque<>(trace)));
         minEventIdForWindow = other.minEventIdForWindow;
     }
 
@@ -140,7 +140,9 @@ class StateAtWindowBorder {
                 joinThread(ttid);
             }
         } else if (event.getType() == EventType.INVOKE_METHOD) {
-            tidToStacktrace.computeIfAbsent(ttid, k -> new ArrayDeque<>()).add(event.copy());
+            Deque<ReadonlyEventInterface> stackTrace = tidToStacktrace.computeIfAbsent(ttid, k -> new ArrayDeque<>());
+            assert stackTrace.isEmpty() || stackTrace.peekLast().getEventId() < event.getEventId();
+            stackTrace.add(event.copy());
         } else if (event.getType() == EventType.FINISH_METHOD) {
             Deque<ReadonlyEventInterface> stackTrace = tidToStacktrace.get(ttid);
             assert stackTrace != null;

@@ -118,6 +118,9 @@ public class TraceState {
     public Trace initNextTraceWindow(List<RawTrace> rawTraces) {
         processWindow(rawTraces);
         rawTraces = traceProducers.mergedRawTraces.getComputed().getTraces();
+        if (rawTraces.size() == 1) {
+            fastProcessWithoutStateAtCurrentWindowEnd(rawTraces.get(0));
+        }
 
         t_eventIdToTtid.clear();
         t_tidToEvents.clear();
@@ -207,7 +210,11 @@ public class TraceState {
      * @param rawTrace
      */
     public void fastProcess(RawTrace rawTrace) {
-        processWindow(Collections.singletonList(rawTrace));
+        fastProcessWithoutStateAtCurrentWindowEnd(rawTrace);
+        maintainStateAtCurrentWindowEnd(rawTrace);
+    }
+
+    private void fastProcessWithoutStateAtCurrentWindowEnd(RawTrace rawTrace) {
         int ttid = rawTrace.getThreadInfo().getId();
         for (int i = 0; i < rawTrace.size(); i++) {
             ReadonlyEventInterface event = rawTrace.event(i);
@@ -224,26 +231,28 @@ public class TraceState {
         }
     }
 
+    private void maintainStateAtCurrentWindowEnd(RawTrace rawTrace) {
+        ThreadInfo threadInfo = rawTrace.getThreadInfo();
+        if (threadInfo.getSignalDepth() > 0) {
+            stateAtCurrentWindowEnd.onSignalThread(rawTrace);
+        }
+        int ttid = threadInfo.getId();
+        if (rawTrace.size() > 0) {
+            stateAtCurrentWindowEnd.threadEvent(ttid);
+        }
+        for (int i = 0; i < rawTrace.size(); i++) {
+            ReadonlyEventInterface event = rawTrace.event(i);
+            stateAtCurrentWindowEnd.processEvent(event, ttid);
+            if (event.isStart()) {
+                onStartThread(event.getSyncedThreadId());
+            } else if (event.isJoin()) {
+                onJoinThread(event.getSyncedThreadId());
+            }
+        }
+    }
+
     private void processWindow(List<RawTrace> traces) {
-        traces.forEach(rawTrace -> {
-            ThreadInfo threadInfo = rawTrace.getThreadInfo();
-            if (threadInfo.getSignalDepth() > 0) {
-                stateAtCurrentWindowEnd.onSignalThread(rawTrace);
-            }
-            int ttid = threadInfo.getId();
-            if (rawTrace.size() > 0) {
-                stateAtCurrentWindowEnd.threadEvent(ttid);
-            }
-            for (int i = 0; i < rawTrace.size(); i++) {
-                ReadonlyEventInterface event = rawTrace.event(i);
-                stateAtCurrentWindowEnd.processEvent(event, ttid);
-                if (event.isStart()) {
-                    onStartThread(event.getSyncedThreadId());
-                } else if (event.isJoin()) {
-                    onJoinThread(event.getSyncedThreadId());
-                }
-            }
-        });
+        traces.forEach(this::maintainStateAtCurrentWindowEnd);
         traceProducers.startWindow(
                 stateAtCurrentWindowStart.getFormerSignalTraces(),
                 traces, stateAtCurrentWindowEnd.getThreadsForCurrentWindow(), threadInfos,

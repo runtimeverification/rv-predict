@@ -29,9 +29,14 @@ public class LZ4Utils {
 
     public static LZ4BlockOutputStream createCompressionStream(Path path) throws IOException {
         return new LZ4BlockOutputStream(
+                new BufferedChannelOutputStream(path),
+                /*
+                TODO: MappedByteBufferOutputStream is better optimized on Linux, but seems to cause
+                crashes. We should investigate these and reuse it.
                 OS.current() == OS.WINDOWS ?
                     new BufferedChannelOutputStream(path) :
                     new MappedByteBufferOutputStream(path),
+                    */
                 COMPRESS_BLOCK_SIZE,
                 FAST_COMPRESSOR);
     }
@@ -43,3 +48,4 @@ public class LZ4Utils {
     }
 
 }
+    

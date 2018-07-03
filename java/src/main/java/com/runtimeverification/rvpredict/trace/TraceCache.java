@@ -111,7 +111,7 @@ public class TraceCache {
         ArrayList<ReadonlyEventInterface> events = new ArrayList<>(eventsBuffer);
         eventsBuffer.clear();
         events.ensureCapacity(capacity);
-        for (int i = events.size(); i < maxEvents + 1; i++) {
+        for (int i = events.size(); i < maxEvents; i++) {
             ReadonlyEventInterface event;
             long leastGID = Long.MAX_VALUE;
             IEventReader leastReader = null;
@@ -167,6 +167,7 @@ public class TraceCache {
         /* Make GIDs compact. */
         for (int i = 0; i < nextGenStart; i++)
             events.set(i, events.get(i).destructiveWithEventId(lastGID + i));
+        assert maxEvents >= n;
         lastGID += maxEvents;
         splitTracesIntoThreads(rawTraces, events, nextGenStart);
         return rawTraces;

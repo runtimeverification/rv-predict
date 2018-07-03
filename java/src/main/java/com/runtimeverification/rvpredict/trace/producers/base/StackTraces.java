@@ -58,7 +58,10 @@ public class StackTraces extends ComputingProducer<StackTraces.State> {
         });
     }
 
-    private void addToStack(ReadonlyEventInterface e, Deque<StackTraceAfterEvent> stackTrace, ImmutableList.Builder<StackTraceAfterEvent> stackTraces) {
+    private void addToStack(
+            ReadonlyEventInterface e,
+            Deque<StackTraceAfterEvent> stackTrace,
+            ImmutableList.Builder<StackTraceAfterEvent> stackTraces) {
         StackTraceAfterEvent stack =
                 new StackTraceAfterEvent(
                         e, Optional.ofNullable(stackTrace.peekLast()));

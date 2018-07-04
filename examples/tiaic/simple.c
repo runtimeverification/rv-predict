@@ -20,12 +20,14 @@ static int racy, racefree;
 static void
 EI(void)
 {
+	/* Set the global enable flag. */
 	tiaic_write(TIAIC_GER, TIAIC_GER_ENABLE);
 }
 
 static void
 DI(void)
 {
+	/* Clear the global enable flag. */
 	tiaic_write(TIAIC_GER, 0);
 }
 
@@ -39,8 +41,8 @@ DI(void)
 void
 uart_handler(void)
 {
-	const char enter_msg[] = "( low priority interrupt\n";
-	const char exit_msg[] = "low priority interrupt )\n";
+	const char enter_msg[] = "( uart interrupt\n";
+	const char exit_msg[] =  "  uart interrupt )\n";
 
 	write(STDERR_FILENO, enter_msg, sizeof(enter_msg) - 1);
 
@@ -60,8 +62,8 @@ uart_handler(void)
 void
 spi_handler(void)
 {
-	const char enter_msg[] = "( high priority interrupt\n";
-	const char exit_msg[] = "high priority interrupt )\n";
+	const char enter_msg[] = "( spi interrupt\n";
+	const char exit_msg[] =  "  spi interrupt )\n";
 
 	write(STDERR_FILENO, enter_msg, sizeof(enter_msg) - 1);
 
@@ -75,13 +77,20 @@ spi_handler(void)
 int
 main(void)
 {
+	/* On startup, TIAIC interrupts are globally disabled. */
+
+	/* Establish operating mode. */ 
 	tiaic_write(TIAIC_CR,
 	    TIAIC_CR_PRHOLDMODE | TIAIC_CR_NESTMODE_INDIVIDUAL);
+	/* Enable host interrupts on fast interrupt (FIQ) and
+	 * interrupt request (IRQ) lines.
+	 */
 	tiaic_write(TIAIC_HIER, TIAIC_HIER_FIQ | TIAIC_HIER_IRQ);
+	/* Unmask system interrupts UART0 and SIP0. */
 	tiaic_write(TIAIC_EISR, __SHIFTIN(TIAIC_UART0_INT, TIAIC_EISR_INDEX));
 	tiaic_write(TIAIC_EISR, __SHIFTIN(TIAIC_SPI0_INT, TIAIC_EISR_INDEX));
-	/* establish SPI interrupt with lower channel (higher priority)
-	 * than UART interrupt
+	/* Establish SPI interrupt with lower channel (higher priority)
+	 * than UART interrupt.
 	 */
 	tiaic_write(TIAIC_CMR(TIAIC_UART0_INT / 4),
 		    __SHIFTIN(3, TIAIC_CMR_CHNL_MASK(TIAIC_UART0_INT % 4)));

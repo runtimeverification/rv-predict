@@ -127,7 +127,8 @@ public class TestHelper {
         executor.shutdownNow();
 
         Assert.assertTrue("Unable to match regular expressions: \n\t" +
-                        Joiner.on("\n\t").skipNulls().join(expectedPatterns) + "\n\t" + outputs,
+                        Joiner.on("\n\t").skipNulls().join(expectedPatterns) + "\n\t" + outputs +
+                        "\n\n\tFor" + Arrays.toString(command),
                 expectedPatterns.isEmpty());
         return numOfDoneTasks;
     }

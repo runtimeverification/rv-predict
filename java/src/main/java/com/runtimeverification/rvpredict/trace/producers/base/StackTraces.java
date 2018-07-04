@@ -10,6 +10,7 @@ import com.runtimeverification.rvpredict.producerframework.Producer;
 import com.runtimeverification.rvpredict.producerframework.ProducerState;
 
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -19,10 +20,13 @@ import java.util.OptionalInt;
 
 public class StackTraces extends ComputingProducer<StackTraces.State> {
     private final RawTracesCollection rawTraces;
+    private final StackTracesLeaf startTraces;
     public <T extends Producer & RawTracesCollection>StackTraces(
-            ComputingProducerWrapper<T> rawTraces) {
+            ComputingProducerWrapper<T> rawTraces,
+            ComputingProducerWrapper<StackTracesLeaf> startTraces) {
         super(new State());
         this.rawTraces = rawTraces.getAndRegister(this);
+        this.startTraces = startTraces.getAndRegister(this);
     }
 
     @Override
@@ -30,14 +34,18 @@ public class StackTraces extends ComputingProducer<StackTraces.State> {
         rawTraces.getTraces().forEach(rawTrace -> {
             Deque<StackTraceAfterEvent> stackTrace = new ArrayDeque<>();
             ImmutableList.Builder<StackTraceAfterEvent> stackTraces = ImmutableList.builder();
+
+            Collection<ReadonlyEventInterface> existingStackTrace =
+                    startTraces.getStackTraces().get(rawTrace.getThreadInfo().getId());
+            if (existingStackTrace == null) {
+                existingStackTrace = ImmutableList.of();
+            }
+            existingStackTrace.forEach(e -> addToStack(e, stackTrace, stackTraces));
+
             for (int i = 0; i < rawTrace.size(); i++) {
                 ReadonlyEventInterface e = rawTrace.event(i);
                 if (e.getType() == EventType.INVOKE_METHOD) {
-                    StackTraceAfterEvent stack =
-                            new StackTraceAfterEvent(
-                                    e, Optional.ofNullable(stackTrace.peekLast()));
-                    stackTrace.addLast(stack);
-                    stackTraces.add(stack);
+                    addToStack(e, stackTrace, stackTraces);
                 } else if (e.getType() == EventType.FINISH_METHOD) {
                     if (!stackTrace.isEmpty()) {
                         stackTrace.removeLast();
@@ -48,6 +56,17 @@ public class StackTraces extends ComputingProducer<StackTraces.State> {
             }
             getState().ttidToStackTrace.put(rawTrace.getThreadInfo().getId(), stackTraces.build());
         });
+    }
+
+    private void addToStack(
+            ReadonlyEventInterface e,
+            Deque<StackTraceAfterEvent> stackTrace,
+            ImmutableList.Builder<StackTraceAfterEvent> stackTraces) {
+        StackTraceAfterEvent stack =
+                new StackTraceAfterEvent(
+                        e, Optional.ofNullable(stackTrace.peekLast()));
+        stackTrace.addLast(stack);
+        stackTraces.add(stack);
     }
 
     public ImmutableList.Builder<ReadonlyEventInterface> getStackTraceAfterEventBuilder(int ttid, long eventId) {
@@ -77,6 +96,7 @@ public class StackTraces extends ComputingProducer<StackTraces.State> {
                 Optional<StackTraceAfterEvent> previousEvent) {
             this.event = event;
             this.previousEvent = previousEvent;
+            assert !previousEvent.isPresent() || previousEvent.get().getEventId() < event.getEventId();
         }
 
         private long getEventId() {

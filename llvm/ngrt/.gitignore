@@ -1,4 +1,6 @@
 *.a
+*.gcno
+*.gcda
 *.d
 .depend
 .gdbinit

@@ -16,6 +16,14 @@ RVP_TRACE_ONLY:=yes
 .export RVP_TRACE_ONLY
 .export RVP_TRACE_SIZE_LIMIT
 
+
+.if $(MKCOVERAGE1:U"no")=="yes"
+# I do not why this isn't passed down from ~/rv-predict/Makefile
+#    I don't know what LDFLAGS should be - this is overkill, probably
+LDFLAGS+=--coverage -fprofile-instr-generate -fcoverage-mapping
+.endif
+
+
 CC?=rvpc
 CPPFLAGS+=-I$(.CURDIR)/../../../../include
 SRCS.$(PROG)=$(PROG).c

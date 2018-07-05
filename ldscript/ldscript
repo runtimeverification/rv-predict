@@ -66,6 +66,14 @@ SECTIONS
         }
         __stop___llvm_prf_vnds = . ;
 
+        __start__llvm_gcov_ctr = . ;
+        __llvm_gcov_ctr :
+        {
+		*(__llvm_gcov_ctr)
+        }
+        __stop__llvm_gcov_ctr = . ;
+
+
         __rvpredict_cov_end = . ;
 
 

@@ -1,0 +1,7 @@
+cd ./ctests/regression
+ do.run4cov
+cd ../..
+cd ./ctests/trace
+ do.run4cov
+cd ../..
+

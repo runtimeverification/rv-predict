@@ -1,4 +1,6 @@
 store
+*.gcda
+*.gcno
 *.d
 .depend
 .Makefile.tags

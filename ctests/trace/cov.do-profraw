@@ -1,0 +1,5 @@
+#
+ls -la   default.profraw
+echo "         ================= do the llvm cov stuff               ===================="
+llvm-profdata merge default.profraw -o z.z
+llvm-cov show test-rvpmk  -instr-profile=z.z

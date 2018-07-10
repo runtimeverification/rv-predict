@@ -80,7 +80,7 @@ public class RVPredict implements AutoCloseable {
                 traceCache = new LLVMTraceCache(config, singleton);
             }
         } else {
-            metadata = Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace());
+            metadata = Metadata.readFrom(config.getMetadataPath());
             traceCache = new TraceCache(config, metadata);
         }
         if (config.isHappensBefore()) {

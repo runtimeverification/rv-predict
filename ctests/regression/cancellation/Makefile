@@ -19,7 +19,7 @@ LDADD+=-pthread
 
 .PHONY: test_output
 
-test_output:
+test_output: $(PROG)
 	@timeout --signal INT 1s $(.OBJDIR)/cancellation 2>&1 | \
 	    grep 'No races found' || true
 

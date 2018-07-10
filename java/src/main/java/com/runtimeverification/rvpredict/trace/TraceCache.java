@@ -12,10 +12,13 @@ import com.runtimeverification.rvpredict.log.compact.CompactEventReader;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.util.Logger;
+import org.apache.tools.ant.DirectoryScanner;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -83,6 +86,7 @@ public class TraceCache {
             }
             return;
         }
+
         while (true) {
             Path path = config.getTraceFilePath(logFileId++);
             if (!path.toFile().exists()) {
@@ -90,6 +94,13 @@ public class TraceCache {
             }
             readers.add(new EventReader(path));
         }
+
+        DirectoryScanner scanner = new DirectoryScanner();
+        scanner.setIncludes(new String[] { "*" + Configuration.TRACE_SUFFIX });
+        scanner.setBasedir(config.getLogDir());
+        scanner.scan();
+        assert readers.size() == scanner.getIncludedFilesCount()
+                : "Expecting trace files to have consecutive numbers, starting from 0.";
     }
 
     public LockGraph getLockGraph() {

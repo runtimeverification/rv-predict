@@ -1,8 +1,10 @@
 package com.runtimeverification.rvpredict.log;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -29,10 +31,17 @@ public class LZ4Utils {
 
     public static LZ4BlockOutputStream createCompressionStream(Path path) throws IOException {
         return new LZ4BlockOutputStream(
-                new BufferedChannelOutputStream(path),
+                new BufferedOutputStream(new FileOutputStream(path.toString())),
                 /*
-                TODO: MappedByteBufferOutputStream is better optimized on Linux, but seems to cause
-                crashes. We should investigate these and reuse it.
+                TODO: MappedByteBufferOutputStream was better optimized on Linux, but David's last tests show that
+                this is not the case anymore. Also, it seems to cause crashes.
+
+                On the other hand, BufferedChannelOutputStream seems to skip creating the file sometimes.
+
+                A raw BufferedOutputStream should be significantly worse, but it seems to be reliable.
+
+                We should investigate these and do something reasonable.
+
                 OS.current() == OS.WINDOWS ?
                     new BufferedChannelOutputStream(path) :
                     new MappedByteBufferOutputStream(path),

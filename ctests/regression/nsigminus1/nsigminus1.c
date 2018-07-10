@@ -9,6 +9,9 @@
 /* Make sure that we can fetch the state of every signal using
  * `sigaction` without crashing.  We used to (in version 1.9?)
  * crash on signal 32.
+ *
+ * Maya Rashish reported the bug and supplied the first draft
+ * of this test case.
  */
 int
 main(void)

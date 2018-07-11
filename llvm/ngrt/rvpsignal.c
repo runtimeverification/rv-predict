@@ -652,29 +652,58 @@ rvp_trace_sigdis(int signum, const void *return_address)
 	rvp_ring_request_service(r);
 }
 
+/* Note well: this routine initializes `bp`.  Any previous content
+ * is lost.
+ */
 static void
-rvp_trace_getsetmask(uint32_t omasknum, uint32_t masknum,
+rvp_bufinit_getsetmask(rvp_buf_t *bp, const char **lastpcp,
+    uint64_t omask, uint64_t nmask, const void *return_address)
+{
+	sigset_t oset, set;
+	rvp_sigblockset_t *obs, *nbs;
+
+	obs = intern_sigset(mask_to_sigset(omask, &oset));
+	nbs = intern_sigset(mask_to_sigset(nmask, &set));
+
+	*bp = RVP_BUF_INITIALIZER;
+
+	rvp_buf_put_pc_and_op(bp, lastpcp, return_address,
+	    RVP_OP_SIGGETSETMASK);
+	rvp_buf_put(bp, obs->bs_number);
+	rvp_buf_put(bp, nbs->bs_number);
+}
+
+static void
+rvp_trace_getsetmask(uint64_t omask, uint64_t mask,
     const void *return_address)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	rvp_buf_t b;
 
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, return_address,
-	    RVP_OP_SIGGETSETMASK);
-	rvp_buf_put(&b, omasknum);
-	rvp_buf_put(&b, masknum);
+	rvp_bufinit_getsetmask(&b, &r->r_lastpc, omask, mask, return_address);
 	rvp_ring_put_buf(r, b);
 	rvp_ring_request_service(r);
 }
 
 static void
-rvp_trace_mask(rvp_op_t op, uint32_t masknum, const void *return_address)
+rvp_bufinit_mask(rvp_buf_t *bp, const char **lastpcp, rvp_op_t op,
+    uint64_t mask, const void *return_address)
+{
+	sigset_t set;
+	rvp_sigblockset_t *bs = intern_sigset(mask_to_sigset(mask, &set));
+
+	*bp = RVP_BUF_INITIALIZER;
+	rvp_buf_put_pc_and_op(bp, lastpcp, return_address, op);
+	rvp_buf_put(bp, bs->bs_number);
+}
+
+static void
+rvp_trace_mask(rvp_op_t op, uint64_t mask, const void *return_address)
 {
 	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	rvp_buf_t b;
 
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, return_address, op);
-	rvp_buf_put(&b, masknum);
+	rvp_bufinit_mask(&b, &r->r_lastpc, op, mask, return_address);
 	rvp_ring_put_buf(r, b);
 	rvp_ring_request_service(r);
 }
@@ -683,21 +712,14 @@ static void
 rvp_thread_trace_getsetmask(rvp_thread_t *t __unused,
     uint64_t omask, uint64_t mask, const void *retaddr)
 {
-	sigset_t oset, set;
-	rvp_sigblockset_t *obs, *bs;
-
-	obs = intern_sigset(mask_to_sigset(omask, &oset));
-	bs = intern_sigset(mask_to_sigset(mask, &set));
-	rvp_trace_getsetmask(obs->bs_number, bs->bs_number, retaddr);
+	rvp_trace_getsetmask(omask, mask, retaddr);
 }
 
 static void
-rvp_thread_trace_setmask(rvp_thread_t *t __unused, int how, uint64_t mask,
+rvp_bufinit_newmask(rvp_buf_t *bp, const char **lastpcp, int how, uint64_t mask,
     const void *retaddr)
 {
 	rvp_op_t op;
-	sigset_t set;
-	rvp_sigblockset_t *bs;
 
 	if (how == SIG_SETMASK)
 		op = RVP_OP_SIGSETMASK;
@@ -708,19 +730,26 @@ rvp_thread_trace_setmask(rvp_thread_t *t __unused, int how, uint64_t mask,
 	else 
 		errx(EXIT_FAILURE, "%s: unknown `how`, %d", __func__, how);
 
-	bs = intern_sigset(mask_to_sigset(mask, &set));
-	rvp_trace_mask(op, bs->bs_number, retaddr);
+	rvp_bufinit_mask(bp, lastpcp, op, mask, retaddr);
+}
+
+static void
+rvp_thread_trace_newmask(rvp_thread_t *t __unused, int how, uint64_t mask,
+    const void *retaddr)
+{
+	rvp_ring_t *r = rvp_ring_for_curthr();
+	rvp_buf_t b;
+
+	rvp_bufinit_newmask(&b, &r->r_lastpc, how, mask, retaddr);
+	rvp_ring_put_buf(r, b);
+	rvp_ring_request_service(r);
 }
 
 static void
 rvp_thread_trace_getmask(rvp_thread_t *t __unused,
     uint64_t omask, const void *retaddr)
 {
-	sigset_t set;
-	rvp_sigblockset_t *bs;
-
-	bs = intern_sigset(mask_to_sigset(omask, &set));
-	rvp_trace_mask(RVP_OP_SIGGETMASK, bs->bs_number, retaddr);
+	rvp_trace_mask(RVP_OP_SIGGETMASK, omask, retaddr);
 }
 
 static int
@@ -857,7 +886,7 @@ __rvpredict_sigsuspend(const sigset_t *mask)
 	const int rc = real_sigsuspend(mask);
 	t->t_intrmask = omask;
 	const int errno_copy = errno;
-	rvp_thread_trace_setmask(t, SIG_SETMASK, omask, retaddr);
+	rvp_thread_trace_newmask(t, SIG_SETMASK, omask, retaddr);
 	errno = errno_copy;
 	return rc;
 }

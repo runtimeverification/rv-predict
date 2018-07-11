@@ -41,6 +41,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -490,10 +491,11 @@ RVPredictInstrument::runOnFunction(Function &F)
 	const DataLayout &DL = m.getDataLayout();
 	struct {
 		Function *exitfn, *createfn, *joinfn,
-		    *lockfn, *trylockfn, *unlockfn;
+		    *lockfn, *trylockfn, *unlockfn, *timedwaitfn, *waitfn;
 
 		Value *createstubfn, *joinstubfn, *exitstubfn,
-		    *lockstubfn, *trylockstubfn, *unlockstubfn;
+		    *lockstubfn, *trylockstubfn, *unlockstubfn,
+		    *timedwaitstubfn, *waitstubfn;
 	} pthreads = {
 		  .exitfn = m.getFunction("pthread_exit")
 		, .createfn = m.getFunction("pthread_create")
@@ -501,6 +503,8 @@ RVPredictInstrument::runOnFunction(Function &F)
 		, .lockfn = m.getFunction("pthread_mutex_lock")
 		, .trylockfn = m.getFunction("pthread_mutex_trylock")
 		, .unlockfn = m.getFunction("pthread_mutex_unlock")
+		, .timedwaitfn = m.getFunction("pthread_cond_timedwait")
+		, .waitfn = m.getFunction("pthread_cond_wait")
 	};
 
 	pthreads.createstubfn = (pthreads.createfn == nullptr)
@@ -527,6 +531,14 @@ RVPredictInstrument::runOnFunction(Function &F)
 	    ? nullptr
 	    : m.getOrInsertFunction("__rvpredict_pthread_mutex_unlock",
 		pthreads.unlockfn->getFunctionType());
+	pthreads.timedwaitstubfn = (pthreads.timedwaitfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_cond_timedwait",
+		pthreads.timedwaitfn->getFunctionType());
+	pthreads.waitstubfn = (pthreads.waitfn == nullptr)
+	    ? nullptr
+	    : m.getOrInsertFunction("__rvpredict_pthread_cond_wait",
+		pthreads.waitfn->getFunctionType());
 
 	// Traverse all instructions, collect loads/stores/returns, check for calls.
 	for (auto &bblock : F) {
@@ -595,6 +607,10 @@ RVPredictInstrument::runOnFunction(Function &F)
 			replacefn = pthreads.trylockstubfn;
 		} else if (calledfn == pthreads.unlockfn) {
 			replacefn = pthreads.unlockstubfn;
+		} else if (calledfn == pthreads.timedwaitfn) {
+			replacefn = pthreads.timedwaitstubfn;
+		} else if (calledfn == pthreads.waitfn) {
+			replacefn = pthreads.waitstubfn;
 		}
 		if (replacefn != nullptr && ClInstrumentPthreads) {
 			auto nargs = ci->getNumArgOperands();

@@ -157,7 +157,7 @@ fi
 # -latomic for atomic_is_lock_free()
 # -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} -ldl -lrt -latomic -pthread -g"
+	runtime="-Wl,-rpath=${runtime_dir} -Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} -ldl -lrt -latomic -pthread -g"
 fi
 
 if [ ${just_print} = yes ]; then

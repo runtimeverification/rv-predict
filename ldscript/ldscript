@@ -43,13 +43,3 @@ SECTIONS
 	}
 }
 INSERT AFTER .data;
-SECTIONS
-{
-	__rvpredict_text_begin = . ;
-	.text.rvpredict :
-	{
-		librvprt.a(.text)
-	}
-	__rvpredict_text_end = . ;
-}
-INSERT AFTER .text;

@@ -269,7 +269,7 @@ rvp_signal_rings_replenish(void)
 	}
 
 	for (nallocated = nclean; nallocated <= nneeded; nallocated++) {
-		rvp_ring_t *r = calloc(sizeof(*r), 1);
+		r = calloc(sizeof(*r), 1);
 		if (r == NULL && nallocated == 0)
 			err(EXIT_FAILURE, "%s: calloc", __func__);
 		else if (r == NULL)
@@ -362,8 +362,8 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_ENTERSIG));
 	rvp_buf_put_voidptr(&b,
 	    (s->s_handler != NULL)
-	        ? (const void *)s->s_handler
-		: (const void *)s->s_sigaction);
+	        ? (const void *)(uintptr_t)s->s_handler
+		: (const void *)(uintptr_t)s->s_sigaction);
 	rvp_buf_put_u64(&b, r->r_lgen);
 	rvp_buf_put(&b, signum);
 	rvp_ring_put_buf(r, b);
@@ -676,19 +676,6 @@ rvp_thread_trace_getmask(rvp_thread_t *t __unused,
 	bs = intern_sigset(mask_to_sigset(omask, &set));
 	rvp_trace_mask(RVP_OP_SIGGETMASK, bs->bs_number, retaddr);
 }
-
-#if 0
-static inline void
-trace_sigmask_op(const void *retaddr, int how)
-{
-	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
-	rvp_buf_put_voidptr(&b, mtx);
-
-	rvp_ring_put_buf(r, b);
-}
-#endif
 
 static int
 rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,

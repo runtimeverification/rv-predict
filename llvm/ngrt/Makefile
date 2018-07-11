@@ -16,10 +16,9 @@ INCS=rvpredict_intr.h
 CC?=clang
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
-CFLAGS+=-Wmissing-prototypes
 #COPTS+=-O3
 COPTS+=-g
-CFLAGS+=-Wmissing-prototypes
+CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 SRCS+=access.c const.c deltops.c func.c lock.c notimpl.c

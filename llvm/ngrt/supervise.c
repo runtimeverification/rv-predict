@@ -295,7 +295,8 @@ rvp_online_analysis_start(void)
 	analysis_pid = fork();
 
 	if (analysis_pid == 0) {
-		char *const args[] = {"rvpa", binpath, "/dev/stdin", NULL};
+		char cmdname[] = "rvpa", tracename[] = "/dev/stdin";
+		char *const args[] = {cmdname, binpath, tracename, NULL};
 
 		/* We move the analyzer into its own process group
 		 * so that signals generated on the terminal (e.g.,
@@ -565,7 +566,8 @@ rvp_supervision_start(void)
 	}
 
 	if (pid == 0) {
-		char *const args[] = {"rvpa", binpath, NULL};
+		char cmdname[] = "rvpa";
+		char *const args[] = {cmdname, binpath, NULL};
 
 		if (chdir(tmpdir) == -1) {
 			err(EXIT_FAILURE, "%s could not change to "

@@ -1,9 +1,11 @@
 #include <stdlib.h>
 
+#include "nbcompat.h"
+
 int
 main(void)
 {
-	volatile int x;
+	volatile int x __unused;
 	int i;
 
 	for (i = 0; i < 1000; i++)

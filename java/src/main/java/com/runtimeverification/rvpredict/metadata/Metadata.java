@@ -4,13 +4,11 @@ import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.trace.Trace;
-import com.runtimeverification.rvpredict.util.RVPair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
-import java.io.ObjectStreamClass;
 import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -42,7 +40,7 @@ public class Metadata implements MetadataInterface, Serializable {
     private final Set<Integer> volatileVarIds = Collections
             .newSetFromMap(new ConcurrentHashMap<>());
 
-    private final Map<Long, RVPair<Long, Long>> otidToCreationInfo = new ConcurrentHashMap<>();
+    private final Map<Long, Pair<Long, Long>> otidToCreationInfo = new ConcurrentHashMap<>();
 
     private static final Metadata instance = new Metadata();
 
@@ -173,18 +171,18 @@ public class Metadata implements MetadataInterface, Serializable {
 
     @Override
     public void addOriginalThreadCreationInfo(long childOTID, long parentOTID, long locId) {
-        otidToCreationInfo.put(childOTID, RVPair.of(parentOTID, locId));
+        otidToCreationInfo.put(childOTID, Pair.of(parentOTID, locId));
     }
 
     @Override
     public long getParentOTID(long otid) {
-        RVPair<Long, Long> info = otidToCreationInfo.get(otid);
+        Pair<Long, Long> info = otidToCreationInfo.get(otid);
         return info == null ? 0 : info.getLeft();
     }
 
     @Override
     public long getOriginalThreadCreationLocId(long otid) {
-        RVPair<Long, Long> info = otidToCreationInfo.get(otid);
+        Pair<Long, Long> info = otidToCreationInfo.get(otid);
         return info == null ? -1 : info.getRight();
     }
 

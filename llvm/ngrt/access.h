@@ -13,20 +13,31 @@
 extern struct llvm_profile_data __start___llvm_prf_data;
 extern struct llvm_profile_data __stop___llvm_prf_data;
 
-extern char __rvpredict_cov_begin;
+extern const char __rvpredict_cov_begin;
+extern const char __rvpredict_cov_end;
+
 extern uint64_t __start___llvm_prf_cnts;
 extern uint64_t __stop___llvm_prf_cnts;
 extern char __start___llvm_prf_names;
 extern char __stop___llvm_prf_names;
-extern char __rvpredict_cov_end;
+
+extern char __stop__llvm_gcov_ctr;
+
+extern const char  __llvm_profile_filename; /* This comes after all the __llvm_gcov_ctr.nn variables */
+
+#define COV_begin __rvpredict_cov_begin
+#define COV_end   __stop__llvm_gcov_ctr
+/* #define COV_end   __rvpredict_cov_end */
+/* #define COV_end   __llvm_profile_filename */
+
 /* do not trace LLVM coverage runtime counters */
 static inline int
 no_trace(rvp_addr_t addr)
 {        /* return true if we should not trace this variable */
          if ( 
-              ((void*) addr) >= ((void*) & __rvpredict_cov_begin) 
+              ((void*) addr) >= ((void*) & COV_begin) 
                  &&
-              ((void*) addr) <= ((void*) & __rvpredict_cov_end) 
+              ((void*) addr) <= ((void*) & COV_end) 
             )
          {
               return 1; /* Its sn LLVM coverage variable - do not trace */

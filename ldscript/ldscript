@@ -72,8 +72,14 @@ SECTIONS
 		*(__llvm_gcov_ctr)
         }
         __stop__llvm_gcov_ctr = . ;
-
-
+/*
+*       __start__llvm_profile_filename = . ;
+*       __llvm_gcov_ctr :
+*       {
+*		*(__llvm_profile_filename)
+*       }
+*       __stop__llvm_profile_filename = . ;
+*/
         __rvpredict_cov_end = . ;
 
 

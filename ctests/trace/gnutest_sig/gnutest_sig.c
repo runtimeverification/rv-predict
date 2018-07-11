@@ -72,7 +72,7 @@ handler (int sig)
   struct sigaction sa;
   ASSERT (sig == SIGABRT);
   ASSERT (sigaction (SIGABRT, NULL, &sa) == 0);
-#if 0 /* RV:CRM:I don't know why this assert fails */
+#if 1 /* RV:CRM:I don't know why this assert fails */
   ASSERT ((sa.sa_flags & SA_SIGINFO) == 0);
 #endif
   switch (entry_count++)

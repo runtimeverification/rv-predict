@@ -1,0 +1,27 @@
+   The clang/llvm tool set generates two kinds of coverage information:
+A. Clang generates default.profraw files; apparently this is designed for integration with Xcode projects.
+     The command line options are
+	CFLAGS+=-fprofile-instr-generate -fcoverage-mapping
+	LDFLAGS+=-fprofile-instr-generate -fcoverage-mapping
+  We do not utilize this style of coverage. "rvpmake MKCOVERAGE2=yes" will generate the 'prof' files	
+B. Clang/llvm also can generate information roughly compatible with GCC code coverage tools.
+     The command line options are (rvpmake MKCOVERAGE=yes inserts these command line options)
+	CFLAGS+=--coverage -g
+	#    I don't know what LDFLAGS should be - this is overkill, probably
+	LDFLAGS+=--coverage -fprofile-instr-generate -fcoverage-mapping
+     The compiler generates a .gcno file for each .c file. During execution a .gcda file is created/updated with 
+   usuage counts. Additional runs add to the totals in the .gcda file. The llvm-cov gcov utility creates human
+   readable .gcov files.
+     There are many GCC tools like lcov that analyze/summerize/display .gcov files, but the clang files 
+   are not compatible for some reason.
+
+Example
+  Create coverage information on the rv-predict runtime:
+        cd ~/rv-predict
+        rvpmake cleandir
+        rvpmake MKCOVERAGE=yes
+        do.run4cov
+        cd llvm/ngrt
+        llvm-cov gcov *.c
+
+        There will now be *.c.gcov and *.h.gcov files that show the source and execution counts line by line.

@@ -18,7 +18,7 @@ SUBPRJ+=maven
 # Code coverage
 RVPRoot=~/rv-predict
 
-.if $(MKCOVERAGE1:U"no")=="yes"
+.if $(MKCOVERAGE:U"no")=="yes"
 #       each .c gets a .gcno at compile time and .gcda at execution
 #       --coverage includes -fprofile-arcs -ftest-coverage
 #       -g includes debug info (as per https://llvm.org/docs/CommandGuide/llvm-cov.html )
@@ -27,7 +27,7 @@ CFLAGS+=--coverage -g
 LDFLAGS+=--coverage -fprofile-instr-generate -fcoverage-mapping
 .endif
 
-.if $(MKCOVERAGE:U"no")=="yes"
+.if $(MKCOVERAGE2:U"no")=="yes"
 #      Generates default.profraw when program runs
 CFLAGS+=-fprofile-instr-generate -fcoverage-mapping 
 LDFLAGS+=-fprofile-instr-generate -fcoverage-mapping`

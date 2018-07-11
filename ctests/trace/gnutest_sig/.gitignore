@@ -1,4 +1,6 @@
 gnutest_sig
+0GNU*
+*.gc*
 0O*
 *.d
 .depend

@@ -1,3 +1,5 @@
 core
+*.gcno
+*.gcda
 G
 *.test.out

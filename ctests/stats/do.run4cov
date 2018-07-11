@@ -1,0 +1,9 @@
+echo "============== stats on_exit on_signal ============="
+cd on_exit 
+on_exit 
+cd ..
+
+cd on_signal
+on_signal
+cd ..
+

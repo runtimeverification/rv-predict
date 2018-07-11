@@ -4,6 +4,7 @@
 #define _RVP_RING_H_
 
 #include <sched.h>
+#include <signal.h>	/* for sigset_t */
 #include <stdatomic.h>	/* for atomic_store_explicit */
 #include <stdbool.h>
 #include <stdint.h>	/* for uint32_t */

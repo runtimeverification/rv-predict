@@ -35,7 +35,7 @@ __rettype __func(__VA_ARGS__) __attribute__((weak,			\
 				     visibility("default")))
 
 #define	ESTABLISH_PTR_TO_REAL(__fntype, __fn)	do {		\
-	real_##__fn = (__fntype)dlsym(RTLD_NEXT, #__fn);	\
+	real_##__fn = (__fntype)(uintptr_t)dlsym(RTLD_NEXT, #__fn);	\
 } while (/*CONSTCOND*/false)
 
 INTERPOSE_DECLS(int, pthread_join, pthread_t, void **);

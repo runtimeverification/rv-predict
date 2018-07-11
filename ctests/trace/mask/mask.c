@@ -9,15 +9,16 @@ int
 main(int argc __unused, char **argv __unused)
 {
 	int rc;
-	sigset_t oset, set;
-	sigfillset(&set);
+	sigset_t empty, full, oset;
+	sigfillset(&full);
+	sigemptyset(&empty);
 
-	if ((rc = pthread_sigmask(SIG_BLOCK, &set, NULL)) != 0) {
+	if ((rc = pthread_sigmask(SIG_BLOCK, &full, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
 	}
 
-	if ((rc = pthread_sigmask(SIG_BLOCK, &set, &oset)) != 0) {
+	if ((rc = pthread_sigmask(SIG_BLOCK, &full, &oset)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
 	}
@@ -28,6 +29,11 @@ main(int argc __unused, char **argv __unused)
 	}
 
 	if ((rc = pthread_sigmask(SIG_SETMASK, &oset, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+
+	if ((rc = pthread_sigmask(SIG_SETMASK, &empty, &oset)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
 	}

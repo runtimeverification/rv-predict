@@ -23,12 +23,8 @@ tid 1.0 in main at .../chgmask/chgmask.c:31 store 8 0000000000000000 -> sa.sa_ma
 tid 1.0 in main at .../chgmask/chgmask.c:31 store 8 0000000000000000 -> sa.sa_flags at chgmask.c;main
 tid 1.0 in main at .../chgmask/chgmask.c:31 store 8 0000000000000000 -> sa.sa_restorer at chgmask.c;main
 tid 1.0 in main at .../chgmask/chgmask.c:35:36 establish signal action signal 10 handler in handler at .../chgmask/chgmask.c:11 mask #2
-tid 1.0 in main at .../chgmask/chgmask.c:35:36 signal depth -> 1
-tid 1.1 {} signal depth -> 0
 tid 1.0 in main at .../chgmask/chgmask.c:38:10 nop
 tid 1.0 in main at .../chgmask/chgmask.c:38:10 set signal mask #4
-tid 1.0 in main at .../chgmask/chgmask.c:38:10 signal depth -> 1
-tid 1.1 {} signal depth -> 0
 tid 1.0 in main at .../chgmask/chgmask.c:38:10 signal depth -> 1
 tid 1.1 {} enter signal handler signal 10 handler in handler at .../chgmask/chgmask.c:11
 tid 1.1 in handler at .../chgmask/chgmask.c:11 nop

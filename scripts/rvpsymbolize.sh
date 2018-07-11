@@ -90,8 +90,8 @@ set +i
 signal_regex='\<\(S[0-9]\+\)\>'
 
 func_addr_regex='{\(0x[0-9a-f]\+\)}'
-func_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.*\)$,s|\1|in \2 at \3|g,'
-
+func_sym_sed_template='s,^\(.\+\);;\(\(rvp\|__rvpredict\).\+\);;\(.*\)$,s|\1|in \2|g,
+s,^\(.\+\);;\(.\+\);;\(.*\)$,s|\1|in \2 at \3|g,'
 data_addr_regex='\(\[0x[0-9a-f]\+[^]]*\]\)'
 data_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.\+\)$,s|\3|\2 at \1|g,'
 

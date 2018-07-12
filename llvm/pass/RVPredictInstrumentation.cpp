@@ -711,7 +711,6 @@ RVPredictInstrument::addrBelongsToCoverage(Value *addr)
 
 	if (GlobalVariable *v = dyn_cast<GlobalVariable>(addr)) {
 		if (v->getName().startswith("__llvm_gcov_ctr")) {
-			errs() << format("%s belongs to coverage\n", v->getName().data());
 			return true;
 		}
 	}

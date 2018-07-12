@@ -43,6 +43,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
@@ -107,8 +108,9 @@ public:
   void chooseInstructionsToInstrument(SmallVectorImpl<Instruction *> &Local,
                                       SmallVectorImpl<Instruction *> &All,
                                       const DataLayout &DL);
-  bool addrPointsToConstantData(Value *Addr);
+  bool addrBelongsToCoverage(Value *);
   bool addrContainsRegister(Value *);
+  bool addrPointsToConstantData(Value *Addr);
   int getMemoryAccessFuncIndex(Value *Addr, const DataLayout &DL);
 
   Type *intptr_type;
@@ -694,6 +696,30 @@ RVPredictInstrument::runOnFunction(Function &F)
 }
 
 /**
+ * Check if an address belongs to the LLVM coverage instrumentation.
+ * We do not ordinarily want to instrument loads & stores to those
+ * addresses.
+ */
+bool
+RVPredictInstrument::addrBelongsToCoverage(Value *addr)
+{
+	// If this is a GEP, just analyze its pointer operand.
+	if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(addr))
+		addr = gep->getPointerOperand();
+	else if (GEPOperator *gep = dyn_cast<GEPOperator>(addr))
+		addr = gep->getPointerOperand();
+
+	if (GlobalVariable *v = dyn_cast<GlobalVariable>(addr)) {
+		if (v->getName().startswith("__llvm_gcov_ctr")) {
+			errs() << format("%s belongs to coverage\n", v->getName().data());
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Check if an address is a register.
  */
 bool
@@ -736,6 +762,8 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
   int Idx = getMemoryAccessFuncIndex(Addr, DL);
   if (Idx < 0)
     return false;
+  if (addrBelongsToCoverage(Addr))
+	return false;
   if (addrContainsRegister(Addr)) {
 	Instruction *CastInsn = CastInst::CreateBitOrPointerCast(Val, Ty);
 	if (IsWrite) {

@@ -8,6 +8,8 @@
 *.deb
 **/.depend
 EVALUATION-LICENSE.md
+**/*.gcda
+**/*.gcno
 **/.gdbinit
 .idea
 *.iml

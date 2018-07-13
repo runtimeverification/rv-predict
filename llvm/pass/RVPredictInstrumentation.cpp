@@ -640,7 +640,8 @@ RVPredictInstrument::runOnFunction(Function &F)
 
         // Instrument function entry/exit points if there were
         // instrumented accesses.
-	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit) {
+	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit &&
+	    !F.getName().startswith("__llvm_gcov_")) {
 		IRBuilder<> builder(F.getEntryBlock().getFirstNonPHI());
 		Value *callsite = builder.CreateCall(
 		    Intrinsic::getDeclaration(F.getParent(),

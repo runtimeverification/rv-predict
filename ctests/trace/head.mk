@@ -20,28 +20,3 @@ CTEST_dir=$(.CURDIR)/../..
 .export PATH
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY
-
-# Code coverage
-.if $(MKCOVERAGE2:U"no")=="yes"
-#      Generates default.profraw when program runs
-CFLAGS+=-fprofile-instr-generate -fcoverage-mapping 
-#LDFLAGS+=-fprofile-instr-generate -fcoverage-mapping
-LDFLAGS+=-fprofile-instr-generate
-.endif
-
-# Code coverage
-
-.if $(MKCOVERAGE:U"no")=="yes"
-#       each .c gets a .gcno at compile time and .gcda at execution
-#       --coverage includes -fprofile-arcs -ftest-coverage
-#       -g includes debug info (as per https://llvm.org/docs/CommandGuide/llvm-cov.html )
-#CFLAGS+=--coverage -g
-CFLAGS+=--coverage -fprofile-instr-generate
-#    I don't know what LDFLAGS should be - this is overkill, probably
-#LDFLAGS+=--coverage -fprofile-instr-generate -fcoverage-mapping
-#LDFLAGS+= -fprofile-instr-generate -fcoverage-mapping
-#LDFLAGS+=--coverage -fprofile-instr-generate
-LDFLAGS+=--coverage
-.endif
-
-#

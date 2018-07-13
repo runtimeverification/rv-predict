@@ -81,6 +81,8 @@ if [ ${RVPMAKE_DIR:-none} = none ]; then
 	err "unreachable"
 fi
 
+export MAKECONF=${RVPMAKE_DIR}/.tools/etc/mk-c.conf
+
 #
 # Other environment setup should go here.
 #

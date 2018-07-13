@@ -2,6 +2,9 @@
 
 SRCDIR=$(.CURDIR)/../external/bsd/elftoolchain
 
+MAKECONF:=
+.export MAKECONF
+
 #
 # I set variables such as MAKEFLAGS= in the environment when children
 # of `make` (sub-makes) also need to see the value.  I pass the WITH_*

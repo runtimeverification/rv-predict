@@ -12,7 +12,7 @@ COPTS+=-O0 -g
 LDADD+=-pthread
 
 .PHONY: test_output
-
+ 
 test.trace: $(PROG)
 	@$(.OBJDIR)/$(PROG) > /dev/null
 

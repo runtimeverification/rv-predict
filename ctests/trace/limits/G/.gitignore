@@ -3,3 +3,4 @@ core
 *.gcda
 G
 *.test.out
+*.gc*

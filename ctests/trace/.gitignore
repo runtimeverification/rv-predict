@@ -5,3 +5,5 @@
 .Makefile.tags
 *.o
 tags
+z*
+0Ori*

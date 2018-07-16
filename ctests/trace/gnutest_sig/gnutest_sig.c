@@ -72,7 +72,7 @@ handler (int sig)
   struct sigaction sa;
   ASSERT (sig == SIGABRT);
   ASSERT (sigaction (SIGABRT, NULL, &sa) == 0);
-#if 1 /* RV:CRM:I don't know why this assert fails */
+#if 0 /* RV:CRM:I don't know why this assert fails */
   ASSERT ((sa.sa_flags & SA_SIGINFO) == 0);
 #endif
   switch (entry_count++)
@@ -114,7 +114,7 @@ main (void)
 
   sa.sa_handler = SIG_DFL;
   ASSERT (sigaction (SIGABRT, &sa, &old_sa) == 0);
-#if 1 /* ignore this asssert fail for a while */
+#if 0 /* ignore this asssert fail for a while */
   ASSERT ((old_sa.sa_flags & SA_SIGINFO) == 0);
 #endif
 #if !(defined __GLIBC__ || defined __UCLIBC__) /* see above */

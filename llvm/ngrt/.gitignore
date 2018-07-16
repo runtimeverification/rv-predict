@@ -14,3 +14,4 @@ _mkc_*
 *.so
 .*.swp
 tags
+z*

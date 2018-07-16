@@ -16,8 +16,10 @@ LDADD+=-pthread
 test.trace: $(PROG)
 	@$(.OBJDIR)/$(PROG) > /dev/null
 
+LOCAL_NORMALIZE?=cat
+
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(CTEST_dir)/normalize-humanized-trace
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(CTEST_dir)/normalize-humanized-trace | $(LOCAL_NORMALIZE)
 
 CLEANFILES+=test.trace
 

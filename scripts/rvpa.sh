@@ -13,7 +13,8 @@ _usage()
 {
 	cat 1>&2 <<EOF
 usage: $(basename $0) [--window size] [--no-shorten|--no-symbol|--no-trim]
-    [--html-dir directory] [--interrupts-target number] [--]
+    [--html-dir directory] [--interrupts-target number]
+    [--max-interrupt-depth number] [--]
     program [trace-file]
 EOF
 }
@@ -138,8 +139,8 @@ while [ $# -ge 1 ]; do
 		esac
 		;;
 	--interrupt-target=*|--interrupts-target=*)
-		eval interrupts_target=${1##--interrupt-target=}
-		eval interrupts_target=${interrupts_target##--interrupts-target=}
+		interrupts_target=${1##--interrupt-target=}
+		interrupts_target=${interrupts_target##--interrupts-target=}
 		shift
 		;;
 	--interrupt-target|--interrupts-target)
@@ -153,7 +154,7 @@ while [ $# -ge 1 ]; do
 		shift
 		;;
 	--window=*)
-		eval window="--window ${1##--window=}"
+		window="--window ${1##--window=}"
 		shift
 		;;
 	--window)
@@ -162,6 +163,15 @@ while [ $# -ge 1 ]; do
 		shift
 		;;
 	--global-timeout|--solver-timeout|--window-timeout)
+		analyze_passthrough="${analyze_passthrough:-} $1 $2"
+		shift
+		shift
+		;;
+	--max-interrupt-depth=*)
+		analyze_passthrough="${analyze_passthrough:-} --max-interrupt-depth ${1##--max-interrupt-depth=}"
+		shift
+		;;
+	--max-interrupt-depth)
 		analyze_passthrough="${analyze_passthrough:-} $1 $2"
 		shift
 		shift

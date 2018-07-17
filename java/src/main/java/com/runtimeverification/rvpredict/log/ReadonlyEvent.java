@@ -85,6 +85,16 @@ public abstract class ReadonlyEvent implements ReadonlyEventInterface {
     }
 
     @Override
+    public boolean isSignalLockEvent() {
+        return isLock() && (getLockRepresentation().getLockType() == LockRepresentation.LockType.SIGNAL_LOCK);
+    }
+
+    @Override
+    public boolean isSignalUnlockEvent() {
+        return isUnlock() && (getLockRepresentation().getLockType() == LockRepresentation.LockType.SIGNAL_LOCK);
+    }
+
+    @Override
     public boolean isSignalMaskRead() {
         return getType() == EventType.READ_WRITE_SIGNAL_MASK
                 || getType() == EventType.READ_SIGNAL_MASK;

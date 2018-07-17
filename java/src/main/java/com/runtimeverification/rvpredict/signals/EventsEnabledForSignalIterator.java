@@ -31,6 +31,7 @@ public class EventsEnabledForSignalIterator {
     private boolean firstStep;
     private boolean reuseLastEvent;
     private boolean inAtomicEvent;
+    private boolean inSignalEvent;
 
     static EventsEnabledForSignalIterator createWithNoInterruptedThreadRaceDetectionStrictMode(
             Collection<ReadonlyEventInterface> events,
@@ -136,7 +137,7 @@ public class EventsEnabledForSignalIterator {
                 return false;
             }
         }
-        if (inAtomicEvent) {
+        if (inAtomicLikeEvent()) {
             if (!findNextEnabledEvent()) {
                 previousEvent = Optional.empty();
                 return false;
@@ -155,12 +156,16 @@ public class EventsEnabledForSignalIterator {
         return previousEvent.isPresent() || currentAndPrecedentEvent.getEvent().isPresent();
     }
 
+    private boolean inAtomicLikeEvent() {
+        return inAtomicEvent || inSignalEvent;
+    }
+
     private boolean findNextEnabledEvent() {
         do {
             if (!advanceOneStep()) {
                 return false;
             }
-        } while (!enabled || inAtomicEvent);
+        } while (!enabled || inAtomicLikeEvent());
         return true;
     }
 
@@ -187,7 +192,7 @@ public class EventsEnabledForSignalIterator {
                     return;
                 }
             }
-        } while (enabled && !inAtomicEvent);
+        } while (enabled && !inAtomicLikeEvent());
     }
 
     private boolean advanceOneStep() {
@@ -210,6 +215,15 @@ public class EventsEnabledForSignalIterator {
                 inAtomicEvent = true;
             }
         }
+        if (inSignalEvent) {
+            if (isSignalEventEnd(event)) {
+                inSignalEvent = false;
+            }
+        } else {
+            if (isSignalEventStart(event)) {
+                inSignalEvent = true;
+            }
+        }
         enabled = Signals.updateEnabledWithEvent(enabled, signalNumber, event);
         currentAndPrecedentEvent.addEvent(Optional.of(event));
         return true;
@@ -221,6 +235,14 @@ public class EventsEnabledForSignalIterator {
 
     private boolean isAtomicEventEnd(ReadonlyEventInterface event) {
         return event.isUnlock() && event.isAtomic();
+    }
+
+    private boolean isSignalEventStart(ReadonlyEventInterface event) {
+        return event.isSignalLockEvent();
+    }
+
+    private boolean isSignalEventEnd(ReadonlyEventInterface event) {
+        return event.isSignalUnlockEvent();
     }
 
     private static Optional<ReadonlyEventInterface> eventWithDefault(

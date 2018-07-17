@@ -1,12 +1,12 @@
 tid 1.0 {} begin thread
 tid 1.0 in main at .../and/and.c:19 enter function cfa . return {}
-tid 1.0 in main at .../and/and.c:20 store 2 0x0040 -> u16 at and.c;main
-tid 1.0 in main at .../and/and.c:21 store 4 0x00000041 -> u32 at and.c;main
-tid 1.0 in main at .../and/and.c:22 store 8 0x0000000000000043 -> u64 at and.c;main
-tid 1.0 in main at .../and/and.c:24 atomic rmw 2 0x0040 <- u16 at and.c;main <- 0x1000
-tid 1.0 in main at .../and/and.c:25 atomic rmw 4 0x00000041 <- u32 at and.c;main <- 0x00000100
-tid 1.0 in main at .../and/and.c:26 atomic rmw 8 0x0000000000000043 <- u64 at and.c;main <- 0x0000000f00000000
-tid 1.0 in main at .../and/and.c:27 atomic load 2 0x1000 <- u16 at and.c;main
-tid 1.0 in main at .../and/and.c:28 atomic load 4 0x00000100 <- u32 at and.c;main
-tid 1.0 in main at .../and/and.c:29 atomic load 8 0x0000000f00000000 <- u64 at and.c;main
+tid 1.0 in main at .../and/and.c store 2 0x2020 -> u16 at and.c;main
+tid 1.0 in main at .../and/and.c store 4 0x40404040 -> u32 at and.c;main
+tid 1.0 in main at .../and/and.c store 8 0x8080808080808080 -> u64 at and.c;main
+tid 1.0 in main at .../and/and.c:24 atomic rmw 2 0x2020 <- u16 at and.c;main <- 0000
+tid 1.0 in main at .../and/and.c:25 atomic rmw 4 0x40404040 <- u32 at and.c;main <- 00000000
+tid 1.0 in main at .../and/and.c atomic rmw 8 0x8080808080808080 <- u64 at and.c;main <- 0000000000000000
+tid 1.0 in main at .../and/and.c:27 atomic load 2 0000 <- u16 at and.c;main
+tid 1.0 in main at .../and/and.c:28 atomic load 4 00000000 <- u32 at and.c;main
+tid 1.0 in main at .../and/and.c:29 atomic load 8 0000000000000000 <- u64 at and.c;main
 tid 1.0 in main at .../and/and.c:19 exit function

@@ -103,7 +103,8 @@ public class MaximalRaceDetector implements RaceDetector {
         }
 
         Map<String, Race> result =
-                MaximalCausalModel.create(trace, raceSolver, config.detectInterruptedThreadRace())
+                MaximalCausalModel
+                        .create(trace, raceSolver, config.detectInterruptedThreadRace(), config.maxInterruptDepth())
                         .checkRaceSuspects(sigToRaceSuspects, analysisLimit);
         sigToRealRace.putAll(result);
         result.forEach((sig, race) -> {

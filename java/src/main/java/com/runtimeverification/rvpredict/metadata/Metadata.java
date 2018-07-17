@@ -2,7 +2,6 @@ package com.runtimeverification.rvpredict.metadata;
 
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.LZ4Utils;
-import com.runtimeverification.rvpredict.log.LockRepresentation;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.trace.Trace;
 import org.apache.commons.lang3.tuple.Pair;
@@ -12,11 +11,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,7 +47,7 @@ public class Metadata implements MetadataInterface, Serializable {
     /**
      * Note: This method should be used only in a few places and definitely NOT
      * in offline prediction which should get its {@code Metadata} instance from
-     * {@link #readFrom(Path, boolean)}.
+     * {@link #readFrom(Path)}.
      *
      * @return a singleton instance of {@code Metadata}.
      */
@@ -73,8 +68,7 @@ public class Metadata implements MetadataInterface, Serializable {
         return varId;
     }
 
-    public String getRaceDataSigHelper(ReadonlyEventInterface e1, ReadonlyEventInterface e2, Configuration config) {
-        StringBuilder sb = new StringBuilder();
+    private String getRaceDataSigHelper(ReadonlyEventInterface e1, Configuration config) {
         if(config.isLLVMPrediction()) {
             long idx = e1.getDataObjectExternalIdentifier();
             if(idx != 0) {
@@ -97,7 +91,7 @@ public class Metadata implements MetadataInterface, Serializable {
     @Override
     public String getRaceDataSig(ReadonlyEventInterface e1,
         ReadonlyEventInterface e2, Trace trace, Configuration config) {
-        String locSig = getRaceDataSigHelper(e1, e2, config);
+        String locSig = getRaceDataSigHelper(e1, config);
         switch (locSig.charAt(0)) {
             case '#':
                 return "array element " + locSig;
@@ -157,7 +151,7 @@ public class Metadata implements MetadataInterface, Serializable {
         locIdToLocSig[locId] = sig;
     }
 
-    public void addVolatileVariable(String cname, String fname) {
+    void addVolatileVariable(String cname, String fname) {
         volatileVarIds.add(getVariableId(cname, fname));
     }
 
@@ -192,6 +186,28 @@ public class Metadata implements MetadataInterface, Serializable {
         return info == null ? -1 : info.getRight();
     }
 
+    /*
+    static class RemappingObjectInputStream extends ObjectInputStream {
+        private static final String RV_PREFIX = "com.runtimeverification.rvpredict.internal.";
+
+        private RemappingObjectInputStream(InputStream in) throws IOException {
+            super(in);
+        }
+
+        @Override
+        protected ObjectStreamClass readClassDescriptor() throws IOException, ClassNotFoundException {
+            ObjectStreamClass resultClassDescriptor = super.readClassDescriptor();
+
+            if (resultClassDescriptor.getName().startsWith(RV_PREFIX)) {
+                resultClassDescriptor = ObjectStreamClass.lookup(
+                        Class.forName(resultClassDescriptor.getName().substring(RV_PREFIX.length())));
+            }
+
+            return resultClassDescriptor;
+        }
+    }
+    */
+
     /**
      * Deserializes the {@code Metadata} object stored at the specified location.
      * <p>
@@ -202,11 +218,10 @@ public class Metadata implements MetadataInterface, Serializable {
      *            the location where the metadata is stored
      * @return the {@code Metadata} object
      */
-    public static Metadata readFrom(Path path, boolean isCompactTrace) {
-        try (ObjectInputStream metadataIS = new ObjectInputStream(
+    public static Metadata readFrom(Path path) {
+        try (ObjectInputStream metadataIS = new /*Remapping*/ObjectInputStream(
                 LZ4Utils.createDecompressionStream(path))) {
-            Metadata metadata = (Metadata) metadataIS.readObject();
-            return metadata;
+            return (Metadata) metadataIS.readObject();
         } catch (FileNotFoundException e) {
             System.err.println("Error: Metadata file not found.");
             System.err.println(e.getMessage());

@@ -12,7 +12,7 @@ import java.io.IOException;
 public class ReadTrace {
     public static void main(String args[]) {
         Configuration config = Configuration.instance(args);
-        Metadata metadata = Metadata.readFrom(config.getMetadataPath(), config.isCompactTrace());
+        Metadata metadata = Metadata.readFrom(config.getMetadataPath());
         try (VectorClockTraceReader reader = new VectorClockTraceReader(
                 new OrderedLoggedTraceReader(config), new JavaHappensBefore(metadata))) {
                 while (true) {

@@ -25,6 +25,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.runtimeverification.rvpredict.testutils.ModelConstraintUtils.mockVariableSource;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.when;
 
@@ -130,7 +131,7 @@ public class SignalStartMaskTest {
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
         ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
-        Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
+        Assert.assertTrue(constraint.evaluate(mockVariableSource()));
     }
 
     @Test
@@ -143,7 +144,7 @@ public class SignalStartMaskTest {
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
         ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
-        Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource()));
+        Assert.assertTrue(constraint.evaluate(mockVariableSource()));
     }
 
     @Test
@@ -162,15 +163,18 @@ public class SignalStartMaskTest {
                 mockSignalStartsInWindow, mockSignalEndsInWindow,
                 mockSignalEnabledAtStart, mockEstablishSignalEvents, mockPreviousWindowEstablishEvent);
         ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
-        Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+        Assert.assertTrue(constraint.evaluate(mockVariableSource(
                 "sm_101_3", "0",
-                "citv101", "100")));
-        Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                "citv101", "100",
+                "cidv100", "0", "cidv101", "1")));
+        Assert.assertFalse(constraint.evaluate(mockVariableSource(
                 "sm_101_3", "1",
-                "citv101", "100")));
-        Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+                "citv101", "100",
+                "cidv100", "0", "cidv101", "1")));
+        Assert.assertFalse(constraint.evaluate(mockVariableSource(
                 "sm_101_3", "0",
-                "citv101", "101")));
+                "citv101", "101",
+                "cidv100", "0", "cidv101", "1")));
     }
 
     @Test
@@ -193,7 +197,7 @@ public class SignalStartMaskTest {
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource("citv101", "100")
+                mockVariableSource("citv101", "100", "cidv100", "0", "cidv101", "1")
         );
     }
 
@@ -221,13 +225,15 @@ public class SignalStartMaskTest {
         Consumer<VariableSource> assertUnconstrained = mockVariableSource -> assertSignalCanBeEnabedOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource, "citv101", "100")
+                mockVariableSource(mockVariableSource, "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
         Consumer<VariableSource> assertSignalDisabled = mockVariableSource -> assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource,
-                        "citv101", "100")
+                mockVariableSource(mockVariableSource,
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
 
         assertUnconstrained.accept(ModelConstraintUtils.orderedEvents(
@@ -266,10 +272,11 @@ public class SignalStartMaskTest {
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(
                                 ENABLE_2_SIGEST_50, "o3", "o4", DISABLE_ALL_SIGEST_51),
-                        "citv101", "100")
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
     }
 
@@ -296,18 +303,20 @@ public class SignalStartMaskTest {
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(
                                 ENABLE_2_SIGEST_50, "o3", "o4", ENABLE_2_60, DISABLE_ALL_SIGEST_51),
-                        "citv101", "100")
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
         assertSignalCanBeEnabedOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(
                                 ENABLE_2_SIGEST_50, ENABLE_2_60, "o3", "o4", DISABLE_ALL_SIGEST_51),
-                        "citv101", "100")
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
     }
 
@@ -334,28 +343,46 @@ public class SignalStartMaskTest {
         Consumer<VariableSource> assertSignalDisabled = mockVariableSource -> assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource,
+                mockVariableSource(mockVariableSource,
                         "citv101", "100")
         );
         Consumer<VariableSource> assertUnconstrained = mockVariableSource -> assertSignalCanBeEnabedOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource, "citv101", "100")
+                mockVariableSource(mockVariableSource, "citv101", "100")
         );
 
-        assertSignalDisabled.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, "o3", "o4", ENABLE_2_SIGEST_50, DISABLE_ALL_SIGEST_51));
-        assertUnconstrained.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, ENABLE_2_SIGEST_50, "o3", "o4", DISABLE_ALL_SIGEST_51));
-        assertSignalDisabled.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, ENABLE_2_SIGEST_50, DISABLE_ALL_SIGEST_51, "o3", "o4"));
+        assertSignalDisabled.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, "o3", "o4", ENABLE_2_SIGEST_50, DISABLE_ALL_SIGEST_51),
+                        "cidv100", "0", "cidv101", "1"));
+        assertUnconstrained.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, ENABLE_2_SIGEST_50, "o3", "o4", DISABLE_ALL_SIGEST_51),
+                        "cidv100", "0", "cidv101", "1"));
+        assertSignalDisabled.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, ENABLE_2_SIGEST_50, DISABLE_ALL_SIGEST_51, "o3", "o4"),
+                        "cidv100", "0", "cidv101", "1"));
 
-        assertSignalDisabled.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, "o3", "o4", DISABLE_ALL_SIGEST_51, ENABLE_2_SIGEST_50));
-        assertSignalDisabled.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, DISABLE_ALL_SIGEST_51, "o3", "o4", ENABLE_2_SIGEST_50));
-        assertUnconstrained.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, DISABLE_ALL_SIGEST_51, ENABLE_2_SIGEST_50, "o3", "o4"));
+        assertSignalDisabled.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, "o3", "o4", DISABLE_ALL_SIGEST_51, ENABLE_2_SIGEST_50),
+                        "cidv100", "0", "cidv101", "1"));
+        assertSignalDisabled.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, DISABLE_ALL_SIGEST_51, "o3", "o4", ENABLE_2_SIGEST_50),
+                        "cidv100", "0", "cidv101", "1"));
+        assertUnconstrained.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, DISABLE_ALL_SIGEST_51, ENABLE_2_SIGEST_50, "o3", "o4"),
+                        "cidv100", "0", "cidv101", "1"));
     }
 
     @Test
@@ -384,19 +411,25 @@ public class SignalStartMaskTest {
         Consumer<VariableSource> assertSignalDisabled = mockVariableSource -> assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource,
+                mockVariableSource(mockVariableSource,
                         "citv101", "100")
         );
         Consumer<VariableSource> assertUnconstrained = mockVariableSource -> assertSignalCanBeEnabedOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource, "citv101", "100")
+                mockVariableSource(mockVariableSource, "citv101", "100")
         );
 
-        assertUnconstrained.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, "o3", "o4", DISABLE_ALL_SIGEST_51));
-        assertSignalDisabled.accept(ModelConstraintUtils.orderedEvents(
-                ENABLE_2_60, DISABLE_ALL_SIGEST_51, "o3", "o4"));
+        assertUnconstrained.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, "o3", "o4", DISABLE_ALL_SIGEST_51),
+                        "cidv100", "0", "cidv101", "1"));
+        assertSignalDisabled.accept(
+                mockVariableSource(
+                        ModelConstraintUtils.orderedEvents(
+                                ENABLE_2_60, DISABLE_ALL_SIGEST_51, "o3", "o4"),
+                        "cidv100", "0", "cidv101", "1"));
     }
 
     @Test
@@ -425,13 +458,15 @@ public class SignalStartMaskTest {
         Consumer<VariableSource> assertSignalDisabled = mockVariableSource -> assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource,
-                        "citv101", "100")
+                mockVariableSource(mockVariableSource,
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
         Consumer<VariableSource> assertUnconstrained = mockVariableSource -> assertSignalCanBeEnabedOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(mockVariableSource, "citv101", "100")
+                mockVariableSource(mockVariableSource,
+                        "citv101", "100", "cidv100", "0", "cidv101", "1")
         );
 
         assertSignalDisabled.accept(ModelConstraintUtils.orderedEvents(
@@ -462,29 +497,32 @@ public class SignalStartMaskTest {
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(
                                 ENABLE_2_SIGEST_50, "o3", "o4", ENABLE_2_60, DISABLE_2_70,
                                 DISABLE_ALL_SIGEST_51),
-                        "citv101", "100")
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
         assertSignalCanBeEnabedOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(
                                 ENABLE_2_SIGEST_50, ENABLE_2_60, "o3", "o4", DISABLE_2_70,
                                 DISABLE_ALL_SIGEST_51),
-                        "citv101", "100")
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(
                                 ENABLE_2_SIGEST_50, ENABLE_2_60, DISABLE_2_70, "o3", "o4",
                                 DISABLE_ALL_SIGEST_51),
-                        "citv101", "100")
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1")
         );
     }
 
@@ -512,15 +550,17 @@ public class SignalStartMaskTest {
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(ENABLE_2_60, "o3", "o4"),
-                        "citv101", "102"));
+                        "citv101", "102",
+                        "cidv102", "0", "cidv101", "1"));
         assertSignalCanBeEnabedOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents(ENABLE_2_60, "o3", "o4"),
-                        "citv101", "100"));
+                        "citv101", "100",
+                        "cidv100", "0", "cidv101", "1"));
     }
 
     @Test
@@ -545,10 +585,10 @@ public class SignalStartMaskTest {
         ModelConstraint constraint = constraintSource.createConstraint(ConstraintType.SOUND);
 
         VariableSource mockVariableSource = ModelConstraintUtils.orderedEvents("o3", ENABLE_2_60, "o4");
-        Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+        Assert.assertTrue(constraint.evaluate(mockVariableSource(
                 mockVariableSource,
                 "sm_101_3", "1")));
-        Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+        Assert.assertFalse(constraint.evaluate(mockVariableSource(
                 mockVariableSource,
                 "sm_101_3", "0")));
     }
@@ -577,7 +617,7 @@ public class SignalStartMaskTest {
         assertSignalIsDisabledOnThread(
                 constraint,
                 "sm_101_3",
-                ModelConstraintUtils.mockVariableSource(
+                mockVariableSource(
                         ModelConstraintUtils.orderedEvents("o3", ENABLE_2_60, "o4")));
     }
 
@@ -585,10 +625,10 @@ public class SignalStartMaskTest {
             ModelConstraint constraint,
             String threadEnableRestrictName,
             VariableSource mockVariableSource) {
-        Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+        Assert.assertTrue(constraint.evaluate(mockVariableSource(
                 mockVariableSource,
                 threadEnableRestrictName, "1")));
-        Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+        Assert.assertTrue(constraint.evaluate(mockVariableSource(
                 mockVariableSource,
                 threadEnableRestrictName, "0")));
     }
@@ -597,10 +637,10 @@ public class SignalStartMaskTest {
             ModelConstraint constraint,
             String threadEnableRestrictName,
             VariableSource mockVariableSource) {
-        Assert.assertFalse(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+        Assert.assertFalse(constraint.evaluate(mockVariableSource(
                 mockVariableSource,
                 threadEnableRestrictName, "1")));
-        Assert.assertTrue(constraint.evaluate(ModelConstraintUtils.mockVariableSource(
+        Assert.assertTrue(constraint.evaluate(mockVariableSource(
                 mockVariableSource,
                 threadEnableRestrictName, "0")));
     }

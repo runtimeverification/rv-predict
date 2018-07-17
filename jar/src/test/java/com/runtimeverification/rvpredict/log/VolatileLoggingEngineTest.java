@@ -1,16 +1,15 @@
 package com.runtimeverification.rvpredict.log;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.testutils.TestUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class VolatileLoggingEngineTest {
     private static final int LOC_ID = 10;
@@ -31,7 +30,7 @@ public class VolatileLoggingEngineTest {
             while (!flags.canFinishRaceDetection) {
                 try {
                     Thread.sleep(1);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
                 }
             }
             flags.hasStartedRaceDetection = false;
@@ -66,7 +65,7 @@ public class VolatileLoggingEngineTest {
         while (!controlFlags.hasStartedRaceDetection) {
             try {
                 Thread.sleep(1);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
             }
         }
         Thread t2 = new Thread(() -> {

@@ -36,6 +36,9 @@ import static org.mockito.Mockito.when;
 public class MaximalCausalModelTest {
     private static final int WINDOW_SIZE = 100;
     private static final int TIMEOUT_SECONDS = 2;
+    private static final int UNLIMITED_SIGNAL_DEPTH = 0;
+    private static final int ONE_SIGNAL_DEPTH = 1;
+    private static final int TWO_SIGNAL_DEPTH = 2;
     private static final long ADDRESS_1 = 200;
     private static final long ADDRESS_2 = 201;
     private static final long ADDRESS_3 = 202;
@@ -1219,6 +1222,55 @@ public class MaximalCausalModelTest {
     }
 
     @Test
+    public void noRaceWithSignalThatInterruptsSignalWithDepthLimit() throws InvalidTraceDataException {
+        TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
+
+        List<ReadonlyEventInterface> e1;
+        List<ReadonlyEventInterface> e2;
+
+        List<List<ReadonlyEventInterface>> events = Arrays.asList(
+                tu.disableSignal(SIGNAL_NUMBER_1),
+                tu.disableSignal(SIGNAL_NUMBER_2),
+                tu.atomicStore(ADDRESS_2, VALUE_2),
+                tu.setSignalHandler(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, SIGNAL_2_ENABLED_MASK),
+                tu.enableSignal(SIGNAL_NUMBER_1),
+                tu.enableSignal(SIGNAL_NUMBER_2),
+
+                tu.switchThread(THREAD_1, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_1, SIGNAL_HANDLER_1, GENERATION_1),
+                tu.atomicStore(ADDRESS_2, VALUE_1),
+
+                tu.switchThread(THREAD_2, ONE_SIGNAL),
+                tu.enterSignal(SIGNAL_NUMBER_2, SIGNAL_HANDLER_2, GENERATION_1),
+                tu.atomicLoad(ADDRESS_2, VALUE_1),
+                e2 = tu.nonAtomicStore(ADDRESS_1, VALUE_1),
+                tu.exitSignal(),
+
+                tu.switchThread(THREAD_1, ONE_SIGNAL),
+                tu.atomicStore(ADDRESS_2, VALUE_2),
+                tu.exitSignal(),
+
+                tu.switchThread(THREAD_1, NO_SIGNAL),
+                e1 = tu.nonAtomicLoad(ADDRESS_1, VALUE_1),
+                tu.disableSignal(SIGNAL_NUMBER_1),
+                tu.enableSignal(SIGNAL_NUMBER_2),
+
+                tu.switchThread(THREAD_2, NO_SIGNAL),
+                tu.atomicStore(ADDRESS_2, VALUE_2)
+        );
+        List<RawTrace> rawTraces = Arrays.asList(
+                tu.extractRawTrace(events, THREAD_1, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_2, NO_SIGNAL),
+                tu.extractRawTrace(events, THREAD_1, ONE_SIGNAL),
+                tu.extractRawTrace(events, THREAD_2, ONE_SIGNAL));
+
+        ReadonlyEventInterface event1 = extractSingleEvent(e1);
+        ReadonlyEventInterface event2 = extractSingleEvent(e2);
+        Assert.assertFalse(hasRace(rawTraces, event1, event2, tu, true, ONE_SIGNAL_DEPTH));
+        Assert.assertTrue(hasRace(rawTraces, event1, event2, tu, true, TWO_SIGNAL_DEPTH));
+    }
+
+    @Test
     public void signalEndsBeforeInterruptedSignal() throws InvalidTraceDataException {
         TraceUtils tu = new TraceUtils(mockContext, THREAD_1, NO_SIGNAL, BASE_PC);
 
@@ -2314,7 +2366,27 @@ public class MaximalCausalModelTest {
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             TraceUtils tu, boolean detectInterruptedThreadRace) {
         Map<String, Race> races = findRaces(
-                Collections.singletonList(rawTraces), e1, e2, Collections.emptyList(), tu, detectInterruptedThreadRace);
+                Collections.singletonList(rawTraces),
+                e1, e2,
+                Collections.emptyList(),
+                tu,
+                detectInterruptedThreadRace,
+                UNLIMITED_SIGNAL_DEPTH);
+        return races.size() > 0;
+    }
+
+    private boolean hasRace(
+            List<RawTrace> rawTraces,
+            ReadonlyEventInterface e1, ReadonlyEventInterface e2,
+            TraceUtils tu, boolean detectInterruptedThreadRace,
+            int maxSignalDepth) {
+        Map<String, Race> races = findRaces(
+                Collections.singletonList(rawTraces),
+                e1, e2,
+                Collections.emptyList(),
+                tu,
+                detectInterruptedThreadRace,
+                maxSignalDepth);
         return races.size() > 0;
     }
 
@@ -2324,7 +2396,13 @@ public class MaximalCausalModelTest {
             TraceUtils tu,
             boolean detectInterruptedThreadRace) {
         Map<String, Race> races =
-                findRaces(rawTraces, e1, e2, Collections.emptyList(), tu, detectInterruptedThreadRace);
+                findRaces(
+                        rawTraces,
+                        e1, e2,
+                        Collections.emptyList(),
+                        tu,
+                        detectInterruptedThreadRace,
+                        UNLIMITED_SIGNAL_DEPTH);
         return races.size() > 0;
     }
 
@@ -2334,16 +2412,23 @@ public class MaximalCausalModelTest {
             TraceUtils tu, List<ReadonlyEventInterface> previousSigestEvents,
             boolean detectInterruptedThreadRace) {
         Map<String, Race> races = findRaces(
-                Collections.singletonList(rawTraces), e1, e2, previousSigestEvents, tu, detectInterruptedThreadRace);
+                Collections.singletonList(rawTraces),
+                e1, e2,
+                previousSigestEvents,
+                tu,
+                detectInterruptedThreadRace,
+                UNLIMITED_SIGNAL_DEPTH);
         return races.size() > 0;
     }
+
 
     private Map<String, Race> findRaces(
             List<List<RawTrace>> rawTracesList,
             ReadonlyEventInterface e1, ReadonlyEventInterface e2,
             List<ReadonlyEventInterface> previousSigestEvents,
             TraceUtils tu,
-            boolean detectInterruptedThreadRace) {
+            boolean detectInterruptedThreadRace,
+            int maxSignalDepth) {
         try (RaceSolver raceSolver = SingleThreadedRaceSolver.createRaceSolver(mockConfiguration)) {
             mockConfiguration.windowSize = WINDOW_SIZE;
             TraceState traceState = new TraceState(mockConfiguration, mockMetadata);
@@ -2364,7 +2449,8 @@ public class MaximalCausalModelTest {
                 traceState.preStartWindow();
                 trace = traceState.initNextTraceWindow(rawTraces);
             }
-            MaximalCausalModel model = MaximalCausalModel.create(trace, raceSolver, detectInterruptedThreadRace);
+            MaximalCausalModel model =
+                    MaximalCausalModel.create(trace, raceSolver, detectInterruptedThreadRace, maxSignalDepth);
 
             if (trace.getSize() == 0) {
                 return Collections.emptyMap();

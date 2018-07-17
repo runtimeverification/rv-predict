@@ -4,3 +4,4 @@ core
 G
 *.test.out
 *.gc*
+*.tmp

@@ -5,4 +5,3 @@ grep -v ' memoize signal mask #' | \
 sed 's/{0x[0-9a-z]\+}/{}/g' | \
 sed 's/ generation [0-9]\+$//g' | \
 sed 's/cfa [0-9a-z]\+ /cfa . /g'
-# | \ $(dirname $0)/normalize-sigdepth

@@ -1,38 +1,43 @@
 tid 1.0 {} begin thread
 tid 1.0 in main at .../interrupt_mask_change/chgmask.c:18 nop
 tid 1.0 in main at .../interrupt_mask_change/chgmask.c:18 enter function cfa . return {}
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:26:10 nop
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:26:10 get & set signal mask #4 -> #3
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.__sigaction_handler at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[0] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[1] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[2] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[3] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[4] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[5] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[6] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[7] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[8] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[9] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[10] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[11] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[12] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[13] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[14] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_mask.__val[15] at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_flags at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:31 store 8 0000000000000000 -> sa.sa_restorer at chgmask.c;main
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:35:36 establish signal action signal 10 handler in handler at .../interrupt_mask_change/chgmask.c:11 mask #2
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:38:10 nop
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:38:10 set signal mask #4
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:38:10 signal depth -> 1
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:29:10 nop
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:29:10 get & set signal mask #4 -> #3
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.__sigaction_handler at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[0] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[1] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[2] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[3] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[4] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[5] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[6] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[7] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[8] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[9] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[10] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[11] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[12] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[13] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[14] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_mask.__val[15] at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_flags at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:34 store 8 0000000000000000 -> sa.sa_restorer at chgmask.c;main
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:38:36 establish signal action signal 10 handler in handler at .../interrupt_mask_change/chgmask.c:11 mask #2
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:41:10 nop
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:41:10 set signal mask #4
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:41:10 signal depth -> 1
 tid 1.1 {} enter signal handler signal 10 handler in handler at .../interrupt_mask_change/chgmask.c:11
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 nop
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 enter function cfa . return in __rvpredict_handler_wrapper
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit function
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit signal handler
+tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 enter signal handler signal 10 handler in handler at .../interrupt_mask_change/chgmask.c:11
+tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 nop
+tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 enter function cfa . return in __rvpredict_handler_wrapper
+tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit function
+tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit signal handler
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 signal depth -> 0
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:43:10 nop
-tid 1.0 in main at .../interrupt_mask_change/chgmask.c:43:10 set signal mask #4
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:46:10 nop
+tid 1.0 in main at .../interrupt_mask_change/chgmask.c:46:10 set signal mask #3
 tid 1.0 in main at .../interrupt_mask_change/chgmask.c:18 nop
 tid 1.0 in main at .../interrupt_mask_change/chgmask.c:18 exit function

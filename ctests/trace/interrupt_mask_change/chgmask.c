@@ -20,8 +20,11 @@ main(int argc __unused, char **argv __unused)
 	sigset_t empty, full, oset;
 	struct sigaction osa, sa;
 
-	sigfillset(&full);
-	sigemptyset(&empty);
+	if (sigfillset(&full) == -1)
+		err(EXIT_FAILURE, "%s: sigfillset", __func__);
+
+	if (sigemptyset(&empty) == -1)
+		err(EXIT_FAILURE, "%s: sigemptyset", __func__);
 
 	if ((rc = pthread_sigmask(SIG_SETMASK, &full, &oset)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
@@ -40,7 +43,7 @@ main(int argc __unused, char **argv __unused)
 		    strerror(rc));
 	}
 
-	if ((rc = pthread_sigmask(SIG_SETMASK, &oset, NULL)) != 0) {
+	if ((rc = pthread_sigmask(SIG_SETMASK, &full, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
 		    strerror(rc));
 	}

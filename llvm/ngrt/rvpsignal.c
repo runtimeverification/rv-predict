@@ -394,9 +394,27 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 		rvp_buf_put(&b, idepth + 1);
 		/* Unless some thread raced in and logged the mask change,
 		 * write it to the log.
-		 */ 
-		if (atomic_compare_exchange_strong(&t->t_maskchg, &mcp, NULL))
+		 */
+		if (t->t_maskchg == mcp) {
+			/* It's unavoidable that an interrupt may race
+			 * in after testing `t->t_maskchg` and before `b`
+			 * is written to the event ring.  That's ok, the
+			 * interrupt will just write an event sequence
+			 * equivalent to `b` to its ring.  This interrupt
+			 * will still write `b`, which is redundant but
+			 * harmless.
+			 *
+			 * Note that it is *not* ok to perform a CAS on
+			 * `t->t_maskchg`, above, because an interrupt
+			 * could race in after the test but before the
+			 * change of mask is written to the event ring.
+			 * Seeing `t->t_maskchg == NULL`, the instrumentation
+			 * during that interrupt will use the wrong
+			 * mask, and the trace may contain inconsistencies.
+			 */
 			rvp_ring_put_buf(r, b);
+			t->t_maskchg = NULL;
+		}
 		b = RVP_BUF_INITIALIZER;
 	}
 	/* When the serializer reaches this ring, it will emit a

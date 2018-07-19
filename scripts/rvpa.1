@@ -13,9 +13,9 @@ instrumentation using
 .Op Fl n
 .Op Fl Fl help
 .Op Fl Fl window Ar size
-.Op Fl Fl window Ns = Ns Ar size
 .Op Fl Fl html-dir Ar directory
-.Op Fl Fl html-dir Ns = Ns Ar directory
+.Op Fl Fl interrupts-target Ar number
+.Op Fl Fl max-interrupt-depth Ar depth 
 .Op Fl Fl no-shorten
 .Op Fl Fl no-symbol
 .Op Fl Fl no-system
@@ -70,6 +70,21 @@ parameter overrides all previous
 and
 .Fl Fl output
 parameters on the command line.
+.It Fl Fl max-interrupt-depth Ar depth | Fl Fl max-interrupt-depth Ns = Ns Ar depth
+In each trace window, look for schedules where interrupts
+.Dq stack
+no more than
+.Ar depth
+deep, or no deeper than the trace events in that window actually show,
+whichever is deeper.
+A
+.Ar depth
+of 0 means no maximum.
+A
+.Ar depth
+of 1 means an interruption of a thread, a
+.Ar depth
+of 2 means an interruption of an interruption of a thread, and so on.
 .It Fl Fl interrupts-target Ar number | Fl Fl interrupt-target Ar number
 .It Fl Fl interrupts-target Ns = Ns Ar number | Fl Fl interrupt-target Ns = Ns Ar number 
 If there are fewer than

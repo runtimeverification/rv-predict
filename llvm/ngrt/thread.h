@@ -11,6 +11,15 @@
 #include "interpose.h"
 #include "ring.h"
 
+typedef struct _rvp_maskchg {
+	uint32_t	mc_idepth;	// the interrupt depth for the sequence
+					// that was interrupted while it tried
+					// to establish
+	uint64_t	mc_nmask;	// this new mask,
+	rvp_buf_t	mc_buf;		// and the trace event that would
+					// establish it
+} rvp_maskchg_t;
+
 typedef struct _rvp_thread rvp_thread_t;
 
 struct _rvp_thread {
@@ -32,7 +41,7 @@ struct _rvp_thread {
 	 */
 	uint64_t _Atomic	t_intrmask;
 	uint32_t _Atomic	t_idepth;
-	bool _Atomic		t_in_maskchg;
+	const rvp_maskchg_t * volatile _Atomic	t_maskchg;
 	rvp_ring_t * _Atomic	t_intr_ring;
 	rvp_ring_stats_t	t_stats;
 };

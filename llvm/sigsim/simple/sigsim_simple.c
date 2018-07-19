@@ -1,6 +1,7 @@
 #include "nbcompat.h"
 #include "rvpsignal.h"
 
+#define simple_sigsim_init rvp_sigsim_init
 #define simple_sigsim_raise_all_in_mask rvp_sigsim_raise_all_in_mask
 #define simple_sigsim_establish rvp_sigsim_establish
 #define simple_sigsim_disestablish rvp_sigsim_disestablish
@@ -8,7 +9,31 @@
 
 const char simple_sigsim_name[] = "simple";
 
+static const char varname[] = "RVP_SIGSIM_CONTEXTS";
+
+static bool before, after;
+
 _Atomic uint64_t established = 0;
+
+void
+simple_sigsim_init(void)
+{
+	const char *v = getenv(varname);
+
+	if (v == NULL || strcmp(v, "both") == 0) {
+		before = after = true;
+		before = after = true;
+	} else if (strcmp(v, "before") == 0) {
+		before = true;
+		after = false;
+	} else if (strcmp(v, "after") == 0) {
+		before = false;
+		after = true;
+	} else if (strcmp(v, "neither") == 0) {
+		before = after = false;
+	} else
+		errx(EXIT_FAILURE, "Unexpected %s setting \"%s\"", varname, v);
+}
 
 void
 simple_sigsim_establish(int signo)
@@ -35,10 +60,15 @@ simple_sigsim_disestablish(int signo)
 }
 
 void
-simple_sigsim_raise_all_in_mask(uint64_t masked)
+simple_sigsim_raise_all_in_mask(
+    rvp_sigsim_context_t ctx, uint64_t masked)
 {
 	uint64_t bit;
 	int bitno;
+
+	if ((ctx == RVP_SIGSIM_BEFORE_MASKCHG && !before) ||
+	    (ctx == RVP_SIGSIM_AFTER_MASKCHG && !after))
+		return;
 
 	for (bitno = 0; bitno < 64; bitno++) {
 		if ((masked & established & __BIT(bitno)) != 0)

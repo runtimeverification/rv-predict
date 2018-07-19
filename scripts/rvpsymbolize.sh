@@ -15,7 +15,11 @@ cleanup_hook()
 		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
 		exit $exitcode
 	done
-	rm -rf $tmpdir
+	if [ ${RVPSYMBOLIZE_DEBUG:-no} = yes ]; then
+		echo "$(basename $0): intermediate files are in $tmpdir/." 1>&2
+	else
+		rm -rf $tmpdir
+	fi
 	exit $exitcode
 }
 
@@ -90,8 +94,8 @@ set +i
 signal_regex='\<\(S[0-9]\+\)\>'
 
 func_addr_regex='{\(0x[0-9a-f]\+\)}'
-func_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.*\)$,s|\1|in \2 at \3|g,'
-
+func_sym_sed_template='s,^\(.\+\);;\(\(rvp\|__rvpredict\).\+\);;\(.*\)$,s|\1|in \2|g,
+s,^\(.\+\);;\(.\+\);;\(.*\)$,s|\1|in \2 at \3|g,'
 data_addr_regex='\(\[0x[0-9a-f]\+[^]]*\]\)'
 data_sym_sed_template='s,^\(.\+\);;\(.\+\);;\(.\+\)$,s|\3|\2 at \1|g,'
 
@@ -102,7 +106,8 @@ exitcode=1
 # TBD split lines after each address, just in case there is >1 per line
 #
 normalize | tee $tmpdir/original | \
-grep "$func_addr_regex" | sed "s/.*$func_addr_regex.*/{\1}/g" | sort -u | \
+grep "$func_addr_regex" | \
+    sed "s/[^{]*$func_addr_regex[^{]*/{\1}/g" | sed 's,}{,}\n{,g' | sort -u | \
     tee $tmpdir/rvsyms_func_input | \
     rvsyms -r $1 | \
     sed 's/\([^:]\+\)\(:[^:]\+:[^;]\+\);\(.\+\);;\(.\+\)$/\4 \1 \2 \3/

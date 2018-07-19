@@ -44,9 +44,15 @@ int bitno_to_signo(int);
 uint64_t sigset_to_mask(const sigset_t *);
 sigset_t *mask_to_sigset(uint64_t, sigset_t *);
 
+typedef enum _rvp_sigsim_context {
+	  RVP_SIGSIM_BEFORE_MASKCHG = 0
+	, RVP_SIGSIM_AFTER_MASKCHG
+} rvp_sigsim_context_t;
+
+void rvp_sigsim_init(void);
 void rvp_sigsim_disestablish(int);
 void rvp_sigsim_establish(int);
-void rvp_sigsim_raise_all_in_mask(uint64_t);
+void rvp_sigsim_raise_all_in_mask(rvp_sigsim_context_t, uint64_t);
 
 extern const char rvp_sigsim_name[];
 extern uint64_t rvp_unmaskable;

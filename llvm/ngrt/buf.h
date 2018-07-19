@@ -22,6 +22,16 @@ rvp_buf_put(rvp_buf_t *b, uint32_t item)
 }
 
 static inline void
+rvp_buf_put_buf(rvp_buf_t *db, const rvp_buf_t *sb)
+{
+	unsigned int i;
+
+	assert(db->b_nwords + sb->b_nwords <= __arraycount(db->b_word));
+	for (i = 0; i < sb->b_nwords; i++)
+		db->b_word[db->b_nwords++] = sb->b_word[i];
+}
+
+static inline void
 rvp_buf_put_addr(rvp_buf_t *b, rvp_addr_t addr)
 {
 	unsigned int i;

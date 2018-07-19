@@ -115,9 +115,11 @@ rvp_siginfo_handler(int signum __unused)
 void
 rvp_signal_init(void)
 {
-	rvp_signal_table_init();
 	struct sigaction osa, sa;
 	sigset_t unmaskable_set;
+
+	rvp_signal_table_init();
+	rvp_sigsim_init();
 
 	if (sigemptyset(&unmaskable_set) != 0)
 		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
@@ -801,6 +803,14 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	const rvp_maskchg_t *omaskchg;
 	rvp_maskchg_t mc = {.mc_nmask = nmask, .mc_idepth = r->r_idepth};
 
+	/* If this pthread_sigmask(3) call is changing the mask, then
+	 * save the mask-change event to a temporary buffer and point
+	 * `t->t_maskchg` to it.  If the program enters a signal
+	 * after the change of mask has taken place, but before the
+	 * change is logged to the ring, then `__rvpredict_handler_wrapper`
+	 * can detect the discrepancy, write the event buffered in
+	 * `t->t_maskchg` to the interrupt ring, and clear `t->t_maskchg`.
+	 */
 	if (set == NULL)
 		;
 	else if (oldset != NULL) {
@@ -820,20 +830,32 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		    retaddr);
 	}
 
-	if (set != NULL)
+	if (set != NULL) {
 		omaskchg = atomic_exchange(&t->t_maskchg, &mc);
+		/* Even if a signal interrupts a `pthread_sigmask(3)`
+		 * call in progress, `__rvpredict_handler_wrapper` may not
+		 * find a discrepancy, resolve it, and clear `t->t_maskchg`.
+		 * Thus a `pthread_sigmask(3)` call in a signal handler may
+		 * find `t->t_maskchg != NULL`.  So we may have to save and
+		 * restore `t->t_maskchg`.
+		 */
+		if (omaskchg != NULL)
+			;	// increase counter
+	}
 
 	masked = nmask & ~omask;
 	unmasked = omask & ~nmask;
 
 	if (masked != 0)
-		rvp_sigsim_raise_all_in_mask(masked);
+		rvp_sigsim_raise_all_in_mask(RVP_SIGSIM_BEFORE_MASKCHG, masked);
 
 	if ((rc = (*changefn)(how, set, oldset)) != 0)
 		return rc;
 
-	if (unmasked != 0)
-		rvp_sigsim_raise_all_in_mask(unmasked);
+	if (unmasked != 0) {
+		rvp_sigsim_raise_all_in_mask(RVP_SIGSIM_AFTER_MASKCHG,
+		    unmasked);
+	}
 
 	const rvp_maskchg_t *expected_mc = &mc;
 

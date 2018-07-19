@@ -1,14 +1,16 @@
-datatables.css
-datatables.js
+datatables.min.css
+datatables.min.js
 error.css
 error-descriptions.html
 error.html
+error.js
 errors.js
 favicon.ico
 index.html
+index.js
+message.js
 jquery.min.js
 layout.html
-main.js
 rv_logo.png
 sort_asc_disabled.png
 sort_asc.png
@@ -16,4 +18,6 @@ sort_both.png
 sort_desc_disabled.png
 sort_desc.png
 sourcefile.html
+sourcefile.js
+sourcefile.css
 style.css

@@ -1,17 +1,17 @@
-FILES=datatables.css datatables.js
-FILES+=error.css error-descriptions.html error.html errors.js
+FILES=datatables.min.css datatables.min.js
+FILES+=error.css error-descriptions.html error.html error.js errors.js
 FILES+=favicon.ico
-FILES+=index.html
+FILES+=index.html index.js
+FILES+=message.js
 FILES+=jquery.min.js
 FILES+=layout.html
-FILES+=main.js
 FILES+=rv_logo.png
 FILES+=sort_asc_disabled.png
 FILES+=sort_asc.png
 FILES+=sort_both.png
 FILES+=sort_desc_disabled.png
 FILES+=sort_desc.png
-FILES+=sourcefile.html
+FILES+=sourcefile.html sourcefile.js sourcefile.css
 FILES+=style.css
 
 FILESMODE=0644
@@ -27,19 +27,23 @@ FILESDIR_favicon.ico=$(_STATIC_DIR)
 FILESDIR_rv_logo.png=$(_STATIC_DIR)
 FILESDIR_style.css=$(_STATIC_DIR)
 
-FILESDIR_jquery.min.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_sort_both.png=$(_STATIC_IMAGES_DIR)
 FILESDIR_sort_asc_disabled.png=$(_STATIC_IMAGES_DIR)
 FILESDIR_sort_desc.png=$(_STATIC_IMAGES_DIR)
 FILESDIR_sort_asc.png=$(_STATIC_IMAGES_DIR)
 FILESDIR_sort_desc_disabled.png=$(_STATIC_IMAGES_DIR)
 
-FILESDIR_datatables.js=$(_STATIC_SCRIPTS_DIR)
+FILESDIR_datatables.min.js=$(_STATIC_SCRIPTS_DIR)
+FILESDIR_error.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_errors.js=$(_STATIC_SCRIPTS_DIR)
-FILESDIR_main.js=$(_STATIC_SCRIPTS_DIR)
+FILESDIR_index.js=$(_STATIC_SCRIPTS_DIR)
+FILESDIR_jquery.min.js=$(_STATIC_SCRIPTS_DIR)
+FILESDIR_message.js=$(_STATIC_SCRIPTS_DIR)
+FILESDIR_sourcefile.js=$(_STATIC_SCRIPTS_DIR)
 
-FILESDIR_datatables.css=$(_STATIC_STYLES_DIR)
+FILESDIR_datatables.min.css=$(_STATIC_STYLES_DIR)
 FILESDIR_error.css=$(_STATIC_STYLES_DIR)
+FILESDIR_sourcefile.css=$(_STATIC_STYLES_DIR)
 
 FILESDIR_sourcefile.html=$(_TEMPLATES_DIR)
 FILESDIR_index.html=$(_TEMPLATES_DIR)

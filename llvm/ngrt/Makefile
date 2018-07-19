@@ -52,7 +52,7 @@ xstr.o: xstr.o.tmp
 	$(OBJCOPY) --localize-symbols=$(.OBJDIR)/internal-libc-localize $(.ALLSRC) $(.TARGET)
 #	$(OBJCOPY) -L __rvpredict_internal_memcpy -L __rvpredict_internal_memmove -L __rvpredict_internal_memset $(.ALLSRC) $(.TARGET)
 
-CLEANFILES+=internal-libc-localize internal-libc-redefines internal-libc.a intern str.d str.o xstr.o.tmp
+CLEANFILES+=internal-libc-localize internal-libc-redefines internal-libc.a intern str.d str.o xstr.o.tmp *.gcda
 .endif
 
 .include <mkc.lib.mk>

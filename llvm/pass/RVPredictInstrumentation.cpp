@@ -711,7 +711,7 @@ RVPredictInstrument::addrBelongsToCoverage(Value *addr)
 		addr = gep->getPointerOperand();
 
 	if (GlobalVariable *v = dyn_cast<GlobalVariable>(addr)) {
-		if (v->getName().startswith("__llvm_gcov_ctr")) {
+		if (v->getName().startswith("__llvm_gcov_")) {
 			return true;
 		}
 	}

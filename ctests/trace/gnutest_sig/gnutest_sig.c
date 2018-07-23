@@ -72,9 +72,7 @@ handler (int sig)
   struct sigaction sa;
   ASSERT (sig == SIGABRT);
   ASSERT (sigaction (SIGABRT, NULL, &sa) == 0);
-#if 0 /* RV:CRM:I don't know why this assert fails */
   ASSERT ((sa.sa_flags & SA_SIGINFO) == 0);
-#endif
   switch (entry_count++)
     {
     case 0:
@@ -106,17 +104,17 @@ main (void)
   ASSERT (sigaction (SIGABRT, &sa, NULL) == 0);
   ASSERT (raise (SIGABRT) == 0);
 
+#if 0 /* The SA_RESETHAND flag is not supported, using it will cause an abort */
   sa.sa_flags = SA_RESETHAND | SA_NODEFER;
   ASSERT (sigaction (SIGABRT, &sa, &old_sa) == 0);
   ASSERT ((old_sa.sa_flags & MASK_SA_FLAGS) == 0);
   ASSERT (old_sa.sa_handler == handler);
   ASSERT (raise (SIGABRT) == 0);
+#endif
 
   sa.sa_handler = SIG_DFL;
   ASSERT (sigaction (SIGABRT, &sa, &old_sa) == 0);
-#if 0 /* ignore this asssert fail for a while */
   ASSERT ((old_sa.sa_flags & SA_SIGINFO) == 0);
-#endif
 #if !(defined __GLIBC__ || defined __UCLIBC__) /* see above */
   ASSERT (old_sa.sa_handler == SIG_DFL);
 #endif

@@ -984,8 +984,31 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	    {.s_blockset = NULL, .s_handler = NULL, .s_sigaction = NULL};
 	rvp_signal_t *s;
 	sigset_t mask, savedmask;
-	struct sigaction act_copy;
-	const struct sigaction *act = act0;
+	struct sigaction act_copy ;
+	#if 0 /* The SA_RESETHAND flag is not supported  - this is a failed attempt to implement it */
+	   /* SA_RESETHAND
+	    * https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.bpxbd00/rtsigac.htm
+	    *    Tells the system to reset the signal's action to SIG_DFL and clear the SA_SIGINFO flag 
+            * before invoking a signal handler function
+            * -------
+            * We copy act0 to act_copy and insert the changes into act_copy
+ 	    * The act_copy initializes the const act.
+            */
+	   bool use_act0 = true;
+	   if (act0 != NULL && (act0->sa_flags & SA_RESETHAND) != 0) {
+		act_copy = *act0;
+		act_copy.sa_flags &= ~SA_SIGINFO; 
+		act_copy.sa_handler = SIG_DFL; 
+		use_act0 = false;
+	   } 
+	   const struct sigaction *act = (use_act0 ? act0 : &act_copy);
+	#else
+   	   /* Abort if the unsupported SA_RESETHAND flag is set */
+	   if (act0 != NULL && (act0->sa_flags & SA_RESETHAND) != 0) {
+		err(EXIT_FAILURE, "%s.%d: SA_RESETHAND is not supported", __func__, __LINE__);
+	   }
+	   const struct sigaction *act = act0;
+	#endif
 	int rc;
 	rvp_addr_t handler;
 	bool establishing;
@@ -1074,6 +1097,14 @@ null_act:
 		oact->sa_flags &= ~SA_SIGINFO;
 		oact->sa_handler = s->s_handler;
 	}
+#if 0
+	/*
+	 * Clear SA_SIGINFO upon SIGABRT
+	 */
+	if (signum == SIGABRT &&  (oact->sa_flags & SA_SIGINFO) == 1  ){
+		oact->sa_flags &= ~SA_SIGINFO;
+	}
+#endif
 	rvp_signal_unlock(signum, &savedmask);
 	return rc;
 }

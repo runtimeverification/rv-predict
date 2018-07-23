@@ -1,3 +1,7 @@
-SUBPRJ=atomic_load atomic_store gnutest_sig interrupt_mask_change limits mask memcpy natest rmw store unaligned xchange_t816 xchange_test
+
+SUBPRJ=atomic_load atomic_store mask memcpy natest rmw load store xchange_t816 xchange_test limits unaligned
+#SUBPRJ+=gnutest_sig
+#SUBPRJ=interrupt_mask_change 
+
 
 .include <mkc.subprj.mk>

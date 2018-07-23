@@ -2,6 +2,7 @@ gnutest_sig
 0GNU*
 *.gc*
 0O*
+0A*
 *.d
 .depend
 .Makefile.tags

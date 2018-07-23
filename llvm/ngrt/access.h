@@ -9,53 +9,25 @@
 #include "thread.h"
 #include "unaligned.h"
 
-#if 1
-extern struct llvm_profile_data __start___llvm_prf_data;
-extern struct llvm_profile_data __stop___llvm_prf_data;
-
 extern const char __rvpredict_cov_begin;
 extern const char __rvpredict_cov_end;
 
-extern uint64_t __start___llvm_prf_cnts;
-extern uint64_t __stop___llvm_prf_cnts;
-extern char __start___llvm_prf_names;
-extern char __stop___llvm_prf_names;
-
-extern char __stop__llvm_gcov_ctr;
-
-extern const char  __llvm_profile_filename; /* This comes after all the __llvm_gcov_ctr.nn variables */
-
-#define COV_begin __rvpredict_cov_begin
-#define COV_end   __stop__llvm_gcov_ctr
-/* #define COV_end   __rvpredict_cov_end */
-/* #define COV_end   __llvm_profile_filename */
-
-/* do not trace LLVM coverage runtime counters */
-static inline int
-no_trace(rvp_addr_t addr)
-{        /* return true if we should not trace this variable */
-         if ( 
-              ((void*) addr) >= ((void*) & COV_begin) 
-                 &&
-              ((void*) addr) <= ((void*) & COV_end) 
-            )
-         {
-              return 1; /* Its sn LLVM coverage variable - do not trace */
-         } else {
-              return 0;
-         }
+/* Return true if we should not trace this variable because
+ * it belongs to the LLVM coverage runtime.  Otherwise, return false.
+ */
+static inline bool
+data_is_in_coverage(rvp_addr_t addr)
+{
+	return (uintptr_t)&__rvpredict_cov_begin <= (uintptr_t)addr &&
+	       (uintptr_t)addr <= (uintptr_t)&__rvpredict_cov_end;
 }
-#endif
 
 static inline void
 trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 {
-#if 1
-       if(no_trace(addr))
-        {
-             return;
-        }
-#endif
+	if (data_is_in_coverage(addr))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
@@ -69,12 +41,9 @@ trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 static inline void
 trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
-#if 1
-       if(no_trace(addr))
-        {
+	if (data_is_in_coverage(addr))
              return;
-        }
-#endif
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
@@ -88,12 +57,9 @@ trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 static inline void
 trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 {
-#if 1
-       if(no_trace(addr))
-        {
-             return;
-        }
-#endif
+	if (data_is_in_coverage(addr))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;
@@ -110,12 +76,9 @@ trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 static inline void
 trace_store8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
-#if 1
-       if(no_trace(addr))
-        {
-            return;
-        }
-#endif
+	if (data_is_in_coverage(addr))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;

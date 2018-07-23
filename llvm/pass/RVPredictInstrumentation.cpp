@@ -530,6 +530,9 @@ RVPredictInstrument::runOnFunction(Function &F)
 	    : m.getOrInsertFunction("__rvpredict_pthread_mutex_unlock",
 		pthreads.unlockfn->getFunctionType());
 
+	if (F.getName().startswith("__llvm_gcov_"))
+		return false;
+
 	// Traverse all instructions, collect loads/stores/returns, check for calls.
 	for (auto &bblock : F) {
 		for (auto &insn : bblock) {
@@ -640,8 +643,7 @@ RVPredictInstrument::runOnFunction(Function &F)
 
         // Instrument function entry/exit points if there were
         // instrumented accesses.
-	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit &&
-	    !F.getName().startswith("__llvm_gcov_")) {
+	if ((didInstrument || hasCalls) && ClInstrumentFuncEntryExit) {
 		IRBuilder<> builder(F.getEntryBlock().getFirstNonPHI());
 		Value *callsite = builder.CreateCall(
 		    Intrinsic::getDeclaration(F.getParent(),

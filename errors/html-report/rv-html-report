@@ -165,6 +165,8 @@ for ix, err in enumerate(errors):
             loc = frame[u'loc']
             if loc[u'rel_file'] != "<unknown>":
                 files[loc[u'abs_file']] = loc[u'rel_file']
+        else:
+            frame[u'loc'] = null_loc()
     
     for trace in err[u'stack_traces']:
         for component in trace[u'components']:

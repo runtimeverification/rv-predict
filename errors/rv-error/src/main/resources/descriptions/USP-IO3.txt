@@ -1,0 +1,1 @@
+Using an unspecified value in an expression can cause non-portable unspecified behavior. This might occur when reading padding bytes or unspecified values created by some other means. For maximum portability, avoid using unspecified values.

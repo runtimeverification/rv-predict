@@ -165,6 +165,8 @@ for ix, err in enumerate(errors):
             loc = frame[u'loc']
             if loc[u'rel_file'] != "<unknown>":
                 files[loc[u'abs_file']] = loc[u'rel_file']
+        else:
+            frame[u'loc'] = null_loc()
     
     for trace in err[u'stack_traces']:
         for component in trace[u'components']:
@@ -228,10 +230,17 @@ window['CODES']['%s'] = '%s'
                                         fileid=path).encode('utf-8'))
 
 
-def render_error(err):
+def render_error(err, total_errors):
     template = env.get_template('error.html')
-    with open('%s/error-%d.html' % (args.output, err[u'index']), 'w') as target:
-        target.write(template.render(err=err, output_dir=".", fileids=fileids))
+    index = err[u'index']
+    prev = index - 1
+    if prev < 0:
+        prev = total_errors - 1
+    next_ = index + 1
+    if next_ >= total_errors:
+        next_ = 0
+    with open('%s/error-%d.html' % (args.output, index), 'w') as target:
+        target.write(template.render(err=err, output_dir=".", fileids=fileids, prev=prev, next=next_))
 
 
 def render_template(filename):
@@ -266,6 +275,6 @@ for abs,rel in files.iteritems():
     render_code(rel, abs, abs, True, False)
     render_code(rel, abs, fileids[abs], False, True)
 for err in errors:
-    render_error(err)
+    render_error(err, len(errors))
 with open(args.output + "/errors.json.js", "w") as file:
     file.write("var json_data='" + json.dumps(errors).replace('\\"',"'").replace("'", "\\'") + "';\n");

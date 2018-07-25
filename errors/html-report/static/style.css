@@ -122,6 +122,7 @@ a:link span.lineno { text-decoration: none }
     box-sizing: border-box;
     font-size: 14px;
     margin-right: 54px;
+    -webkit-appearance: none;
 }
 
 div.clear {
@@ -317,7 +318,7 @@ sup {
 .group input:focus ~ label, .group input:valid ~ label 		{
   top:-20px;
   font-size:14px;
-  color:#179acf;
+  color:#0366d6;
 }
 
 /* BOTTOM BARS ================================= */
@@ -329,7 +330,7 @@ sup {
   width:0;
   bottom:1px; 
   position:absolute;
-  background:#179acf; 
+  background:#288de7;
   transition:0.2s ease all; 
   -moz-transition:0.2s ease all; 
   -webkit-transition:0.2s ease all;
@@ -367,14 +368,14 @@ sup {
 
 /* ANIMATIONS ================ */
 @-webkit-keyframes inputHighlighter {
-	from { background:#179acf; }
+	from { background:#0366d6; }
   to 	{ width:0; background:transparent; }
 }
 @-moz-keyframes inputHighlighter {
-	from { background:#179acf; }
+	from { background:#0366d6; }
   to 	{ width:0; background:transparent; }
 }
 @keyframes inputHighlighter {
-	from { background:#179acf; }
+	from { background:#0366d6; }
   to 	{ width:0; background:transparent; }
 }

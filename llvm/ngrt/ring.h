@@ -10,6 +10,7 @@
 #include <stdint.h>	/* for uint32_t */
 #include <string.h>	/* for memcpy(3) */
 #include <unistd.h>	/* for size_t */
+#include <sys/param.h>	/* for MIN(a, b) */
 #include <sys/uio.h>	/* for struct iovec */
 
 #include "buf.h"

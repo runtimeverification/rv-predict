@@ -4,7 +4,7 @@ PROJECTNAME=rv-predict-c
 
 SUBPRJ=doc examples ldscript scripts:llvm errors:reports unit_ctests
 
-.if $(OS) == "Linux"
+.if $(OS) == "Linux" || $(OS) == "QNX"
 SUBPRJ+=elftoolchain:rvsyms
 .else
 SUBPRJ+=rvsyms

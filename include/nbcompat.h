@@ -36,6 +36,19 @@
 #ifndef _RVP_NBCOMPAT_H_
 #define _RVP_NBCOMPAT_H_
 
+#include <sys/param.h> /* for MIN, MAX, NBBY */
+
+#ifndef MIN
+#define        MIN(__x, __y)   (((__x) < (__y)) ? (__x) : (__y))
+#endif
+
+#ifndef MAX
+#define        MAX(__x, __y)   (((__x) > (__y)) ? (__x) : (__y))
+#endif
+
+#include <sys/cdefs.h>
+#include <limits.h>
+
 #include <sys/param.h>
 #include <stddef.h>
 

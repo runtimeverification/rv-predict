@@ -294,6 +294,12 @@ struct name {							\
 #define	ELFTC_VCSID(ID)		__FBSDID(ID)
 #endif
 
+#if defined(__QNX__)
+#define	ELFTC_VCSID(ID)		/**/
+#define	roundup(x, y)	((((x)+((y)-1))/(y))*(y))
+#define	roundup2	roundup
+#endif
+
 #if defined(__APPLE__) || defined(__GLIBC__) || defined(__GNU__) || \
     defined(__linux__)
 #if defined(__GNUC__)

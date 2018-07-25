@@ -23,6 +23,7 @@ COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../ngrt -I$(.CURDIR)/../../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
+CPPFLAGS+=-D_POSIX_C_SOURCE=200112
 SRCS+=78k0_intr.c
 LINKS=${LIBDIR}/librvpi_78k0.a ${LIBDIR}/librvpi_78k064.a
 

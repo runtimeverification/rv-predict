@@ -19,7 +19,7 @@ usage(const char *progname)
 {
 	fprintf(stderr,
 	    "usage: %s [-g] "
-	    "[-t <binary|plain|legacy|symbol-friendly>] [-n #traces]\n"
+	    "[-t <binary|plain|symbol-friendly>] [-n #traces]\n"
 	    "[<trace file>]\n", progname);
 	exit(EXIT_FAILURE);
 }
@@ -65,8 +65,6 @@ main(int argc, char **argv)
 		case 't':
 			if (strcmp(optarg, "binary") == 0)
 				op.op_type = RVP_OUTPUT_BINARY;
-			else if (strcmp(optarg, "legacy") == 0)
-				op.op_type = RVP_OUTPUT_LEGACY_BINARY;
 			else if (strcmp(optarg, "plain") == 0)
 				op.op_type = RVP_OUTPUT_PLAIN_TEXT;
 			else if (strcmp(optarg, "symbol-friendly") == 0)

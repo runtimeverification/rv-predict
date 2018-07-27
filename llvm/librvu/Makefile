@@ -20,7 +20,7 @@ CFLAGS+=-std=c11
 COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
-CPPFLAGS+=-D_POSIX_C_SOURCE=200112	# for write(2) on QNX
+CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for write(2) on QNX
 SRCS=io.c
 WARNS=4
 

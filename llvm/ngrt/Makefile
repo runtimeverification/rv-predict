@@ -20,18 +20,23 @@ CFLAGS+=-pedantic
 COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
-CPPFLAGS+=-D_POSIX_C_SOURCE=200112	# for sigismember, sigaction on QNX,
+CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for sigismember, sigaction on QNX,
 					# POSIX threads and scheduling,
 					# pthread_kill(3)
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 
 SRCS+=access.c const.c deltops.c func.c lock.c notimpl.c
 SRCS+=opinit.c
+.if $(OS) != "QNX"
+SRCS+=offline_analysis.c
+SRCS+=online_analysis.c
+.endif
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c
-#SRCS+=supervise.c
+SRCS+=supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c
 SRCS+=io.c
+SRCS+=stubs.c
 WARNS=4
 LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
 LIBC_A!=$(CC) -print-file-name=libc.a

@@ -1,7 +1,6 @@
 .include "../head.mk"
 
 PROG=chgmask
-CPPFLAGS+="-D_POSIX_C_SOURCE=199506L"
 .if $(CC:Urvpc) == "rvpc"
 CFLAGS+="--sigsim=simple"
 LDFLAGS+="--sigsim=simple"

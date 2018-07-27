@@ -3,7 +3,8 @@
 #
 
 CC?=rvpc
-CPPFLAGS+=-I$(CTEST_dir)/../include
+CPPFLAGS+=-I$(.CURDIR)/../../../include
+CPPFLAGS+="-D_POSIX_C_SOURCE=200112L"
 WARNS=4
 STRIPFLAG=
 

@@ -20,6 +20,7 @@ FILESDIR_console-metadata.json=$(DATADIR)/rv-predict-c
 FILESDIR_csv-metadata.json=$(DATADIR)/rv-predict-c
 FILESDIR_json-metadata.json=$(DATADIR)/rv-predict-c
 LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
+LINKS=${BINDIR}/rvpc ${BINDIR}/qrvpc
 MLINKS=rvpc.1 rvpc++.1
 
 #

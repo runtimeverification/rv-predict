@@ -1,0 +1,112 @@
+#!/bin/sh
+
+#
+# Note: this is a more-or-less "portable" Bourne shell script.
+# That is, it is not reliant on any bash-isms.
+#
+
+set -e
+set -u
+
+export QNX_TARGET=${HOME}/qnx700/target/qnx7
+export QNX_HOST=${HOME}/qnx700/host/linux/x86_64
+export PATH=${HOME}/qnx700/host/linux/x86_64/usr/bin:${PATH}
+
+# -nostdinc -Asystem(unix)
+cflags="-target x86_64-pc-qnx-gnu -mcmodel=small -D__LANGUAGE_C -D_LANGUAGE_C -D__QNX__ -D__QNXNTO__ -D__unix__ -D__unix -D__ELF__ -fPIE -D__X86_64__ -D__LITTLEENDIAN__ -nostdlib --sysroot=${HOME}/qnx700/host/linux/x86_64 -isystem /mnt/hd2/dyoung/qnx700/target/qnx7/usr/include -isystem ${HOME}/qnx700/host/linux/x86_64/usr/include"
+
+_ldflags="-Wl,--dynamic-linker=/usr/lib/ldqnx-64.so.2"
+_ldflags="${_ldflags:-} -Wl,--sysroot=${QNX_TARGET}/x86_64"
+_ldflags="${_ldflags:-} -Wl,--hash-style=gnu -Wl,--warn-shared-textrel"
+_ldflags="${_ldflags:-} -Wl,-zrelro"
+_ldflags="${_ldflags:-} -Wl,-znow -Wl,--eh-frame-hdr"
+
+_ldflags="${_ldflags:-} ${QNX_TARGET}/x86_64/lib/crt1.o"
+_ldflags="${_ldflags:-} ${QNX_TARGET}/x86_64/lib/crti.o"
+_ldflags="${_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/crtbegin.o"
+_ldflags="${_ldflags:-} -Wl,-rpath-link=${QNX_TARGET}/x86_64/lib -Wl,-rpath-link=${QNX_TARGET}/x86_64/usr/lib -Wl,-rpath-link=${QNX_TARGET}/x86_64/lib/gcc/5.4.0 -Wl,-rpath-link=${QNX_TARGET}/x86_64/opt/lib"
+_ldflags="${_ldflags:-} -Wl,-Y${QNX_TARGET}/x86_64/lib -Wl,-Y${QNX_TARGET}/x86_64/usr/lib -Wl,-Y${QNX_TARGET}/x86_64/opt/lib"
+_ldflags="${_ldflags:-} -L${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/lib/gcc/5.4.0"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/usr/x86_64-pc-nto-qnx7.0.0/lib"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/lib"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/usr/lib"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/opt/lib"
+
+#
+# %(ftest-coverage: %(!fprofile-arcs: ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/%(!nopie:pic/)libgcov.a)) %(fprofile-arcs: ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/%(!nopie:pic/)libgcov.a)
+#
+# -lcS -> -lc%(!nopie:S)
+#
+_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/libgcc.a"
+_post_ldflags="${_post_ldflags:-} -lc -Bstatic -lcS"
+_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/libgcc.a"
+
+_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/crtend.o"
+_post_ldflags="${_post_ldflags:-} ${QNX_TARGET}/x86_64/lib/crtn.o"
+
+_posix_ldflags="-L$(dirname $0)/../lib -lmissingposix"
+
+cplusplus=no
+compile=yes
+link=yes
+just_print=no
+ldflags=
+posix_ldflags=
+post_ldflags=
+
+prog=$(basename $0)
+
+if [ ${prog%%++} != ${prog} ]; then
+	cplusplus=yes
+fi
+
+for arg in "$@"; do
+	case "$arg" in
+	--)	break
+		;;
+	--just-print)
+		just_print=yes
+		continue
+		;;
+	-M|-E)	# -M implies -E, and -E skips normal compilation
+		compile=no
+		link=no
+		continue
+		;;
+	-[cS]|-shared)
+		link=no
+		continue
+		;;
+	*.cc|*.cp|*.cxx|*.cpp|*.CPP|*.c++|*.C)
+		cplusplus=yes
+		;;
+	esac
+done
+
+if [ ${cplusplus:-no} = yes ]; then
+	compiler="clang++-4.0 -std=c++11"
+else
+	compiler=clang-4.0
+fi
+
+if [ ${just_print} = yes ]; then
+	pfx=echo
+else
+	pfx=
+fi
+
+if [ ${compile} = yes -a ${RVP_SETUP:-no} = no ]; then
+	cflags="${cflags} -include $(dirname $0)/../include/missingposix.h"
+fi
+
+if [ ${link} = yes ]; then
+	ldflags=${_ldflags}
+	post_ldflags=${_post_ldflags}
+	posix_ldflags=${_posix_ldflags}
+fi
+
+#echo link=${link} 1>&2
+#echo _ldflags=${_ldflags} 1>&2
+
+$pfx $compiler ${cflags} ${ldflags} "$@" ${post_ldflags} ${posix_ldflags}

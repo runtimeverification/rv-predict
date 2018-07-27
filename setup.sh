@@ -4,6 +4,8 @@ set -e
 set -u
 
 objdir=$(mkcmake -V '$(.OBJDIR)')
+export RVP_SETUP=yes	# tells `qclang` not to expect `missingposix.h` to
+			# be available 
 export OPAMROOT="${objdir}/.opam"
 
 yes n | opam init
@@ -29,8 +31,17 @@ install -o $(id -u) -g $(id -g) -m 0755 -d ${objdir}/.tools/etc
 install -o $(id -u) -g $(id -g) -m 0644 etc/mk-c.conf \
     ${objdir}/.tools/etc/mk-c.conf
 
-install -o $(id -u) -g $(id -g) -m 0555 bin/rvpmake.in \
+install -o $(id -u) -g $(id -g) -m 0555 scripts/rvpmake.in \
     ${objdir}/.tools/bin/rvpmake
+
+if [ -d $HOME/qnx700 ]; then
+	install -o $(id -u) -g $(id -g) -m 0555 scripts/qclang-4.0 \
+	    ${objdir}/.tools/bin/qclang-4.0
+
+	PATH=${objdir}/.tools/bin/:${PATH} \
+	  mkcmake PREFIX=${objdir}/.tools -C lib cleandir all install
+fi
+
 
 if [ ${home_relative_bindir} != ${bindir} ]; then
 	pathdir=\$HOME/${home_relative_bindir}

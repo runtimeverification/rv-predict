@@ -1,12 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __NetBSD__
-#include <sys/endian.h>	/* for htobe32() */
-#else
-#include <endian.h>	/* for htobe32() */
-#endif
 
 #include "ring.h"
+#include "rvpendian.h"	/* for htobe32() */
 #include "trace.h"
 
 const uint32_t tid = 0xdeadbeef;

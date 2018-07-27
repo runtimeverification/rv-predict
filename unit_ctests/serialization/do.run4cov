@@ -1,0 +1,12 @@
+echo "=============== unit c tests ================="
+
+cd ./empty_ring;     main ; cd ..
+cd ./full_ring;      main ; cd ..
+
+cd ./initial_intr;    main ; cd ..
+
+cd ./multi_word;      main ; cd ..
+cd ./one_word;        main ; cd ..
+cd ./wrap_multi_word; main ; cd ..
+cd ./wrap_one_word;   main ; cd ..
+

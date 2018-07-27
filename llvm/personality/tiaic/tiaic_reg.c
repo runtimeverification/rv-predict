@@ -13,6 +13,7 @@
 #include "register.h"
 #include "rvpredict_intr_tiaic.h"
 #include "rvpsignal.h"
+#include "sigutil.h"
 
 static bool tiaic_debug = false;
 
@@ -219,7 +220,7 @@ __rvpredict_update_state(uint64_t prior_mask, bool fire_all)
 	for (i = 0; i < rvp_static_nassigned; i++) {
 		const rvp_static_intr_t *osi = &rvp_static_intr[i];
 		const int oirq = osi->si_prio;
-		struct sigaction sa;
+		struct sigaction osa, sa;
 
 		if (osi->si_signum == -1)
 			continue;
@@ -259,6 +260,16 @@ __rvpredict_update_state(uint64_t prior_mask, bool fire_all)
 		memset(&sa, 0, sizeof(sa));
 		mask_to_sigset(smask, &sa.sa_mask);
 		sa.sa_handler = __rvpredict_tiaic_handler;
+
+		/* Don't call `sigaction` to change the mask or handler, if
+		 * neither will actually change.
+		 */
+		if (sigaction(osi->si_signum, NULL, &osa) == -1)
+			abort();
+
+		if (sa.sa_handler == osa.sa_handler &&
+		    sigeqset(&sa.sa_mask, &osa.sa_mask))
+			continue;
 
 		if (sigaction(osi->si_signum, &sa, NULL) == -1)
 			abort();

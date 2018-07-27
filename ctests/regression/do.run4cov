@@ -1,0 +1,4 @@
+cd stopkill;     pwd; stopkill     ;cd ..
+echo "======== Skipping regression/cancellation ================"
+echo "======== Skipping regression/cancellation ================"
+# cd cancellation; pwd; cancellation ;cd ..

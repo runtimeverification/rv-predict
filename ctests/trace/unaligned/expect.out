@@ -1,13 +1,11 @@
 tid 1.0 {} begin thread
 tid 1.0 in main at .../unaligned/unaligned.c:21 enter function cfa . return {}
-tid 1.0 in main at .../unaligned/unaligned.c:0:22 load 4 0x00000500 <- initial.misalign at unaligned.c
-tid 1.0 in main at .../unaligned/unaligned.c:0:22 store 4 0x00000500 -> p.misalign at unaligned.c;main
-tid 1.0 in main at .../unaligned/unaligned.c:0:22 load 4 0x00000700 <- initial.a at unaligned.c
-tid 1.0 in main at .../unaligned/unaligned.c:0:22 store 4 0x00000700 -> p.a at unaligned.c;main
-tid 1.0 in main at .../unaligned/unaligned.c:0:22 load 1 00 <- initial.b at unaligned.c
-tid 1.0 in main at .../unaligned/unaligned.c:0:22 store 1 00 -> p.b at unaligned.c;main
-tid 1.0 in main at .../unaligned/unaligned.c:25 load 4 0x00000005 <- p.a at unaligned.c;main
-tid 1.0 in main at .../unaligned/unaligned.c:25 load 4 0x00000007 <- p.b at unaligned.c;main
-tid 1.0 in main at .../unaligned/unaligned.c:25 load 4 0x00000005 <- p.a at unaligned.c;main
-tid 1.0 in main at .../unaligned/unaligned.c:25 load 4 0x00000007 <- p.b at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:23 load 4 0x00000005 <- initial.a at unaligned.c
+tid 1.0 in main at .../unaligned/unaligned.c:23 store 4 0x00000005 -> p.a at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:24 load 4 0x00000007 <- initial.b at unaligned.c
+tid 1.0 in main at .../unaligned/unaligned.c:24 store 4 0x00000007 -> p.b at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:27 load 4 0x00000005 <- p.a at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:27 load 4 0x00000007 <- p.b at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:27 load 4 0x00000005 <- p.a at unaligned.c;main
+tid 1.0 in main at .../unaligned/unaligned.c:27 load 4 0x00000007 <- p.b at unaligned.c;main
 tid 1.0 in main at .../unaligned/unaligned.c:21 exit function

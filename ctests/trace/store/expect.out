@@ -6,6 +6,6 @@ tid 1.0 in main at .../store/store.c:25 store 4 0x00000041 -> u32 at store.c;mai
 tid 1.0 in main at .../store/store.c:26 store 8 0x0000000000000043 -> u64 at store.c;main
 tid 1.0 in main at .../store/store.c:28 atomic store 1 0x10 -> u8 at store.c;main
 tid 1.0 in main at .../store/store.c:28 atomic store 2 0x1000 -> u16 at store.c;main
-tid 1.0 in main at .../store/store.c:33:6 atomic store 4 0x00000100 -> u32 at store.c;main
-tid 1.0 in main at .../store/store.c:34:6 atomic store 8 0x0000000f00000000 -> u64 at store.c;main
+tid 1.0 in main at .../store/store.c:33 atomic store 4 0x00000100 -> u32 at store.c;main
+tid 1.0 in main at .../store/store.c:34 atomic store 8 0x0000000f00000000 -> u64 at store.c;main
 tid 1.0 in main at .../store/store.c:22 exit function

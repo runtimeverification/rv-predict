@@ -92,24 +92,9 @@ __rvpredict_atomic_exchange4(volatile _Atomic uint32_t *addr,
 	    memory_order);
 }
 
-void
-__rvpredict_atomic_fetch_and4(volatile _Atomic uint32_t *addr,
-    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
-{
-	trace_atomic_rmw4(
-	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval & arg,
-	    memory_order);
-}
-
-void
-__rvpredict_atomic_fetch_or4(volatile _Atomic uint32_t *addr,
-    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
-{
-	trace_atomic_rmw4(
-	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval | arg,
-	    memory_order);
-}
-
+/*
+ * add
+ */
 void
 __rvpredict_atomic_fetch_add1(volatile _Atomic uint8_t *addr,
     uint8_t oval, uint8_t arg, int32_t memory_order __unused)
@@ -173,6 +158,126 @@ __rvpredict_atomic_fetch_sub8(volatile _Atomic uint64_t *addr,
 	    memory_order);
 }
 
+/*
+ * or
+ */
+void
+__rvpredict_atomic_fetch_or1(volatile _Atomic uint8_t *addr,
+    uint8_t oval, uint8_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval | arg,
+	    memory_order, RVP_OP_ATOMIC_RMW1);
+}
+
+void
+__rvpredict_atomic_fetch_or2(volatile _Atomic uint16_t *addr,
+    uint16_t oval, uint16_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval | arg,
+	    memory_order, RVP_OP_ATOMIC_RMW2);
+}
+
+void
+__rvpredict_atomic_fetch_or4(volatile _Atomic uint32_t *addr,
+    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw4(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval | arg,
+	    memory_order);
+}
+
+void
+__rvpredict_atomic_fetch_or8(volatile _Atomic uint64_t *addr,
+    uint64_t oval, uint64_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw8(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval | arg,
+	    memory_order);
+}
+
+/*
+ * and
+ */
+void
+__rvpredict_atomic_fetch_and1(volatile _Atomic uint8_t *addr,
+    uint8_t oval, uint8_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval & arg,
+	    memory_order, RVP_OP_ATOMIC_RMW1);
+}
+
+void
+__rvpredict_atomic_fetch_and2(volatile _Atomic uint16_t *addr,
+    uint16_t oval, uint16_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval & arg,
+	    memory_order, RVP_OP_ATOMIC_RMW2);
+}
+
+void
+__rvpredict_atomic_fetch_and4(volatile _Atomic uint32_t *addr,
+    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw4(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval & arg,
+	    memory_order);
+}
+
+void
+__rvpredict_atomic_fetch_and8(volatile _Atomic uint64_t *addr,
+    uint64_t oval, uint64_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw8(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval & arg,
+	    memory_order);
+}
+
+/*
+ * xor
+ */
+void
+__rvpredict_atomic_fetch_xor1(volatile _Atomic uint8_t *addr,
+    uint8_t oval, uint8_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval ^ arg,
+	    memory_order, RVP_OP_ATOMIC_RMW1);
+}
+
+void
+__rvpredict_atomic_fetch_xor2(volatile _Atomic uint16_t *addr,
+    uint16_t oval, uint16_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval ^ arg,
+	    memory_order, RVP_OP_ATOMIC_RMW2);
+}
+
+void
+__rvpredict_atomic_fetch_xor4(volatile _Atomic uint32_t *addr,
+    uint32_t oval, uint32_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw4(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval ^ arg,
+	    memory_order);
+}
+
+void
+__rvpredict_atomic_fetch_xor8(volatile _Atomic uint64_t *addr,
+    uint64_t oval, uint64_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw8(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval + arg,
+	    memory_order);
+}
+
+/*
+ * Compare and set
+ */
 /* T fn(T *addr, T expected, T desired,
  *      int32_t memory_order_success,
  *      int32_t memory_order_failure)

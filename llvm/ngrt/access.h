@@ -9,9 +9,25 @@
 #include "thread.h"
 #include "unaligned.h"
 
+extern const char __rvpredict_cov_begin;
+extern const char __rvpredict_cov_end;
+
+/* Return true if we should not trace this variable because
+ * it belongs to the LLVM coverage runtime.  Otherwise, return false.
+ */
+static inline bool
+data_is_in_coverage(rvp_addr_t addr)
+{
+	return (uintptr_t)&__rvpredict_cov_begin <= (uintptr_t)addr &&
+	       (uintptr_t)addr <= (uintptr_t)&__rvpredict_cov_end;
+}
+
 static inline void
 trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 {
+	if (data_is_in_coverage(addr))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
@@ -25,6 +41,9 @@ trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 static inline void
 trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
+	if (data_is_in_coverage(addr))
+             return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
@@ -38,6 +57,9 @@ trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 static inline void
 trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 {
+	if (data_is_in_coverage(addr))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;
@@ -54,6 +76,9 @@ trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 static inline void
 trace_store8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
+	if (data_is_in_coverage(addr))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;

@@ -1,5 +1,5 @@
 tid 1.0 {} begin thread
 tid 1.0 in main at .../stopkill/stopkill.c:24 enter function cfa . return {}
-tid 1.0 in main at .../stopkill/stopkill.c:30:48 set signal mask #4
-tid 1.0 in main at .../stopkill/stopkill.c:33:50 get & set signal mask #4 -> #4
+tid 1.0 in main at .../stopkill/stopkill.c:30 set signal mask #4
+tid 1.0 in main at .../stopkill/stopkill.c:33 get & set signal mask #4 -> #4
 tid 1.0 in main at .../stopkill/stopkill.c:24 exit function

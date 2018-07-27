@@ -4,6 +4,7 @@ MKINSTALL=no
 
 PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 .export PATH
+
 CC?=rvpc
 PROG=on_exit
 WARNS=5

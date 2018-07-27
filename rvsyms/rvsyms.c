@@ -533,7 +533,7 @@ check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
 	Dwarf_Error err;
 	int i;
 	Dwarf_Unsigned lineno, plineno;
-	Dwarf_Signed colno;
+	Dwarf_Signed colno, pcolno;
 	char *filename, *pfilename = NULL;
 
 	if (!ctx->have_insnptr)
@@ -551,6 +551,7 @@ check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
 		paddr = addr;
 		pfilename = filename;
 		plineno = lineno;
+		pcolno = colno;
 
 		lineinfo(line[i], &addr, &lineno, &colno, &filename);
 		if (addr == ctx->insnptr)
@@ -559,7 +560,7 @@ check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
 			addr = paddr;
 			filename = pfilename;
 			lineno = plineno;
-			colno = -1;
+			colno = pcolno;
 			break;
 		}
 	}
@@ -568,7 +569,10 @@ check_line(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx,
 found:
 		*filenamep = filename;
 		*linep = lineno;
-		*colp = colno;
+		*colp = -1;	/* Should be `colno`, but clang doesn't
+				 * generate consistent/correct column
+				 * information.
+				 */
 		return true;
 	}
 	return false;
@@ -1229,9 +1233,12 @@ print_die_data(Dwarf_Debug dbg, Dwarf_Die die, dwarf_walk_ctx_t *ctx)
 	        &column)) {
 		if (ctx->print_comp_dir && comp_dir != NULL)
 			strstack_pushf(ss, "%s;", comp_dir);
-		strstack_pushf(ss, "%s:%d", filename, line);
-		if (column != -1)
-			strstack_pushf(ss, ":%d", column);
+		strstack_pushf(ss, "%s", filename);
+		if (line != 0) {
+			strstack_pushf(ss, ":%d", line);
+			if (column != -1)
+				strstack_pushf(ss, ":%d", column);
+		}
 	} else if (tag == DW_TAG_subprogram && ctx->have_insnptr &&
 	    !ctx->have_dataptr && !ctx->have_frameptr &&
 	    inner.lopc < inner.hipc) {

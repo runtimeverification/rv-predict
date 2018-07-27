@@ -15,6 +15,8 @@ PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 RVP_TRACE_FILE:=$(.OBJDIR)/test.trace 
 RVP_TRACE_ONLY:=yes
 
+CTEST_dir=$(.CURDIR)/../..
+
 .export PATH
 .export RVP_TRACE_FILE
 .export RVP_TRACE_ONLY

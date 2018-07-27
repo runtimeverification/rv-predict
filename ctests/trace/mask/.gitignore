@@ -1,3 +1,4 @@
+mask
 *.d
 .depend
 .Makefile.tags

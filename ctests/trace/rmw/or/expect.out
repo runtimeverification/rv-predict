@@ -1,0 +1,12 @@
+tid 1.0 {} begin thread
+tid 1.0 in main at .../or/or.c enter function cfa . return {}
+tid 1.0 in main at .../or/or.c store 2 0x2020 -> u16 at or.c;main
+tid 1.0 in main at .../or/or.c store 4 0x40404040 -> u32 at or.c;main
+tid 1.0 in main at .../or/or.c store 8 0x8080808080808080 -> u64 at or.c;main
+tid 1.0 in main at .../or/or.c atomic rmw 2 0x2020 <- u16 at or.c;main <- 0x2222
+tid 1.0 in main at .../or/or.c atomic rmw 4 0x40404040 <- u32 at or.c;main <- 0x44444444
+tid 1.0 in main at .../or/or.c atomic rmw 8 0x8080808080808080 <- u64 at or.c;main <- 0x8888888888888888
+tid 1.0 in main at .../or/or.c atomic load 2 0x2222 <- u16 at or.c;main
+tid 1.0 in main at .../or/or.c atomic load 4 0x44444444 <- u32 at or.c;main
+tid 1.0 in main at .../or/or.c atomic load 8 0x8888888888888888 <- u64 at or.c;main
+tid 1.0 in main at .../or/or.c exit function

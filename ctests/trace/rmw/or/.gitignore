@@ -1,0 +1,6 @@
+or
+*.gcno
+*.gcda
+*.profraw
+*.test.out
+test.trace

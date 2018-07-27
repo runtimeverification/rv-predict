@@ -16,12 +16,12 @@ tid 1.0 in main at .../xchange_t816/xchange_t816.c:38 atomic rmw 8 0x70080001fff
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:39 atomic rmw 4 0x70800034 <- u_lcl_u32 at xchange_t816.c;main <- 0x50400032
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:40 atomic rmw 2 0x7032 <- u_lcl_u16 at xchange_t816.c;main <- 0x5006
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:41 atomic rmw 1 0x33 <- u_lcl_u8 at xchange_t816.c;main <- 0x50
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:44:25 atomic load 8 0x10080001eeef0064 <- u_glbl_u64 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:44:13 atomic store 8 0x10080001eeef0065 -> u_lcl_u64 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:45:25 atomic load 4 0x10400032 <- u_glbl_u32 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:45:13 atomic store 4 0x10400033 -> u_lcl_u32 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:44 atomic load 8 0x10080001eeef0064 <- u_glbl_u64 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:44 atomic store 8 0x10080001eeef0065 -> u_lcl_u64 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:45 atomic load 4 0x10400032 <- u_glbl_u32 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:45 atomic store 4 0x10400033 -> u_lcl_u32 at xchange_t816.c;main
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:46 atomic load 2 0x1006 <- u_glbl_u16 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:46:13 atomic store 2 0x1007 -> u_lcl_u16 at xchange_t816.c;main
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:47:25 atomic load 1 0x10 <- u_glbl_u8 at xchange_t816.c
-tid 1.0 in main at .../xchange_t816/xchange_t816.c:47:13 atomic store 1 0x11 -> u_lcl_u8 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:46 atomic store 2 0x1007 -> u_lcl_u16 at xchange_t816.c;main
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:47 atomic load 1 0x10 <- u_glbl_u8 at xchange_t816.c
+tid 1.0 in main at .../xchange_t816/xchange_t816.c:47 atomic store 1 0x11 -> u_lcl_u8 at xchange_t816.c;main
 tid 1.0 in main at .../xchange_t816/xchange_t816.c:27 exit function

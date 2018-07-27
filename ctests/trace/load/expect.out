@@ -1,0 +1,15 @@
+tid 1.0 {} begin thread
+tid 1.0 in main at .../load/load.c:22 enter function cfa . return {}
+tid 1.0 in main at .../load/load.c:23 store 1 0x39 -> u8 at load.c;main
+tid 1.0 in main at .../load/load.c:24 store 2 0x0040 -> u16 at load.c;main
+tid 1.0 in main at .../load/load.c:25 store 4 0x00000041 -> u32 at load.c;main
+tid 1.0 in main at .../load/load.c:26 store 8 0x0000000000000043 -> u64 at load.c;main
+tid 1.0 in main at .../load/load.c:28 load 1 0x10 <- end_u8 at load.c
+tid 1.0 in main at .../load/load.c:28 atomic store 1 0x10 -> u8 at load.c;main
+tid 1.0 in main at .../load/load.c:29 load 2 0x1000 <- end_u16 at load.c
+tid 1.0 in main at .../load/load.c:29 atomic store 2 0x1000 -> u16 at load.c;main
+tid 1.0 in main at .../load/load.c:30 load 4 0x00000100 <- end_u32 at load.c
+tid 1.0 in main at .../load/load.c:30 atomic store 4 0x00000100 -> u32 at load.c;main
+tid 1.0 in main at .../load/load.c:31 load 8 0x0000000f00000000 <- end_u64 at load.c
+tid 1.0 in main at .../load/load.c:31 atomic store 8 0x0000000f00000000 -> u64 at load.c;main
+tid 1.0 in main at .../load/load.c:22 exit function

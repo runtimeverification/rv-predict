@@ -1,0 +1,5 @@
+xor
+*.gcno
+*.gcda
+*.test.out
+test.trace

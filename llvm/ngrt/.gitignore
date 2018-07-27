@@ -1,4 +1,6 @@
 *.a
+*.gcno
+*.gcda
 *.d
 .depend
 .gdbinit
@@ -12,3 +14,4 @@ _mkc_*
 *.so
 .*.swp
 tags
+z*

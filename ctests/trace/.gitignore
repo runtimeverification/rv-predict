@@ -1,5 +1,9 @@
 *.d
+*.profdata
+*.profraw
 .depend
 .Makefile.tags
 *.o
 tags
+z*
+0Ori*

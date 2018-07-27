@@ -19,7 +19,9 @@ static const pair_t initial = {.a = 5, .b = 7};
 int
 main(void)
 {
-	volatile pair_t p = initial;
+	volatile pair_t p;
+	p.a = initial.a;
+	p.b = initial.b;
 
 	printf("%" PRIu32 " * %" PRIu32 " = %" PRIu32 "\n",
 	    p.a, p.b, p.a * p.b);

@@ -14,6 +14,7 @@ OPAMYES=true opam install ocp-ocamlres ocamlbuild-atdgen csv uri "atdgen>=2" atd
 
 home_slash=${HOME}/
 bindir=${objdir}/.tools/bin
+etcdir=${objdir}/.tools/etc
 mandir=${objdir}/.tools/man
 home_relative_bindir=${bindir##${HOME}/}
 home_relative_mandir=${mandir##${HOME}/}
@@ -23,6 +24,10 @@ mkcmake PREFIX=${objdir}/.nbstage LINKSPREFIX=${objdir}/.tools -C nbtools \
     all-mtree all-pax all-xinstall \
     install-mtree install-pax install-xinstall \
     cleandir-mtree cleandir-pax cleandir-xinstall
+
+install -o $(id -u) -g $(id -g) -m 0755 -d ${objdir}/.tools/etc
+install -o $(id -u) -g $(id -g) -m 0644 etc/mk-c.conf \
+    ${objdir}/.tools/etc/mk-c.conf
 
 install -o $(id -u) -g $(id -g) -m 0555 bin/rvpmake.in \
     ${objdir}/.tools/bin/rvpmake

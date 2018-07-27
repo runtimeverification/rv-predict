@@ -1,0 +1,4 @@
+cd ./ctests/regression; do.run4cov; cd ../..
+cd ./ctests/stats;      do.run4cov; cd ../..
+cd ./ctests/trace;      do.run4cov; cd ../..
+cd ./unit_ctests/serialization ; do.run4cov; cd ../..

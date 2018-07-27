@@ -1,1 +1,9 @@
 atomic_store
+*.profraw
+*.d
+.depend
+.Makefile.tags
+*.test.out
+*.o
+tags
+test.trace

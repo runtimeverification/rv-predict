@@ -1,19 +1,12 @@
 tid 1.0 {} begin thread
-tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:99 enter function cfa . return {}
-tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:106 establish signal action signal 6 handler in handler at .../gnutest_sig/gnutest_sig.c:70 mask #4
+tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:97 enter function cfa . return {}
+tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:104 establish signal action signal 6 handler in handler at .../gnutest_sig/gnutest_sig.c:70 mask #4
 tid 1.1 {} enter signal handler signal 6 handler in handler at .../gnutest_sig/gnutest_sig.c:70
 tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 enter function cfa . return in __rvpredict_handler_wrapper
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:78 load 4 00000000 <- entry_count at gnutest_sig.c;handler
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:78 store 4 0x00000001 -> entry_count at gnutest_sig.c;handler
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 exit function
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 exit signal handler
-tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:110 establish signal action signal 6 handler in handler at .../gnutest_sig/gnutest_sig.c:70 mask #3
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 enter signal handler signal 6 handler in handler at .../gnutest_sig/gnutest_sig.c:70
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 enter function cfa . return in __rvpredict_handler_wrapper
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:78 load 4 0x00000001 <- entry_count at gnutest_sig.c;handler
-tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:78 store 4 0x00000002 -> entry_count at gnutest_sig.c;handler
+tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:76 load 4 00000000 <- entry_count at gnutest_sig.c;handler
+tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:76 store 4 0x00000001 -> entry_count at gnutest_sig.c;handler
 tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 exit function
 tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 exit signal handler
 tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:116 disestablish signal action signal 0
-tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:125 disestablish signal action signal 0
-tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:99 exit function
+tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:123 disestablish signal action signal 0
+tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:97 exit function

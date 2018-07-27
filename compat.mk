@@ -12,8 +12,8 @@ _ELFTOP:=$(.PARSEDIR)/external/bsd/elftoolchain
 #DWARF_LDDIR?=${HOME}/elftoolchain-install/usr/lib
 #ELF_LDDIR?=${HOME}/elftoolchain-install/usr/lib
 #CPPFLAGS+=-isystem ${HOME}/elftoolchain-install/usr/include
-_DWARF_LDDIR!=cd $(_ELFTOP)/libdwarf && MAKEFLAGS= $(MAKE) -V .OBJDIR
-_ELF_LDDIR!=cd $(_ELFTOP)/libelf && MAKEFLAGS= $(MAKE) -V .OBJDIR
+_DWARF_LDDIR!=cd $(_ELFTOP)/libdwarf && MAKECONF= MAKEFLAGS= $(MAKE) -V .OBJDIR
+_ELF_LDDIR!=cd $(_ELFTOP)/libelf && MAKECONF= MAKEFLAGS= $(MAKE) -V .OBJDIR
 DWARF_LDDIR?=${_DWARF_LDDIR}
 ELF_LDDIR?=${_ELF_LDDIR}
 CPPFLAGS+=-isystem $(_ELFTOP)/common

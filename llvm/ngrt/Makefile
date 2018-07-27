@@ -21,6 +21,7 @@ COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
+
 SRCS+=access.c const.c deltops.c func.c lock.c notimpl.c
 SRCS+=opinit.c
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c

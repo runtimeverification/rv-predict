@@ -23,7 +23,7 @@ COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../ngrt -I$(.CURDIR)/../../../include
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
-CPPFLAGS+=-D_POSIX_C_SOURCE=200112
+CPPFLAGS+=-D_POSIX_C_SOURCE=200112L
 SRCS+=tiaic_intr.c tiaic_reg.c
 LINKS=${LIBDIR}/librvpi_tiaic.a ${LIBDIR}/librvpi_tiaic64.a
 

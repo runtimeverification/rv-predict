@@ -22,9 +22,6 @@ uint16_t u_glbl_u16_mm = 0x1f;
 volatile _Atomic uint32_t u_glbl_u32    = 0x32;
 volatile _Atomic uint64_t u_glbl_u64    = 0x64;
 
-sig_atomic_t  qsig;
-
-
 int
 main(void)
 {
@@ -44,11 +41,10 @@ main(void)
 	lcl_u32 = u32;
 	lcl_u64 = u64;
 
-  	u32 = __sync_val_compare_and_swap(&lcl_u32, 1, 2 );
-	qsig = 1;
+	u32 = __sync_val_compare_and_swap(&lcl_u32, 1, 2 );
 
-	 u32 = atomic_exchange(&u_glbl_u32, 0x32);
-	 u64 = atomic_exchange(&u_glbl_u64, 0x64);
+	u32 = atomic_exchange(&u_glbl_u32, 0x32);
+	u64 = atomic_exchange(&u_glbl_u64, 0x64);
 
 	return EXIT_SUCCESS;
 }

@@ -1,6 +1,7 @@
 .include "../head.mk"
 
 PROG=chgmask
+CTESTS_DIR=$(.CURDIR)/../..
 .if $(CC:Urvpc) == "rvpc"
 CFLAGS+="--sigsim=simple"
 LDFLAGS+="--sigsim=simple"

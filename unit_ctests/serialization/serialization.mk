@@ -7,7 +7,11 @@ CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../../../llvm/ngrt
 CPPFLAGS+=-I${.CURDIR}/../../../include
 CPPFLAGS+=-I${.CURDIR}/../../../llvm/librvu
 CPPFLAGS+=-D_POSIX_C_SOURCE=200112L
+.if $(OS:Uunknown) == "QNX"
 CPPFLAGS+=-D_QNX_SOURCE
+.else
+CPPFLAGS+=-D_BSD_SOURCE
+.endif
 WARNS=4
 SRCS=main.c
 SRCS+=deltops.c serialize.c

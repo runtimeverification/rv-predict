@@ -1,0 +1,11 @@
+tid 1.0 {} begin thread
+tid 1.0 in main at .../memset/memset.c:13 enter function cfa . return {}
+tid 1.0 in main at .../memset/memset.c:17 store 8 0x0101010101010101 -> gstr[0] at memset.c
+tid 1.0 in main at .../memset/memset.c:17 store 1 0x01 -> gstr[0] at memset.c
+tid 1.0 in main at .../memset/memset.c:20 store 1 0x03 -> lstr[0] at memset.c;main
+tid 1.0 in main at .../memset/memset.c:20 store 1 0x03 -> lstr[1] at memset.c;main
+tid 1.0 in main at .../memset/memset.c:20 store 1 0x03 -> lstr[2] at memset.c;main
+tid 1.0 in main at .../memset/memset.c:20 store 1 0x03 -> lstr[3] at memset.c;main
+tid 1.0 in main at .../memset/memset.c:20 store 1 0x03 -> lstr[4] at memset.c;main
+tid 1.0 in main at .../memset/memset.c:22 load 1 0x01 <- gstr[7] at memset.c
+tid 1.0 in main at .../memset/memset.c:13 exit function

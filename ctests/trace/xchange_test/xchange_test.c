@@ -25,7 +25,6 @@ volatile _Atomic uint64_t u_glbl_u64    = 0x64;
 int
 main(void)
 {
-
 	uint8_t  u8  = initial_u8; 
 	uint16_t u16 = initial_u16;
 	uint32_t u32 = initial_u32;

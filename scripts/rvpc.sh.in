@@ -151,7 +151,7 @@ if [ ${prog} != qrvpc ]; then
 	# -lrt for timer_create() et cetera, in hacks.c
 	# -latomic for atomic_is_lock_free()
 	# -pthread for POSIX threads
-	ldflags=-ldl -lrt -latomic -pthread
+	ldflags="-ldl -lrt -latomic -pthread"
 fi
 
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]

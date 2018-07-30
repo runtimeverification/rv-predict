@@ -17,13 +17,73 @@
 #include "supervise.h"
 
 const char *self_exe_pathname = "/proc/self/exe";
-const int killer_signum[] = {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM,
+static const int killer_signum[] = {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM,
     SIGTERM};
 int rvp_analysis_fd = -1;
 
 volatile _Atomic bool __read_mostly rvp_initialized = false;
 
 const char *product_name = "RV-Predict/C";
+
+void
+ignore_signals(struct sigaction **actionp)
+{
+	int i;
+	struct sigaction sa;
+	struct sigaction *action;
+
+	memset(&sa, '\0', sizeof(sa));
+	sa.sa_handler = SIG_IGN;
+	if (sigemptyset(&sa.sa_mask) == -1)
+		goto errexit;
+
+	action = calloc(__arraycount(killer_signum), sizeof(struct sigaction));
+	if (action == NULL) {
+		errx(EXIT_FAILURE,
+		    "%s: could not allocate `struct sigaction` to hold state",
+		    __func__);
+	}
+
+	for (i = 0; i < __arraycount(killer_signum); i++) {
+		if (real_sigaction(killer_signum[i], &sa, &action[i]) == -1)
+			goto errexit;
+	}
+
+	*actionp = action;
+
+	return;
+
+errexit:
+	err(EXIT_FAILURE, "%s could not ignore signals", product_name);
+}
+
+void
+reset_signals(struct sigaction **actionp)
+{
+	int i;
+	struct sigaction *action = *actionp;
+
+	*actionp = NULL;
+
+	for (i = 0; i < __arraycount(killer_signum); i++) {
+		if (real_sigaction(killer_signum[i], &action[i], NULL) == -1) {
+			err(EXIT_FAILURE, "%s could not reset signals",
+			    product_name);
+		}
+	}
+	free(action);
+}
+
+int
+sigaddset_killers(sigset_t *s)
+{
+	int i;
+	for (i = 0; i < __arraycount(killer_signum); i++) {
+		if (sigaddset(s, killer_signum[i]) == -1)
+			return -1;
+	}
+	return 0;
+}
 
 char *
 get_binary_path(void)

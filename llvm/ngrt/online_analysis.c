@@ -14,6 +14,8 @@
 #include <sys/wait.h>
 #include <unistd.h>	/* for pathconf(2), pipe(2), readlink(2) */
 
+#include "interpose.h"	/* for real_pthread_sigmask */
+#include "nbcompat.h"
 #include "supervise.h"
 
 static int __printflike(1, 2)
@@ -32,55 +34,14 @@ dbg_printf(const char *fmt, ...)
 }
 
 static void
-ignore_signals(struct sigaction *action, size_t nactions)
-{
-	int i;
-	struct sigaction sa;
-
-	memset(&sa, '\0', sizeof(sa));
-	sa.sa_handler = SIG_IGN;
-	if (sigemptyset(&sa.sa_mask) == -1)
-		goto errexit;
-
-	if (nactions < __arraycount(killer_signum)) {
-		errx(EXIT_FAILURE,
-		    "%s: too few `struct sigaction` to hold state", __func__);
-	}
-
-	for (i = 0; i < __arraycount(killer_signum); i++) {
-		if (real_sigaction(killer_signum[i], &sa, &action[i]) == -1)
-			goto errexit;
-	}
-
-	return;
-
-errexit:
-	err(EXIT_FAILURE, "%s could not ignore signals", product_name);
-}
-
-static void
-reset_signals(const struct sigaction *action)
-{
-	int i;
-
-	for (i = 0; i < __arraycount(killer_signum); i++) {
-		if (real_sigaction(killer_signum[i], &action[i], NULL) == -1) {
-			err(EXIT_FAILURE, "%s could not reset signals",
-			    product_name);
-		}
-	}
-}
-
-static void
 sigchld(int signo __unused)
 {
 	return;
 }
 
 static void
-prepare_to_wait_for_analysis(struct sigaction *action, sigset_t *setp)
+prepare_to_wait_for_analysis(struct sigaction **actionp, sigset_t *setp)
 {
-	int i;
 	struct sigaction sa = {.sa_handler = sigchld};
 
 	if (sigemptyset(&sa.sa_mask) == -1)
@@ -89,12 +50,11 @@ prepare_to_wait_for_analysis(struct sigaction *action, sigset_t *setp)
 	if (sigemptyset(setp) == -1)
 		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
 
-	for (i = 0; i < __arraycount(killer_signum); i++) {
-		if (sigaddset(setp, killer_signum[i]) == -1) {
-			err(EXIT_FAILURE, "%s.%d: sigaddset", __func__,
-			    __LINE__);
-		}
+	if (sigaddset_killers(setp) == -1) {
+		err(EXIT_FAILURE, "%s.%d: sigaddset_killers", __func__,
+		    __LINE__);
 	}
+
 	if (sigaddset(setp, SIGCHLD) == -1)
 		err(EXIT_FAILURE, "%s.%d: sigaddset", __func__, __LINE__);
 
@@ -103,13 +63,13 @@ prepare_to_wait_for_analysis(struct sigaction *action, sigset_t *setp)
 	if (real_sigaction(SIGCHLD, &sa, NULL) == -1)
 		err(EXIT_FAILURE, "%s: sigaction", __func__);
 
-	reset_signals(action);
+	reset_signals(actionp);
 }
 
 void
 rvp_online_analysis_start(void)
 {
-	struct sigaction action[__arraycount(killer_signum)];
+	struct sigaction *action;
 	int astatus, sstatus;
 	pid_t supervisee_pid, analysis_pid, parent_pid;
 	int pipefd[2];
@@ -141,13 +101,13 @@ rvp_online_analysis_start(void)
 		    "%s could not fork a supervisee process", product_name);
 	}
 
-	ignore_signals(action, __arraycount(action));
+	ignore_signals(&action);
 
 	/* the child process runs the program: return to its main routine */
 	if (supervisee_pid == 0) {
 		rvp_analysis_fd = pipewr;
 		(void)close(piperd);
-		reset_signals(action);
+		reset_signals(&action);
 		return;
 	}
 
@@ -172,7 +132,7 @@ rvp_online_analysis_start(void)
 			    "process group", product_name);
 		}
 
-		reset_signals(action);
+		reset_signals(&action);
 
 		/* establish read end of pipe as rvpa's stdin */
 		if (dup2(piperd, STDIN_FILENO) == -1) {
@@ -228,7 +188,7 @@ rvp_online_analysis_start(void)
 	 * waits for signals.
 	 */
 
-	prepare_to_wait_for_analysis(action, &waitset);
+	prepare_to_wait_for_analysis(&action, &waitset);
 	if (parent_pid == 1) {
 		if (WIFSIGNALED(sstatus)) {
 			signo = WTERMSIG(sstatus);

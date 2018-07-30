@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 #include <unistd.h>	/* for pathconf(2), pipe(2), readlink(2) */
 
+#include "interpose.h"	/* for real_pthread_sigmask */
 #include "supervise.h"
 
 static const char *tmproot = "/tmp";
@@ -31,16 +32,13 @@ restore_signals(sigset_t *omask)
 static void
 block_signals(sigset_t *omask)
 {
-	int i;
 	sigset_t s;
 
 	if (sigemptyset(&s) == -1)
 		goto errexit;
 
-	for (i = 0; i < __arraycount(killer_signum); i++) {
-		if (sigaddset(&s, killer_signum[i]) == -1)
-			goto errexit;
-	}
+	if (sigaddset_killers(&s) == -1)
+		goto errexit;
 
 	if ((errno = real_pthread_sigmask(SIG_BLOCK, &s, omask)) == 0)
 		return;

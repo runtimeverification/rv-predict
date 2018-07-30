@@ -27,16 +27,17 @@ CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 
 SRCS+=access.c const.c deltops.c func.c lock.c notimpl.c
 SRCS+=opinit.c
-.if $(OS) != "QNX"
+.if $(OS:Uunknown) != "QNX"
 SRCS+=offline_analysis.c
 SRCS+=online_analysis.c
+.else
+SRCS+=stubs.c
 .endif
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c
 SRCS+=supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c
 SRCS+=io.c
-SRCS+=stubs.c
 WARNS=4
 LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
 LIBC_A!=$(CC) -print-file-name=libc.a

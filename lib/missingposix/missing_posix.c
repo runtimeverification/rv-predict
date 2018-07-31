@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "missingposix.h"
+#include "rvpredict_missing_posix.h"
 
 int
 vasprintf(char **bufp, const char *fmt, va_list ap)

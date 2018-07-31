@@ -45,7 +45,7 @@ _post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0
 _post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/crtend.o"
 _post_ldflags="${_post_ldflags:-} ${QNX_TARGET}/x86_64/lib/crtn.o"
 
-_posix_ldflags="-L$(dirname $0)/../lib -lmissingposix"
+_posix_ldflags="-L$(dirname $0)/../lib -lrvpmissing_posix"
 
 cplusplus=no
 compile=yes
@@ -97,7 +97,7 @@ else
 fi
 
 if [ ${compile} = yes -a ${RVP_SETUP:-no} = no ]; then
-	cflags="${cflags} -include $(dirname $0)/../include/missingposix.h"
+	cflags="${cflags} -include $(dirname $0)/../include/rvpredict_missing_posix.h"
 fi
 
 if [ ${link} = yes ]; then

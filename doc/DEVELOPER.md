@@ -77,6 +77,17 @@ rvpmake depend
 rvpmake
 ```
 
+## Building RV-Predict for QNX
+
+At the QNX port's current stage of development, it's very important to
+*clean* your directory before building for QNX.
+
+```bash
+cd rv-predict
+rvpmake cleandir
+rvpmake PREDICT_CC=qrvpc TARGET_CC=qclang HOST_CC=clang OS=QNX
+```
+
 ## Creating the RV-Predict distribution
 
 ```bash

@@ -802,7 +802,7 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 
 	omask = t->t_intrmask;
 
-	maskchg = sigset_to_mask(set);
+	maskchg = (set != NULL) ? sigset_to_mask(set) : 0;
 
 	switch (how) {
 	case SIG_BLOCK:

@@ -8,7 +8,8 @@ PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 
 PROG=cancellation
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../include
 SRCS.cancellation=cancellation.c
 WARNS=4

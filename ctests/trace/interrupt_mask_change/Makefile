@@ -11,7 +11,8 @@ LDFLAGS+="--sigsim=simple"
 # Tail portion of Makefiles in the test directory
 #
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../include
 WARNS=4
 STRIPFLAG=

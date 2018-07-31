@@ -2,7 +2,8 @@
 # Tail portion of Makefiles in the trace tests directory
 #
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC?=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../include
 CPPFLAGS+="-D_POSIX_C_SOURCE=200112L"
 WARNS=4
@@ -10,7 +11,9 @@ STRIPFLAG=
 
 
 COPTS+=-O0 -g
+.if $(OS:Uunknown) != QNX
 LDADD+=-pthread
+.endif
 
 .PHONY: test_output
  

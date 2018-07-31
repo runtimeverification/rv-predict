@@ -13,7 +13,8 @@ LIB?=rvprt
 
 STRIPFLAG=
 INCS=rvpredict_intr.h
-CC?=clang
+TARGET_CC?=clang
+CC?=$(TARGET_CC)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 #COPTS+=-O3

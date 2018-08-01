@@ -1,6 +1,5 @@
 memset
 *.profraw
-*.profraw
 *.d
 *.gc*
 .depend

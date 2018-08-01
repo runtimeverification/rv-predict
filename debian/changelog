@@ -1,3 +1,101 @@
+rv-predict-c (2.0-1) xenial; urgency=medium
+
+  * Improve compatibility with LLVM coverage tools.
+
+  * In data-race reports, print the source filename and line number,
+    but don't print the column number, because LLVM appears to generate
+    incorrect column numbers when coverage is enabled.  Do not print
+    line number 0.
+
+  * Avoid recording program traces where a program appears to enter a
+    signal handler when the signal mask does not allow, or to read a
+    signal mask that is inconsistent with the masks that were written.
+
+  * Make `rvpsymbolize` correctly symbolize inputs that contain more
+    than one function address.
+
+  * Add to `rvpa(1)` an option `--max-interrupt-depth depth` that limits
+    the level of recursion Predict will explore.
+
+  * Print correct stack traces for interrupted threads and signals.  Fix
+    a bug where a function entered in a previous window may not have
+    appeared in a data race report for the current window.
+
+  * Change the appearance of the HTML report and add controls to the
+    data-race detail display for moving to the previous/next detailed
+    display.
+
+  * Introduce an interrupt personality, `tiaic`, for the Texas
+    Instruments ARM Interrupt Controller.
+
+  * Add an option, --interrupts-target=N (and variants), that tells how
+    many times to try to run each interrupt in each window by copying
+    interrupt traces from prior windows, if necessary.  Describe the
+    option in the manual page.
+
+  * Add {} to more instruction pointers in the symbol-friendly output of
+    `rvpdump` so that `rvpsymbolize` will turn the pointers to function
+    names.
+
+  * Fix bugs that sometimes caused Predict-instrumented programs to hang
+    when they received a signal such as SIGINT (Control-C).
+
+  * Improve the examples for the Renesas 78k0 simulation.  Improve
+    interrupt examples and their documentation.
+
+  * Improve performance of Predict's data-race analysis.
+
+  * Provide an example from Volker Stolz.
+
+  * Add modular simulations for spontaneous signal entry.  Document the
+    signal simulations.
+
+  * Streamline the production of HTML reports.
+
+  * Add options for adjusting the timeouts used by the data-race
+    analysis.
+
+  * Install `rv-html-report` as `rvp-html-report` to avoid conflicts
+    with RV-Match.
+
+  * Add instrumentation to the `signal(2)` system call.
+
+  * Fix some bugs in the `sigaction(2)` instrumentation.
+
+  * When the instrumented application is cancelled with, say, Control-C,
+    don't cancel the analysis, too.
+
+  * Cancel analysis if, after the application program has finished
+    running, we receive another signal like SIGINT (Control-C), SIGHUP,
+    SIGQUIT, et cetera.
+
+  * Check the status of the analysis process and squeak on `stderr` if
+    it exited on a signal.
+
+  * Correctly forward `rvpc` command-line arguments that contain
+    whitespace to `clang`.
+
+  * Fix some bugs affecting atomic 8- and 16-bit stores and atomic
+    16-bit read-modify-write.
+
+  * Fix some data-race analysis crashes.
+
+  * Add a `--version` command-line flag to `rvpc` and `rvpc++` commands.
+
+  * Add a command-line option, `--parallel-smt #`, that tells how many
+    threads to run the SMT solver in.
+
+  * Improve the `rvpdump(1)` manual page.
+
+  * Prevent a diagnostic assertion from occurring when the Predict
+    runtime expected (incorrectly) for SIGKILL or SIGSTOP to be
+    masked---they cannot be masked.
+
+  * Perform online analysis by default.  That is, run the instrumented
+    program and the data-race analysis concurrently.
+
+ -- Runtime Verification, Inc. <support@runtimeverification.com>  Tue, 31 Jul 2018 23:22:00 -0600
+
 rv-predict-c (1.9-1) xenial; urgency=medium
 
   * Miscellaneous bug fixes and new features.

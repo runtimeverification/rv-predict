@@ -1,3 +1,10 @@
+rv-predict-c (2.0.1-1) xenial; urgency=medium
+
+  * Fix a defect in the report symbolization that broke some of
+    the examples.
+
+ -- Runtime Verification, Inc. <support@runtimeverification.com>  Wed, 01 Aug 2018 19:53:00 -0600
+
 rv-predict-c (2.0-1) xenial; urgency=medium
 
   * Improve compatibility with LLVM coverage tools.

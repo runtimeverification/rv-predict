@@ -5,7 +5,7 @@ _ELFTOP:=$(.PARSEDIR)/external/bsd/elftoolchain
 #.info .PARSEDIR=$(.PARSEDIR)
 #.info _ELFTOP=$(_ELFTOP)
 
-.if $(OS) == "Linux"
+.if $(OS) == "Linux" || $(OS) == "QNX"
 #DWARF_LDDIR?=${HOME}/pkg/lib
 #ELF_LDDIR?=${HOME}/pkg/lib
 #CPPFLAGS+=-isystem ${HOME}/pkg/include

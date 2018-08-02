@@ -1,6 +1,7 @@
 #ifndef _RVP_SUPERVISE_H_
 #define _RVP_SUPERVISE_H_
 
+#include <signal.h>
 #include <stdbool.h>
 
 extern bool rvp_trace_only;
@@ -9,7 +10,15 @@ extern bool rvp_debug_supervisor;
 extern int rvp_analysis_fd;
 extern volatile _Atomic bool rvp_initialized;
 
+int sigaddset_killers(sigset_t *);
+
 void rvp_supervision_start(void);
+void rvp_online_analysis_start(void);
+void rvp_offline_analysis_start(void);
 char *get_binary_path(void);
+extern const char *self_exe_pathname;
+extern const char *product_name;
+void reset_signals(struct sigaction **);
+void ignore_signals(struct sigaction **);
 
 #endif /* _RVP_SUPERVISE_H_ */

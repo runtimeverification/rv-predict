@@ -1,7 +1,7 @@
 .include "../head.mk"
 
 PROG=chgmask
-CPPFLAGS+="-D_POSIX_C_SOURCE=199506L"
+CTESTS_DIR=$(.CURDIR)/../..
 .if $(CC:Urvpc) == "rvpc"
 CFLAGS+="--sigsim=simple"
 LDFLAGS+="--sigsim=simple"
@@ -11,7 +11,8 @@ LDFLAGS+="--sigsim=simple"
 # Tail portion of Makefiles in the test directory
 #
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../include
 WARNS=4
 STRIPFLAG=

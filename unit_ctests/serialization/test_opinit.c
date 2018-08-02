@@ -1,5 +1,6 @@
 #include "nbcompat.h"
 #include "init.h"
+#include "rvpendian.h"
 #include "trace.h"
 
 rvp_jumpless_op_t rvp_jumpless_op;

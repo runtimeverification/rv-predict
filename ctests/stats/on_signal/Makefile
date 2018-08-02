@@ -5,7 +5,8 @@ MKINSTALL=no
 PATH:=$(.OBJDIR)/../../toolset/bin:$(PATH)
 .export PATH
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 LDFLAGS+=-pthread	# needed if CC is overridden with clang or gcc
 PROG=on_signal
 WARNS=5

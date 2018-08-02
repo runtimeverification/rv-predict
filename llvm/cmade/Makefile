@@ -24,7 +24,7 @@ rvpinstrument.so: build/pass/rvpinstrument.so installit
 build: $(.CURDIR)/../CMakeLists.txt $(.CURDIR)/../pass/CMakeLists.txt $(.CURDIR)/../runtime/CMakeLists.txt
 	@rm -rf $(.OBJDIR)/build
 	@$(INSTALL) -d -m 0700 $(.OBJDIR)/build
-	cd $(.OBJDIR)/build && cmake -DCMAKE_C_COMPILER=$(CC) -DCMAKE_CXX_COMPILER=$(CXX) -DLLVM_DIR=$(LLVMDIR) $(.CURDIR)/..
+	cd $(.OBJDIR)/build && cmake -DCMAKE_C_COMPILER=$(HOST_CC) -DCMAKE_CXX_COMPILER=$(HOST_CXX) -DLLVM_DIR=$(LLVMDIR) $(.CURDIR)/..
 
 build/runtime/lib/linux/libclang_rt.tsan_cxx-x86_64.a \
 build/runtime/lib/linux/libclang_rt.tsan_cxx-x86_64.a.syms \

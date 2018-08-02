@@ -9,7 +9,8 @@
 #include <stdint.h> /* for uint32_t */
 #include <stdlib.h> /* for EXIT_FAILURE */
 #include <stdio.h> /* for fprintf(3) */
-#include <string.h> /* for strerror(3), strcasecmp(3) */
+#include <string.h> /* for strerror(3) */
+#include <strings.h> /* for strcasecmp(3) */
 #include <unistd.h> /* for sysconf */
 
 #include "init.h"

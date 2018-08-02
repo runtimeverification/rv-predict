@@ -77,6 +77,21 @@ rvpmake depend
 rvpmake
 ```
 
+## Building RV-Predict for QNX
+
+Variables `TARGET_CC`, `PREDICT_CC`, and `HOST_CC` tell what compiler
+to use to build binaries for the target platform, target binaries with
+Predict instrumentation, and host binaries, respectively.
+
+At the QNX port's current stage of development, it's very important to
+*clean* your directory before building for QNX.
+
+```bash
+cd rv-predict
+rvpmake cleandir
+rvpmake PREDICT_CC=qrvpc TARGET_CC=qclang HOST_CC=clang OS=QNX
+```
+
 ## Creating the RV-Predict distribution
 
 ```bash

@@ -16,7 +16,8 @@ RVP_TRACE_ONLY:=yes
 .export RVP_TRACE_ONLY
 .export RVP_TRACE_SIZE_LIMIT
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../../include
 SRCS.$(PROG)=$(PROG).c
 WARNS=4

@@ -17,7 +17,8 @@ RVP_TRACE_ONLY:=yes
 
 PROG=stopkill
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../include
 SRCS.stopkill=stopkill.c
 WARNS=4

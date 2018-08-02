@@ -6,14 +6,17 @@ PATH:=$(.OBJDIR)/../toolset/bin:$(PATH)
 
 PROG=forkfail
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../include
 SRCS.forkfail=forkfail.c
 WARNS=4
 STRIPFLAG=
 
 COPTS+=-O3 -g -O0
+.if $(OS:Uunknown) != QNX
 LDADD+=-pthread
+.endif
 
 .PHONY: test_output
 

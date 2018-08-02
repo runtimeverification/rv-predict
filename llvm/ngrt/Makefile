@@ -13,17 +13,27 @@ LIB?=rvprt
 
 STRIPFLAG=
 INCS=rvpredict_intr.h
-CC?=clang
+TARGET_CC?=clang
+CC?=$(TARGET_CC)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
+CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for sigismember, sigaction on QNX,
+					# POSIX threads and scheduling,
+					# pthread_kill(3)
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 
 SRCS+=access.c const.c deltops.c func.c lock.c notimpl.c
 SRCS+=opinit.c
+.if $(OS:Uunknown) != "QNX"
+SRCS+=offline_analysis.c
+SRCS+=online_analysis.c
+.else
+SRCS+=stubs.c
+.endif
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c
 SRCS+=supervise.c
 SRCS+=thread.c trace.c

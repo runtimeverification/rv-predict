@@ -20,7 +20,7 @@
 #endif
 
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
-REAL_DEFN(sighandler_t, signal, int, sighandler_t);
+REAL_DEFN(rvp_sighandler_t, signal, int, rvp_sighandler_t);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, sigsuspend, const sigset_t *);
@@ -90,7 +90,7 @@ void
 rvp_signal_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(
-	    sighandler_t (*)(int, sighandler_t),
+	    rvp_sighandler_t (*)(int, rvp_sighandler_t),
 	    signal);
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const struct sigaction *, struct sigaction *),
@@ -802,7 +802,7 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 
 	omask = t->t_intrmask;
 
-	maskchg = sigset_to_mask(set);
+	maskchg = (set != NULL) ? sigset_to_mask(set) : 0;
 
 	switch (how) {
 	case SIG_BLOCK:
@@ -947,8 +947,8 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
-sighandler_t
-__rvpredict_signal(int signo, sighandler_t handler)
+rvp_sighandler_t
+__rvpredict_signal(int signo, rvp_sighandler_t handler)
 {
 	struct sigaction nsa, osa;
 
@@ -1112,5 +1112,5 @@ null_act:
 INTERPOSE(int, sigprocmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, sigaction, int, const struct sigaction *, struct sigaction *);
-INTERPOSE(sighandler_t, signal, int, sighandler_t);
+INTERPOSE(rvp_sighandler_t, signal, int, rvp_sighandler_t);
 INTERPOSE(int, sigsuspend, const sigset_t *);

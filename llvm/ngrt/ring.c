@@ -5,8 +5,6 @@
 #include <stdio.h>	/* for stderr, fprintf(3) */
 #include <stdlib.h>
 
-#include <sys/param.h>	/* for MIN(a, b) */
-
 #include "rvpsignal.h"
 #include "thread.h"
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop() */

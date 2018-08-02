@@ -26,6 +26,16 @@
  * $Id: _libelf_config.h 3168 2015-02-24 19:17:47Z emaste $
  */
 
+#if defined(__QNX__)
+
+#if	defined(__X86_64__)
+#define	LIBELF_ARCH		EM_X86_64
+#define	LIBELF_BYTEORDER	ELFDATA2LSB
+#define	LIBELF_CLASS		ELFCLASS64
+#endif
+
+#endif /* __QNX__ */
+
 #if defined(__APPLE__) || defined(__DragonFly__)
 
 #if	defined(__amd64__)

@@ -19,7 +19,8 @@ RVP_TRACE_SIZE_LIMIT:=-10
 
 PROG=negative
 
-CC?=rvpc
+PREDICT_CC?=rvpc
+CC=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../../include
 SRCS.$(PROG)=$(PROG).c
 WARNS=4

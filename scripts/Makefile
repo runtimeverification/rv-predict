@@ -8,7 +8,8 @@
 
 MAN=rvpa.1 rvpc.1 rvpsymbolize.1
 FILESMODE=0755
-FILES=rvpa.sh rvpc.sh rvpsymbolize.sh
+FILES=qclang-4.0
+FILES+=rvpa.sh rvpc.sh rvpsymbolize.sh
 FILES+=console-metadata.json csv-metadata.json json-metadata.json
 FILESNAME_rvpa.sh=rvpa
 FILESNAME_rvpc.sh=rvpc
@@ -20,7 +21,10 @@ FILESDIR_console-metadata.json=$(DATADIR)/rv-predict-c
 FILESDIR_csv-metadata.json=$(DATADIR)/rv-predict-c
 FILESDIR_json-metadata.json=$(DATADIR)/rv-predict-c
 LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
+LINKS+=${BINDIR}/rvpc ${BINDIR}/qrvpc
+LINKS+=${BINDIR}/qclang-4.0 ${BINDIR}/qclang
 MLINKS=rvpc.1 rvpc++.1
+MLINKS=rvpc.1 qrvpc.1
 
 #
 # I assume here and in rvpc.sh.in that there is only one directory

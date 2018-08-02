@@ -2,7 +2,7 @@
 PATH:=$(.OBJDIR)/../../../toolset/bin:$(PATH)
 LOCAL_NORMALIZE=$(.CURDIR)/../../../normalize-lines
 CPPFLAGS+=-I$(.CURDIR)/../../../../include
-CTEST_dir=../../..
+CTESTS_DIR=$(.CURDIR)/../../..
 
 PROG=and
 

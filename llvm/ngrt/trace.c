@@ -42,7 +42,7 @@ rvp_expand_template(const char *template)
 	char *out;
 	char pidbuf[sizeof("18446744073709551616")],
 	     secs_since_epoch[sizeof("18446744073709551616")];
-	char buf[PATH_MAX] = "";
+	char buf[_POSIX_PATH_MAX] = "";
 	const size_t buflen = sizeof(buf);
 	int rc;
 	size_t nleft;

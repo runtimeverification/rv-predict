@@ -140,8 +140,18 @@ eval "set -- ${quoted_list}"
 
 if [ ${cplusplus:-no} = yes ]; then
 	compiler="clang++-4.0 -std=c++11"
+elif [ ${prog} = qrvpc ]; then
+	compiler=qclang-4.0
 else
 	compiler=clang-4.0
+fi
+
+if [ ${prog} != qrvpc ]; then
+	# -ldl for dlsym()
+	# -lrt for timer_create() et cetera, in hacks.c
+	# -latomic for atomic_is_lock_free()
+	# -pthread for POSIX threads
+	ldflags="-ldl -lrt -latomic -pthread"
 fi
 
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]
@@ -152,12 +162,8 @@ then
 	fi
 fi
 
-# -ldl for dlsym()
-# -lrt for timer_create() et cetera, in hacks.c
-# -latomic for atomic_is_lock_free()
-# -pthread for POSIX threads
 if [ ${link:-yes} = yes ]; then
-	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} -ldl -lrt -latomic -pthread -g"
+	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} ${ldflags:-} -g"
 fi
 
 if [ ${just_print} = yes ]; then

@@ -96,13 +96,16 @@ let render_loc (buffer : rv_buffer) (loc : location option) : unit =
   | None -> add_string buffer "<unknown>"
   | Some loc ->
     add_string buffer         loc.rel_file ;
-    add_char buffer           ':' ;
-    add_string buffer         (string_of_int loc.line) ;
-    match loc.column with
+    match loc.line with
     | None -> ()
-    | Some column ->
-      add_char buffer         ':' ;
-      add_string buffer       (string_of_int column)
+    | Some line -> 
+      add_char buffer           ':' ;
+      add_string buffer         (string_of_int line) ;
+      match loc.column with
+      | None -> ()
+      | Some column ->
+        add_char buffer         ':' ;
+        add_string buffer       (string_of_int column)
 
 
 let render_lock (buffer : rv_buffer) (lock : lock) : unit =

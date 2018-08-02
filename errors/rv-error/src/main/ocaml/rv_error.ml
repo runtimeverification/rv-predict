@@ -153,12 +153,10 @@ let matches_file (loc: location option) (f :string) : bool =
 
 
 let matches_line (loc: location option) (l: line_spec) : bool =
-  match loc with
-  | None -> false
-  | Some loc
-  -> loc.line >= l.start_line
-  && loc.line <= l.end_line
-  && Some loc.rel_file = l.file
+	match loc with
+	| Some { line=Some line; rel_file=rel_file } ->
+	  line >= l.start_line && line <= l.end_line && l.file = Some rel_file
+	| _ -> false
 
 
 let matches_symbol (symbol : string option) (s : string) : bool =

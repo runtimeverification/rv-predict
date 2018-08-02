@@ -38,8 +38,9 @@ let rvsyms_field str =
 let parse_loc loc =
   let parts = Str.split_delim (Str.regexp ":") loc in
   match parts with
-  | file :: line :: [] -> {rel_file=file; abs_file=file; line=(int_of_string line); column=None; system_header=false}
-  | file :: line :: column :: [] -> {rel_file=file; abs_file=file; line=(int_of_string line); column=Some(int_of_string column); system_header=false}
+  | file :: [] -> {rel_file=file; abs_file=file; line=None; column=None; system_header=false}
+  | file :: line :: [] -> {rel_file=file; abs_file=file; line=Some(int_of_string line); column=None; system_header=false}
+  | file :: line :: column :: [] -> {rel_file=file; abs_file=file; line=Some(int_of_string line); column=Some(int_of_string column); system_header=false}
   | _ -> failwith "could not parse location in rvsyms output"
 
 let rvsyms_frame str =

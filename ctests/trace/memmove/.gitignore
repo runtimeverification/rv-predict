@@ -2,6 +2,7 @@ memmove
 z*
 *.gcda
 *.gcno
+*.profraw
 *.d
 .depend
 .Makefile.tags
@@ -9,3 +10,4 @@ z*
 *.o
 tags
 test.trace
+0*

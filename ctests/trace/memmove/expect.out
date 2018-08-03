@@ -1,51 +1,12 @@
 tid 1.0 {} begin thread
-tid 1.0 in main at .../memmove/memmove.c:14 enter function cfa . return {}
-tid 1.0 in main at .../memmove/memmove.c:17 store 2 0x0101 -> gstr[0] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:17 store 1 0x01 -> gstr[0] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[2] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[4] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[6] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[8] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[10] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[12] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[14] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[16] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[18] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[20] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[22] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[24] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 2 0x0202 -> gstr[26] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:18 store 1 0x02 -> gstr[26] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[15] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[16] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[14] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[15] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[13] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[14] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[12] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[13] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[11] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[12] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[10] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[11] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[9] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[10] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[8] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[9] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[7] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[8] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[6] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[7] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[5] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[6] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[4] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[5] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[3] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[4] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x02 <- gstr[2] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x02 -> gstr[3] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 load 1 0x01 <- gstr[1] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:21 store 1 0x01 -> gstr[2] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:23 load 1 0x02 <- gstr[4] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:23 load 1 0x02 <- gstr[5] at memmove.c
-tid 1.0 in main at .../memmove/memmove.c:14 exit function
+tid 1.0 in main at .../../memcp_test_src.c:145 enter function cfa . return {}
+tid 1.0 in testdriver at .../../memcp_test_src.c:118 enter function cfa . return in main at .../../memcp_test_src.c:147
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- iidst[0] at memmove.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000003 <- iisrc[0] at memmove.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- lngths[0] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
+tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x00000001842d73]
+tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 00 <- [0x00000001842d71]
+tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.c:118 exit function
+tid 1.0 in main at .../../memcp_test_src.c:145 exit function

@@ -8,3 +8,4 @@ memset
 *.o
 tags
 test.trace
+0*

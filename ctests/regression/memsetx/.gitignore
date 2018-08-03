@@ -1,0 +1,13 @@
+memsetx
+*.gcda
+*.gcno
+*.profraw
+*.d
+.depend
+.Makefile.tags
+*.test.out
+*.o
+tags
+test.trace
+0*
+z*

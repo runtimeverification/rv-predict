@@ -1,0 +1,77 @@
+tid 1.0 {} begin thread
+tid 1.0 in main at .../../memcp_test_src.c:145 enter function cfa . return {}
+tid 1.0 in testdriver at .../../memcp_test_src.c:117 enter function cfa . return in main at .../../memcp_test_src.c:147
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iidst[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iisrc[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- lngths[0] at memsetx.c
+tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 1 0x41 -> [0x0000000173d2b0]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2b0]
+tid 1.0 in testit at .../../memcp_test_src.c:111 load 1 00 <- [0x0000000173d2b1]
+tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iidst[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iisrc[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000005 <- lngths[1] at memsetx.c
+tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 4 0x41414141 -> [0x0000000173d2d0]
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 1 0x41 -> [0x0000000173d2d4]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2d0]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2d1]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2d2]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2d3]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2d4]
+tid 1.0 in testit at .../../memcp_test_src.c:111 load 1 00 <- [0x0000000173d2d5]
+tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iidst[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iisrc[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000009 <- lngths[2] at memsetx.c
+tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 8 0x4141414141414141 -> [0x0000000173d2f0]
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 1 0x41 -> [0x0000000173d2f8]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f0]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f1]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f2]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f3]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f4]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f5]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f6]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f7]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d2f8]
+tid 1.0 in testit at .../../memcp_test_src.c:111 load 1 00 <- [0x0000000173d2f9]
+tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iidst[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iisrc[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000011 <- lngths[3] at memsetx.c
+tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 8 0x4141414141414141 -> [0x0000000173d310]
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 8 0x4141414141414141 -> [0x0000000173d318]
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 1 0x41 -> [0x0000000173d320]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d310]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d311]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d312]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d313]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d314]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d315]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d316]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d317]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d318]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d319]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d31a]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d31b]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d31c]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d31d]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d31e]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d31f]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d320]
+tid 1.0 in testit at .../../memcp_test_src.c:111 load 1 00 <- [0x0000000173d321]
+tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- iidst[1] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 00000000 <- iisrc[0] at memsetx.c
+tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- lngths[0] at memsetx.c
+tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
+tid 1.0 in testit at .../../memcp_test_src.c:72 store 1 0x41 -> [0x0000000173d330]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 0x41 <- [0x0000000173d330]
+tid 1.0 in testit at .../../memcp_test_src.c:105 load 1 00 <- [0x0000000173d331]
+tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.c:117 exit function
+tid 1.0 in main at .../../memcp_test_src.c:145 exit function

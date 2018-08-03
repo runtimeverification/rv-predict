@@ -14,7 +14,7 @@ usage()
 version=$1
 
 rm -f rv-predict-c.tar.gz
-mkcmake RELEASE=yes PREFIX= bin_targz
+rvpmake RELEASE=yes PREFIX= bin_targz
 mv rv-predict-c.tar.gz rv-predict-c-${version}.tar.gz
 
 exit 0

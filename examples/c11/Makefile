@@ -26,9 +26,14 @@ PROGS+=	stolz-queue
 CC=clang
 CFLAGS+=-std=c11
 CFLAGS+=-Wmissing-prototypes
-CPPFLAGS+=-D_POSIX_C_SOURCE=199506L
-# _XOPEN_SOURCE=500 seems to be necessary to get a definition for SA_NODEFER
-CPPFLAGS+=-D_XOPEN_SOURCE=500
+CPPFLAGS+=-D_POSIX_C_SOURCE=200112L
+#
+# _XOPEN_SOURCE=500 seems to be necessary to get a definition for
+# SA_NODEFER, but it is not compatible on QNX _POSIX_C_SOURCE=200112L.
+#
+# _XOPEN_SOURCE=600 is compatible with _POSIX_C_SOURCE=200112L on QNX.
+#
+CPPFLAGS+=-D_XOPEN_SOURCE=600
 #CPPFLAGS+=-Dlpcq_atomic=_Atomic
 #CPPFLAGS.spcq+=-D__STDC_NO_ATOMICS__
 WARNS=4

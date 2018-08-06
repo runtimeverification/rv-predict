@@ -1,4 +1,6 @@
 LIB=rvpmissing_posix
+LIBDIR=$(PREFIX)/lib/qnx
+INCSDIR=${PREFIX}/include/qnx
 
 STRIPFLAG=
 TARGET_CC?=clang

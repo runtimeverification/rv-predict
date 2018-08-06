@@ -9,6 +9,8 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
+.include "../../../cross-libdir.mk"
+
 LIB?=rvpi_default
 
 .PATH: $(.CURDIR)/../../ngrt

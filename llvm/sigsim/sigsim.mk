@@ -1,3 +1,5 @@
+.include "../../cross-libdir.mk"
+
 LIB?=rvpsigsim_$(SIGSIM)
 
 .PATH: $(.CURDIR)/../../ngrt

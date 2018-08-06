@@ -9,6 +9,8 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
+.include "../../../cross-libdir.mk"
+
 LIB?=rvpi_tiaic
 INCS=rvpredict_intr_tiaic.h
 

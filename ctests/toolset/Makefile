@@ -2,6 +2,12 @@
 
 FILES=xyz
 
+.if $(OS:Uunknown) == QNX
+_LIBDIR=/lib/qnx
+.else
+_LIBDIR=/lib
+.endif
+
 #
 # The following rules set LIBDIR to lib for compatibility
 # with dpkg-buildpackage, which overrides LIBDIR
@@ -11,7 +17,7 @@ FILES=xyz
 $(TARGETS:Nclean:Ncleandir:Ntags:Ndepend):
 .for __t in all install
 	$(MAKE) ONLY_TEST_DEPENDENCIES=yes DESTDIR=$(.OBJDIR) PREFIX= \
-	    LIBDIR=/lib -C $(.CURDIR)/../.. ${__t}
+	    LIBDIR=$(_LIBDIR) -C $(.CURDIR)/../.. ${__t}
 .endfor
 
 CLEANDIRS+=bin include lib libexec man share

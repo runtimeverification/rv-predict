@@ -139,12 +139,17 @@ done
 quoted_list=$(filter_noncc_arguments "$@")
 eval "set -- ${quoted_list}"
 
-if [ ${cplusplus:-no} = yes ]; then
-	compiler="clang++-4.0 -std=c++11"
-elif [ ${prog} = qrvpc ]; then
+if [ x${prog%%rvpc} = xq ]; then
+	runtime_dir=${runtime_dir}/qnx
+	if [ ${cplusplus:-no} = yes ]; then
+		echo "${prog}: C++ not supported" 1>&2
+		exit 1
+	fi
 	compiler=qclang-4.0
 elif [ ${prog} = rvpld ]; then
 	compiler=ld
+elif [ ${cplusplus:-no} = yes ]; then
+	compiler="clang++-4.0 -std=c++11"
 else
 	compiler=clang-4.0
 fi

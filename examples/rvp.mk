@@ -15,7 +15,10 @@ CXX=rvpc++
 .endif
 .endif
 
+.if $(OS:Uunknown) != QNX
 LDADD+=-pthread
+.endif
+
 LDADD+=-g
 
 COPTS+=-g -O0

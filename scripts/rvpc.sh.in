@@ -64,6 +64,7 @@ filter_noncc_arguments()
 )}
 
 ldscript_dir=$(dirname $0)/../share/rv-predict-c
+clang_libdir=$(llvm-config-4.0 --libdir)/clang/*/lib/linux
 pass_dir=$(dirname $0)/../--LIBEXECDIR--
 runtime_dir=$(dirname $0)/../lib
 
@@ -163,7 +164,7 @@ then
 fi
 
 if [ ${link:-yes} = yes ]; then
-	runtime="-Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} ${ldflags:-} -g"
+	runtime="-L ${clang_libdir} -Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} ${ldflags:-} -g"
 fi
 
 if [ ${just_print} = yes ]; then

@@ -3,4 +3,4 @@
  * Uses the master source in ctests
  */
 #define MEMcpy
-#include "../../memcp_test_src.c"
+#include "../../memcp_test_src.h"

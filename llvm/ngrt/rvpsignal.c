@@ -13,6 +13,10 @@
 #include "text.h"
 #include "trace.h"
 
+#include <stdio.h> /* for tracing/debugging */
+#include <string.h> /* for tracing/debugging */
+#include <unistd.h> /* for tracing/debugging */
+
 #if defined(SIGINFO)
 #define	RVP_INFO_SIGNUM	SIGINFO
 #else
@@ -912,7 +916,6 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 #endif
 	return 0;
 }
-
 int
 __rvpredict_sigsuspend(const sigset_t *mask)
 {
@@ -947,12 +950,53 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
+#define sig_debug 1
+//#undef sig_debug 
+
+#ifdef sig_debug
+	int qdb = 0; /* Trace output turned off. It is turned of by special call to signal */
+#	define gt_flags(xp)   (xp ? ((unsigned) xp->sa_flags) : 0)
+#	define gt_handler(xp) (xp ? ((unsigned) xp->sa_handler) : 0)
+
+int ___rvpredict_set_signal_trace(int x);
+void ___rvpredict_wr_signal_trace(int kd,char*fstr,int sn,unsigned f1,unsigned f2,unsigned hh);
+
+int ___rvpredict_set_signal_trace(int x) {
+	qdb=x;
+	return x;
+}
+
+/* A signal safe write */
+void ___rvpredict_wr_signal_trace(int kd,char*fstr,int sn,unsigned f1,unsigned f2,unsigned hh){
+	char buf[160];
+
+	switch(kd){
+		case 2: 
+			snprintf(buf, sizeof(buf), fstr, sn, f1);
+			write(1, buf, strlen(buf));
+			break;
+		case 4:
+			snprintf(buf, sizeof(buf), fstr, sn,f1,f2,hh);
+			write(1, buf, strlen(buf));
+			break;
+
+		default:
+			return;
+	}
+	return;
+}
+#endif
+
+
 rvp_sighandler_t
 __rvpredict_signal(int signo, rvp_sighandler_t handler)
 {
 	struct sigaction nsa, osa;
 
-	memset(&nsa, '\0', sizeof(nsa));
+	/*
+	 * Implement signal by invoking sigaction 
+	 */
+	memset(&nsa, '\0', sizeof(nsa)); /* Clear the sigaction struct */
 
 	if (sigemptyset(&nsa.sa_mask) == -1)
 		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
@@ -967,6 +1011,14 @@ __rvpredict_signal(int signo, rvp_sighandler_t handler)
 
 		return SIG_ERR;
 	}
+#ifdef sig_debug
+	if(qdb)
+	  ___rvpredict_wr_signal_trace( 4, "signal    :xit :signo =%2d nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n"
+                      ,signo, nsa.sa_flags, osa.sa_flags,(unsigned ) osa.sa_handler);
+	
+//	printf("signal    :xit :signo =%2d nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n"
+ //                     ,signo, nsa.sa_flags, osa.sa_flags,(unsigned int) osa.sa_handler);
+#endif
 	return osa.sa_handler;
 }
 
@@ -985,6 +1037,12 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	rvp_signal_t *s;
 	sigset_t mask, savedmask;
 	struct sigaction act_copy ;
+
+#ifdef sig_debug
+	if(qdb)
+		 ___rvpredict_wr_signal_trace( 2,"sigaction :ntr :signum=%2d act-flags=%8x \n",
+						signum, gt_flags(act0), 0,0 );
+#endif
 	#if 0 /* The SA_RESETHAND flag is not supported  - this is a failed attempt to implement it */
 	   /* SA_RESETHAND
 	    * https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.bpxbd00/rtsigac.htm
@@ -1029,7 +1087,14 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 
 	if (!establishing)
 		rvp_sigsim_disestablish(signum);
-
+#ifdef sig_debug
+	if(qdb)
+	   ___rvpredict_wr_signal_trace(4,"sigaction : mid:signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x \n"
+		,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
+	
+	//if(qdb) printf("sigaction : mid:signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x\n"
+	//	,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
+#endif
 	/* XXX sigaction(2) is supposed to be async-signal-safe, so instead of
 	 * acquiring a lock here, I should use a signal-safe approach to
 	 * allocating & establishing a new rvp_signal_t, possibly copying
@@ -1097,15 +1162,12 @@ null_act:
 		oact->sa_flags &= ~SA_SIGINFO;
 		oact->sa_handler = s->s_handler;
 	}
-#if 0
-	/*
-	 * Clear SA_SIGINFO upon SIGABRT
-	 */
-	if (signum == SIGABRT &&  (oact->sa_flags & SA_SIGINFO) == 1  ){
-		oact->sa_flags &= ~SA_SIGINFO;
-	}
-#endif
 	rvp_signal_unlock(signum, &savedmask);
+#ifdef sig_debug
+	if(qdb)
+	   ___rvpredict_wr_signal_trace(4,"sigaction :xit :signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x\n"
+		,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
+#endif
 	return rc;
 }
 

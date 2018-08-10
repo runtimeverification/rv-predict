@@ -11,10 +11,10 @@ these notes are not tutorials.)
      The RVPredict product captures signal events and logs them for analysis. Their are edge cases where the RVPredict event capture mechanism could return from a signal with an unexpected ’sig mask’ value. The RVPredict test suite includes the gnu signal test program - RVPredict successfully passes the gnu signal test.
 
 Instances:
-* SIGABRT is not supported.
-   The gnutest program has the use of SIGABRT ifdefed out. 
+* SA_RESETHAND   is not supported.
+   The gnutest program has the use of SA_RESETHAND is ifdefed out. 
    An invocation of sigaction() with the SA_RESETHAND flag will result in an error message 
-  stating that SA_RESETHAND is unsupported and program 
+  stating that SA_RESETHAND is unsupported  
 	Reference documentation:
 	https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.bpxbd00/rtsigac.htm
  	SA_RESETHAND
@@ -23,5 +23,20 @@ Instances:
          no error will be generated should this situation exist). Otherwise, the disposition of the signal will not 
          be modified on entry to the signal handler.
 	   In addition, if this flag is set, sigaction() behaves as if the SA_NODEFER flag were also set
+
+These signals are tested using the GNU signal test code (see rv-predict/ctests/trace/gnutest_sig):
+SIGABRT
+SIG_IGN 
+
+The implementation/test status of these signals has not been decided:
+SIGBUS	-errors from memory mapped files
+signalfd	- signals turn into file input. The program reads them serially
+SIGCHILD	- gracefully ignore termination of a process
+SA_NODEFER
+sigaltstack	Use another stack to handle signals
+SIGSEGV
+
+sources:
+http://www.linuxprogrammingblog.com/all-about-linux-signals?page=show
 
 =========== fini ========

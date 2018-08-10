@@ -1,12 +1,16 @@
 tid 1.0 {} begin thread
-tid 1.0 in main at .../../memcp_test_src.c:145 enter function cfa . return {}
-tid 1.0 in testdriver at .../../memcp_test_src.c:117 enter function cfa . return in main at .../../memcp_test_src.c:147
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- iidst[0] at memmove.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000003 <- iisrc[0] at memmove.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- lngths[0] at memmove.c
-tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000017ee2b3]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 00 <- [0x000000017ee2b1]
-tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.c:117 exit function
-tid 1.0 in main at .../../memcp_test_src.c:145 exit function
+tid 1.0 in main at .../../memcp_test_src.h:147 enter function cfa . return {}
+tid 1.0 in testdriver at .../../memcp_test_src.h:120 enter function cfa . return in main at .../../memcp_test_src.h:149
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- iidst[0] at memmove.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000003 <- iisrc[0] at memmove.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- lngths[0] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 enter function cfa . return in testdriver at .../../memcp_test_src.h:137
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[0] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[8] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 2 0000 -> cc[16] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 1 00 -> cc[18] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[3] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 00 <- cc[1] at memmove.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:120 exit function
+tid 1.0 in main at .../../memcp_test_src.h:147 exit function

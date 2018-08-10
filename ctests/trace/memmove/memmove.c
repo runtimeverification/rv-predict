@@ -3,5 +3,5 @@
  */
 #define MEMmov
 #define short_expect_out 1
-#include "../../memcp_test_src.c"
+#include "../../memcp_test_src.h"
 

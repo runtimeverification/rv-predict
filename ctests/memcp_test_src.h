@@ -1,5 +1,5 @@
 /*
- * This code file is used for the memmov and memcpy tests
+ * Source for the memmov, memset, and memcpy tests
  * About ...
  *   This code file is used in two basic ways:
  * 1. An exhaustive test of many cases which generates a huge expect.out file.

@@ -1,114 +1,134 @@
 tid 1.0 {} begin thread
-tid 1.0 in main at .../../memcp_test_src.c:145 enter function cfa . return {}
-tid 1.0 in testdriver at .../../memcp_test_src.c:117 enter function cfa . return in main at .../../memcp_test_src.c:147
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- iidst[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000003 <- iisrc[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- lngths[0] at memcpy.c
-tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672b3]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672b3]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672b1]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672b1]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672b1]
-tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- iidst[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000003 <- iisrc[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000005 <- lngths[1] at memcpy.c
-tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672d3]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672d4]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672d5]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672d6]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672d7]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672d3]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672d1]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672d4]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672d2]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672d5]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672d3]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672d6]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672d4]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672d7]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672d5]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672d1]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672d5]
-tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- iidst[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000003 <- iisrc[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000009 <- lngths[2] at memcpy.c
-tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672f3]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672f4]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672f5]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672f6]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672f7]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672f8]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672f9]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672fa]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x000000019672fb]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f3]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f1]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f4]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f2]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f5]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f3]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f6]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f4]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f7]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f5]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f8]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f6]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f9]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f7]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672fa]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f8]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672fb]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x000000019672f9]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f1]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x000000019672f9]
-tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000001 <- iidst[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000007 <- iisrc[1] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000005 <- lngths[1] at memcpy.c
-tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x48 -> [0x00000001967317]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x48 -> [0x00000001967318]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x48 -> [0x00000001967319]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x48 -> [0x0000000196731a]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x48 -> [0x0000000196731b]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x48 <- [0x00000001967317]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x48 -> [0x00000001967311]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x48 <- [0x00000001967318]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x48 -> [0x00000001967312]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x48 <- [0x00000001967319]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x48 -> [0x00000001967313]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x48 <- [0x0000000196731a]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x48 -> [0x00000001967314]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x48 <- [0x0000000196731b]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x48 -> [0x00000001967315]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x48 <- [0x00000001967311]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x48 <- [0x00000001967315]
-tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000007 <- iidst[1] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000003 <- iisrc[0] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000005 <- lngths[1] at memcpy.c
-tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x00000001967333]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x00000001967334]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x00000001967335]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x00000001967336]
-tid 1.0 in testit at .../../memcp_test_src.c:74 store 1 0x44 -> [0x00000001967337]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 4 0x44444444 <- [0x00000001967334]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 4 0x44444444 -> [0x00000001967338]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x00000001967333]
-tid 1.0 in testit at .../../memcp_test_src.c:83 store 1 0x44 -> [0x00000001967337]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x00000001967337]
-tid 1.0 in testit at .../../memcp_test_src.c:83 load 1 0x44 <- [0x0000000196733b]
-tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000007 <- iidst[1] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000007 <- iisrc[1] at memcpy.c
-tid 1.0 in testdriver at .../../memcp_test_src.c:135 load 4 0x00000005 <- lngths[1] at memcpy.c
-tid 1.0 in testit at .../../memcp_test_src.c:54 enter function cfa . return in testdriver at .../../memcp_test_src.c:135
-tid 1.0 in testit at .../../memcp_test_src.c:54 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.c:117 exit function
-tid 1.0 in main at .../../memcp_test_src.c:145 exit function
+tid 1.0 in main at .../../memcp_test_src.h:147 enter function cfa . return {}
+tid 1.0 in testdriver at .../../memcp_test_src.h:120 enter function cfa . return in main at .../../memcp_test_src.h:149
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- iidst[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000003 <- iisrc[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- lngths[0] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 enter function cfa . return in testdriver at .../../memcp_test_src.h:137
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[0] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 2 0000 -> cc[16] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 1 00 -> cc[18] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- iidst[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000003 <- iisrc[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000005 <- lngths[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 enter function cfa . return in testdriver at .../../memcp_test_src.h:137
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[0] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 2 0000 -> cc[16] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 1 00 -> cc[18] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[6] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[2] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[6] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- iidst[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000003 <- iisrc[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000009 <- lngths[2] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 enter function cfa . return in testdriver at .../../memcp_test_src.h:137
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[0] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 2 0000 -> cc[16] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 1 00 -> cc[18] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[6] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[9] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[10] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[11] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[2] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[6] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[6] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[9] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[10] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[11] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[9] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[9] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- iidst[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000007 <- iisrc[1] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000005 <- lngths[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 enter function cfa . return in testdriver at .../../memcp_test_src.h:137
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[0] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 2 0000 -> cc[16] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 1 00 -> cc[18] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x48 -> cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x48 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x48 -> cc[9] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x48 -> cc[10] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x48 -> cc[11] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x48 <- cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x48 -> cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x48 <- cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x48 -> cc[2] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x48 <- cc[9] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x48 -> cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x48 <- cc[10] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x48 -> cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x48 <- cc[11] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x48 -> cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x48 <- cc[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x48 <- cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000007 <- iidst[1] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000003 <- iisrc[0] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000005 <- lngths[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 enter function cfa . return in testdriver at .../../memcp_test_src.h:137
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[0] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 8 0000000000000000 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 2 0000 -> cc[16] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:73 store 1 00 -> cc[18] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[5] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[6] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 4 0x44444444 <- cc[4] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 4 0x44444444 -> cc[8] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 load 1 0x44 <- cc[3] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:76 store 1 0x44 -> cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[7] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 0x44 <- cc[11] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000007 <- iidst[1] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000007 <- iisrc[1] at memcpy.c
+tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000005 <- lngths[1] at memcpy.c
+tid 1.0 in testit at .../../memcp_test_src.h:56 enter function cfa . return in testdriver at .../../memcp_test_src.h:137
+tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:120 exit function
+tid 1.0 in main at .../../memcp_test_src.h:147 exit function

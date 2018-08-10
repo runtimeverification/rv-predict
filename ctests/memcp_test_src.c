@@ -24,6 +24,7 @@
 
 #if short_expect_out == 1
  /* # define c  (0x41 + srcinx) */
+  char cc [19];
   int iidst  []={1,7};
   int iisrc  []={3,7};
   int lngths []={1,5,9};
@@ -34,6 +35,7 @@
 #else
  /* Settings for exhaustive test
   * The trace for these variables helps analyze the trace */
+  char cc [29];
   int iidst  []={0,1,2,3,4,6,7,8};
   int iisrc  []={0,1,2,3,5,7};
   int lngths []={1,5,9,17};
@@ -52,7 +54,6 @@
 
 int 
 testit(int dstinx, int srcinx, int n2move){
-	char *cc = calloc(srcinx+dstinx+n2move+2, sizeof(char));
 	char c = 0x41 + srcinx; /* a,b,c,... */
 #if short_expect_out == 1
 
@@ -67,8 +68,9 @@ testit(int dstinx, int srcinx, int n2move){
 #endif
 
 	/*
-         * build the cc array
+         * clear the cc array and then test
  	 */
+	memset(&cc[0], 0, sizeof(cc)*sizeof(char));
 	memset(&cc[srcinx], c, n2move*sizeof(char));
 #	ifdef MEMcpy
 		memcpy(&cc[dstinx],&cc[srcinx], n2move*sizeof(char));

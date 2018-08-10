@@ -23,7 +23,7 @@ On Ubuntu, install the prerequisite packages:
 
 ```
 sudo apt install m4
-sudo apt install make # GNU make
+sudo apt install make cmake
 sudo apt install maven mk-configure
 sudo apt install opam openjdk-8-jdk-headless
 sudo apt install pandoc

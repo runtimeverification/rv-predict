@@ -22,13 +22,13 @@ groups
 On Ubuntu, install the prerequisite packages:
 
 ```
-sudo apt install m4
-sudo apt install make cmake
-sudo apt install maven mk-configure
-sudo apt install opam openjdk-8-jdk-headless
-sudo apt install pandoc
-sudo apt install sed
-sudo apt install devscripts debhelper dh-virtualenv
+sudo apt install -y m4
+sudo apt install -y make cmake
+sudo apt install -y maven mk-configure
+sudo apt install -y opam openjdk-8-jdk-headless
+sudo apt install -y pandoc
+sudo apt install -y sed
+sudo apt install -y devscripts debhelper dh-virtualenv
 ```
 
 Here are some other programs that must be available:
@@ -45,7 +45,7 @@ yacc
 For clang you can try:
 
 ```
-sudo apt install clang-4.0
+sudo apt install -y clang-4.0
 sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/lib/llvm-4.0/bin/clang++ 100
 sudo update-alternatives --install /usr/bin/clang clang /usr/lib/llvm-4.0/bin/clang 100
 ```

@@ -61,6 +61,13 @@ EOF
 	${pfx} ${_java} -ea -jar ${sharedir}/rv-predict.jar "$@"
 }
 
+do_output()
+{
+	[ ${RVP_OUTPUT_FILE:-none} != none ] \
+	    && cat > ${RVP_OUTPUT_FILE} \
+	    || cat 1>&${RVP_OUTPUT_FD:-2}
+}
+
 symbolize()
 {
 	if [ ${raw:-no} = yes ]; then
@@ -74,8 +81,20 @@ symbolize()
 	    rvp-error ${sharedir}/${output_format:-console}-metadata.json | \
 	{ [ x${html_dir:-} != x ] \
 	    && rvp-html-report -o ${html_dir} /dev/stdin \
-	    || cat 1>&2 ; }
+	    || do_output ; }
 }
+
+if [ ${RVP_OUTPUT_FD:-none} != none -a ${RVP_OUTPUT_FILE:-none} != none ]; then
+	echo "$(basename $0): RVP_OUTPUT_FD conflicts with RVP_OUTPUT_FILE, set only one." 2>&1
+	exit 1
+fi
+
+if [ ${RVP_OUTPUT_FD:-none} != none ]; then
+	if [ -n "$(echo -n "$RVP_OUTPUT_FD" | sed 's/^[0-9]\+$//g')" ]; then
+		echo "$(basename $0): malformed RVP_OUTPUT_FD: expected decimal digits, read '${RVP_OUTPUT_FD}'" 2>&1
+		exit 1
+	fi
+fi
 
 if [ ${RVP_WINDOW_SIZE:-none} != none ]; then
 	if [ -n "$(echo -n "$RVP_WINDOW_SIZE" | sed 's/^[0-9]\+$//g')" ]; then

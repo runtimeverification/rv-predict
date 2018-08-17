@@ -165,11 +165,11 @@ all frames under a thread's
 .Fn start_routine ,
 and all frames under a signal handler.
 .It Fl Fl output=console|csv|json|raw
-indicates the desired output format.
+indicates the desired report format.
 .Dq console
 is the default.
 .Dq json
-produces output in JSON format that is suitable for
+produces a report in JSON format that is suitable for
 .Xr rv-html-report
 to read.
 .Dq csv
@@ -225,6 +225,28 @@ treats this as the default window size.
 however, it may be overridden with a command-line argument.
 .Op Fl Fl window Ar size
 on the command line.
+.It Ev RVP_REPORT_FILE
+.Nm
+writes its report to the file named by
+.Ev RVP_REPORT_FILE ,
+if the variable is set in the environment.
+.Nm
+quits with an error if both 
+.Ev RVP_REPORT_FILE
+and
+.Ev RVP_REPORT_FD
+are set in the environment.
+.It Ev RVP_REPORT_FD
+.Nm
+writes its report to the file descriptor given by
+.Ev RVP_REPORT_FD ,
+if the variable is set in the environment.
+.Nm
+quits with an error if both 
+.Ev RVP_REPORT_FILE
+and
+.Ev RVP_REPORT_FD
+are set in the environment.
 .El
 .Sh FILES
 .Bl -tag -width "/usr/share/examples/rv-predict-c/"

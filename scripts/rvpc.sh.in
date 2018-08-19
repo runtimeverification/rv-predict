@@ -164,6 +164,7 @@ then
 fi
 
 if [ ${link:-yes} = yes ]; then
+	# The space between -L and ${clang_libdir} is necessary for shell glob expansion
 	runtime="-L ${clang_libdir} -Wl,-T${ldscript_dir}/ldscript -L${runtime_dir} -lrvprt${bits:-} -lrvpi_${intr_personality}${bits:-} -lrvpi_default${bits:-} -lrvpsigsim_${sigsim}${bits:-} -lrvpsigsim_default${bits:-} ${ldflags:-} -g"
 fi
 

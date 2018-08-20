@@ -12,8 +12,6 @@ RVP_TRACE_ONLY:=yes
 
 .export PATH
 
-CLEANFILES+=test.trace
-
 CC?=rvpc
 CPPFLAGS+=-I$(.CURDIR)/../../../include
 WARNS=4

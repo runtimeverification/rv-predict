@@ -20,7 +20,7 @@ LDADD+=-pthread
 .PHONY: test_output
  
 test.trace: $(PROG)
-	@$(.OBJDIR)/$(PROG) > /dev/null
+	@$(.OBJDIR)/$(PROG) > /dev/null || { rm -f $(RVP_TRACE_FILE) && echo $(PROG) exited with an error 1>&2 && false ; }
 
 LOCAL_NORMALIZE?=cat
 

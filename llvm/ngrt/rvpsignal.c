@@ -23,11 +23,17 @@
 #define	RVP_INFO_SIGNUM	SIGPWR
 #endif
 
+#define gt_flags(xp)   (xp ? ((unsigned) xp->sa_flags) : 0)
+#define gt_handler(xp) (xp ? ((unsigned) xp->sa_handler) : 0)
+
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
 REAL_DEFN(rvp_sighandler_t, signal, int, rvp_sighandler_t);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, sigsuspend, const sigset_t *);
+
+int ___rvpredict_set_signal_trace(int);
+static void signal_safe_debugf(const char *fmt, ...);
 
 typedef int (*rvp_change_sigmask_t)(int, const sigset_t *, sigset_t *);
 
@@ -50,6 +56,9 @@ static rvp_sigblockset_t * volatile _Atomic sigblockset_head = NULL;
 static rvp_sigblockset_t * volatile _Atomic sigblockset_freehead = NULL;
 
 static rvp_ring_t * volatile _Atomic signal_rings = NULL;
+
+/* Trace output turned off. It is turned of by special call to signal */
+static bool qdb = false;
 
 static void
 rvp_signal_table_init(void)
@@ -916,6 +925,7 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 #endif
 	return 0;
 }
+
 int
 __rvpredict_sigsuspend(const sigset_t *mask)
 {
@@ -950,43 +960,29 @@ __rvpredict_sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
 	    __builtin_return_address(0), how, set, oldset);
 }
 
-#define sig_debug 1
-//#undef sig_debug 
-
-#ifdef sig_debug
-	int qdb = 0; /* Trace output turned off. It is turned of by special call to signal */
-#	define gt_flags(xp)   (xp ? ((unsigned) xp->sa_flags) : 0)
-#	define gt_handler(xp) (xp ? ((unsigned) xp->sa_handler) : 0)
-
-int ___rvpredict_set_signal_trace(int x);
-void ___rvpredict_wr_signal_trace(int kd,char*fstr,int sn,unsigned f1,unsigned f2,unsigned hh);
-
-int ___rvpredict_set_signal_trace(int x) {
-	qdb=x;
+int
+___rvpredict_set_signal_trace(int x)
+{
+	qdb = (x != 0);
 	return x;
 }
 
-/* A signal safe write */
-void ___rvpredict_wr_signal_trace(int kd,char*fstr,int sn,unsigned f1,unsigned f2,unsigned hh){
+/* A signal-safe printf(3) */
+static inline void
+signal_safe_debugf(const char *fmt, ...)
+{
 	char buf[160];
+	va_list ap;
 
-	switch(kd){
-		case 2: 
-			snprintf(buf, sizeof(buf), fstr, sn, f1);
-			write(1, buf, strlen(buf));
-			break;
-		case 4:
-			snprintf(buf, sizeof(buf), fstr, sn,f1,f2,hh);
-			write(1, buf, strlen(buf));
-			break;
+	if (!qdb)
+		return;
 
-		default:
-			return;
-	}
+	va_start(ap, fmt);
+	(void)vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	(void)write(STDOUT_FILENO, buf, strlen(buf));
 	return;
 }
-#endif
-
 
 rvp_sighandler_t
 __rvpredict_signal(int signo, rvp_sighandler_t handler)
@@ -1011,14 +1007,8 @@ __rvpredict_signal(int signo, rvp_sighandler_t handler)
 
 		return SIG_ERR;
 	}
-#ifdef sig_debug
-	if(qdb)
-	  ___rvpredict_wr_signal_trace( 4, "signal    :xit :signo =%2d nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n"
+	signal_safe_debugf("signal    :xit :signo =%2d nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n"
                       ,signo, nsa.sa_flags, osa.sa_flags,(unsigned ) osa.sa_handler);
-	
-//	printf("signal    :xit :signo =%2d nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n"
- //                     ,signo, nsa.sa_flags, osa.sa_flags,(unsigned int) osa.sa_handler);
-#endif
 	return osa.sa_handler;
 }
 
@@ -1038,11 +1028,8 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	sigset_t mask, savedmask;
 	struct sigaction act_copy ;
 
-#ifdef sig_debug
-	if(qdb)
-		 ___rvpredict_wr_signal_trace( 2,"sigaction :ntr :signum=%2d act-flags=%8x \n",
+	signal_safe_debugf("sigaction :ntr :signum=%2d act-flags=%8x \n",
 						signum, gt_flags(act0), 0,0 );
-#endif
 	#if 0 /* The SA_RESETHAND flag is not supported  - this is a failed attempt to implement it */
 	   /* SA_RESETHAND
 	    * https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.bpxbd00/rtsigac.htm
@@ -1087,14 +1074,8 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 
 	if (!establishing)
 		rvp_sigsim_disestablish(signum);
-#ifdef sig_debug
-	if(qdb)
-	   ___rvpredict_wr_signal_trace(4,"sigaction : mid:signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x \n"
+	signal_safe_debugf("sigaction : mid:signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x \n"
 		,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
-	
-	//if(qdb) printf("sigaction : mid:signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x\n"
-	//	,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
-#endif
 	/* XXX sigaction(2) is supposed to be async-signal-safe, so instead of
 	 * acquiring a lock here, I should use a signal-safe approach to
 	 * allocating & establishing a new rvp_signal_t, possibly copying
@@ -1163,11 +1144,8 @@ null_act:
 		oact->sa_handler = s->s_handler;
 	}
 	rvp_signal_unlock(signum, &savedmask);
-#ifdef sig_debug
-	if(qdb)
-	   ___rvpredict_wr_signal_trace(4,"sigaction :xit :signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x\n"
+	signal_safe_debugf("sigaction :xit :signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x\n"
 		,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
-#endif
 	return rc;
 }
 

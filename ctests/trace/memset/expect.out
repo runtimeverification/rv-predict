@@ -1,6 +1,6 @@
 tid 1.0 {} begin thread
 tid 1.0 in main at .../../memcp_test_src.h:147 enter function cfa . return {}
-tid 1.0 in testdriver at .../../memcp_test_src.h:119 enter function cfa . return in main at .../../memcp_test_src.h:149
+tid 1.0 in testdriver at .../../memcp_test_src.h:120 enter function cfa . return in main at .../../memcp_test_src.h:149
 tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- iidst[0] at memset.c
 tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000003 <- iisrc[0] at memset.c
 tid 1.0 in testdriver at .../../memcp_test_src.h:137 load 4 0x00000001 <- lngths[0] at memset.c
@@ -12,5 +12,5 @@ tid 1.0 in testit at .../../memcp_test_src.h:73 store 1 00 -> cc[18] at memset.c
 tid 1.0 in testit at .../../memcp_test_src.h:74 store 1 0x44 -> cc[3] at memset.c
 tid 1.0 in testit at .../../memcp_test_src.h:85 load 1 00 <- cc[1] at memset.c
 tid 1.0 in testit at .../../memcp_test_src.h:56 exit function
-tid 1.0 in testdriver at .../../memcp_test_src.h:119 exit function
+tid 1.0 in testdriver at .../../memcp_test_src.h:120 exit function
 tid 1.0 in main at .../../memcp_test_src.h:147 exit function

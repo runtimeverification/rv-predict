@@ -7,7 +7,6 @@
 #include "text.h"
 #include "tracefmt.h"
 
-
 REAL_DEFN(void *, memcpy, void *, const void *, size_t) =
     __rvpredict_internal_memcpy;
 REAL_DEFN(void *, memmove, void *, const void *, size_t) =
@@ -151,8 +150,7 @@ __rvpredict_memset1(const void *retaddr, const rvp_addr_t dst, int c, size_t n)
 	}
 	if (ncopied == n)
 		return (void *)dst;
-/*	(void)__rvpredict_memset1(retaddr, to - width, c, n - ncopied); */
-	(void)__rvpredict_memset1(retaddr, to        , c, n - ncopied);
+	(void)__rvpredict_memset1(retaddr, to, c, n - ncopied);
 	return (void *)dst;
 }
 

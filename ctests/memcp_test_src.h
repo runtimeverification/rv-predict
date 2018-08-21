@@ -21,9 +21,7 @@
 #include <stdlib.h>
 #include "nbcompat.h"
 
-
 #if short_expect_out == 1
- /* # define c  (0x41 + srcinx) */
   char cc [19];
   int iidst  []={1,7};
   int iisrc  []={3,7};
@@ -49,11 +47,21 @@
 # define zmin(hi,lo) (((hi) > (lo))? (lo) :(hi)   )
 # define zmax(hi,lo) ( (hi) > (lo) ? (hi) :(lo)   )
 
-
-/*void stop_me(){}*/
-
+/*
+ * Error reporting within the testit function.
+ */
+#define errx(str,qq) err_out_proc(str,srcinx,dstinx,n2move,qq)
 int 
-testit(int dstinx, int srcinx, int n2move){
+err_out_proc(char* sss,int s,int d,int l,int ii)
+{
+	printf("mem* Fail:src=%d,dst=%d,lngth=%d,c=%2x,ii=%d %s"
+			,s,d,l,cc[ii],ii,sss);
+	return EXIT_FAILURE;
+}
+
+int
+testit(int dstinx, int srcinx, int n2move)
+{
 	char c = 0x41 + srcinx; /* a,b,c,... */
 #if short_expect_out == 1
 
@@ -64,14 +72,22 @@ testit(int dstinx, int srcinx, int n2move){
  	int nzfrstinx = zmin(dstinx, srcinx);
 	int nzlastinx = zmax( (dstinx+n2move-1) , (srcinx+n2move-1) );
 	int ii;
- 	int nzero     =  zmax(0,nzlastinx-nzfrstinx-n2move); /* number of zeros in the middle - if any*/
+	int lmin   = zmin(srcinx,dstinx);
+	int lmax   = zmax(srcinx,dstinx);
+	int n_in_middle  = zmax (0,lmax-lmin-n2move);
+
 #endif
 
 	/*
-         * clear the cc array and then test
+         * clear the cc array 
  	 */
 	memset(&cc[0], 0, sizeof(cc)*sizeof(char));
+	/*
+	 * Note we always write to srcinc, this is then copied/move
+ 	 * but for memset, srcinx is also the destination
+	 */
 	memset(&cc[srcinx], c, n2move*sizeof(char));
+
 #	ifdef MEMcpy
 		memcpy(&cc[dstinx],&cc[srcinx], n2move*sizeof(char));
 #	endif
@@ -82,9 +98,8 @@ testit(int dstinx, int srcinx, int n2move){
 	/* data transfer complete, now check result */
 #if short_expect_out == 1
 	/* Since the test is suppossed to produce short output, we do minimum check */
-        if(cc[dstinx] != c || cc[dstinx+n2move-1] !=c)
-			return EXIT_FAILURE;
-
+        if(cc[srcinx] != c || cc[srcinx+n2move-1] !=c)
+			return errx("1:incomplete move/set",srcinx);
 #else
 	/* cc should contain:
 	 * 1. zero or more bytes of 0x00 
@@ -94,30 +109,31 @@ testit(int dstinx, int srcinx, int n2move){
 	/*
 	 * verify leading zeros if any
  	 */
-/*stop_me();*/
 	if(nzfrstinx>0)
 	   for(ii=0;ii<nzfrstinx;ii++){
 		if(cc[ii] != 0)
-			return EXIT_FAILURE;
-	}
+			return errx("2:should be non-zero",ii);
+		}
 	/*
 	 * verify the proper number of non-zeros 
    	 */
-	for(ii=nzfrstinx;ii<=nzlastinx;ii++){
+	if(n_in_middle>0)
+	   for(ii=nzfrstinx;ii<=nzlastinx;ii++){
 		if(cc[ii] != c)
-			nzero--;
+			n_in_middle--;
 	}
-        if(nzero != 0)
-			return EXIT_FAILURE;
+        if(n_in_middle != 0)
+			return errx("3:Missing middle zeros",n_in_middle);
 	/* Make sure that too many didn't get copied */
 	if(cc[nzlastinx+1] != 0)
-			return EXIT_FAILURE;
+			return errx("4:too many copied/set",ii);
 #endif
 	return EXIT_SUCCESS;
 }
 
-int testdriver(void){
-	int ii, jj=0, kk, rr;
+int testdriver(void)
+{
+	int ii, jj=0, kk, rr; 
 
 	for(ii=0;ii<n_iidst;ii++)
 #ifndef MEMset

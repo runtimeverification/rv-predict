@@ -654,10 +654,14 @@ $(document).ready(function() {
       $expandBtn.on('click', function(event) {
         event.preventDefault()
         event.stopPropagation()
-        $snippetDetails.toggle('fast')
-        $snippetDetails.toggleClass('displayed')
-        $locksDetails.toggle('fast')
-        setExpandBtnStatus()
+        if ($bar.hasClass("disabled")) {
+          return
+        } else {
+          $snippetDetails.toggle('fast')
+          $snippetDetails.toggleClass('displayed')
+          $locksDetails.toggle('fast')
+          setExpandBtnStatus()
+        }
       })
       $bar.on('click', function(event) { $expandBtn.click() })
 

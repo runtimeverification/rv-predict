@@ -81,7 +81,7 @@ body .vi { color: #19177C } /* Name.Variable.Instance */
 body .il { color: #666666 } /* Literal.Number.Integer.Long */
 
 table {
-  box-shadow: 0px 0px 1px 1px #cccccc;
+  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12);
   width: 100%;
   margin: 0 auto;
   clear: both;
@@ -91,6 +91,9 @@ table {
 table#myTable {
   padding-bottom: 42px;
   border-bottom: none;
+}
+table#myTable.no-footer {
+  padding-bottom: 0;
 }
 table.dataTable thead .sorting {
     background-image: url("./images/sort_both.png") !important;
@@ -106,6 +109,19 @@ table.dataTable thead .sorting_asc_disabled {
 }
 table.dataTable thead .sorting_desc_disabled {
     background-image: url("./images/sort_desc_disabled.png") !important;
+}
+table.dataTable tbody td.dataTables_empty {
+  padding-top: 6px;
+  background-image: url(images/celebrate_no_errors.svg);
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 350px;
+  max-height: 100%;
+}
+table.dataTable tbody td.dataTables_empty > span {
+  padding: 6px;
+  background-color: rgba(231, 231, 231, 0.75);
+  border-radius: 4px;
 }
 
 /* Code Errors */

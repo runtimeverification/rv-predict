@@ -69,14 +69,17 @@ def highlight_c(code, hl_links, fileid):
 
 
 def load_json(filename):
-    with open(filename, 'r') as f:
-        for line in f:
-            if len(line) == 0:
-                continue
-            try:
-                yield json.loads(line)
-            except Exception:
-                print 'error reading: ' + line
+    try:
+        with open(filename, 'r') as f:
+            for line in f:
+                if len(line) == 0:
+                    continue
+                try:
+                    yield json.loads(line)
+                except Exception:
+                    print 'error reading: ' + line
+    except Exception:
+        pass
 
 dirname = "%s/../share/rv-predict-c/html-report" % os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
@@ -159,6 +162,12 @@ for ix, err in enumerate(errors):
                     else:
                         loc = null_loc()
                         fr[u'loc'] = loc
+                        
+                    locks = fr.get(u'locks', [])
+                    for lock in locks:
+                        if u'locked_at' in lock:
+                            if not u'loc' in lock[u'locked_at']:
+                                lock[u'locked_at'][u'loc'] = null_loc();
             if u'thread_created_at' in tr and not u'loc' in tr[u'thread_created_at']:
                 tr[u'thread_created_at'][u'loc'] = null_loc()
     else:

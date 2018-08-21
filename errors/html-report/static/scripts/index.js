@@ -214,6 +214,13 @@ $(document).ready(function() {
         }
       }
 
+      function checkEmptyTable() {
+        var $emptyTd = $(".dataTables_empty")
+        if ($emptyTd.length) {
+          $emptyTd.html("<span>Let's celebrate! There are no errors in your report.</span>")
+        }
+      }
+
       table.on('column-reorder', function(e, settings, details) {
         rebindTableHeaderClickEvents()
         sortColumns()
@@ -222,6 +229,7 @@ $(document).ready(function() {
       formatFileColumn()
       initColumnsSorting()
       rebindTableHeaderClickEvents()
+      checkEmptyTable()
     }
   });
 

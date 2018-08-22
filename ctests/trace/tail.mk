@@ -5,7 +5,9 @@
 PREDICT_CC?=rvpc
 CC?=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../../include
-CPPFLAGS+="-D_POSIX_C_SOURCE=200112L"
+# _POSIX_C_SOURCE=200809L is needed for SA_RESETHAND on Linux
+CPPFLAGS+="-D_POSIX_C_SOURCE=200809L"
+
 WARNS=4
 STRIPFLAG=
 
@@ -18,7 +20,7 @@ LDADD+=-pthread
 .PHONY: test_output
  
 test.trace: $(PROG)
-	@$(.OBJDIR)/$(PROG) > /dev/null
+	@$(.OBJDIR)/$(PROG) > /dev/null || { rm -f $(RVP_TRACE_FILE) && echo $(PROG) exited with an error 1>&2 && false ; }
 
 LOCAL_NORMALIZE?=cat
 

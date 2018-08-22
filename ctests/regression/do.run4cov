@@ -1,4 +1,7 @@
 cd stopkill;     pwd; stopkill     ;cd ..
+cd memsetx;     pwd; memsetx     ;cd ..
+cd memcpyx;     pwd; memcpyx     ;cd ..
+cd memmovex;     pwd; memmovex     ;cd ..
 echo "======== Skipping regression/cancellation ================"
 echo "======== Skipping regression/cancellation ================"
 # cd cancellation; pwd; cancellation ;cd ..

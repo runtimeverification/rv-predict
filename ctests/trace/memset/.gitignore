@@ -1,7 +1,7 @@
-memcpy
-*.profraw
+memset
 *.profraw
 *.d
+*.gc*
 .depend
 .Makefile.tags
 *.test.out

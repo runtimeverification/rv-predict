@@ -70,6 +70,8 @@ handler (int sig)
 {
   static int entry_count;
   struct sigaction sa;
+  printf("In handler: sig=%d \n",sig);
+
   ASSERT (sig == SIGABRT);
   ASSERT (sigaction (SIGABRT, NULL, &sa) == 0);
   ASSERT ((sa.sa_flags & SA_SIGINFO) == 0);

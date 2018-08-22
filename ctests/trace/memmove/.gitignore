@@ -1,5 +1,7 @@
-memcpy
-*.profraw
+memmove
+z*
+*.gcda
+*.gcno
 *.profraw
 *.d
 .depend

@@ -1,5 +1,6 @@
-memcpy
-*.profraw
+memcpyx
+*.gcda
+*.gcno
 *.profraw
 *.d
 .depend
@@ -9,3 +10,4 @@ memcpy
 tags
 test.trace
 0*
+z*

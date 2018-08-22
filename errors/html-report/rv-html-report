@@ -69,17 +69,14 @@ def highlight_c(code, hl_links, fileid):
 
 
 def load_json(filename):
-    try:
-        with open(filename, 'r') as f:
-            for line in f:
-                if len(line) == 0:
-                    continue
-                try:
-                    yield json.loads(line)
-                except Exception:
-                    print 'error reading: ' + line
-    except Exception:
-        pass
+    with open(filename, 'r') as f:
+        for line in f:
+            if len(line) == 0:
+                continue
+            try:
+                yield json.loads(line)
+            except Exception:
+                print 'error reading: ' + line
 
 dirname = "%s/../share/rv-predict-c/html-report" % os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()

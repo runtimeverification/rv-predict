@@ -148,15 +148,25 @@ for ix, err in enumerate(errors):
         frame = primary_component[u'frames'][0]
         for tr in traces:
             for cp in tr[u'components']:
-              for fr in cp[u'frames']:
-                  if (u'loc' in fr):
-                      loc = fr[u'loc']
-                      loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
-                      if loc[u'rel_file'] != "<unknown>":
-                          files[loc[u'abs_file']] = loc[u'rel_file']
-                  else:
-                      loc = null_loc()
-                      fr[u'loc'] = loc
+                for fr in cp[u'frames']:
+                    if (u'loc' in fr):
+                        loc = fr[u'loc']
+                        loc[u'missing'] = not os.path.exists(loc[u'abs_file'])
+                        if loc[u'rel_file'] != "<unknown>":
+                            files[loc[u'abs_file']] = loc[u'rel_file']
+                        if not u'line' in loc:
+                            loc[u'line'] = 0
+                    else:
+                        loc = null_loc()
+                        fr[u'loc'] = loc
+                        
+                    locks = fr.get(u'locks', [])
+                    for lock in locks:
+                        if u'locked_at' in lock:
+                            if not u'loc' in lock[u'locked_at']:
+                                lock[u'locked_at'][u'loc'] = null_loc();
+            if u'thread_created_at' in tr and not u'loc' in tr[u'thread_created_at']:
+                tr[u'thread_created_at'][u'loc'] = null_loc()
     else:
         frame = err[u'loc']
         primary_component = {u'frames': [frame]}
@@ -173,7 +183,6 @@ for ix, err in enumerate(errors):
             if len(component[u'frames']) > 0:
                 frame = component[u'frames'][0]
                 errorsByFile[loc[u'rel_file']][frame[u'loc'][u'line']].append(err)
-
     if (u'loc' in frame):
         loc = frame[u'loc']
         loc[u'missing'] = not os.path.exists(loc[u'abs_file'])

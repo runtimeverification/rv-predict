@@ -23,19 +23,21 @@ body {
 .error-navigator {
   font-weight: 400;
   font-size: 1rem;
+  width: 256px;
+  text-align: right;
 }
 .error-navigator a {
   cursor: pointer;
 }
 
 .trace {
+  margin-left: 54px;
   padding: 6px 48px 6px 0;
-  background-color: #e6e6e6;
-  background: radial-gradient(#eaeaea, #e6e6e6);
   margin-bottom: 24px;
-  box-shadow: 0px 1px 4px 0px rgba(69, 69, 69, 0.76);
+  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12);
 }
 .trace.disabled {
+  margin-left: 0;
   padding: 0;
   background-color: inherit;
   background: inherit;
@@ -103,7 +105,7 @@ ul.exp-list {
   cursor: pointer;
   padding: 4px;
   background-color: #fff;
-  box-shadow: 0px 1px 2px 1px rgba(0,0,0,0.2);
+  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12);
 }
 .exp-list .bar.disabled {
   cursor: default;
@@ -244,7 +246,7 @@ div.stack-frame > .pre {
   overflow: auto;
   padding: 32px 0;
   background-color: #f9f9f9;
-  box-shadow: 0px 2px 2px 1px rgba(0,0,0,0.2);
+  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12);
   box-sizing: border-box;
 }
 div.stack-frame > .pre .lineno {
@@ -314,7 +316,7 @@ div.memory .variables::-webkit-scrollbar-thumb {
   border-top: none;
   border-collapse: collapse;
   border-spacing: 0;
-  box-shadow: 0px 2px 8px 0 rgba(0,0,0,0.2)
+  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.2), 0px 1px 1px 0px rgba(0, 0, 0, 0.14), 0px 2px 1px -1px rgba(0, 0, 0, 0.12);
 }
 .memory .variables.struct:after {
   content: "}";
@@ -466,6 +468,13 @@ div.memory .variables::-webkit-scrollbar-thumb {
   .error-description-header {
     margin-left: 0;
     margin-bottom: 0;
+    text-overflow: ellipsis;
+    width: 100%;
+    overflow: hidden;
+  }
+  .error-navigator {
+    text-align: left;
+    margin-top: 12px;
   }
 
   h3.component,
@@ -483,6 +492,7 @@ div.memory .variables::-webkit-scrollbar-thumb {
   }
 
   .trace {
+    margin-left: 0;
     padding: 6px;
   }
   .trace.disabled {
@@ -497,6 +507,7 @@ div.memory .variables::-webkit-scrollbar-thumb {
   .bottom-section .error-description {
     width: 100%;
     margin: 0;
+    margin-bottom: 36px;
   }
 
   .bottom-section .citation {

@@ -109,11 +109,13 @@ Thread {{trace.thread_id}} created by thread {{trace.thread_created_by}}
           <th>{{err.friendly_cat}} ({{err.error_id}})</th>
         </tr>
       </thead>
+      {% if err.long_desc %}
       <tbody>
         <tr>
           <td>{{err.long_desc}}</td>
         </tr>
       </tbody>
+      {% endif %}
     </table>
   </div>
   <div class="citation">

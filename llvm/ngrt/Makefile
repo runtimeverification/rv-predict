@@ -17,6 +17,7 @@ TARGET_CC?=clang
 CC?=$(TARGET_CC)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
+CFLAGS+=-fPIC
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes

@@ -2,15 +2,15 @@ tid 1.0 {} begin thread
 tid 1.0 in main at .../sigtest/sigtest.c:144 enter function cfa . return {}
 tid 1.0 in main at .../sigtest/sigtest.c:146 store 4 00000000 -> trace at sigtest.c
 tid 1.0 in main at .../sigtest/sigtest.c:147 load 4 00000000 <- trace at sigtest.c
-tid 1.0 in __rvpredict_signal disestablish signal action signal 0
-tid 1.0 in __rvpredict_signal establish signal action signal 6 handler in gnutest_handler at .../sigtest/sigtest.c:29 mask #4
-tid 1.0 in __rvpredict_signal disestablish signal action signal 0
-tid 1.0 in __rvpredict_signal establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:106 mask #3
-tid 1.0 in __rvpredict_signal disestablish signal action signal 0
-tid 1.0 in __rvpredict_signal establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:126 mask #2
-tid 1.0 in __rvpredict_signal disestablish signal action signal 0
-tid 1.0 in __rvpredict_signal establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:106 mask #3
-tid 1.0 in __rvpredict_signal establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:126 mask #2
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 disestablish signal action signal 0
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 establish signal action signal 6 handler in gnutest_handler at .../sigtest/sigtest.c:29 mask origin 1 bits 0000000000000000
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 disestablish signal action signal 0
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:106 mask origin 1 bits 0000000000000000
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 disestablish signal action signal 0
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:126 mask origin 1 bits 0000000000000000
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 disestablish signal action signal 0
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:106 mask origin 1 bits 0000000000000000
+tid 1.0 in common_signal at .../ngrt/rvpsignal.c:1012 establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:126 mask origin 1 bits 0000000000000000
 tid 1.0 in wr_sig_safe at .../sigtest/sigtest.c:70 enter function cfa . return in main at .../sigtest/sigtest.c:165
 tid 1.0 in wr_sig_safe at .../sigtest/sigtest.c:72 load 4 00000000 <- trace at sigtest.c
 tid 1.0 in wr_sig_safe at .../sigtest/sigtest.c:70 exit function

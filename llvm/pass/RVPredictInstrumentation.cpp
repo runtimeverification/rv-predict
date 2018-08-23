@@ -83,6 +83,7 @@ STATISTIC(NumOmittedReadsFromConstantGlobals,
 STATISTIC(NumOmittedReadsFromVtable, "Number of vtable reads");
 STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
 
+static const uint64_t kRVPCtorAndDtorPriority = 2;
 static const char *const kRVPredictModuleCtorName = "rvpredict.module_ctor";
 static const char *const kRVPredictInitName = "__rvpredict_init";
 
@@ -374,7 +375,7 @@ bool RVPredictInstrument::doInitialization(Module &M) {
   order_acq_rel->setAlignment(4);
   order_seq_cst->setAlignment(4);
 
-  appendToGlobalCtors(M, ctorfn, 0);
+  appendToGlobalCtors(M, ctorfn, kRVPCtorAndDtorPriority);
 
   return true;
 }

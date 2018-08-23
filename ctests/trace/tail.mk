@@ -22,10 +22,11 @@ LDADD+=-pthread
 test.trace: $(PROG)
 	@$(.OBJDIR)/$(PROG) > /dev/null || { rm -f $(RVP_TRACE_FILE) && echo $(PROG) exited with an error 1>&2 && false ; }
 
-LOCAL_NORMALIZE?=cat
+PRE_NORMALIZE?=cat
+POST_NORMALIZE?=cat
 
 test_output: test.trace
-	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(CTESTS_DIR)/normalize-humanized-trace | $(LOCAL_NORMALIZE)
+	@rvpdump -t symbol-friendly $(RVP_TRACE_FILE) | rvpsymbolize $(.OBJDIR)/$(PROG) | $(PRE_NORMALIZE) | $(CTESTS_DIR)/normalize-humanized-trace | $(POST_NORMALIZE)
 
 CLEANFILES+=test.trace
 

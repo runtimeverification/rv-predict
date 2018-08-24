@@ -228,7 +228,7 @@ Makefile uses by setting CC and LD variables on the make(1) command line.
 To replace the standard compiler and linker with RV-Predict/C:
 
 ```
-make CC=rvpc LD=rvpc
+make CC=rvpc LD=rvpld
 ```
 
 ### GNU autoconf scripts (./configure)
@@ -238,13 +238,13 @@ instrumentation, set CC and LD in the configure script's environment.
 For example, in Bourne shell (and bash):
 
 ```
-CC=rvpc LD=rvpc ./configure
+CC=rvpc LD=rvpld ./configure
 ```
 
 In csh/tcsh:
 
 ```
-env CC=rvpc LD=rvpc ./configure
+env CC=rvpc LD=rvpld ./configure
 ```
 
 ## Package contents

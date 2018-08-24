@@ -3,6 +3,7 @@ SUBPRJ+=mask natest rmw load store unaligned xchange_t816 xchange_test
 SUBPRJ+=memcpy
 #SUBPRJ+=memmove
 #SUBPRJ+=memset
-SUBPRJ+=sigtest
+SUBPRJ+=__sysv_signal
+SUBPRJ+=signal
 
 .include <mkc.subprj.mk>

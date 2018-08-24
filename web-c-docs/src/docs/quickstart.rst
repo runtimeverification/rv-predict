@@ -23,14 +23,14 @@ Autoconf, use the following command:
 
 .. code-block:: none
 
-    CC=rvpc ./configure
+    CC=rvpc CXX=rvpc++ LD=rvpld ./configure
 
 To use RV-Predict/C on a project that uses a makefile but does *not*
 use GNU autoconf, provide a CC variable on the command line:
 
 .. code-block:: none
 
-    make <target> CC=rvpc
+    make <target> CC=rvpc CXX=rvpc++ LD=rvpld
 
 Note: if your code uses ``g++`` or ``clang++``, then replace ``rvpc``
 with ``rvpc++``.

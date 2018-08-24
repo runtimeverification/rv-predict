@@ -143,6 +143,8 @@ if [ ${cplusplus:-no} = yes ]; then
 	compiler="clang++-4.0 -std=c++11"
 elif [ ${prog} = qrvpc ]; then
 	compiler=qclang-4.0
+elif [ ${prog} = rvpld ]; then
+	compiler=ld
 else
 	compiler=clang-4.0
 fi
@@ -151,8 +153,14 @@ if [ ${prog} != qrvpc ]; then
 	# -ldl for dlsym()
 	# -lrt for timer_create() et cetera, in hacks.c
 	# -latomic for atomic_is_lock_free()
+	ldflags="-ldl -lrt -latomic"
 	# -pthread for POSIX threads
-	ldflags="-ldl -lrt -latomic -pthread"
+	if [ ${prog} = rvpld ]; then
+		# ld doesn't know about -pthread
+		ldflags="${ldflags} -lpthread"
+	else
+		ldflags="${ldflags} -pthread"
+	fi
 fi
 
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]

@@ -24,8 +24,9 @@ LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
 LINKS+=${BINDIR}/rvpc ${BINDIR}/rvpld
 LINKS+=${BINDIR}/rvpc ${BINDIR}/qrvpc
 LINKS+=${BINDIR}/qclang-4.0 ${BINDIR}/qclang
-MLINKS=rvpc.1 rvpc++.1
-MLINKS=rvpc.1 qrvpc.1
+MLINKS+=rvpc.1 rvpc++.1
+MLINKS+=rvpc.1 rvpld.1
+MLINKS+=rvpc.1 qrvpc.1
 
 #
 # I assume here and in rvpc.sh.in that there is only one directory

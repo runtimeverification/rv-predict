@@ -8,7 +8,9 @@
 #include <signal.h>	/* for sigprocmask(3), sigaction(3), signal(3),
 			 * sigsuspend(3), etc.
 			 */
+#include <stdbool.h>	/* for false */
 #include <string.h>	/* for memcpy(3), memmove(3), memset(3) */
+#include <unistd.h>	/* for fork(2) */
 
 #define	REAL_DECL(__rettype, __func, ...)				\
 	extern __rettype (*real_##__func)(__VA_ARGS__)
@@ -38,6 +40,7 @@ __rettype __func(__VA_ARGS__) __attribute__((weak,			\
 	real_##__fn = (__fntype)(uintptr_t)dlsym(RTLD_NEXT, #__fn);	\
 } while (/*CONSTCOND*/false)
 
+INTERPOSE_DECLS(pid_t, fork, void);
 INTERPOSE_DECLS(int, pthread_join, pthread_t, void **);
 INTERPOSE_DECLS(int, pthread_create, pthread_t *, const pthread_attr_t *,
     void *(*)(void *), void *);

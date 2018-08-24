@@ -157,7 +157,7 @@ rvp_offline_analysis_start(void)
 	// Check binpath for an RV-Predict/C runtime symbol, and see if
 	// its address matches the address of our own copy?
 
-	if ((pid = fork()) == -1) {
+	if ((pid = real_fork()) == -1) {
 		err(EXIT_FAILURE,
 		    "%s could not fork a supervisor process", product_name);
 	}
@@ -189,7 +189,7 @@ rvp_offline_analysis_start(void)
 		fputc('\n', stderr);
 	}
 
-	if ((pid = fork()) == -1) {
+	if ((pid = real_fork()) == -1) {
 		err(EXIT_FAILURE,
 		    "%s could not fork an analyzer", product_name);
 	}

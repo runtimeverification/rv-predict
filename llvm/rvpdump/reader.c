@@ -706,7 +706,7 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_SIGDIS:
 		printf("%s %s signal %" PRIu32 "\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
-		    oi->oi_descr, ub->ub_sigest.signum);
+		    oi->oi_descr, ub->ub_sigdis.signum);
 		break;
 	case RVP_OP_SIGEST:
 		printf("%s %s signal %" PRIu32

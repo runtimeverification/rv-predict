@@ -1,5 +1,7 @@
 #
 #
+.PATH: $(.CURDIR)/../signal
+
 .include "../head.mk"
 MKCOVERAGE=no
 CTESTS_DIR=$(.CURDIR)/../..

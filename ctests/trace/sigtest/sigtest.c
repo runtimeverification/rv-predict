@@ -7,8 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "macros.h"
-
 void
 gnutest_handler(int sig)
 {

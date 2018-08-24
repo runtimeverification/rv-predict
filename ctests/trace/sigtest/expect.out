@@ -1,17 +1,17 @@
 tid 1.0 {} begin thread
-tid 1.0 in main at .../sigtest/sigtest.c:53 enter function cfa . return {}
+tid 1.0 in main at .../sigtest/sigtest.c:51 enter function cfa . return {}
+tid 1.0 in main at .../sigtest/sigtest.c:53 disestablish signal action signal 6
+tid 1.0 in main at .../sigtest/sigtest.c:54 establish signal action signal 6 handler in gnutest_handler at .../sigtest/sigtest.c:12 mask origin 1 bits 0000000000000000
 tid 1.0 in main at .../sigtest/sigtest.c:55 disestablish signal action signal 6
-tid 1.0 in main at .../sigtest/sigtest.c:56 establish signal action signal 6 handler in gnutest_handler at .../sigtest/sigtest.c:14 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../sigtest/sigtest.c:57 disestablish signal action signal 6
-tid 1.0 in main at .../sigtest/sigtest.c:60 establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:41 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../sigtest/sigtest.c:61 disestablish signal action signal 10
-tid 1.0 in main at .../sigtest/sigtest.c:62 establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:47 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../sigtest/sigtest.c:63 disestablish signal action signal 12
-tid 1.0 in main at .../sigtest/sigtest.c:65 establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:41 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../sigtest/sigtest.c:66 establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:47 mask origin 1 bits 0000000000000000
-tid 1.1 {} enter signal handler signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:41
-tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:41 disestablish signal action signal 10
-tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:41 enter function cfa . return in __rvpredict_handler_wrapper
-tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:41 exit function
-tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:41 exit signal handler
-tid 1.0 in main at .../sigtest/sigtest.c:53 exit function
+tid 1.0 in main at .../sigtest/sigtest.c:58 establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:39 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../sigtest/sigtest.c:59 disestablish signal action signal 10
+tid 1.0 in main at .../sigtest/sigtest.c:60 establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:45 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../sigtest/sigtest.c:61 disestablish signal action signal 12
+tid 1.0 in main at .../sigtest/sigtest.c:63 establish signal action signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:39 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../sigtest/sigtest.c:64 establish signal action signal 12 handler in usr_2_handler at .../sigtest/sigtest.c:45 mask origin 1 bits 0000000000000000
+tid 1.1 {} enter signal handler signal 10 handler in usr_1_handler at .../sigtest/sigtest.c:39
+tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:39 disestablish signal action signal 10
+tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:39 enter function cfa . return in __rvpredict_handler_wrapper
+tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:39 exit function
+tid 1.1 in usr_1_handler at .../sigtest/sigtest.c:39 exit signal handler
+tid 1.0 in main at .../sigtest/sigtest.c:51 exit function

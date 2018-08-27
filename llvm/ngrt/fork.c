@@ -1,4 +1,13 @@
-/* Copyright (c) 2017 Runtime Verification, Inc.  All rights reserved. */
+/* Copyright (c) 2018 Runtime Verification, Inc.  All rights reserved. */
+
+/* Stopgap implementaiton of fork.
+ *
+ * XXX This is a stopgap fix for the hang that used to occur in a child
+ * XXX process once it filled a ring.  Because a child process had
+ * XXX no serialization thread, it would wait forever for its ring
+ * XXX to empty.  Now, a child process's rings are just emptied to
+ * XXX /dev/null, so you cannot find any races in child processes.
+ */
 
 #include <assert.h>
 #include <err.h> /* for err(3) */

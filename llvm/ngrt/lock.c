@@ -86,7 +86,6 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 	if ((rc = real_pthread_mutex_trylock(mtx)) != 0)
 		return rc;
 
-	rvp_ensure_initialization();
 	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
 
 	return 0;

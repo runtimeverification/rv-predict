@@ -3,9 +3,7 @@
 #ifndef _RVP_INIT_H_
 #define _RVP_INIT_H_
 
-#ifndef _RVP_SUPERVISE_H_
-#	include "supervise.h"
-#endif
+#include "supervise.h"
 
 #include "intrinit.h"
 
@@ -15,7 +13,8 @@ rvp_prefork_init(void);
 
 
 static inline void
-rvp_ensure_initialization(void){
+rvp_ensure_initialization(void)
+{
 	if(!rvp_initialized)
 		rvp_prefork_init();
 }

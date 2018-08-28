@@ -449,7 +449,7 @@ rvp_assert_atomicity(void)
 	ASSERT_LOCK_FREENESS(rvp_signal_t *);
 }
 
-static void
+ void
 rvp_prefork_init(void)
 {
 	rvp_deltop_init();

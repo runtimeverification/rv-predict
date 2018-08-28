@@ -85,7 +85,7 @@ STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
 
 static const uint64_t kRVPCtorAndDtorPriority = 2;
 static const char *const kRVPredictModuleCtorName = "rvpredict.module_ctor";
-static const char *const kRVPredictInitName = "__rvpredict_init";
+       const char *const kRVPredictInitName = "__rvpredict_init";
 
 namespace RVPredict {
 

@@ -94,6 +94,7 @@ table#myTable {
 }
 table#myTable.no-footer {
   padding-bottom: 0;
+  margin-bottom: 46px;
 }
 table.dataTable thead .sorting {
     background-image: url("./images/sort_both.png") !important;
@@ -237,6 +238,9 @@ table#myTable tbody tr:last-child td {
 table tfoot th {
   border: none;
   padding: 10px 18px 2em 18px;
+}
+table.tablesorter.myTable.dataTable.no-footer.fixedHeader-floating {
+  box-shadow: none;
 }
 
 @media only screen and (max-width: 660px) {

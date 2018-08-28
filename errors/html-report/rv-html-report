@@ -7,6 +7,7 @@ import uuid
 import argparse
 import os
 import urllib
+import errno
 
 from jinja2 import Environment, FileSystemLoader
 from pygments import highlight
@@ -204,8 +205,11 @@ def render_code(rel, abs, path, errors, to_js):
     if to_js:
         extension = ".js"
 
-    if not os.path.exists(args.output + '/' + directory):
+    try:
         os.makedirs(args.output + '/' + directory)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
     if not os.path.exists(filename):
         return
     with open(filename, 'r') as f, open(args.output + '/' + path + extension, 'w') as target:

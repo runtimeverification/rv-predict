@@ -35,7 +35,7 @@ SRCS+=online_analysis.c
 SRCS+=stubs.c
 .endif
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c serialize.c sigutil.c
-SRCS+=supervise.c
+SRCS+=specific.c supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c
 SRCS+=io.c

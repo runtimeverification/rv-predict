@@ -1,3 +1,3 @@
-SUBPRJ=cancellation stopkill memcpyx memmovex memsetx
+SUBPRJ=cancellation setspecific stopkill memcpyx memmovex memsetx
 
 .include <mkc.subprj.mk>

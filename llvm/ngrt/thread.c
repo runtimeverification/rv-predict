@@ -113,7 +113,7 @@ rvp_thread0_create(void)
 	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
 
-	if (pthread_setspecific(rvp_thread_key, t) != 0)
+	if (real_pthread_setspecific(rvp_thread_key, t) != 0)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
 
 	if (real_pthread_sigmask(SIG_BLOCK, NULL, &oset) != 0)
@@ -455,6 +455,7 @@ rvp_prefork_init(void)
 	rvp_deltop_init();
 	rvp_assert_atomicity();
 	rvp_lock_prefork_init();	// needed by rvp_signal_init()
+	rvp_specific_prefork_init();
 	rvp_signal_prefork_init();
 	rvp_str_prefork_init();
 	rvp_thread_prefork_init();
@@ -466,7 +467,8 @@ rvp_postfork_init(void)
 	rvp_signal_init();
 	rvp_rings_init();
 
-	if (pthread_key_create(&rvp_thread_key, NULL) != 0) 
+	if (real_pthread_key_create(&rvp_thread_key,
+	                            rvp_thread_destructor) != 0) 
 		err(EXIT_FAILURE, "%s: pthread_key_create", __func__);
 	if (sigfillset(&allmask) == -1)
 		err(EXIT_FAILURE, "%s: sigfillset", __func__);
@@ -697,7 +699,7 @@ __rvpredict_thread_wrapper(void *arg)
 
 	assert(pthread_getspecific(rvp_thread_key) == NULL);
 
-	if (pthread_setspecific(rvp_thread_key, t) != 0)
+	if (real_pthread_setspecific(rvp_thread_key, t) != 0)
 		err(EXIT_FAILURE, "%s: pthread_setspecific", __func__);
 
 	r->r_lgen = rvp_ggen_after_load();

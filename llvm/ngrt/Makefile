@@ -17,6 +17,7 @@ TARGET_CC?=clang
 CC?=$(TARGET_CC)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
+CFLAGS+=-fPIC
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
@@ -35,7 +36,7 @@ SRCS+=offline_analysis.c online_analysis.c
 SRCS+=stubs.c
 .endif
 SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c
-SRCS+=serialize.c sigutil.c supervise.c
+SRCS+=serialize.c sigutil.c specific.c supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c io.c
 WARNS=4

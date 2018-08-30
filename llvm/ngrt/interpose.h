@@ -46,6 +46,10 @@ INTERPOSE_DECLS(int, pthread_create, pthread_t *, const pthread_attr_t *,
     void *(*)(void *), void *);
 INTERPOSE_DECLS(void, pthread_exit, void *);
 
+INTERPOSE_DECLS(int, pthread_key_create, pthread_key_t *, void (*)(void *));
+INTERPOSE_DECLS(int, pthread_key_delete, pthread_key_t);
+INTERPOSE_DECLS(int, pthread_setspecific, pthread_key_t, const void *);
+
 INTERPOSE_DECLS(int, pthread_mutex_lock, pthread_mutex_t *);
 INTERPOSE_DECLS(int, pthread_mutex_trylock, pthread_mutex_t *);
 INTERPOSE_DECLS(int, pthread_mutex_unlock, pthread_mutex_t *);
@@ -60,6 +64,7 @@ INTERPOSE_DECLS(int, sigaction, int, const struct sigaction *,
 
 typedef void (*rvp_sighandler_t)(int);
 
+INTERPOSE_DECLS(rvp_sighandler_t, __sysv_signal, int, rvp_sighandler_t);
 INTERPOSE_DECLS(rvp_sighandler_t, signal, int, rvp_sighandler_t);
 
 INTERPOSE_DECLS(int, sigsuspend, const sigset_t *);

@@ -22,8 +22,6 @@ LDADD+=-pthread
 
 .PHONY: test_output
 
-LOCAL_NORMALIZE?=cat
-
 test_output:
 	@set -e; \
 	$(.OBJDIR)/$(PROG) 2>&1 > /dev/null && false || true

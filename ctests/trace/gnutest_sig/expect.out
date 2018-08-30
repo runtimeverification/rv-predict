@@ -7,6 +7,6 @@ tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:78 load 4 00000000 <- entry_
 tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:78 store 4 0x00000001 -> entry_count at gnutest_sig.c;handler
 tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 exit function
 tid 1.1 in handler at .../gnutest_sig/gnutest_sig.c:70 exit signal handler
-tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:118 disestablish signal action signal 0
-tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:125 disestablish signal action signal 0
+tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:118 disestablish signal action signal 6
+tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:125 disestablish signal action signal 6
 tid 1.0 in main at .../gnutest_sig/gnutest_sig.c:99 exit function

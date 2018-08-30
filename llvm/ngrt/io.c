@@ -32,12 +32,14 @@ iovsum(const struct iovec *iov, int iovcnt)
 }
 
 ssize_t
-writeall(int fd, const void *buf, size_t nbytes)
+writeall(int fd, const void *buf, size_t nbytes, iostat_t *ios)
 {
 	ssize_t nwritten;
 	const char *p = buf;
 
+	iostat_inc(ios, IOSTAT_VECTORS);
 	for (; nbytes > 0; p += nwritten, nbytes -= nwritten) {
+		iostat_inc(ios, IOSTAT_IOS);
 		nwritten = write(fd, p, nbytes);
 		if (nwritten == -1)
 			return -1;
@@ -71,12 +73,15 @@ advance_iov(struct iovec **iovp, int *iovcntp, ssize_t nbytes)
 static ssize_t
 xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
     const int err_ret,
-    const struct iovec *iov0, struct iovec *scratch, int iovcnt)
+    const struct iovec *iov0, struct iovec *scratch, int iovcnt, iostat_t *ios)
 {
 	ssize_t nexpected = iovsum(iov0, iovcnt),
 		nxferd,
 		ntotal;
 
+	iostat_inc(ios, IOSTAT_VECTORS);
+
+	iostat_inc(ios, IOSTAT_IOS);
 	nxferd = xferv(fd, iov0, iovcnt);
 	if (nxferd == -1 || nxferd == err_ret || nxferd == nexpected) {
 		dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__, nxferd);
@@ -88,6 +93,7 @@ xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
 
 	for (ntotal = nxferd; ntotal < nexpected; ntotal += nxferd) {
 		advance_iov(&iov, &iovcnt, nxferd);
+		iostat_inc(ios, IOSTAT_IOS);
 		nxferd = xferv(fd, iov, iovcnt);
 		if (nxferd == -1) {
 			dbg_printf("%s.%d: nxferd -> %zd", __func__, __LINE__,
@@ -110,13 +116,15 @@ xferallv(int fd, ssize_t (*xferv)(int, const struct iovec *, int),
 }
 
 ssize_t
-readallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
+readallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt,
+    iostat_t *ios)
 {
-	return xferallv(fd, readv, 0, iov0, scratch, iovcnt);
+	return xferallv(fd, readv, 0, iov0, scratch, iovcnt, ios);
 }
 
 ssize_t
-writeallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt)
+writeallv(int fd, const struct iovec *iov0, struct iovec *scratch, int iovcnt,
+    iostat_t *ios)
 {
-	return xferallv(fd, writev, -1, iov0, scratch, iovcnt);
+	return xferallv(fd, writev, -1, iov0, scratch, iovcnt, ios);
 }

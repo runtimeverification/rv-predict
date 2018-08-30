@@ -1,18 +1,21 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <err.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <sys/uio.h>	/* for writev(2) */
+#include <sys/uio.h>	/* for struct iovec */
 
 #include "io.h"
 #include "ring.h"
+#include "serialize.h"
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop */
 
 int64_t rvp_trace_size = 0;
 
 static const bool rvp_do_debug = false;
+static iostat_t serializer_ios;
 
 static void
 rvp_debugf(const char *fmt, ...)
@@ -23,6 +26,14 @@ rvp_debugf(const char *fmt, ...)
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
 	va_end(ap);
+}
+
+void
+rvp_serializer_dump_info(void)
+{
+	fprintf(stderr, "serializer: %" PRIu64 " vectors, %" PRIu64 " I/Os\n",
+	    iostat_get(&serializer_ios, IOSTAT_VECTORS),
+	    iostat_get(&serializer_ios, IOSTAT_IOS));
 }
 
 /* Visualize the buffer as a ring where the consumer pointer
@@ -650,7 +661,8 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	if (iovp == first_ring_iov)
 		return 0;
 
-	nwritten = writeallv(fd, iov, scratch_iov, iovp - &iov[0]);
+	nwritten = writeallv(fd, iov, scratch_iov, iovp - &iov[0],
+	    &serializer_ios);
 	if (nwritten == -1)
 		return -1;
 
@@ -662,7 +674,8 @@ rvp_ring_flush_to_fd(rvp_ring_t *r, int fd, rvp_lastctx_t *lc)
 	assert(nwritten > 0);
 
 	const struct iovec *check_iov = first_ring_iov;
-	assert(rvp_ring_discard_iovs(r, NULL, &check_iov, iovp, &idepth1) <= 0);
+	if (rvp_ring_discard_iovs(r, NULL, &check_iov, iovp, &idepth1) > 0)
+		abort();
 	assert(idepth0 == idepth1);
 
 	if (lc != NULL) {

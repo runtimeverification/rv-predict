@@ -199,6 +199,7 @@ rvp_dump_info(void)
 		    t->t_garbage ? " destroyed" : "");
 	}
 	rvp_ring_stats_dump_total();
+	rvp_serializer_dump_info();
 }
 
 static void

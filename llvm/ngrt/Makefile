@@ -20,7 +20,7 @@ INCS=rvpredict_intr.h
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-fPIC
-#COPTS+=-O3
+COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include

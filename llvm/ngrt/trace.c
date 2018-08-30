@@ -177,7 +177,7 @@ rvp_trace_begin(void)
 {
 	const int fd = rvp_trace_open();
 
-	if (writeall(fd, &header, sizeof(header)) == -1)
+	if (writeall(fd, &header, sizeof(header), NULL) == -1)
 		err(EXIT_FAILURE, "%s: writeall", __func__);
 
 	return fd;

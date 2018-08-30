@@ -895,7 +895,7 @@ rvp_trace_dump_with_emitters(bool emit_generation, bool emit_bytes,
 	};
 	struct iovec scratch[__arraycount(iov)];
 
-	if ((nread = readallv(fd, iov, scratch, __arraycount(iov))) == -1)
+	if ((nread = readallv(fd, iov, scratch, __arraycount(iov), NULL)) == -1)
 		err(EXIT_FAILURE, "%s: readallv(header)", __func__);
 
 	if (nread < iovsum(iov, __arraycount(iov))) {

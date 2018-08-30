@@ -22,6 +22,15 @@ typedef struct _rvp_signal {
 	rvp_sigblockset_t	*s_blockset;
 	void			(*s_handler)(int);
 	void			(*s_sigaction)(int, siginfo_t *, void *);
+/* Set iff the application established with SA_RESETHAND: indicates
+ * that our wrapper should log the reset.
+ */
+#define	RVP_SIGNAL_F_LOG_RESETHAND	__BIT(0)
+/* Set iff the application established with SA_NODEFER but our wrapper
+ * had to be established without
+ */
+#define	RVP_SIGNAL_F_FAKING_NODEFER	__BIT(1)
+	uint32_t		s_flags;
 } rvp_signal_t;
 
 rvp_ring_t *rvp_signal_ring_get(rvp_thread_t *, uint32_t);

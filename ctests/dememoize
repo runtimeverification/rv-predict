@@ -1,0 +1,53 @@
+#!/bin/sh
+
+set -e
+set -u
+
+cleanup_hook()
+{
+	trap - EXIT ALRM HUP INT PIPE QUIT TERM
+
+	reason=$1
+	if [ ${reason} != EXIT ]; then
+		echo "$(basename $0): caught signal $reason.  Cleaning up." 1>&2
+	fi
+	for core in $(ls $tmpdir/*core 2> /dev/null); do
+		echo "$(basename $0): there are cores in $tmpdir/." 1>&2
+		exit $exitcode
+	done
+	if [ ${RVPSYMBOLIZE_DEBUG:-no} = yes ]; then
+		echo "$(basename $0): intermediate files are in $tmpdir/." 1>&2
+	else
+		rm -rf $tmpdir
+	fi
+	exit $exitcode
+}
+
+trap_with_reason()
+{
+	func="$1"
+	shift
+	for reason; do
+		trap "$func $reason" $reason
+	done
+}
+
+prog=$(basename $0)
+tmpdir=$(mktemp -d -t ${prog}.XXXXXX)
+exitcode=1
+
+# Suppress "$ " output, which seems to be caused by "set -i" and "set +i".
+PS1=""
+
+set -i
+trap_with_reason cleanup_hook EXIT ALRM HUP INT PIPE QUIT TERM
+set +i
+
+tee ${tmpdir}/copy | grep '^tid .* memoize signal mask ' | sed 's/^tid .* memoize signal mask \(#[[:digit:]]\+\) origin \([[:digit:]]\+\) bits \(\(0x\)\?[[0-9a-fA-F]\+\)$/s,mask \1\\>,mask origin \2 bits \3,/' > ${tmpdir}/script
+
+grep -v '^tid .* memoize signal mask ' < ${tmpdir}/copy | \
+    sed -f ${tmpdir}/script
+
+exitcode=0
+
+exit 0

@@ -28,12 +28,15 @@
 
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
 REAL_DEFN(rvp_sighandler_t, signal, int, rvp_sighandler_t);
+REAL_DEFN(rvp_sighandler_t, __sysv_signal, int, rvp_sighandler_t);
 REAL_DEFN(int, sigprocmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, sigsuspend, const sigset_t *);
 
 int ___rvpredict_set_signal_trace(int);
 static void signal_safe_debugf(const char *fmt, ...);
+static int __rvpredict_sigaction_impl(int, const struct sigaction *,
+    struct sigaction *, const void *);
 
 typedef int (*rvp_change_sigmask_t)(int, const sigset_t *, sigset_t *);
 
@@ -105,6 +108,9 @@ rvp_signal_prefork_init(void)
 	ESTABLISH_PTR_TO_REAL(
 	    rvp_sighandler_t (*)(int, rvp_sighandler_t),
 	    signal);
+	ESTABLISH_PTR_TO_REAL(
+	    rvp_sighandler_t (*)(int, rvp_sighandler_t),
+	    __sysv_signal);
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(int, const struct sigaction *, struct sigaction *),
 	    sigaction);
@@ -332,6 +338,18 @@ rvp_signal_ring_put(rvp_thread_t *t __unused, rvp_ring_t *r)
 		abort();
 }
 
+static inline void
+unblock(int signum)
+{
+	sigset_t unblock;
+	if (sigemptyset(&unblock) == -1)
+		abort();
+	if (sigaddset(&unblock, signum) == -1)
+		abort();
+	if (real_pthread_sigmask(SIG_UNBLOCK, &unblock, NULL) == -1)
+		abort();
+}
+
 static void
 __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 {
@@ -354,9 +372,16 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	const rvp_maskchg_t *mcp;
 	const uint64_t blocked_by_signal =
 	    sigset_to_mask(&s->s_blockset->bs_sigset) & ~rvp_unmaskable;
-	const uint64_t typical_mask = omask | blocked_by_signal;
-	sigset_t tmpmask;
 	bool inconsistent;
+	const ucontext_t *uc = ctx;
+
+	/* Always unblock `signum` if _F_FAKING_NODEFER is set.
+	 *
+	 * Note that the interruptee could not have had it blocked,
+	 * otherwise the wrapper wouldn't be running for signal `signum`.
+	 */
+	if ((s->s_flags & RVP_SIGNAL_F_FAKING_NODEFER) != 0)
+		unblock(signum);
 
 	/* If `t->t_maskchg != NULL`, then this handler has
 	 * interrupted a change of mask that was underway.  The
@@ -377,20 +402,17 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 * inexpensive to detect.
 	 */
 	if ((mcp = t->t_maskchg) == NULL) {
-		t->t_intrmask = typical_mask;
+		t->t_intrmask = omask | blocked_by_signal;
 		inconsistent = false;
-	} else if ((omask & __BIT(signo_to_bitno(signum))) != 0) {
+	} else if ((omask & __BIT(signo_to_bitno(signum))) != 0 ||
+	           sigset_to_mask(&uc->uc_sigmask) != omask) {
 		omask = mcp->mc_nmask;
 		t->t_intrmask = omask | blocked_by_signal;
 		inconsistent = true;
-	} else if (real_pthread_sigmask(SIG_SETMASK, NULL, &tmpmask) == -1)
-		abort();
-	else if (sigset_to_mask(&tmpmask) != typical_mask) {
-		omask = mcp->mc_nmask;
-		t->t_intrmask = sigset_to_mask(&tmpmask) & ~rvp_unmaskable;
-		inconsistent = true;
-	} else
+	} else {
+		t->t_intrmask = omask | blocked_by_signal;
 		inconsistent = false;
+	}
 
 	r->r_lgen = oldr->r_lgen;
 
@@ -445,6 +467,15 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 		: (const void *)(uintptr_t)s->s_sigaction);
 	rvp_buf_put_u64(&b, r->r_lgen);
 	rvp_buf_put(&b, signum);
+	if ((s->s_flags & RVP_SIGNAL_F_LOG_RESETHAND) != 0) {
+		/* Log handler reset */
+		rvp_buf_put_pc_and_op(&b, &r->r_lastpc,
+		    (s->s_handler != NULL)
+		        ? (const char *)(uintptr_t)s->s_handler
+			: (const char *)(uintptr_t)s->s_sigaction,
+		    RVP_OP_SIGDIS);
+		rvp_buf_put(&b, signum);
+	}
 	rvp_ring_put_buf(r, b);
 
 	if (s->s_sigaction != NULL)
@@ -984,8 +1015,12 @@ signal_safe_debugf(const char *fmt, ...)
 	return;
 }
 
-rvp_sighandler_t
-__rvpredict_signal(int signo, rvp_sighandler_t handler)
+/* TBD Make this take the return address and pass it through to
+ * Predict's implementation of `sigaction`.
+ */
+static rvp_sighandler_t
+__rvpredict_signal_common(int signo, int flags, rvp_sighandler_t handler,
+    const void *return_address)
 {
 	struct sigaction nsa, osa;
 
@@ -997,8 +1032,11 @@ __rvpredict_signal(int signo, rvp_sighandler_t handler)
 	if (sigemptyset(&nsa.sa_mask) == -1)
 		err(EXIT_FAILURE, "%s.%d: sigemptyset", __func__, __LINE__);
 
+	nsa.sa_flags = flags;
 	nsa.sa_handler = handler;
-	if (sigaction(signo, &nsa, &osa) == -1) {
+
+	if (__rvpredict_sigaction_impl(signo, &nsa, &osa,
+	                               return_address) == -1) {
 		/* signal(3) is only defined to set `errno` to `EINVAL`,
 		 * so bail otherwise. 
 		 */
@@ -1007,9 +1045,32 @@ __rvpredict_signal(int signo, rvp_sighandler_t handler)
 
 		return SIG_ERR;
 	}
-	signal_safe_debugf("signal    :xit :signo =%2d nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n"
-                      ,signo, nsa.sa_flags, osa.sa_flags,(unsigned ) osa.sa_handler);
+	signal_safe_debugf("signal    :xit :signo =%2d "
+	    "nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n", signo,
+	    nsa.sa_flags, osa.sa_flags,(unsigned ) osa.sa_handler);
 	return osa.sa_handler;
+}
+
+rvp_sighandler_t
+__rvpredict___sysv_signal(int signo, rvp_sighandler_t handler)
+{
+	return __rvpredict_signal_common(signo, SA_RESETHAND | SA_NODEFER,
+	    handler, __builtin_return_address(0));
+}
+
+rvp_sighandler_t
+__rvpredict_signal(int signo, rvp_sighandler_t handler)
+{
+	return __rvpredict_signal_common(signo, SA_RESTART, handler,
+	    __builtin_return_address(0));
+}
+
+int
+__rvpredict_sigaction(int signum, const struct sigaction *nact,
+    struct sigaction *oact)
+{
+	return __rvpredict_sigaction_impl(signum, nact, oact,
+	    __builtin_return_address(0));
 }
 
 /* XXX sigaction(2) is async-signal-safe, so we have to
@@ -1018,42 +1079,20 @@ __rvpredict_signal(int signo, rvp_sighandler_t handler)
  * XXX pthread_mutex_lock(), which is not async-signal-safe.
  * XXX So I need to fix that someday. 
  */
-int
-__rvpredict_sigaction(int signum, const struct sigaction *act0,
-    struct sigaction *oact)
+static int
+__rvpredict_sigaction_impl(int signum, const struct sigaction *act0,
+    struct sigaction *oact, const void *return_address)
 {
 	rvp_signal_t stmp =
-	    {.s_blockset = NULL, .s_handler = NULL, .s_sigaction = NULL};
+	    {.s_blockset = NULL, .s_handler = NULL, .s_sigaction = NULL,
+	     .s_flags = 0};
 	rvp_signal_t *s;
 	sigset_t mask, savedmask;
-	struct sigaction act_copy ;
+	struct sigaction act_copy;
 
 	signal_safe_debugf("sigaction :ntr :signum=%2d act-flags=%8x \n",
 						signum, gt_flags(act0), 0,0 );
-	#if 0 /* The SA_RESETHAND flag is not supported  - this is a failed attempt to implement it */
-	   /* SA_RESETHAND
-	    * https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.3.0/com.ibm.zos.v2r3.bpxbd00/rtsigac.htm
-	    *    Tells the system to reset the signal's action to SIG_DFL and clear the SA_SIGINFO flag 
-            * before invoking a signal handler function
-            * -------
-            * We copy act0 to act_copy and insert the changes into act_copy
- 	    * The act_copy initializes the const act.
-            */
-	   bool use_act0 = true;
-	   if (act0 != NULL && (act0->sa_flags & SA_RESETHAND) != 0) {
-		act_copy = *act0;
-		act_copy.sa_flags &= ~SA_SIGINFO; 
-		act_copy.sa_handler = SIG_DFL; 
-		use_act0 = false;
-	   } 
-	   const struct sigaction *act = (use_act0 ? act0 : &act_copy);
-	#else
-   	   /* Abort if the unsupported SA_RESETHAND flag is set */
-	   if (act0 != NULL && (act0->sa_flags & SA_RESETHAND) != 0) {
-		err(EXIT_FAILURE, "%s.%d: SA_RESETHAND is not supported", __func__, __LINE__);
-	   }
-	   const struct sigaction *act = act0;
-	#endif
+	const struct sigaction *act = act0;
 	int rc;
 	rvp_addr_t handler;
 	bool establishing;
@@ -1093,7 +1132,7 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	*s = stmp;
 
 	if ((act->sa_flags & SA_SIGINFO) == 0 && !establishing) {
-		rvp_trace_sigdis(signum, __builtin_return_address(0));
+		rvp_trace_sigdis(signum, return_address);
 		goto out;
 	}
 
@@ -1106,10 +1145,26 @@ __rvpredict_sigaction(int signum, const struct sigaction *act0,
 	s->s_blockset = intern_sigset(&mask);
 
 	rvp_trace_sigest(signum, handler, s->s_blockset->bs_number,
-	    __builtin_return_address(0));
+	    return_address);
 
 	act_copy = *act;
 	act_copy.sa_flags |= SA_SIGINFO;
+	switch (act_copy.sa_flags & (SA_RESETHAND|SA_NODEFER)) {
+	case SA_RESETHAND|SA_NODEFER:
+		/* Make sure to enter our wrapper with `signum`
+		 * blocked so that we can log a handler-reset
+		 * before `signum` is retriggered.
+		 */
+		s->s_flags =
+		    RVP_SIGNAL_F_LOG_RESETHAND|RVP_SIGNAL_F_FAKING_NODEFER;
+		act_copy.sa_flags &= ~SA_NODEFER;
+		break;
+	case SA_RESETHAND:
+		s->s_flags = RVP_SIGNAL_F_LOG_RESETHAND;
+		break;
+	default:
+		break;
+	}
 	act_copy.sa_sigaction = __rvpredict_handler_wrapper;
 	act = &act_copy;
 
@@ -1153,4 +1208,5 @@ INTERPOSE(int, sigprocmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 INTERPOSE(int, sigaction, int, const struct sigaction *, struct sigaction *);
 INTERPOSE(rvp_sighandler_t, signal, int, rvp_sighandler_t);
+INTERPOSE(rvp_sighandler_t, __sysv_signal, int, rvp_sighandler_t);
 INTERPOSE(int, sigsuspend, const sigset_t *);

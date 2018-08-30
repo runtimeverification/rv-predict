@@ -10,6 +10,7 @@
 
 #include "interpose.h"
 #include "ring.h"
+#include "specific.h"
 
 typedef struct _rvp_maskchg {
 	uint32_t	mc_idepth;	// the interrupt depth for the sequence
@@ -44,6 +45,8 @@ struct _rvp_thread {
 	const rvp_maskchg_t * volatile _Atomic	t_maskchg;
 	rvp_ring_t * _Atomic	t_intr_ring;
 	rvp_ring_stats_t	t_stats;
+	int			t_nthrspecs;
+	rvp_thrspec_t		*t_thrspec;
 };
 
 int __rvpredict_pthread_create(pthread_t *, const pthread_attr_t *,

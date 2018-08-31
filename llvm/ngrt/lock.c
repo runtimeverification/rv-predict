@@ -13,6 +13,35 @@ REAL_DEFN(int, pthread_mutex_unlock, pthread_mutex_t *);
 REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
    const pthread_mutexattr_t *restrict);
 
+/*
+ *   Programs will call lock functions during their initialization before
+ * rv-predict can get tracing setup. This requires verifying that things 
+ * are initialized. If rv-predict is not initialized, then we will not trace 
+ * to the rv_predict ring.
+ *
+ * There are two stages:
+ * Stage 1: Nothing is initialized (rvp_real_locks_initialized == false)
+ * 	Call rvp_lock_prefork_init to get ptrs to real pthread_mutex_... routines established)
+ * Stage 2: The ring is ready (rvp_initialized == true)
+ * 
+ * i  We use the inline routine rvp_ring_initialized to indicate when one can
+ * trace to the ring.
+ */
+
+
+volatile _Atomic bool __read_mostly rvp_real_locks_initialized = false ;
+
+static inline bool
+is_ring_initialized(void) 
+{
+	if(!rvp_initialized)
+	{
+		if(!rvp_real_locks_initialized)
+			rvp_lock_prefork_init();
+		return false;
+	}
+	return true;
+}
 void
 rvp_lock_prefork_init(void)
 {
@@ -23,6 +52,7 @@ rvp_lock_prefork_init(void)
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(pthread_mutex_t *restrict,
 	            const pthread_mutexattr_t *restrict), pthread_mutex_init);
+	rvp_real_locks_initialized = true;
 }
 
 int
@@ -40,7 +70,11 @@ __rvpredict_pthread_mutex_init(pthread_mutex_t *restrict mtx,
 		    __func__);
 	}
 #endif
-	rvp_ensure_initialization();
+
+	if(is_ring_initialized())
+	{
+		return real_pthread_mutex_init(mtx, attr);
+	}
 	return real_pthread_mutex_init(mtx, attr);
 }
 
@@ -70,9 +104,11 @@ __rvpredict_pthread_mutex_lock(pthread_mutex_t *mtx)
 {
 	int rc;
 
-	rvp_ensure_initialization();
 	rc = real_pthread_mutex_lock(mtx);
-	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
+	if(is_ring_initialized())
+	{
+		trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
+	}
 
 	return rc;
 }
@@ -82,11 +118,15 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 {
 	int rc;
 
-	rvp_ensure_initialization();
-	if ((rc = real_pthread_mutex_trylock(mtx)) != 0)
-		return rc;
-
-	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
+	if(is_ring_initialized())
+	{
+		if ((rc = real_pthread_mutex_trylock(mtx)) != 0)
+			return rc;
+		trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
+	}
+	else	
+		if ((rc = real_pthread_mutex_trylock(mtx)) != 0)
+			return rc;
 
 	return 0;
 }
@@ -94,9 +134,10 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 int
 __rvpredict_pthread_mutex_unlock(pthread_mutex_t *mtx)
 {
-	rvp_ensure_initialization();
-	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_RELEASE);
-
+	if(is_ring_initialized())
+	{
+		trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_RELEASE);
+	}
 	return real_pthread_mutex_unlock(mtx);
 }
 

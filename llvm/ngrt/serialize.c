@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <err.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,7 @@
 #include <sys/uio.h>	/* for struct iovec */
 
 #include "io.h"
+#include "lock.h"
 #include "ring.h"
 #include "serialize.h"
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop */
@@ -388,6 +390,11 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
 	assert(consumer == r->r_consumer);
 	r->r_consumer = producer;
 
+	if (r->r_nwanted != 0 && r->r_nwanted <= rvp_ring_nempty(r)) {
+		real_pthread_mutex_lock(&r->r_mtx);
+		pthread_cond_signal(&r->r_cv);
+		real_pthread_mutex_unlock(&r->r_mtx);
+	}
 	rvp_debugf("%s.%d r %p span %td -> %td\n",
 	    __func__, __LINE__, (void *)r, cidx, producer - r->r_items);
 	*iovp = iov;

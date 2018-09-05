@@ -133,6 +133,9 @@ struct _rvp_ring {
 	rvp_intr_hack_t r_intr_hack;	// hack for supporting
 					// splhigh()/splx()-like function
 					// for our customer
+	pthread_mutex_t r_mtx;
+	pthread_cond_t r_cv;
+	volatile int r_nwanted;		// number of empty slots required
 };
 
 extern volatile _Atomic uint64_t rvp_ggen;

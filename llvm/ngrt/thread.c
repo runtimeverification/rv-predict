@@ -320,7 +320,7 @@ serialize(void *arg __unused)
 					break;
 				}
 			}
-		} while (any_emptied);
+		} while (stopping && any_emptied);
 
 		if (rvp_trace_size_limit <= rvp_trace_size) {
 			warnx("trace-file size %zd %s limit (%zd)",

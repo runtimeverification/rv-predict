@@ -184,25 +184,6 @@ rvp_trace_begin(void)
 }
 
 void
-rvp_buf_put_pc_and_op(rvp_buf_t *b, const char **lastpcp, const char *pc,
-    rvp_op_t op)
-{
-	int jmpvec = pc - *lastpcp;
-	deltop_t *deltop;
-
-	deltop = rvp_vec_and_op_to_deltop(jmpvec, op);
-
-	*lastpcp = pc;
-
-	if (deltop == NULL) {
-		rvp_buf_put_voidptr(b, pc);
-		deltop = rvp_vec_and_op_to_deltop(0, op);
-		assert(deltop != NULL);
-	}
-	rvp_buf_put_voidptr(b, deltop);
-}
-
-void
 rvp_ring_put_begin(rvp_ring_t *r, uint32_t tid, uint64_t generation)
 {
 	rvp_buf_t b = RVP_BUF_INITIALIZER;

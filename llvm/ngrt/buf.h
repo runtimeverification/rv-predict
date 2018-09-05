@@ -6,6 +6,7 @@
 
 #include "nbcompat.h"	/* for __arraycount() */
 #include "tracefmt.h"	/* for rvp_op_t */
+#include "deltops.h"	/* for rvp_vec_and_op_to_deltop */
 
 typedef struct {
 	unsigned int b_nwords;
@@ -63,7 +64,25 @@ rvp_buf_put_u64(rvp_buf_t *b, uint64_t val)
 	rvp_buf_put(b, valu.u32[1]);
 }
 
-void rvp_buf_put_pc_and_op(rvp_buf_t *, const char **, const char *, rvp_op_t);
+static inline void
+rvp_buf_put_pc_and_op(rvp_buf_t *b, const char **lastpcp, const char *pc,
+    rvp_op_t op)
+{
+	int jmpvec = pc - *lastpcp;
+	deltop_t *deltop;
+
+	deltop = rvp_vec_and_op_to_deltop(jmpvec, op);
+
+	*lastpcp = pc;
+
+	if (deltop == NULL) {
+		rvp_buf_put_voidptr(b, pc);
+		deltop = rvp_vec_and_op_to_deltop(0, op);
+		assert(deltop != NULL);
+	}
+	rvp_buf_put_voidptr(b, deltop);
+}
+
 void rvp_buf_put_cog(rvp_buf_t *, uint64_t);
 
 #endif /* _RVP_BUF_H_ */

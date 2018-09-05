@@ -1,4 +1,6 @@
+#include <inttypes.h>	/* for PRIu64 */
 #include <signal.h>	/* for pthread_sigmask(3) */
+#include <stdio.h>	/* for fprintf(3) */
 #include <string.h>	/* for strerror(3) */
 #include <unistd.h>	/* for pause(2) */
 
@@ -9,18 +11,28 @@ int relay_signum = SIGUSR1;
 
 static _Atomic int nwake = 0;
 static pthread_t relay_thread;
+static uint64_t relay_signalled, relay_woke;
 
 void
 rvp_wake_relay(void)
 {
 	int rc;
 
+	relay_signalled++;
 	nwake++;
 	rc = pthread_kill(relay_thread, relay_signum);
 	if (rc != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_kill: %s", __func__,
 		    strerror(rc));
 	}
+}
+
+void
+rvp_relay_dump_info(void)
+{
+	fprintf(stderr, "serializer relay: "
+	    "signalled %" PRIu64 " times, woke %" PRIu64 "\n",
+	    relay_signalled, relay_woke);
 }
 
 static void *
@@ -40,6 +52,7 @@ relay(void *arg __unused)
 			errx(EXIT_FAILURE, "%s: pthread_kill: %s", __func__,
 			    strerror(rc));
 		}
+		relay_woke++;
 		assert(rcvd_signum == expected_signum);
 		while (nwake > 0) {
 			rvp_wake_transmitter();

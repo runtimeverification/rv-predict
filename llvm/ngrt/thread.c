@@ -45,11 +45,12 @@ static pthread_mutex_t thread_mutex;
 static rvp_thread_t * volatile thread_head = NULL;
 static uint32_t next_id = 0;
 static rvp_ring_stats_t joined_rs;
+static uint64_t serializer_signalled, serializer_woke;
 
 static pthread_t serializer;
 static pthread_cond_t wakecond;
 static pthread_cond_t stopcond;
-static _Atomic int nwake = 0;
+static int nwake = 0;
 static bool forked = false;
 static int serializer_fd;
 static rvp_lastctx_t serializer_lc;
@@ -169,7 +170,9 @@ rvp_wake_transmitter_locked(void)
 {
 	int rc;
 
-	nwake++;
+	if (nwake++ != 0)
+		return;
+	serializer_signalled++;
 	if ((rc = pthread_cond_signal(&wakecond)) != 0)
 		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
 }
@@ -178,10 +181,21 @@ rvp_wake_transmitter_locked(void)
 static void
 rvp_ring_stats_dump_total(void)
 {
-	fprintf(stderr, "joined threads: ring sleeps %" PRIu64
+	fprintf(stderr, "joined threads: ring waits %" PRIu64
+	    " ring sleeps %" PRIu64
 	    " spins %" PRIu64 " i-ring spins %" PRIu64 "\n",
-	    joined_rs.rs_ring_sleeps, joined_rs.rs_ring_spins,
-	    joined_rs.rs_iring_spins);
+	    joined_rs.rs_ring_waits, joined_rs.rs_ring_sleeps,
+	    joined_rs.rs_ring_spins, joined_rs.rs_iring_spins);
+}
+
+static void
+rvp_serializer_dump_info(void)
+{
+	fprintf(stderr,
+	    "serializer: signalled %" PRIu64 " times, woke %" PRIu64 "\n",
+	    serializer_signalled, serializer_woke);
+	fprintf(stderr, "serializer: global generation #%" PRIu64 "\n",
+	    rvp_ggen);
 }
 
 /* Caller must hold thread_mutex. */
@@ -199,7 +213,9 @@ rvp_dump_info(void)
 		    t->t_garbage ? " destroyed" : "");
 	}
 	rvp_ring_stats_dump_total();
+	rvp_io_dump_info();
 	rvp_serializer_dump_info();
+	rvp_relay_dump_info();
 }
 
 static void
@@ -265,6 +281,7 @@ serialize(void *arg __unused)
 			}
 
 			rc = pthread_cond_wait(&wakecond, &thread_mutex);
+			serializer_woke++;
 			if (rc != 0) {
 				thread_unlock(&oldmask);
 				errx(EXIT_FAILURE, "%s: pthread_cond_wait: %s",

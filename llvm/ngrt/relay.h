@@ -3,5 +3,6 @@
 
 void rvp_wake_relay(void);
 void rvp_relay_create(void);
+void rvp_relay_dump_info(void);
 
 #endif /* _RVP_RELAY_H_ */

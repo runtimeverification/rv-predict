@@ -29,7 +29,7 @@ rvp_debugf(const char *fmt, ...)
 }
 
 void
-rvp_serializer_dump_info(void)
+rvp_io_dump_info(void)
 {
 	fprintf(stderr, "serializer: %" PRIu64 " vectors, %" PRIu64 " I/Os\n",
 	    iostat_get(&serializer_ios, IOSTAT_VECTORS),

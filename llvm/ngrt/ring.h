@@ -8,6 +8,7 @@
 #include <stdatomic.h>	/* for atomic_store_explicit */
 #include <stdbool.h>
 #include <stdint.h>	/* for uint32_t */
+#include <stdio.h>	/* for fprintf(3) */
 #include <string.h>	/* for memcpy(3) */
 #include <unistd.h>	/* for size_t */
 #include <sys/param.h>	/* for MIN(a, b) */
@@ -23,6 +24,7 @@ typedef enum _rvp_ring_state {
 } rvp_ring_state_t;
 
 typedef struct _rvp_ring_stats {
+	volatile uint64_t _Atomic	rs_ring_waits;
 	volatile uint64_t _Atomic	rs_ring_sleeps;
 	volatile uint64_t _Atomic	rs_ring_spins;
 	volatile uint64_t _Atomic	rs_iring_spins;

@@ -165,9 +165,16 @@ for ix, err in enumerate(errors):
                     for lock in locks:
                         if u'locked_at' in lock:
                             if not u'loc' in lock[u'locked_at']:
-                                lock[u'locked_at'][u'loc'] = null_loc();
-            if u'thread_created_at' in tr and not u'loc' in tr[u'thread_created_at']:
-                tr[u'thread_created_at'][u'loc'] = null_loc()
+                                lock[u'locked_at'][u'loc'] = null_loc()
+                            else:
+                                loc = lock[u'locked_at'][u'loc']
+                                files[loc[u'abs_file']] = loc[u'rel_file']
+            if u'thread_created_at' in tr:
+                if not u'loc' in tr[u'thread_created_at']:
+                    tr[u'thread_created_at'][u'loc'] = null_loc()
+                else:
+                    loc = tr[u'thread_created_at'][u'loc']
+                    files[loc[u'abs_file']] = loc[u'rel_file']
     else:
         frame = err[u'loc']
         primary_component = {u'frames': [frame]}

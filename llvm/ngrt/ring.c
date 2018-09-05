@@ -47,7 +47,7 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
 int
 rvp_ring_stdinit(rvp_ring_t *r)
 {
-	const size_t ringsz = pgsz;
+	const size_t ringsz = pgsz * 64;
 	const size_t items_per_ring = ringsz / sizeof(*r->r_items);
 	uint32_t *items;
 

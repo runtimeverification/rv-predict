@@ -171,7 +171,7 @@ rvp_ggen_after_load(void)
 static inline void
 rvp_buf_trace_cog(rvp_buf_t *b, volatile uint64_t *lgenp, uint64_t gen)
 {
-	if (*lgenp < gen) {
+	if (__predict_false(*lgenp < gen)) {
 		*lgenp = gen;
 		rvp_buf_put_cog(b, gen);
 	}

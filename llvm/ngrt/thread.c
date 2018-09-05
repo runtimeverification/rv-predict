@@ -288,7 +288,7 @@ serialize(void *arg __unused)
 				    __func__, strerror(rc));
 			}
 		}
-		nwake--;
+		nwake = 0;
 
 		if (atomic_exchange(&info_dump_requested, false))
 			rvp_dump_info();

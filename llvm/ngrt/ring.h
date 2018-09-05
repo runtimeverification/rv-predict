@@ -386,7 +386,11 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 	    (next - r->r_items) / ggen_threshold)
 		rvp_increase_ggen();
 
-	if ((nfull - nitems) / service_threshold < nfull / service_threshold)
+	/* If the number of full slots just crossed from below the
+	 * service threshold to above, then request that the serialization
+	 * thread services the ring.
+	 */
+	if (service_threshold <= nfull && (nfull - nitems) < service_threshold)
 		rvp_ring_request_service(r);
 }
 

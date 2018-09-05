@@ -21,6 +21,7 @@ CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-fPIC
 COPTS+=-O3
+CPPFLAGS+=-DNDEBUG
 COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include

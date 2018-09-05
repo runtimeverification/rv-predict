@@ -17,6 +17,7 @@
 #include "interpose.h"
 #include "relay.h"
 #include "rvpsignal.h"
+#include "serialize.h"
 #include "supervise.h"
 #include "thread.h"
 #include "trace.h"
@@ -367,13 +368,13 @@ rvp_size_limit_init(void)
 	rvp_trace_size_limit = limit * factor;
 }
 
-static void
-rvp_serializer_create(void)
+void
+rvp_serializer_create(int fd)
 {
 	int rc;
 	sigset_t oldmask;
 
-	serializer_fd = rvp_trace_begin();
+	serializer_fd = fd;
 
 	thread_lock(&oldmask);
 	assert(thread_head->t_next == NULL);
@@ -452,6 +453,7 @@ rvp_assert_atomicity(void)
 void
 rvp_prefork_init(void)
 {
+	rvp_fork_init();
 	rvp_deltop_init();
 	rvp_assert_atomicity();
 	rvp_lock_prefork_init();	// needed by rvp_signal_init()
@@ -487,7 +489,7 @@ rvp_postfork_init(void)
 	rvp_size_limit_init();
 	rvp_thread0_create();
 	rvp_relay_create();
-	rvp_serializer_create();
+	rvp_serializer_create(rvp_trace_begin());
 
 	rvp_static_intrs_init();
 

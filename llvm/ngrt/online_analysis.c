@@ -96,7 +96,7 @@ rvp_online_analysis_start(void)
 	// Check binpath for an RV-Predict/C runtime symbol, and see if
 	// its address matches the address of our own copy?
 
-	if ((supervisee_pid = fork()) == -1) {
+	if ((supervisee_pid = real_fork()) == -1) {
 		err(EXIT_FAILURE,
 		    "%s could not fork a supervisee process", product_name);
 	}
@@ -116,7 +116,7 @@ rvp_online_analysis_start(void)
 		    "%s could not close event pipeline inlet", product_name);
 	}
 
-	analysis_pid = fork();
+	analysis_pid = real_fork();
 
 	if (analysis_pid == 0) {
 		char cmdname[] = "rvpa", tracename[] = "/dev/stdin";

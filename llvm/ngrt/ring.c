@@ -62,26 +62,28 @@ rvp_ring_stdinit(rvp_ring_t *r)
 	return 0;
 }
 
+/* Caller must hold r->r_mtx!  r->r_idepth must equal 0. */
 void
-rvp_ring_wait_for_nempty(rvp_ring_t *r, int nempty)
+rvp_ring_in_thread_wait_for_nempty(rvp_ring_t *r, int nempty)
+{
+	r->r_stats->rs_ring_waits++;
+
+	r->r_nwanted = nempty;
+	while (rvp_ring_nempty(r) < nempty) {
+		r->r_stats->rs_ring_sleeps++;
+		pthread_cond_wait(&r->r_cv, &r->r_mtx);
+	}
+	r->r_nwanted = 0;
+}
+
+void
+rvp_ring_in_signal_wait_for_nempty(rvp_ring_t *r, int nempty)
 {
 	int i;
 	volatile int j;
 
 	r->r_stats->rs_ring_waits++;
 
-	if (r->r_idepth == 0) {
-/* XXX XXX should hold the lock across the serializer wakeup! */
-		real_pthread_mutex_lock(&r->r_mtx);
-		r->r_nwanted = nempty;
-		while (rvp_ring_nempty(r) < nempty) {
-			r->r_stats->rs_ring_sleeps++;
-			pthread_cond_wait(&r->r_cv, &r->r_mtx);
-		}
-		r->r_nwanted = 0;
-		real_pthread_mutex_unlock(&r->r_mtx);
-		return;
-	}
 	for (i = 32; rvp_ring_nempty(r) < nempty; i = MIN(16384, i + 1)) {
 		for (j = 0; j < i; j++)
 			;

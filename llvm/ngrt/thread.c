@@ -22,6 +22,9 @@
 #include "thread.h"
 #include "trace.h"
 
+#define	assert_mutex_held(__mtx)	\
+    assert(pthread_mutex_trylock(__mtx) == EBUSY)
+
 REAL_DEFN(int, pthread_join, pthread_t, void **);
 REAL_DEFN(int, pthread_create, pthread_t *, const pthread_attr_t *,
     void *(*)(void *), void *);
@@ -170,6 +173,8 @@ rvp_wake_transmitter_locked(void)
 {
 	int rc;
 
+	assert_mutex_held(&thread_mutex);
+
 	if (nwake++ != 0)
 		return;
 	serializer_signalled++;
@@ -177,10 +182,12 @@ rvp_wake_transmitter_locked(void)
 		errx(EXIT_FAILURE, "%s: %s", __func__, strerror(rc));
 }
 
-/* Caller must hold thread_mutex. */ 
+/* Caller must hold thread_mutex. */
 static void
 rvp_ring_stats_dump_total(void)
 {
+	assert_mutex_held(&thread_mutex);
+
 	fprintf(stderr, "joined threads: ring waits %" PRIu64
 	    " ring sleeps %" PRIu64
 	    " spins %" PRIu64 " i-ring spins %" PRIu64 "\n",
@@ -188,9 +195,12 @@ rvp_ring_stats_dump_total(void)
 	    joined_rs.rs_ring_spins, joined_rs.rs_iring_spins);
 }
 
+/* Caller must hold thread_mutex. */
 static void
 rvp_serializer_dump_info(void)
 {
+	assert_mutex_held(&thread_mutex);
+
 	fprintf(stderr,
 	    "serializer: signalled %" PRIu64 " times, woke %" PRIu64 "\n",
 	    serializer_signalled, serializer_woke);
@@ -203,6 +213,8 @@ static void
 rvp_dump_info(void)
 {
 	rvp_thread_t *t;
+
+	assert_mutex_held(&thread_mutex);
 
 	for (t = thread_head; t != NULL; t = t->t_next) {
 		rvp_ring_stats_t *rs = &t->t_stats;
@@ -303,11 +315,12 @@ serialize(void *arg __unused)
 			/* TBD increase global generation every so
 			 * many words flushed?
 			 */
-
+			t = thread_head;
+			thread_unlock(&oldmask);
 			blocksets_last = rvp_sigblocksets_emit(fd,
 			    blocksets_last);
 			any_emptied = false;
-			for (t = thread_head; t != NULL; t = t->t_next) {
+			for (; t != NULL; t = t->t_next) {
 				switch (rvp_ring_flush_to_fd(&t->t_ring,
 				    fd, &serializer_lc)) {
 				case -1:
@@ -320,6 +333,7 @@ serialize(void *arg __unused)
 					break;
 				}
 			}
+			thread_lock(&oldmask);
 		} while (stopping && any_emptied);
 
 		if (rvp_trace_size_limit <= rvp_trace_size) {
@@ -605,22 +619,26 @@ rvp_thread_attach(rvp_thread_t *t)
 	return 0;
 }
 
-/* Caller must hold thread_mutex. */ 
+/* Caller must hold thread_mutex. */
 static void
 rvp_ring_stats_update_total(const rvp_ring_stats_t *rs)
 {
+	assert_mutex_held(&thread_mutex);
+
 	joined_rs.rs_ring_sleeps += rs->rs_ring_sleeps;
 	joined_rs.rs_ring_spins += rs->rs_ring_spins;
 	joined_rs.rs_iring_spins += rs->rs_iring_spins;
 }
 
-/* Caller must hold thread_mutex. */ 
+/* Caller must hold thread_mutex. */
 static rvp_thread_t *
 rvp_collect_garbage(void)
 {
 	rvp_thread_t * volatile *tp;
 	rvp_thread_t *garbage_head = NULL;
 	rvp_thread_t * volatile *gtp = &garbage_head;
+
+	assert_mutex_held(&thread_mutex);
 
 	for (tp = &thread_head; *tp != NULL;) {
 		rvp_thread_t *t = *tp;

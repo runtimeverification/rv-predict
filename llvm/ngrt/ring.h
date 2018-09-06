@@ -15,6 +15,7 @@
 #include <sys/uio.h>	/* for struct iovec */
 
 #include "buf.h"
+#include "interpose.h"
 #include "relay.h"
 
 typedef enum _rvp_ring_state {
@@ -189,7 +190,8 @@ rvp_buf_trace_load_cog(rvp_buf_t *b, volatile uint64_t *lgenp)
 }
 
 void rvp_ring_init(rvp_ring_t *, uint32_t *, size_t);
-void rvp_ring_wait_for_nempty(rvp_ring_t *, int);
+void rvp_ring_in_thread_wait_for_nempty(rvp_ring_t *, int);
+void rvp_ring_in_signal_wait_for_nempty(rvp_ring_t *, int);
 void rvp_wake_transmitter(void);
 
 static inline int
@@ -252,8 +254,20 @@ rvp_ring_request_service(rvp_ring_t *r)
 static inline void
 rvp_ring_await_nempty(rvp_ring_t *r, int nempty)
 {
-	rvp_ring_request_service(r);
-	rvp_ring_wait_for_nempty(r, nempty);
+	if (r->r_idepth == 0) {
+		real_pthread_mutex_lock(&r->r_mtx);
+		/* Check again now that we hold the lock.  Skip the wakeup
+		 * and wait if enough slots emptied in the mean time.
+		 */
+		if (rvp_ring_nempty(r) < nempty) {
+			rvp_wake_transmitter();
+			rvp_ring_in_thread_wait_for_nempty(r, nempty);
+		}
+		real_pthread_mutex_unlock(&r->r_mtx);
+	} else {
+		rvp_wake_relay();
+		rvp_ring_in_signal_wait_for_nempty(r, nempty);
+	}
 }
 
 static inline void

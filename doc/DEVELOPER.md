@@ -369,24 +369,77 @@ start the "teeny" releases.
      what we need when creating an event, while not allowing us to use methods
      which we didn't override by mistake.
 
-1. Race detection works something like this:
-   * Something (the java instrumentation or the trace reader) gets a window's
-     worth of data and puts it in a `Trace` object.
-     * When reading data, the `TraceCache.getTraceWindow` reads the raw data
-       and sends it to `TraceState.initNextTraceWindow`
-     * `TraceState.initNextTraceWindow` will call `processWindow` which, among
-       other things, initializes the trace producers, then it initializes and
-       returns the trace.
-   * `MaximalRaceDetector.run` receives a a window's worth of events in the
-     `Trace` object. It calls `computeUnknownRaceSuspects` to find out the
-     possible races for this window, then it will create a new
-     `MaximalCausalModel`, calling `checkRaceSuspects` on it
-   * `MaximalCausalModel.create` will call `addConstraints` to initialize the
-     constraints to be sent to z3 (read events read the right value,
-     thread events cannot be executed before the start event and so on).
-   * `MaximalCausalModel.checkRaceSuspects` will filter some of the race
-     suspects, then it will start processing the possible races with some degree
-     of parallelism. For efficiency purposes, it first tests race suspects with
-     some inaccurate, but faster constrains, then it will recheck some of them
-     with accurate constraints. As soon as a race is found, it will stop
-     checking others which are very similar.
+### Race detection
+
+Race detection works something like this:
+  * Something (the java instrumentation or the trace reader) gets a window's
+    worth of data and puts it in a `Trace` object.
+    * When reading data, the `TraceCache.getTraceWindow` reads the raw data
+      and sends it to `TraceState.initNextTraceWindow`
+    * `TraceState.initNextTraceWindow` will call `processWindow` which, among
+      other things, initializes the trace producers, then it initializes and
+      returns the trace.
+  * `MaximalRaceDetector.run` receives a a window's worth of events in the
+    `Trace` object. It calls `computeUnknownRaceSuspects` to find out the
+    possible races for this window, then it will create a new
+    `MaximalCausalModel`, calling `checkRaceSuspects` on it
+  * `MaximalCausalModel.create` will call `addConstraints` to initialize the
+    constraints to be sent to z3 (read events read the right value,
+    thread events cannot be executed before the start event and so on).
+  * `MaximalCausalModel.checkRaceSuspects` will filter some of the race
+    suspects, then it will start processing the possible races with some degree
+    of parallelism. For efficiency purposes, it first tests race suspects with
+    some inaccurate, but faster constrains, then it will recheck some of them
+    with accurate constraints. As soon as a race is found, it will stop
+    checking others which are very similar.
+
+### Constraint generation
+
+Constraints are generated in `MaximalCausalModel.addConstraints`. There are
+a few things to keep in mind:
+
+  * Each kind of constraint has a `ConstraintSource`. The `ConstraintSource`
+    classes help isolating the various constraint functionality, which makes
+    the code easier to follow and makes testing easier.
+  * Each source can, in principle, generate two kinds of constraints:
+    * fast, but which may detect more races than there are
+    * accurate, i.e. detects all races, and only when they exist.
+
+    In practice, most of the sources generate the same constraints in both
+    cases.
+  * Read-write consistency is handled in a special way, to allow races involving
+    only part of the trace
+
+That being said, the current constraint types (except read-write consistency)
+are:
+  * Happens-before. These make sure that:
+    * a thread's events are in the right order.
+    * Thread events are executed between the start and end events (if any).
+  * Locks: this makes sure that two sections with the same lock can't overlap
+  * Signal interrupt locations - makes sure that signals can interrupt only when
+    they are enabled
+  * Threads at depth 0 - makes sure that thread events run at signal depth 0.
+  * Signal depth limit - makes sure that we don't generate check races involving
+    signal-interrupts-signal-interrupts-signal... with a depth more than a given
+    limit
+  * Signal start mask - attempts to compute the signal masks with which signals
+    start. This is used by the "signal interrupt locations" constraint to
+    decide whether to allow a signal to interrupt another one before any
+    explicit signal-enable event on the interrupted signal.
+  * Non-overlapping signals - signals interrupting the same thread can't
+    have simultaneous events.
+
+Read-write consistency is handled by `getRaceAssertion`, which asserts that
+the two events involved in a race are reachable without requiring that the
+events are consistent with the previous stuff (`getPhiAbs`) and that they
+can occur at the same time (the `INT_EQUAL` part)
+
+`getPhiAbs` says that an event is reachable through a consistent execution,
+but it does not require that the event itself is consistent.
+
+`getPhiConc` says that an event is reachable through a consistent execution
+and the event itself is consistent.
+
+`getPhiSC` takes all the write events that could occur before a read event
+and checks that the read can occur after one of the compatible ones, and that
+one of the compatible ones is itself reachable through consistent execution.

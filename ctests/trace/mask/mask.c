@@ -38,5 +38,10 @@ main(int argc __unused, char **argv __unused)
 		    strerror(rc));
 	}
 
+	if ((rc = pthread_sigmask(SIG_UNBLOCK, &full, NULL)) != 0) {
+		errx(EXIT_FAILURE, "%s: pthread_sigmask: %s", __func__,
+		    strerror(rc));
+	}
+
 	return EXIT_SUCCESS; 
 }

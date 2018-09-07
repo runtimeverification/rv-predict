@@ -42,7 +42,7 @@ static inline void
 trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
 	if (data_is_in_coverage(addr))
-             return;
+		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;

@@ -91,6 +91,7 @@ rvp_trace_join(uint32_t id, const void *retaddr)
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
+	rvp_buf_trace_load_cog(&b, &r->r_lgen);
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_JOIN);
 	rvp_buf_put(&b, id);
 	rvp_ring_put_buf(r, b);

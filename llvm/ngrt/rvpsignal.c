@@ -744,21 +744,34 @@ rvp_trace_getsetmask(uint64_t omask, uint64_t mask,
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b;
 
+	/* TBD hold generation number across the operation & logging */
 	rvp_bufinit_getsetmask(&b, &r->r_lastpc, omask, mask, return_address);
 	rvp_ring_put_buf(r, b);
 	rvp_ring_request_service(r);
 }
 
 static void
-rvp_bufinit_mask(rvp_buf_t *bp, const char **lastpcp, rvp_op_t op,
-    uint64_t mask, const void *return_address)
+rvp_bufinit_mask(rvp_buf_t *bp, const char **lastpcp, volatile uint64_t *lgenp,
+    rvp_op_t op, uint64_t mask, const void *return_address)
 {
+	uint64_t gen;
 	sigset_t set;
 	rvp_sigblockset_t *bs = intern_sigset(mask_to_sigset(mask, &set));
 
 	*bp = RVP_BUF_INITIALIZER;
+
+	if (op == RVP_OP_SIGGETMASK)
+		rvp_buf_trace_load_cog(bp, lgenp);
+	else if (op == RVP_OP_SIGSETMASK || op == RVP_OP_SIGBLOCK ||
+		 op == RVP_OP_SIGUNBLOCK)
+		gen = rvp_ggen_before_store();
+
 	rvp_buf_put_pc_and_op(bp, lastpcp, return_address, op);
 	rvp_buf_put(bp, bs->bs_number);
+
+	if (op == RVP_OP_SIGSETMASK || op == RVP_OP_SIGBLOCK ||
+	    op == RVP_OP_SIGUNBLOCK)
+		rvp_buf_trace_cog(bp, lgenp, gen);
 }
 
 static void
@@ -767,7 +780,8 @@ rvp_trace_mask(rvp_op_t op, uint64_t mask, const void *return_address)
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b;
 
-	rvp_bufinit_mask(&b, &r->r_lastpc, op, mask, return_address);
+	rvp_bufinit_mask(&b, &r->r_lastpc, &r->r_lgen, op, mask,
+	    return_address);
 	rvp_ring_put_buf(r, b);
 	rvp_ring_request_service(r);
 }
@@ -780,8 +794,8 @@ rvp_thread_trace_getsetmask(rvp_thread_t *t __unused,
 }
 
 static void
-rvp_bufinit_newmask(rvp_buf_t *bp, const char **lastpcp, int how, uint64_t mask,
-    const void *retaddr)
+rvp_bufinit_newmask(rvp_buf_t *bp, const char **lastpcp,
+    volatile uint64_t *lgenp, int how, uint64_t mask, const void *retaddr)
 {
 	rvp_op_t op;
 
@@ -794,7 +808,7 @@ rvp_bufinit_newmask(rvp_buf_t *bp, const char **lastpcp, int how, uint64_t mask,
 	else 
 		errx(EXIT_FAILURE, "%s: unknown `how`, %d", __func__, how);
 
-	rvp_bufinit_mask(bp, lastpcp, op, mask, retaddr);
+	rvp_bufinit_mask(bp, lastpcp, lgenp, op, mask, retaddr);
 }
 
 static void
@@ -804,7 +818,7 @@ rvp_thread_trace_newmask(rvp_thread_t *t __unused, int how, uint64_t mask,
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b;
 
-	rvp_bufinit_newmask(&b, &r->r_lastpc, how, mask, retaddr);
+	rvp_bufinit_newmask(&b, &r->r_lastpc, &r->r_lgen, how, mask, retaddr);
 	rvp_ring_put_buf(r, b);
 	rvp_ring_request_service(r);
 }
@@ -884,12 +898,12 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		    retaddr);
 	} else if (how == SIG_BLOCK || how == SIG_SETMASK) {
 		rvp_ring_reset_pc(r);
-		rvp_bufinit_newmask(&mc.mc_buf, &r->r_lastpc, how,
+		rvp_bufinit_newmask(&mc.mc_buf, &r->r_lastpc, &r->r_lgen, how,
 		    maskchg & ~rvp_unmaskable, retaddr);
 	} else {
 		rvp_ring_reset_pc(r);
-		rvp_bufinit_newmask(&mc.mc_buf, &r->r_lastpc, how, maskchg,
-		    retaddr);
+		rvp_bufinit_newmask(&mc.mc_buf, &r->r_lastpc, &r->r_lgen, how,
+		    maskchg, retaddr);
 	}
 
 	if (set != NULL) {

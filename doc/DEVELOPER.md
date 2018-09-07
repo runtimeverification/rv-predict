@@ -64,7 +64,7 @@ Make sure that you have `clang 4.0` in your PATH.
 *Other notes*:
 
 OPAM packages required by the unified error reporting in errors/:
-* Probably NOT needed: zarith mlgmp 
+* Probably NOT needed: zarith mlgmp
 * Definitely needed: csv uri ocamlbuild-atdgen ocp-ocamlres
 * Maybe needed: uuidm camomile atdgen atdj ctypes ctypes-foreign
 * Install with `opam install -y <packages here>`.
@@ -101,7 +101,7 @@ mvn package
 
 The distribution is packaged at `target/release/rv-predict`
 
-Below are a few useful options:  
+Below are a few useful options:
 
 * `-DskipDocs` to skip generating documentation
 * `-DskipTests`  to skip tests (esp. good for mvn install, as it skips the lengthy failsafe tests)
@@ -167,18 +167,18 @@ cd rv-predict/c-installer
 mvn clean package  # the installer will be placed in `c-installer/target`
 ```
 
-### Modifying rv-install 
+### Modifying rv-install
 
 The installer for rv-predict is based on [rv-install](https://github.com/runtimeverification/rv-install). It is included in `installer/pom.xml` and `c-installer/pom.xml`. 
 
-Sometimes, you may want to modify `rv-install`, then build the installer. 
+Sometimes, you may want to modify `rv-install`, then build the installer.
 To do this, run the following commands:
 
 ```bash
-# remove `rv-install` local cache.  
+# remove `rv-install` local cache.
 rm -rf ~/.m2/repository/com/runtimeverification/install/;
 
-cd rv-install 
+cd rv-install
 
 mvn clean install
 ```
@@ -186,7 +186,7 @@ mvn clean install
 Then you can start building the installer for RV-Predict (see the previous
 section).
 
-## Deploying installer 
+## Deploying installer
 
 1. Generate a new SSH key and add it to your GitHub account.
     * [How to generate SSH key](https://help.github.com/articles/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent/)
@@ -222,7 +222,7 @@ section).
 Advice on the web suggests adding a remote host's public key to
 `known_hosts` like this:
 
-```bash 
+```bash
 ssh-keyscan -t rsa ftp.runtimeverification.com >> ~/.ssh/known_hosts
 ```
 
@@ -235,7 +235,7 @@ For example, examine the fingerprint of the key added by `ssh-keyscan`
 by running this command:
 
 ```bash
-ssh-keygen -l -F ftp.runtimeverification.com -f ~/.ssh/known_hosts 
+ssh-keygen -l -F ftp.runtimeverification.com -f ~/.ssh/known_hosts
 ```
 
 If you are confident that this manual has not been tampered with, then you
@@ -244,8 +244,8 @@ fingerprint printed by `ssh-keygen` with one of these fingerprints---it
 should match one:
 
 ```
-MD5 fingerprint:       86:0d:6b:d3:91:95:f0:45:b6:26:7c:13:81:65:a6:f1 
-SHA256 fingerprint:    4kbAX2bLe5oHofL0sUqyPDuaAiKgt0JGXTodWiVnGdM 
+MD5 fingerprint:       86:0d:6b:d3:91:95:f0:45:b6:26:7c:13:81:65:a6:f1
+SHA256 fingerprint:    4kbAX2bLe5oHofL0sUqyPDuaAiKgt0JGXTodWiVnGdM
 ```
 
 If there is no match, then immediately delete the key from your
@@ -277,3 +277,116 @@ particular version number---for example, 1.9---run this:
 
 The `-DdevelopmentVersion=1.9.1-SNAPSHOT` argument tells where to
 start the "teeny" releases.
+
+## Java
+
+### Idea setup
+
+1. Download Intellij Idea (the Community version is free) from
+   https://www.jetbrains.com/idea/ and follow the installation instructions
+   on the download page. Note that clicking the 'Download' button takes you to
+   a page that does not have those instructions, so you'll have to go back to
+   see them. At the time of writing this, you just have to unpack the archive
+   to a convenient place and run `<unpack-place>/bin/idea.sh`
+1. Successfully compile the entire rv-predict project with rvpmake.
+1. Open a new project.
+   ```File -> Open ... -> select the rv-predict root directory -> Ok```
+1. Run all the tests.
+
+   ```Right hand pane -> right click the 'jar' subproject -> Run all tests```
+
+   You'll likely get some
+   `java.lang.RuntimeException: java.io.IOException: Stream closed`
+   errors that you need to fix, see the next point.
+1. Run `mvn package` to put the z3 libraries in the place where Idea expects
+   them to be. It usually does not matter if the `mvn package` command fails.
+1. Re-run the tests to make sure that they pass now.
+1. Enjoy. `Ctrl-b` takes you to the definition, `Ctrl-n` searches for classes,
+   `Alt-enter` is a very powerful wizard for fixing errors and warnings.
+
+### Adding a new event type
+
+1. The starting point will be the `CompactEventReader` class, so open that file
+   (ctrl-n } write part of the class name and select it).
+
+   Add a new entry in the enum. The enum value takes two arguments, the
+   field number and an object that can read that field.
+
+   You should decide if you want to use an existing reader or you want a new
+   one. In the following I'll assume that you need a new one.
+
+2. Readers live in the `com.runtimeverification.rvpredict.log.compact.readers`
+   package, so you should add a new one there. Most of them look almost
+   identical, so you can use an example, but most likely you will need to:
+
+   1. Make a `TraceElement` class in your reader that extends
+      `ReadableAggregateData`. This will contain information
+      on how to parse the trace data. It usually contains some fields
+      (see the `com.runtimeverification.rvpredict.log.compact.datatypes`
+      package to see what's available) and a constructor which initializes them
+      and then calls `setData` to tell the parent class what to parse.
+
+      *If you only need to parse a single field, you can skip the
+      `TraceElement` class and use the field directly, see `BlockSignalsReader`
+      as an example*
+
+   1. Make a `createReader` function that returns a `CompactEventReader.Reader`.
+      This function usually creates a `SimpleDataReader<>` with two callbacks:
+      * one produces objects which can parse the trace data (`TraceElement`).
+      * one that takes a `TraceElement` object and some additional configuration
+        and produces the internal representation of the event. This one should
+        call a function on the provided `compactEventFactory` to create the
+        event. It should pass the actual data needed to construct the object,
+        not the `TraceElement` representation.
+
+      *The latter callback returns a list of events, so you can just return an
+      empty list if you just want to skip the event, see the `jump` event
+      implementation*
+
+   1. Hook this reader into the `CompactEventReader` enum if you didn't do that
+      already.
+
+1. Add a function to the `CompactEventFactory` class that creates your event(s)
+   (or reuse an existing one). You have to create a new `CompactEvent` object,
+   overriding whatever functions your new event type needs. Don't forget
+   to override the `toString` method so that you'll be able to debug stuff
+   later. If you need new functionality, see the point below.
+
+1. The event hierarchy is `CompactEvent` and `Event` extend `ReadonlyEvent`,
+   which extends `ReadonlyEventInterface`.
+
+   * `ReadonlyEventInterface` is what the backend code uses, except when
+     reading the data / creating it from instrumentation. If you want your
+     new event to have functionality that does not fit in the existing methods,
+     you should probably add it here.
+
+   * `ReadonlyEvent` implements the event functionality that can be computed
+     from the event data (e.g. see `ReadonlyEvent.isLock`).
+
+   * `CompactEvent` represents a `C` event, while `Event` is a `Java` event.
+     Note that `CompactEvent` implements all the `ReadonlyEventInterface`
+     methods by throwing an exception. This allows us to easily implement only
+     what we need when creating an event, while not allowing us to use methods
+     which we didn't override by mistake.
+
+1. Race detection works something like this:
+   * Something (the java instrumentation or the trace reader) gets a window's
+     worth of data and puts it in a `Trace` object.
+     * When reading data, the `TraceCache.getTraceWindow` reads the raw data
+       and sends it to `TraceState.initNextTraceWindow`
+     * `TraceState.initNextTraceWindow` will call `processWindow` which, among
+       other things, initializes the trace producers, then it initializes and
+       returns the trace.
+   * `MaximalRaceDetector.run` receives a a window's worth of events in the
+     `Trace` object. It calls `computeUnknownRaceSuspects` to find out the
+     possible races for this window, then it will create a new
+     `MaximalCausalModel`, calling `checkRaceSuspects` on it
+   * `MaximalCausalModel.create` will call `addConstraints` to initialize the
+     constraints to be sent to z3 (read events read the right value,
+     thread events cannot be executed before the start event and so on).
+   * `MaximalCausalModel.checkRaceSuspects` will filter some of the race
+     suspects, then it will start processing the possible races with some degree
+     of parallelism. For efficiency purposes, it first tests race suspects with
+     some inaccurate, but faster constrains, then it will recheck some of them
+     with accurate constraints. As soon as a race is found, it will stop
+     checking others which are very similar.

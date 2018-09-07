@@ -80,10 +80,8 @@ rvp_trace_fork(uint32_t id, const void *retaddr)
 	gen = rvp_ggen_before_store();
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_FORK);
 	rvp_buf_put(&b, id);
-	if (r->r_lgen < gen) {
-		r->r_lgen = gen;
-		rvp_buf_put_cog(&b, gen);
-	}
+	rvp_buf_trace_cog(&b, &r->r_lgen, gen);
+
 	rvp_ring_put_buf(r, b);
 }
 

@@ -135,6 +135,7 @@ struct _rvp_ring {
 
 extern volatile _Atomic uint64_t rvp_ggen;
 extern unsigned int rvp_log2_nthreads;
+extern bool rvp_consistent;
 
 static inline void
 rvp_increase_ggen(void)
@@ -145,6 +146,10 @@ rvp_increase_ggen(void)
 static inline uint64_t
 rvp_ggen_before_store(void)
 {
+	if (__predict_false(rvp_consistent)) {
+		return atomic_fetch_add_explicit(&rvp_ggen, 1,
+		    memory_order_seq_cst);
+	}
 	// acquire semantics ensure that the global generation load
 	// precedes the following instrumented store
 	return atomic_load_explicit(&rvp_ggen, memory_order_acquire);
@@ -153,6 +158,10 @@ rvp_ggen_before_store(void)
 static inline uint64_t
 rvp_ggen_after_load(void)
 {
+	if (__predict_false(rvp_consistent)) {
+		return atomic_fetch_add_explicit(&rvp_ggen, 1,
+		    memory_order_seq_cst);
+	}
 	// ensure that the instrumented load precedes the global
 	// generation load
 	atomic_thread_fence(memory_order_acquire);

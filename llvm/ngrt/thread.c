@@ -31,6 +31,12 @@ static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
 volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
 
+/* True iff RVP_CONSISTENT put us into the operating mode where we
+ * produce sequentially-consistent traces by increasing the global
+ * generation number, `rvp_ggen`, on every use.
+ */
+bool __read_mostly rvp_consistent = false;
+
 unsigned int rvp_log2_nthreads = 1;
 
 /* thread_mutex protects thread_head, next_id */
@@ -464,10 +470,20 @@ rvp_prefork_init(void)
 }
 
 static void
+rvp_consistency_init(void)
+{
+	const char *s;
+
+	if ((s = getenv("RVP_CONSISTENT")) != NULL && strcasecmp(s, "yes") == 0)
+		rvp_consistent = true;
+}
+
+static void
 rvp_postfork_init(void)
 {
 	rvp_signal_init();
 	rvp_rings_init();
+	rvp_consistency_init();
 
 	if (real_pthread_key_create(&rvp_thread_key,
 	                            rvp_thread_destructor) != 0) 

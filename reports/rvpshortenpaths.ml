@@ -1,5 +1,7 @@
 open Error_t
 
+let abbreviation = ""
+
 let rec first_differing_index (s1:string) (s2:string) =
   let m = min (String.length s1) (String.length s2) in
   let rec f i =
@@ -31,7 +33,7 @@ let rec remove_prefix_frame (prefix:int) (frame: frame) =
     | Some loc ->
         let abs_file = loc.abs_file in
         let no_prefix = String.sub abs_file prefix (String.length abs_file - prefix) in
-        {frame with loc=Some {loc with rel_file= "..." ^ no_prefix}; locks=List.map (remove_prefix_lock prefix) frame.locks}
+        {frame with loc=Some {loc with rel_file= abbreviation ^ no_prefix}; locks=List.map (remove_prefix_lock prefix) frame.locks}
 and remove_prefix_lock (prefix: int) (lock: lock) =
   {lock with locked_at=remove_prefix_frame prefix lock.locked_at}
 ;;
@@ -78,7 +80,7 @@ with End_of_file ->
     | Some p ->
       try
         let i = String.rindex p '/' in
-        remove_prefix_error i
+        remove_prefix_error (i + 1)
       with Not_found -> fun x -> x
   in
   List.iter print_endline (List.map Error_j.string_of_stack_error (List.map update_fn !rlist))

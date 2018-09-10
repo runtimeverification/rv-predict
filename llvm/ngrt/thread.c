@@ -815,6 +815,8 @@ __rvpredict_pthread_exit(void *retval)
 	/* TBD flag change of status so that we can flush the trace
 	 * and reclaim resources---e.g., munmap/free the ring
 	 * once it's empty.  Careful: need to hang around for _join().
+	 *
+	 * TBD Probably should wake serializer.
 	 */
 }
 

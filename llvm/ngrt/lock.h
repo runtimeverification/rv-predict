@@ -3,6 +3,7 @@
 #ifndef _RVP_LOCK_H_
 #define _RVP_LOCK_H_
 
+#include "atomic.h"
 #include <pthread.h>
 
 #include "interpose.h"

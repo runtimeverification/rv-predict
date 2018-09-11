@@ -11,6 +11,30 @@
 #include "fence.h"
 #include "trace.h"
 
+#if 0   /* https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.cbclx01/atomiccpp_memory_order.htm */
+namespace std {
+  typedef enum memory_order {
+    memory_order_relaxed, 
+    memory_order_consume, 
+    memory_order_acquire,
+    memory_order_release, 
+    memory_order_acq_rel, 
+    memory_order_seq_cst
+  } memory_order;
+}
+#endif
+
+#if 0 /* atomic_thread_fence is a macro with param, and a Clang built in */
+/usr/lib/llvm-4.0/bin/../lib/clang/4.0.0/include/stdatomic.h:78:36 
+In stdatomic,h: #define atomic_thread_fence(order) __c11_atomic_thread_fence(order)
+  Note: the function is a built in - so we can't point to it.
+
+RVPredict implements the routine __rvpredict_atomic_thread_fence( memory_order order)
+                                 which invokes the macro atomic_thread_fence
+                                    which expands to _c11_atomic_thread_fence.
+#endif
+
+
 REAL_DEFN(int, pthread_mutex_lock, pthread_mutex_t *);
 REAL_DEFN(int, pthread_mutex_trylock, pthread_mutex_t *);
 REAL_DEFN(int, pthread_mutex_unlock, pthread_mutex_t *);
@@ -28,7 +52,7 @@ REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
  * 	Call rvp_lock_prefork_init to get ptrs to real pthread_mutex_... routines established)
  * Stage 2: The ring is ready (rvp_initialized == true)
  * 
- * i  We use the inline routine rvp_ring_initialized to indicate when one can
+ *   We use the inline routine rvp_ring_initialized to indicate when one can
  * trace to the ring.
  */
 
@@ -46,12 +70,12 @@ is_ring_initialized(void)
 	}
 	return true;
 }
+
 void
 rvp_lock_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_lock);
-	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *),
-	    pthread_mutex_trylock);
+	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_trylock);
 	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_unlock);
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(pthread_mutex_t *restrict,
@@ -152,7 +176,6 @@ __rvpredict_pthread_mutex_unlock(pthread_mutex_t *mtx)
 	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_RELEASE);
 	return real_pthread_mutex_unlock(mtx);
 }
-
 INTERPOSE(int, pthread_mutex_lock, pthread_mutex_t *);
 INTERPOSE(int, pthread_mutex_unlock, pthread_mutex_t *);
 INTERPOSE(int, pthread_mutex_init, pthread_mutex_t *restrict,

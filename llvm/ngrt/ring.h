@@ -15,6 +15,7 @@
 
 #include "buf.h"
 #include "relay.h"
+#include "fence.h"
 
 typedef enum _rvp_ring_state {
 	  RVP_RING_S_INUSE	= 0

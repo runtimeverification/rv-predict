@@ -1,0 +1,4 @@
+When a thread and a signal/interrupt handler access the same memory
+location, both of the accesses are writes, at least one of the accesses
+is not atomic, and neither access happens before the other, then the
+memory location may take an unexpected value.

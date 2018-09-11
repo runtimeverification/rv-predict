@@ -60,11 +60,9 @@ REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
 volatile _Atomic bool __read_mostly rvp_real_locks_initialized = false ;
 
 static inline bool
-is_ring_initialized(void) 
-{
-	if(!rvp_initialized)
-	{
-		if(!rvp_real_locks_initialized)
+is_ring_initialized (void) {
+	if (!rvp_initialized) {
+		if (!rvp_real_locks_initialized)
 			rvp_lock_prefork_init();
 		return false;
 	}
@@ -158,6 +156,7 @@ int
 __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 {
 	int rc;
+	bool ri;
 
 	ensure_real_initialized();
 

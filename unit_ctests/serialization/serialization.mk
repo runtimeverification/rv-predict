@@ -16,6 +16,7 @@ CPPFLAGS+=-D_BSD_SOURCE -D_DEFAULT_SOURCE
 WARNS=4
 SRCS=main.c
 SRCS+=deltops.c serialize.c
+SRCS+=test_mutex.c
 SRCS+=test_opinit.c
 SRCS+=io.c
 STRIPFLAG=

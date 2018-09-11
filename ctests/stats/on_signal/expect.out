@@ -1,3 +1,7 @@
-joined threads: ring sleeps 0 spins 0 i-ring spins 0
-t1: ring sleeps 0 spins 0 i-ring spins 0
-t2: ring sleeps 0 spins 0 i-ring spins 0
+joined threads: ring waits ring sleeps spins i-ring spins
+serializer: vectors, I/Os
+serializer: global generation
+serializer relay: signalled times, woke
+serializer: signalled times, woke
+t1: ring sleeps spins i-ring spins
+t2: ring sleeps spins i-ring spins

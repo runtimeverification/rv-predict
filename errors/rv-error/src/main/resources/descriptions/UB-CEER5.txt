@@ -1,0 +1,4 @@
+According to ISO C11, when two threads write the same memory location,
+at least one of the writes is not atomic, and neither write happens
+before the other, then a data race occurs.  A data race results in
+undefined behavior.

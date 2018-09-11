@@ -3,6 +3,7 @@
 #ifndef _RVP_ATOMIC_H_
 #define _RVP_ATOMIC_H_
 
+#include <stdatomic.h>
 #include "rmw.h"
 #include "rvpint.h"
 

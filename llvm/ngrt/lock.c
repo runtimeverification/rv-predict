@@ -58,11 +58,9 @@ REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
 volatile _Atomic bool __read_mostly rvp_real_locks_initialized = false ;
 
 static inline bool
-is_ring_initialized(void) 
-{
-	if(!rvp_initialized)
-	{
-		if(!rvp_real_locks_initialized)
+is_ring_initialized (void) {
+	if (!rvp_initialized) {
+		if (!rvp_real_locks_initialized)
 			rvp_lock_prefork_init();
 		return false;
 	}
@@ -105,8 +103,7 @@ __rvpredict_pthread_mutex_init(pthread_mutex_t *restrict mtx,
 	}
 #endif
 
-	if(is_ring_initialized())
-	{
+	if (is_ring_initialized()) {
 		return real_pthread_mutex_init(mtx, attr);
 	}
 	return real_pthread_mutex_init(mtx, attr);
@@ -139,8 +136,7 @@ __rvpredict_pthread_mutex_lock(pthread_mutex_t *mtx)
 	int rc;
 
 	rc = real_pthread_mutex_lock(mtx);
-	if(is_ring_initialized())
-	{
+	if (is_ring_initialized()) {
 		trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
 	}
 
@@ -151,16 +147,15 @@ int
 __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 {
 	int rc;
+	bool ri;
 
-	if(is_ring_initialized())
-	{
-		if ((rc = real_pthread_mutex_trylock(mtx)) != 0)
-			return rc;
+	ri = is_ring_initialized();
+	rc = real_pthread_mutex_trylock(mtx);
+	if (rc != 0)
+		return rc;
+	if (ri) {
 		trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
 	}
-	else	
-		if ((rc = real_pthread_mutex_trylock(mtx)) != 0)
-			return rc;
 
 	return 0;
 }
@@ -168,8 +163,7 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 int
 __rvpredict_pthread_mutex_unlock(pthread_mutex_t *mtx)
 {
-	if(is_ring_initialized())
-	{
+	if (is_ring_initialized()) {
 		trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_RELEASE);
 	}
 	return real_pthread_mutex_unlock(mtx);

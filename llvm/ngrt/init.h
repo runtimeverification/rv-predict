@@ -10,14 +10,6 @@
 extern void
 rvp_prefork_init(void);
 
-#if 0 /* Moved to lock.c for the moment */
-static inline void
-rvp_ensure_initialization(void)
-{
-	if(!rvp_initialized)
-		rvp_prefork_init();
-}
-#endif
 void rvp_lock_prefork_init(void);
 void rvp_signal_prefork_init(void);
 void rvp_str_prefork_init(void);

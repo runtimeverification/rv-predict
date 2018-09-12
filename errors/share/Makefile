@@ -4,13 +4,12 @@ FILES+=favicon.ico
 FILES+=index.html index.js
 FILES+=message.js
 FILES+=jquery.min.js
+FIELS+=jquery.highlight.js
 FILES+=layout.html
 FILES+=rv_logo.png
-FILES+=sort_asc_disabled.png
-FILES+=sort_asc.png
-FILES+=sort_both.png
-FILES+=sort_desc_disabled.png
-FILES+=sort_desc.png
+FILES+=sort_asc.svg sort_desc.svg
+FILES+=drag_indicator.svg drag_indicator_yellow.svg
+FILES+=celebrate_no_errors.svg
 FILES+=sourcefile.html sourcefile.js sourcefile.css
 FILES+=style.css
 
@@ -27,17 +26,18 @@ FILESDIR_favicon.ico=$(_STATIC_DIR)
 FILESDIR_rv_logo.png=$(_STATIC_DIR)
 FILESDIR_style.css=$(_STATIC_DIR)
 
-FILESDIR_sort_both.png=$(_STATIC_IMAGES_DIR)
-FILESDIR_sort_asc_disabled.png=$(_STATIC_IMAGES_DIR)
-FILESDIR_sort_desc.png=$(_STATIC_IMAGES_DIR)
-FILESDIR_sort_asc.png=$(_STATIC_IMAGES_DIR)
-FILESDIR_sort_desc_disabled.png=$(_STATIC_IMAGES_DIR)
+FILESDIR_sort_desc.svg=$(_STATIC_IMAGES_DIR)
+FILESDIR_sort_asc.svg=$(_STATIC_IMAGES_DIR)
+FILESDIR_drag_indicator.svg=$(_STATIC_IMAGES_DIR)
+FILESDIR_drag_indicator_yellow.svg=$(_STATIC_IMAGES_DIR)
+FILESDIR_celebrate_no_errors.svg=$(_STATIC_IMAGES_DIR)
 
 FILESDIR_datatables.min.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_error.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_errors.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_index.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_jquery.min.js=$(_STATIC_SCRIPTS_DIR)
+FILESDIR_jquery.highlight.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_message.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_sourcefile.js=$(_STATIC_SCRIPTS_DIR)
 

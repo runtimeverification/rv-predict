@@ -11,19 +11,6 @@
 #include "fence.h"
 #include "trace.h"
 
-#if 0   /* https://www.ibm.com/support/knowledgecenter/en/SSLTBW_2.1.0/com.ibm.zos.v2r1.cbclx01/atomiccpp_memory_order.htm */
-namespace std {
-  typedef enum memory_order {
-    memory_order_relaxed, 
-    memory_order_consume, 
-    memory_order_acquire,
-    memory_order_release, 
-    memory_order_acq_rel, 
-    memory_order_seq_cst
-  } memory_order;
-}
-#endif
-
 #if 0 /* atomic_thread_fence is a macro with param, and a Clang built in */
 /usr/lib/llvm-4.0/bin/../lib/clang/4.0.0/include/stdatomic.h:78:36 
 In stdatomic,h: #define atomic_thread_fence(order) __c11_atomic_thread_fence(order)
@@ -58,17 +45,6 @@ REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
 
 
 volatile _Atomic bool __read_mostly rvp_real_locks_initialized = false ;
-
-static inline bool
-is_ring_initialized(void) 
-{
-	if (!rvp_initialized) {
-		if (!rvp_real_locks_initialized)
-			rvp_lock_prefork_init();
-		return false;
-	}
-	return true;
-}
 
 void
 rvp_lock_prefork_init(void)

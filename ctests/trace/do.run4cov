@@ -28,9 +28,9 @@ cd mask         ;pwd;  mask         ; cd ..
 cd limits/k    ;pwd; k ; cd ../..
 cd limits/M    ;pwd; M ; cd ../..
 cd limits/negative    ;pwd; negative ; cd ../..
-cd limits/G    ;pwd 
-   G|grep -v Window >z.qignore
-cd ../..
+#cd limits/G    ;pwd 
+#   G|grep -v Window >z.qignore
+#cd ../..
 
 
 

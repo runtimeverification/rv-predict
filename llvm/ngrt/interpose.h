@@ -1,7 +1,6 @@
 #ifndef _RVP_INTERPOSE_H_
 #define _RVP_INTERPOSE_H_
 
-#include "atomic.h"
 
 #include <dlfcn.h>	/* for dlsym(3) */
 #include <pthread.h>	/* for pthread_{join,create,exit}(3),
@@ -13,6 +12,8 @@
 #include <stdbool.h>	/* for false */
 #include <string.h>	/* for memcpy(3), memmove(3), memset(3) */
 #include <unistd.h>	/* for fork(2) */
+
+#include "atomic.h"
 
 #define	REAL_DECL(__rettype, __func, ...)				\
 	extern __rettype (*real_##__func)(__VA_ARGS__)

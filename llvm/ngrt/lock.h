@@ -3,9 +3,9 @@
 #ifndef _RVP_LOCK_H_
 #define _RVP_LOCK_H_
 
-#include "atomic.h"
 #include <pthread.h>
 
+#include "atomic.h"
 #include "interpose.h"
 
 int __rvpredict_pthread_mutex_init(pthread_mutex_t *,

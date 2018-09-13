@@ -1,0 +1,23 @@
+# Run test programs to generate coverage info; but don't do test against expect.out
+
+cd forkfail
+./forkfail
+cd ..
+cd regression
+./do.run4cov
+cd ..
+cd rvpa
+./do.run4cov
+cd ..
+cd rvsyms/basic
+./basic
+cd ../..
+cd stats
+./do.run4cov
+cd ..
+echo "Ignoring ictest/toolset"
+cd trace
+./do.run4cov
+cd ..
+
+pwd

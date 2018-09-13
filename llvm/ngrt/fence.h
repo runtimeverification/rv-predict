@@ -3,7 +3,7 @@
 #ifndef _RVP_FENCE_H_
 #define _RVP_FENCE_H_
 
-void __rvpredict_atomic_thread_fence(memory_order order); 
-void __rvpredict_atomic_signal_fence(memory_order order);
+void __rvpredict_atomic_thread_fence(int32_t memory_order ); 
+void __rvpredict_atomic_signal_fence(int32_t memory_order );
 
 #endif /* _RVP_FENCE_H_ */

@@ -1,10 +1,10 @@
 FILES=datatables.min.css datatables.min.js
-FILES+=error.css error-descriptions.html error.html error.js errors.js
+FILES+=error.css error-descriptions.html error.html error.js
 FILES+=favicon.ico
 FILES+=index.html index.js
 FILES+=message.js
 FILES+=jquery.min.js
-FIELS+=jquery.highlight.js
+FILES+=jquery.highlight.js
 FILES+=layout.html
 FILES+=rv_logo.png
 FILES+=sort_asc.svg sort_desc.svg
@@ -34,7 +34,6 @@ FILESDIR_celebrate_no_errors.svg=$(_STATIC_IMAGES_DIR)
 
 FILESDIR_datatables.min.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_error.js=$(_STATIC_SCRIPTS_DIR)
-FILESDIR_errors.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_index.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_jquery.min.js=$(_STATIC_SCRIPTS_DIR)
 FILESDIR_jquery.highlight.js=$(_STATIC_SCRIPTS_DIR)

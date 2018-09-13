@@ -116,6 +116,9 @@ ul.exp-list {
 .exp-list .bar.disabled span {
   cursor: default;
 }
+.exp-list .bar.disabled a span {
+  cursor: pointer;
+}
 .exp-list .bar a {
   padding: 0 4px;
 }

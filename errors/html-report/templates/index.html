@@ -78,7 +78,7 @@
         <div class="td-content-wrapper">
           <div class="td-content">
           {% if not err.missing %}
-            <a href=".{{err.abs_file}}.html?lineno={{err.line}}">{{err.file}}:{{err.line}}</a>
+            <a href="./{{err.abs_file}}.html?lineno={{err.line}}">{{err.file}}:{{err.line}}</a>
           {% else %}
             {{err.file}}
           {% endif %}

@@ -15,9 +15,6 @@ cd store        ;pwd;  store        ; cd ..
 cd atomic_store ;pwd;  atomic_store ; cd ..
 cd atomic_load ;pwd;  atomic_load ; cd ..
 cd gnutest_sig  ;pwd;  gnutest_sig  ; cd ..
-cd memcpy       ;pwd;  memcpy       ; cd ..
-cd memmove       ;pwd;  memmove       ; cd ..
-cd memset       ;pwd;  memset       ; cd ..
 cd natest       ;pwd;  natest       ; cd ..
 cd xchange_t816 ;pwd;  xchange_t816 ; cd ..
 cd xchange_test ;pwd;  xchange_test ; cd ..
@@ -28,6 +25,9 @@ cd mask         ;pwd;  mask         ; cd ..
 cd limits/k    ;pwd; k ; cd ../..
 cd limits/M    ;pwd; M ; cd ../..
 cd limits/negative    ;pwd; negative ; cd ../..
+cd memcpy       ;pwd;  memcpy       ; cd ..
+cd memmove       ;pwd;  memmove       ; cd ..
+cd memset       ;pwd;  memset       ; cd ..
 #cd limits/G    ;pwd 
 #   G|grep -v Window >z.qignore
 #cd ../..

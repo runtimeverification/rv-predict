@@ -31,6 +31,12 @@ static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
 volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
 
+/* True iff RVP_CONSISTENT put us into the operating mode where we
+ * produce sequentially-consistent traces by increasing the global
+ * generation number, `rvp_ggen`, on every use.
+ */
+bool __read_mostly rvp_consistent = false;
+
 unsigned int rvp_log2_nthreads = 1;
 
 /* thread_mutex protects thread_head, next_id */
@@ -74,10 +80,8 @@ rvp_trace_fork(uint32_t id, const void *retaddr)
 	gen = rvp_ggen_before_store();
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_FORK);
 	rvp_buf_put(&b, id);
-	if (r->r_lgen < gen) {
-		r->r_lgen = gen;
-		rvp_buf_put_cog(&b, gen);
-	}
+	rvp_buf_trace_cog(&b, &r->r_lgen, gen);
+
 	rvp_ring_put_buf(r, b);
 }
 
@@ -87,6 +91,7 @@ rvp_trace_join(uint32_t id, const void *retaddr)
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
+	rvp_buf_trace_load_cog(&b, &r->r_lgen);
 	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_JOIN);
 	rvp_buf_put(&b, id);
 	rvp_ring_put_buf(r, b);
@@ -464,10 +469,20 @@ rvp_prefork_init(void)
 }
 
 static void
+rvp_consistency_init(void)
+{
+	const char *s;
+
+	if ((s = getenv("RVP_CONSISTENT")) != NULL && strcasecmp(s, "yes") == 0)
+		rvp_consistent = true;
+}
+
+static void
 rvp_postfork_init(void)
 {
 	rvp_signal_init();
 	rvp_rings_init();
+	rvp_consistency_init();
 
 	if (real_pthread_key_create(&rvp_thread_key,
 	                            rvp_thread_destructor) != 0) 
@@ -800,6 +815,8 @@ __rvpredict_pthread_exit(void *retval)
 	/* TBD flag change of status so that we can flush the trace
 	 * and reclaim resources---e.g., munmap/free the ring
 	 * once it's empty.  Careful: need to hang around for _join().
+	 *
+	 * TBD Probably should wake serializer.
 	 */
 }
 

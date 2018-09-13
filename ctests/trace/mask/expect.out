@@ -5,4 +5,5 @@ tid 1.0 in main at .../mask/mask.c:21 get & set signal mask #4 -> #4
 tid 1.0 in main at .../mask/mask.c:26 get signal mask #4
 tid 1.0 in main at .../mask/mask.c:31 set signal mask #4
 tid 1.0 in main at .../mask/mask.c:36 get & set signal mask #4 -> #3
+tid 1.0 in main at .../mask/mask.c:41 unblock signals #2
 tid 1.0 in main at .../mask/mask.c:10 exit function

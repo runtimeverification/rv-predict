@@ -9,7 +9,7 @@
 
 typedef struct {
 	unsigned int b_nwords;
-	uint32_t b_word[12];
+	uint32_t b_word[20];
 } rvp_buf_t;
 
 #define RVP_BUF_INITIALIZER	(rvp_buf_t){ .b_nwords = 0 }

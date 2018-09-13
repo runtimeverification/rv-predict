@@ -61,6 +61,11 @@ post_ldflags=
 
 prog=$(basename $0)
 
+if [ ${prog%%ld} != ${prog} ]; then
+	echo "${prog}: not implemented" 1>&2
+	exit 1
+fi
+
 if [ ${prog%%++} != ${prog} ]; then
 	cplusplus=yes
 fi
@@ -88,7 +93,14 @@ for arg in "$@"; do
 	esac
 done
 
-if [ ${cplusplus:-no} = yes ]; then
+if [ ${compile} = yes -a ${RVP_SETUP:-no} = no ]; then
+	cflags="${cflags} -include $(dirname $0)/../include/qnx/rvpredict_missing_posix.h"
+fi
+
+if [ ${prog##q} = rvpld ]; then
+	compiler=ld
+	cflags=
+elif [ ${cplusplus:-no} = yes ]; then
 	compiler="clang++-4.0 -std=c++11"
 else
 	compiler=clang-4.0
@@ -100,11 +112,11 @@ else
 	pfx=
 fi
 
-if [ ${compile} = yes -a ${RVP_SETUP:-no} = no ]; then
-	cflags="${cflags} -include $(dirname $0)/../include/qnx/rvpredict_missing_posix.h"
-fi
-
-if [ ${link} = yes ]; then
+if [ ${prog##q} = rvpld ]; then
+	ldflags=$(echo ${_ldflags} | sed 's/-Wl,//g')
+	post_ldflags=$(echo ${_post_ldflags} | sed 's/-Wl,//g')
+	posix_ldflags=$(echo ${_posix_ldflags} | sed 's/-Wl,//g')
+elif [ ${link} = yes ]; then
 	ldflags=${_ldflags}
 	post_ldflags=${_post_ldflags}
 	posix_ldflags=${_posix_ldflags}

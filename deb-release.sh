@@ -63,16 +63,16 @@ NBINSTALL="nb-install -U -D ${destdir} -M ${destdir}/metalog -h md5"
 DEBINSTALL="nb-install -U -D ${tmpdir}/debian -M ${tmpdir}/debian/metalog"
 
 #
+# Get nb-install onto our PATH
+#
+export PATH=$(rvpmake -V '$(.OBJDIR)')/.tools/bin:${PATH}
+
+#
 # Call rvpmake with NBINSTALL=yes so that meta-information is
 # captured.
 #
 RVPMAKE="rvpmake RELEASE=yes DESTDIR=${destdir} PREFIX=/usr LIBDIR=/usr/lib/x86_64-linux-gnu LIBEXECDIR=/usr/lib/x86_64-linux-gnu"
 $RVPMAKE all
-
-#
-# Get nb-install onto our PATH
-#
-export PATH=$(rvpmake -V '$(.OBJDIR)')/.tools/bin:${PATH}
 
 # nb-install requires that the directory that receives the metalog exists.
 mkdir -p ${destdir}

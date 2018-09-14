@@ -39,7 +39,7 @@ if [ -d $HOME/qnx700 ]; then
 	    ${objdir}/.tools/bin/qclang-4.0
 
 	PATH=${objdir}/.tools/bin/:${PATH} \
-	  mkcmake PREFIX=${objdir}/.tools -C lib cleandir all install
+	  mkcmake PREFIX=${objdir}/.tools -C cross/qnx/lib cleandir all install
 fi
 
 

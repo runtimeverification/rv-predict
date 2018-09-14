@@ -16,7 +16,8 @@ INCS=rvpredict_intr_tiaic.h
 
 .PATH: $(.CURDIR)/../../ngrt
 
-CC?=clang
+TARGET_CC?=clang
+CC?=$(TARGET_CC)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-prototypes

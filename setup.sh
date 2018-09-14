@@ -35,8 +35,11 @@ install -o $(id -u) -g $(id -g) -m 0555 scripts/rvpmake.in \
     ${objdir}/.tools/bin/rvpmake
 
 if [ -d $HOME/qnx700 ]; then
+	rm -f ${objdir}/.tools/bin/qclang*
 	install -o $(id -u) -g $(id -g) -m 0555 scripts/qclang-4.0 \
 	    ${objdir}/.tools/bin/qclang-4.0
+	install -o $(id -u) -g $(id -g) -m 0555 scripts/qclang-4.0 \
+	    ${objdir}/.tools/bin/qclang
 
 	PATH=${objdir}/.tools/bin/:${PATH} \
 	  mkcmake PREFIX=${objdir}/.tools -C cross/qnx/lib cleandir all install

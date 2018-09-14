@@ -4,7 +4,8 @@ LIB?=rvpsigsim_$(SIGSIM)
 
 .PATH: $(.CURDIR)/../../ngrt
 
-CC?=clang
+TARGET_CC?=clang
+CC?=$(TARGET_CC)
 .if $(CC) == gcc
 CPPFLAGS+=-U_FORTIFY_SOURCE
 .endif

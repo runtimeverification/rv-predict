@@ -14,10 +14,10 @@ SUBPRJ+=rvsyms
 SUBPRJ+=maven
 .endif
 
-SUBPRJ+=lib
-
 .if $(ONLY_TEST_DEPENDENCIES:Uno) == "no"
-SUBPRJ+=lib:ctests llvm:ctests maven:ctests rvsyms:ctests scripts:ctests reports:ctests ldscript:ctests doc:ctests examples:ctests
+SUBPRJ+=llvm:ctests maven:ctests rvsyms:ctests scripts:ctests reports:ctests ldscript:ctests doc:ctests examples:ctests
 .endif
+
+SUBPRJ+=cross
 
 .include <mkc.subprj.mk>

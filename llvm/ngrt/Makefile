@@ -43,7 +43,7 @@ SRCS+=thread.c trace.c
 SRCS+=intr.c io.c
 WARNS=4
 LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
-LIBC_A!=$(CC) -print-file-name=libc.a
+LIBC_A!=$(TARGET_CC) -print-file-name=libc.a
 
 .if 1
 SRCS+=str.c

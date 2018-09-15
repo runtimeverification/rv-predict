@@ -2,6 +2,7 @@
 
 set -e
 set -u
+set -x
 
 objdir=$(mkcmake -V '$(.OBJDIR)')
 export RVP_SETUP=yes	# tells `qclang` not to expect `missingposix.h` to

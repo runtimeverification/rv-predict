@@ -1,6 +1,14 @@
 .if $(OS:Uunknown) == QNX
 LIBDIR=$(PREFIX)/lib/qnx
+.export LIBDIR	# exporting this is important!
 .endif
+
+.info CROSS_OBJTOP=$(CROSS_OBJTOP)
+.info CROSS_SRCTOP=$(CROSS_SRCTOP)
+.info .OBJDIR=$(.OBJDIR)
+.info MAKEOBJDIR=$(MAKEOBJDIR)
+.info OS=$(OS)
+.info MAKEFLAGS=$(MAKEFLAGS)
 
 .if defined(CROSS_OBJTOP)
 MAKEOBJDIR='$$(.CURDIR:C,${CROSS_SRCTOP},${CROSS_OBJTOP},)'

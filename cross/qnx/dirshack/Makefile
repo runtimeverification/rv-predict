@@ -1,5 +1,3 @@
-.include <mkc.init.mk>
-
 .include "../crossdirs.mk"
 
 .if make(obj)

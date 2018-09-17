@@ -11,6 +11,8 @@
 
 .include "../../cross-libdir.mk"
 
+.info LIBDIR=$(LIBDIR)
+
 LIB?=rvprt
 
 STRIPFLAG=

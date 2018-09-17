@@ -3,6 +3,7 @@ LIBDIR=$(PREFIX)/lib/qnx
 .export LIBDIR	# exporting this is important!
 .endif
 
+.if $(DEBUG:Uno) == yes
 .info CROSS_OBJTOP=$(CROSS_OBJTOP)
 .info CROSS_SRCTOP=$(CROSS_SRCTOP)
 .info .CURDIR=$(.CURDIR)
@@ -11,6 +12,7 @@ LIBDIR=$(PREFIX)/lib/qnx
 .info MKOBJDIRS=$(MKOBJDIRS)
 .info OS=$(OS)
 .info MAKEFLAGS=$(MAKEFLAGS)
+.endif
 
 .if defined(CROSS_OBJTOP)
 MAKEOBJDIR='$$(.CURDIR:C,${CROSS_SRCTOP},${CROSS_OBJTOP},)'

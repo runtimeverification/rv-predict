@@ -1,15 +1,12 @@
-MAKEFLAGS+=	PREDICT_CC=qrvpc
-MAKEFLAGS+=	TARGET_CC=qclang
-MAKEFLAGS+=	HOST_CC=clang
-OS=QNX
 MAKEOBJDIR='$${.CURDIR:C,^${CROSS_SRCTOP},${CROSS_OBJTOP},}'
 MAKEFLAGS+=	MKOBJDIRS=auto
 MAKEFLAGS+=	MAKEOBJDIR='$${.CURDIR:C,^${CROSS_SRCTOP},${CROSS_OBJTOP},}'
 #MKOBJDIRS=auto
 #.export MKOBJDIRS
 .export MAKEOBJDIR
-.export OS
 
-SUBDIR=qnx
+.if !make(tags)
+SUBDIR=linux qnx
+.endif # !make(tags)
 
 .include <mkc.subdir.mk>

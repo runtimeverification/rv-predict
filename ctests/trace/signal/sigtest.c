@@ -7,6 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 
+int	glbl_uu;
+
 void
 gnutest_handler(int sig)
 {
@@ -37,12 +39,14 @@ gnutest_handler(int sig)
 void
 usr_1_handler(int signum)
 {
+	glbl_uu = 1;
   	assert(signum == SIGUSR1);
 }
 
 void
 usr_2_handler(int signum)
 {
+	glbl_uu = 2;
   	assert(signum == SIGUSR2);
 }
 
@@ -63,7 +67,11 @@ main(void)
   	assert(signal(SIGUSR1, usr_1_handler) == 0); 
   	assert(signal(SIGUSR2, usr_2_handler) == 0); 
 
-	/* Do test 1 */
+	/* Tests for usr handlers */
+	glbl_uu = 0;
 	raise(SIGUSR1);
+	assert(glbl_uu == 1);
+	raise(SIGUSR2);
+	assert(glbl_uu == 2);
 	return 0;
 }

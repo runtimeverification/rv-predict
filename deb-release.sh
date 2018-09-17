@@ -72,7 +72,7 @@ export PATH=$(rvpmake -V '$(.OBJDIR)')/.tools/bin:${PATH}
 # captured.
 #
 RVPMAKE="rvpmake RELEASE=yes DESTDIR=${destdir} PREFIX=/usr LIBDIR=/usr/lib/x86_64-linux-gnu LIBEXECDIR=/usr/lib/x86_64-linux-gnu"
-$RVPMAKE all
+$RVPMAKE cleandir all
 
 # nb-install requires that the directory that receives the metalog exists.
 mkdir -p ${destdir}

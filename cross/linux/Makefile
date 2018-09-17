@@ -1,11 +1,5 @@
 .include "../dirs.mk"
 
-MAKEFLAGS+=	PREDICT_CC=qrvpc
-MAKEFLAGS+=	TARGET_CC=qclang
-MAKEFLAGS+=	HOST_CC=clang
-OS=QNX
-.export OS
-
 .include "../common.mk"
 
 SUBDIR=mkobjdirs .WAIT

@@ -1,9 +1,11 @@
 FILES=xyz
 
+LIBDIR=/lib
+.export LIBDIR
+
 $(TARGETS:Nclean:Ncleandir:Ntags):
 .for __t in all install
 	$(MAKE) ONLY_TEST_DEPENDENCIES=yes DESTDIR=$(.OBJDIR) PREFIX= \
-	    LIBDIR=/lib \
 	    -C $(.CURDIR)/../.. ${__t}
 .endfor
 

@@ -4,6 +4,7 @@
 <link href="{{output_dir}}/static/style.css" rel="stylesheet"/>
 <link rel="stylesheet" type="text/css" href="{{output_dir}}/static/styles/datatables.min.css"/>
 <script src="{{output_dir}}/static/scripts/datatables.min.js"></script>
+<script src="{{output_dir}}/static/scripts/jquery.highlight.js"></script>
 <script src="{{output_dir}}/static/scripts/index.js"></script>
 <script src="{{output_dir}}/static/scripts/message.js"></script>
 
@@ -11,40 +12,94 @@
 
 {% block content %}
 <div id="table-header">
-<div>
-<h1><img class="home-icon" src="static/rv_logo.png" alt="Runtime Verification"/> RV Toolkit Error Report</h1>
-</div>
-<div id="table-filter" class="dataTables_filter group">
-  <input id="table-search" class="" aria-controls="myTable" type="search" required>
-  <span class="highlight"></span>
-  <span class="bar"></span>
-  <label>Search</label>
-</div>
+  <div>
+    <h1><img class="home-icon" src="static/rv_logo.png" alt="Runtime Verification"/> RV Toolkit Error Report</h1>
+  </div>
+  <div id="table-filter" class="dataTables_filter group">
+    <input id="table-search" class="" aria-controls="myTable" type="search" required>
+    <span class="highlight"></span>
+    <span class="bar"></span>
+    <label>Search</label>
+  </div>
 </div>
 <table id="myTable" class="tablesorter myTable">
   <thead>
     <tr>
+      <th class="dt-right">
+        <div class="table-header-wrapper">
+        <div class="table-header"><img class="drag-indicator" src="static/images/drag_indicator.svg"></div> 
+        <div>Error</div>
+        </div>
+      </th>
+      <th class="dt-right">
+        <div class="table-header-wrapper">
+        <div class="table-header"><img class="drag-indicator" src="static/images/drag_indicator.svg"></div> 
+        <div>File:Line</div>
+        </div>
+      </th>
+      <th class="dt-right">
+        <div class="table-header-wrapper">
+        <div class="table-header"><img class="drag-indicator" src="static/images/drag_indicator.svg"></div> 
+        <div>Error ID</div>
+        </div>
+      </th>
+      <th class="dt-right">
+        <div class="table-header-wrapper">
+        <div class="table-header"><img class="drag-indicator" src="static/images/drag_indicator.svg"></div> 
+        <div>Error Frequency</div>
+        </div>
+      </th>
+      <th class="dt-right">
+        <div class="table-header-wrapper">
+        <div class="table-header"><img class="drag-indicator" src="static/images/drag_indicator.svg"></div> 
+        <div>Function</div>
+        </div>
+      </th>
+      <!--
       <th class="dt-right">ID</th>
       <th class="dt-left">Error</th>
       <th class="dt-left">Function</th>
-      <th class="dt-left">File</th>
+      <th class="dt-left">File:Line</th>
       <th class="dt-right">Error Frequency</th>
+      -->
     </tr>
   </thead>
   <tbody>
 {% for err in errors %}
     <tr>
-      <td class="dt-right"><a href="error-{{err.index}}.html">{{err.index}}</a></td>
-      <td><a href="error-{{err.index}}.html">{{err.errdesc}}</a></td>
-      <td>{{err.function}}</td>
       <td>
-      {% if not err.missing %}
-        <a href=".{{err.abs_file}}.html?lineno={{err.line}}">{{err.file}}:{{err.line}}</a>
-      {% else %}
-        {{err.file}}
-      {% endif %}
+        <div class="td-content-wrapper">
+          <div class="td-content">
+            <a href="error-{{err.index}}.html">{{err.errdesc}}</a>
+          </div>
+        </div>
       </td>
-      <td class="dt-right">{{err.frequency}}</td>
+      <td>
+        <div class="td-content-wrapper">
+          <div class="td-content">
+          {% if not err.missing %}
+            <a href="./{{err.abs_file}}.html?lineno={{err.line}}">{{err.file}}:{{err.line}}</a>
+          {% else %}
+            {{err.file}}
+          {% endif %}
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="td-content-wrapper">
+          <div class="td-content">{{err.index}}</div>
+        </div>
+      </td>
+      <td>
+        <div class="td-content-wrapper">
+          <div class="td-content">{{err.frequency}}</div>
+        </div>
+      </td>
+      <td>
+        <div class="td-content-wrapper">
+          <div class="td-content">{{err.function}}</div>
+        </div>
+      </td>
     </tr>
 {% endfor %}
 </table>

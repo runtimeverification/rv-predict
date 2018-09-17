@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Error {{err.index}}{% endblock %}
+{% block title %}Error ID {{err.index}}{% endblock %}
 {% block head %}
 <link href="{{output_dir}}/static/style.css" rel="stylesheet"/>
 <link href="{{output_dir}}/static/styles/error.css" rel="stylesheet"/>
@@ -12,10 +12,10 @@
 </script>
 {% endblock %}
 {% block content %}
-<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/> RV Toolkit Error Report</a>{% if not err.primary_component.frames[0].loc.missing %}  &nbsp;&rsaquo; &nbsp; <a href="{{output_dir}}{{err.primary_component.frames[0].loc.abs_file}}.html">{{err.primary_component.frames[0].loc.rel_file}}</a>{% endif %} &nbsp;&rsaquo;&nbsp; Error {{err.index}}</h1>
+<h1><a href="index.html"><img alt="Report Index" class="breadcrumb" src="static/rv_logo.png"/> RV Toolkit Error Report</a>{% if not err.primary_component.frames[0].loc.missing %}  &nbsp;&rsaquo; &nbsp; <a href="{{output_dir}}/{{err.primary_component.frames[0].loc.abs_file}}.html">{{err.primary_component.frames[0].loc.rel_file}}</a>{% endif %} &nbsp;&rsaquo;&nbsp; Error ID {{err.index}}</h1>
 <div class="error-header-section">
   <h2 class="error-description-header">{{err.description}}</h2>
-  <div class="error-navigator"><a href="./error-{{prev}}.html">&lt;&nbsp;Previous error</a>&nbsp;|&nbsp;<a href="./error-{{next}}.html">Next error&nbsp;&gt;</a></div>
+  <div class="error-navigator"><a id="previous-error-navigator" href="./error-{{prev}}.html">&lt;&nbsp;Previous</a>&nbsp;|&nbsp; Error &nbsp;|&nbsp;<a id="next-error-navigator" href="./error-{{next}}.html">Next&nbsp;&gt;</a></div>
 </div>
 {% macro lock_lines(locks) %}{% for lock in locks %}{{lock.locked_at.loc.line}} {% endfor %}{% endmacro %}
 {% macro source_snippet(frame, initial, at, header) %}
@@ -24,7 +24,7 @@
   <div class="bar {{'disabled' if frame.loc.missing or not frame.loc.line}}">
     <div class="expand-btn">&#x002b</div>
     <span> {{at}} {{frame.symbol}} at {% if not frame.loc.missing %}
-      <a href="{{output_dir}}{{frame.loc.abs_file}}.html{% if frame.loc.line %}?lineno={{frame.loc.line}}{% endif %}" onclick="(function(){event.stopPropagation()})(event)">
+      <a href="{{output_dir}}/{{frame.loc.abs_file}}.html{% if frame.loc.line %}?lineno={{frame.loc.line}}{% endif %}" onclick="(function(){event.stopPropagation()})(event)">
         <span>{{frame.loc.rel_file}}</span>{% if frame.loc.line %}<span class="line">:{{frame.loc.line}}</span>{% endif %}{% if frame.loc.column %}<span class="column">:{{frame.loc.column}}</span>{% endif %}        
       </a>
     </span>

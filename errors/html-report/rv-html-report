@@ -56,7 +56,7 @@ class LinkedHtmlFormatter(HtmlFormatter):
                 msg = '%s (%s)' % (err[u'description'], err[u'error_id'])
                 ix = err[u'index']
                 tgt = '%s/error-%d.html' % (self.output_dir, ix)
-                line = '<a href="%s"> %s Error #%d</a>\n' % (tgt, msg, ix)
+                line = '<a href="%s"> Error ID %d: %s</a>\n' % (tgt, ix, msg)
                 yield 0, line
             yield 0, '</div></div>'
         yield 0, '</div>'

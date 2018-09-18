@@ -1,5 +1,7 @@
 .include "../dirs.mk"
 
+.include <mkc.init.mk>
+
 MAKEFLAGS+=	PREDICT_CC=qrvpc
 MAKEFLAGS+=	TARGET_CC=qclang
 MAKEFLAGS+=	HOST_CC=clang

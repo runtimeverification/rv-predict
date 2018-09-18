@@ -1,5 +1,7 @@
 .include "../dirs.mk"
 
+.include <mkc.init.mk>
+
 .include "../common.mk"
 
 SUBDIR=mkobjdirs .WAIT

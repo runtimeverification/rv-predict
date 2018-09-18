@@ -9,41 +9,64 @@ export RVP_SETUP=yes	# tells `qclang` not to expect `missingposix.h` to
 			# be available 
 export OPAMROOT="${objdir}/.opam"
 
+home_slash=${HOME}/
+nbstage=${objdir}/.nbstage
+tools=${objdir}/.tools
+bindir=${tools}/bin
+etcdir=${tools}/etc
+mandir=${tools}/man
+home_relative_bindir=${bindir##${HOME}/}
+home_relative_mandir=${mandir##${HOME}/}
+
+if [ ${1:-none} = clean ]; then
+	mkcmake PREFIX=${nbstage} LINKSPREFIX=${tools} -C nbtools cleandir
+	if [ -d $HOME/qnx700 ]; then
+		PATH=${tools}/bin:${PATH} \
+		  mkcmake PREFIX=${tools} -C cross/qnx/lib cleandir
+	fi
+	rm -rf ${nbstage}
+	rm -rf ${tools}
+	rm -rf ${OPAMROOT}
+	exit 0
+fi
+
 yes n | opam init
 opam update 
 opam switch 4.03.0
 eval $(opam config env)
-OPAMYES=true opam install ocp-ocamlres ocamlbuild-atdgen csv uri "atdgen>=2" atdj
+OPAMYES=true opam install \
+    ocp-ocamlres ocamlbuild-atdgen csv uri "atdgen>=2" atdj
 
-home_slash=${HOME}/
-bindir=${objdir}/.tools/bin
-etcdir=${objdir}/.tools/etc
-mandir=${objdir}/.tools/man
-home_relative_bindir=${bindir##${HOME}/}
-home_relative_mandir=${mandir##${HOME}/}
-
-mkcmake PREFIX=${objdir}/.nbstage LINKSPREFIX=${objdir}/.tools -C nbtools \
+mkcmake PREFIX=${nbstage} LINKSPREFIX=${tools} -C nbtools \
     cleandir \
     all-mtree all-pax all-xinstall \
     install-mtree install-pax install-xinstall \
     cleandir-mtree cleandir-pax cleandir-xinstall
 
-install -o $(id -u) -g $(id -g) -m 0755 -d ${objdir}/.tools/etc
+# Be tidy: get rid of disused build products.  Everything we need is
+# now installed at ${nbstage} and ${tools}.
+mkcmake PREFIX=${nbstage} LINKSPREFIX=${tools} -C nbtools cleandir
+
+install -o $(id -u) -g $(id -g) -m 0755 -d ${tools}/etc
 install -o $(id -u) -g $(id -g) -m 0644 etc/mk-c.conf \
-    ${objdir}/.tools/etc/mk-c.conf
+    ${tools}/etc/mk-c.conf
 
 install -o $(id -u) -g $(id -g) -m 0555 scripts/rvpmake.in \
-    ${objdir}/.tools/bin/rvpmake
+    ${tools}/bin/rvpmake
 
 if [ -d $HOME/qnx700 ]; then
-	rm -f ${objdir}/.tools/bin/qclang*
+	rm -f ${tools}/bin/qclang*
 	install -o $(id -u) -g $(id -g) -m 0555 scripts/qclang-4.0 \
-	    ${objdir}/.tools/bin/qclang-4.0
+	    ${tools}/bin/qclang-4.0
 	install -o $(id -u) -g $(id -g) -m 0555 scripts/qclang-4.0 \
-	    ${objdir}/.tools/bin/qclang
+	    ${tools}/bin/qclang
 
-	PATH=${objdir}/.tools/bin/:${PATH} \
-	  mkcmake PREFIX=${objdir}/.tools -C cross/qnx/lib cleandir all install
+	PATH=${tools}/bin/:${PATH} \
+	  mkcmake PREFIX=${tools} -C cross/qnx/lib cleandir all install
+	# Re-clean so that there's no garbage to interfere with a
+	# subsequent build.
+	PATH=${tools}/bin:${PATH} \
+	  mkcmake PREFIX=${tools} -C cross/qnx/lib cleandir
 fi
 
 

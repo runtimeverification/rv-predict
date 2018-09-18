@@ -9,16 +9,16 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-.include "../../cross-libdir.mk"
-
-.info LIBDIR=$(LIBDIR)
-
-LIB?=rvprt
-
-STRIPFLAG=
-INCS=rvpredict_intr.h
 TARGET_CC?=clang
 CC?=$(TARGET_CC)
+
+.include <mkc.init.mk>
+
+.include "../../cross-libdir.mk"
+
+LIB?=rvprt
+STRIPFLAG=
+INCS=rvpredict_intr.h
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-fPIC

@@ -9,14 +9,16 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
+TARGET_CC=clang
+CC?=$(TARGET_CC)
+
+.include <mkc.init.mk>
+
 .include "../../../cross-libdir.mk"
 
 LIB?=rvpi_none
-
 .PATH: $(.CURDIR)/../../ngrt
 
-TARGET_CC=clang
-CC?=$(TARGET_CC)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-prototypes

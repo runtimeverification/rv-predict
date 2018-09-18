@@ -9,17 +9,19 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
+CC?=$(HOST_CC)
+
+.PATH: $(.CURDIR)/../ngrt
+
 PROG=rvpdump
+SRCS=io.c main.c reader.c
+
+.include <mkc.prog.mk>
 
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L	# for dprintf(3) and getopt(3)
-CC?=$(HOST_CC)
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
-CPPFLAGS+=-I$(.CURDIR)/../librvu
-SRCS=main.c reader.c
-#LDFLAGS+=-L${.CURDIR}/../../librvu -lrvu
 WARNS=4
 STRIPFLAG=
 
 COPTS+=-g -O3
 
-.include <mkc.prog.mk>

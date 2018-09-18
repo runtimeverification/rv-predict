@@ -34,7 +34,10 @@ MLINKS+=rvpc.1 qrvpc.1
 # I assume here and in rvpc.sh.in that there is only one directory
 # between PREFIX and BINDIR, and that may not always be the case.
 #
+# Note well: I have found experimentally that $(.TARGET) has $(.OBJDIR)
+# prepended automatically.
+#
 rvpc.sh! rvpc.sh.in
-	@sed "s,--LIBEXECDIR--,$(LIBEXECDIR:C,^$(PREFIX)/,,g),g" < $(.ALLSRC) > $(.OBJDIR)/$(.TARGET)
+	@sed "s,--LIBEXECDIR--,$(LIBEXECDIR:C,^$(PREFIX)/,,g),g" < $(.ALLSRC) > $(.TARGET)
 
 .include <mkc.files.mk>

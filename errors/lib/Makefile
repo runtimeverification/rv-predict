@@ -19,6 +19,8 @@ test depend uninstall:
 
 install: all
 
-$(TARGETS:Ncleandir:Ndistclean:Nfilelist:Ninstalldirs:Ntags:Ndepend:Ntest:Nuninstall):
+obj:
+
+$(TARGETS:Ncleandir:Ndistclean:Nfilelist:Ninstalldirs:Nobj:Ntags:Ndepend:Ntest:Nuninstall):
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) $(.TARGET)

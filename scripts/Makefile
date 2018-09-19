@@ -6,6 +6,11 @@
 # pkgsrc bootstrap kit. The package for mk-configure is in devel/.
 #
 
+.info PREFIX=$(PREFIX)
+.info LIBDIR=$(LIBDIR)
+.info DESTDIR=$(LIBDIR)
+.info DESTDIR=$(BINDIR)
+
 MAN=rvpa.1 rvpc.1 rvpsymbolize.1
 FILESMODE=0755
 FILES=qclang-4.0

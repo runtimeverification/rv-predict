@@ -23,7 +23,7 @@
 #include "trace.h"
 
 #define	assert_mutex_held(__mtx)	\
-    assert(pthread_mutex_trylock(__mtx) == EBUSY)
+    assert(real_pthread_mutex_trylock(__mtx) == EBUSY)
 
 REAL_DEFN(int, pthread_join, pthread_t, void **);
 REAL_DEFN(int, pthread_create, pthread_t *, const pthread_attr_t *,

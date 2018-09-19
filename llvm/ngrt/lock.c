@@ -124,6 +124,7 @@ __rvpredict_pthread_mutex_unlock(pthread_mutex_t *mtx)
 }
 
 INTERPOSE(int, pthread_mutex_lock, pthread_mutex_t *);
+INTERPOSE(int, pthread_mutex_trylock, pthread_mutex_t *);
 INTERPOSE(int, pthread_mutex_unlock, pthread_mutex_t *);
 INTERPOSE(int, pthread_mutex_init, pthread_mutex_t *restrict,
    const pthread_mutexattr_t *restrict);

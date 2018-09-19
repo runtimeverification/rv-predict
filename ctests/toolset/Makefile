@@ -4,12 +4,11 @@ CLEANDIRS+=bin include lib libexec man share usr
 
 .include <mkc.files.mk>
 
-LIBDIR=/lib
 DESTDIR=$(.OBJDIR)
 .undef PREFIX
 PREFIX=
 
-MAKEFLAGS+=	LIBDIR=/lib
+MAKEFLAGS+=	USE_PACKAGE_LIBDIR=no
 MAKEFLAGS+=	DESTDIR=$(.OBJDIR)
 MAKEFLAGS+=	PREFIX=
 

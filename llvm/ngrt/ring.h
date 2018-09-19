@@ -255,6 +255,12 @@ static inline void
 rvp_ring_await_nempty(rvp_ring_t *r, int nempty)
 {
 	if (r->r_idepth == 0) {
+		int ostate, discard;
+		/* I disable cancellation here to ensure that the ring
+		 * mutex is released.  Application threads run this routine,
+		 * and all application threads are susceptible to cancellation.
+		 */
+		pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ostate);
 		real_pthread_mutex_lock(&r->r_mtx);
 		/* Check again now that we hold the lock.  Skip the wakeup
 		 * and wait if enough slots emptied in the mean time.
@@ -264,6 +270,7 @@ rvp_ring_await_nempty(rvp_ring_t *r, int nempty)
 			rvp_ring_in_thread_wait_for_nempty(r, nempty);
 		}
 		real_pthread_mutex_unlock(&r->r_mtx);
+		pthread_setcancelstate(ostate, &discard);
 	} else {
 		rvp_wake_relay();
 		rvp_ring_in_signal_wait_for_nempty(r, nempty);

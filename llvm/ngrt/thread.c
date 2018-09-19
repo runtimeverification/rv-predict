@@ -236,7 +236,14 @@ rvp_stop_transmitter(void)
 	int rc;
 	sigset_t oldmask;
 	const char *s;
+	int ostate, discard;
 
+	/* I disable cancellation here because it is not inconceivable
+	 * that while we're exiting (thus stopping the transmitter),
+	 * there are application threads still running that will cancel
+	 * the application thread that stops the transmitter.
+	 */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ostate);
 	thread_lock(&oldmask);
 	rvp_wake_transmitter_locked();
 	stopping = true;
@@ -252,6 +259,7 @@ rvp_stop_transmitter(void)
 	    strcasecmp(s, "yes") == 0)
 		(void)pthread_once(&rvp_dump_info_once, rvp_dump_info);
 	thread_unlock(&oldmask);
+	pthread_setcancelstate(ostate, &discard);
 }
 
 void
@@ -275,6 +283,10 @@ serialize(void *arg __unused)
 	sigfillset(&maskall);
 	real_pthread_sigmask(SIG_BLOCK, &maskall, NULL);
 
+	/* I don't disable cancellation here because no thread,
+	 * least of all a Predict implementation thread, should
+	 * cancel the serializer.
+	 */
 	thread_lock(&oldmask);
 	for (;;) {
 		bool any_emptied;
@@ -421,6 +433,10 @@ rvp_serializer_create(int fd)
 
 	serializer_fd = fd;
 
+	/* I don't disable cancellation here because no thread,
+	 * least of all a Predict implementation thread, should
+	 * cancel the main thread while it starts the serializer.
+	 */
 	thread_lock(&oldmask);
 	assert(thread_head->t_next == NULL);
 	/* I don't use rvp_thread_flush_to_fd() here because I do not
@@ -599,6 +615,11 @@ static int
 rvp_thread_attach(rvp_thread_t *t)
 {
 	sigset_t oldmask;
+
+	/* I don't disable cancellation here because no thread,
+	 * least of all a Predict implementation thread, should
+	 * cancel a thread that's just being born.
+	 */
 	thread_lock(&oldmask);
 
 	if ((t->t_id = ++next_id) == 0) {
@@ -661,6 +682,11 @@ rvp_thread_detach(rvp_thread_t *tgt)
 	int rc;
 	sigset_t oldmask;
 
+	/* I don't disable cancellation here because I only detach
+	 * threads that failed to get started, and no thread,
+	 * least of all a Predict implementation thread, should
+	 * cancel such a thread.
+	 */
 	thread_lock(&oldmask);
 
 	for (tp = &thread_head; *tp != NULL && *tp != tgt; tp = &(*tp)->t_next)
@@ -725,6 +751,10 @@ rvp_pthread_to_thread(pthread_t pthread)
 	rvp_thread_t *t;
 	sigset_t oldmask;
 
+	/* I don't disable cancellation here because there are no
+	 * cancellation points in here.  Now, if that changes, let
+	 * us reconsider. 
+	 */
 	thread_lock(&oldmask);
 
 	for (t = thread_head; t != NULL; t = t->t_next) {
@@ -744,10 +774,16 @@ void
 rvp_wake_transmitter(void)
 {
 	sigset_t oldmask;
+	int ostate, discard;
 
+	/* I disable cancellation here so that the thread lock
+	 * is certain to be released.
+	 */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ostate);
 	thread_lock(&oldmask);
 	rvp_wake_transmitter_locked();
 	thread_unlock(&oldmask);
+	pthread_setcancelstate(ostate, &discard);
 }
 
 static void *

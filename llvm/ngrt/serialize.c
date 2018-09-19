@@ -391,6 +391,11 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
 	r->r_consumer = producer;
 
 	if (r->r_nwanted != 0 && r->r_nwanted <= rvp_ring_nempty(r)) {
+		/* I don't disable cancellation here because this routine
+		 * is run only by the serialization thread, which should
+		 * not be cancelled, least of all by a Predict implementation
+		 * thread.
+		 */
 		real_pthread_mutex_lock(&r->r_mtx);
 		pthread_cond_signal(&r->r_cv);
 		real_pthread_mutex_unlock(&r->r_mtx);

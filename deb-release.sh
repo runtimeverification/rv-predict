@@ -71,7 +71,7 @@ export PATH=$(rvpmake -V '$(.OBJDIR)')/.tools/bin:${PATH}
 # Call rvpmake with NBINSTALL=yes so that meta-information is
 # captured.
 #
-RVPMAKE="rvpmake RELEASE=yes DESTDIR=${destdir} PREFIX=/usr LIBDIR=/usr/lib/x86_64-linux-gnu LIBEXECDIR=/usr/lib/x86_64-linux-gnu"
+RVPMAKE="rvpmake DEBUG=yes RELEASE=yes DESTDIR=${destdir} PREFIX=/usr PACKAGE_LIBDIR=/usr/lib/x86_64-linux-gnu LIBEXECDIR=/usr/lib/x86_64-linux-gnu"
 $RVPMAKE all
 
 # nb-install requires that the directory that receives the metalog exists.

@@ -1,7 +1,6 @@
 .include "../../../../cross-libdir.mk"
 
 LIB=rvpmissing_posix
-LIBDIR=$(PREFIX)/lib/qnx
 INCSDIR=${PREFIX}/include/qnx
 
 STRIPFLAG=

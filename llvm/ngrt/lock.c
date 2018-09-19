@@ -3,6 +3,7 @@
 #include <stdatomic.h>
 
 #include "init.h"
+#include "supervise.h"
 #include "interpose.h"
 #include "lock.h"
 #include "nbcompat.h"

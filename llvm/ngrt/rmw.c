@@ -109,7 +109,7 @@ __rvpredict_atomic_fetch_add1(volatile _Atomic uint8_t *addr,
     uint8_t oval, uint8_t arg, int32_t memory_order __unused)
 {
 	trace_atomic_rmw_narrow(
-	    __builtin_return_address(0), (rvp_addr_t)addr, oval, (oval + arg)&0xff,
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, (oval + arg),
 	    memory_order, RVP_OP_ATOMIC_RMW1);
 }
 
@@ -127,7 +127,7 @@ __rvpredict_atomic_fetch_add2(volatile _Atomic uint16_t *addr,
     uint16_t oval, uint16_t arg, int32_t memory_order __unused)
 {
 	trace_atomic_rmw_narrow(
-	    __builtin_return_address(0), (rvp_addr_t)addr, oval, (oval + arg)&0xffff,
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, (oval + arg),
 	    memory_order, RVP_OP_ATOMIC_RMW2);
 }
 

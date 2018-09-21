@@ -1,0 +1,3 @@
+tid 1.0 {} begin thread
+tid 1.0 in main at .../st_r_rr_chr/st_r_rr_chr.c enter function cfa . return {}
+tid 1.0 in main at .../st_r_rr_chr/st_r_rr_chr.c exit function

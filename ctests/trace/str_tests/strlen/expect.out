@@ -1,0 +1,3 @@
+tid 1.0 {} begin thread
+tid 1.0 in main at .../strlen/strlen.c enter function cfa . return {}
+tid 1.0 in main at .../strlen/strlen.c exit function

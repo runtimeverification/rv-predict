@@ -1,5 +1,4 @@
 *.d
-sigtest/
 *.profdata
 *.profraw
 .depend

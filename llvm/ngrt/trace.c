@@ -199,3 +199,12 @@ rvp_buf_put_cog(rvp_buf_t *b, uint64_t generation)
 	rvp_buf_put_voidptr(b, rvp_vec_and_op_to_deltop(0, RVP_OP_COG));
 	rvp_buf_put_u64(b, generation);
 }
+
+#if defined(declare_cursor)
+void
+rvp_cursor_put_cog(rvp_cursor_t *c, uint64_t generation)
+{
+	rvp_cursor_put_voidptr(c, rvp_vec_and_op_to_deltop(0, RVP_OP_COG));
+	rvp_cursor_put_u64(c, generation);
+}
+#endif

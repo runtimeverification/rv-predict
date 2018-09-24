@@ -189,7 +189,6 @@ rvp_buf_trace_load_cog(rvp_buf_t *b, volatile uint64_t *lgenp)
 	rvp_buf_trace_cog(b, lgenp, rvp_ggen_after_load());
 }
 
-void rvp_ring_init(rvp_ring_t *, uint32_t *, size_t);
 void rvp_ring_in_thread_wait_for_nempty(rvp_ring_t *, int);
 void rvp_ring_in_signal_wait_for_nempty(rvp_ring_t *, int);
 void rvp_wake_transmitter(void);
@@ -452,6 +451,43 @@ rvp_interruption_close(rvp_interruption_t *it, int eidx)
 	it->it_interruptor_eidx = eidx;
 }
 
+#if defined(declare_cursor)
+static inline void
+rvp_cursor_trace_cog(rvp_cursor_t *c, volatile uint64_t *lgenp, uint64_t gen)
+{
+	if (__predict_false(*lgenp < gen)) {
+		*lgenp = gen;
+		rvp_cursor_put_cog(c, gen);
+	}
+}
+
+static inline void
+rvp_cursor_trace_load_cog(rvp_cursor_t *c, volatile uint64_t *lgenp)
+{
+	rvp_cursor_trace_cog(c, lgenp, rvp_ggen_after_load());
+}
+
+static inline rvp_cursor_t
+rvp_cursor_for_ring(const rvp_ring_t *r)
+{
+	return (rvp_cursor_t){.c_producer = r->r_producer,
+	                      .c_last = r->r_last,
+			      .c_first = r->r_items};
+}
+
+static inline void
+rvp_ring_advance_to_cursor(rvp_ring_t *r, rvp_cursor_t *c)
+{
+	/* TBD assert (again?) that the cursor hasn't crossed the consumer
+	 * pointer?  Of course, the cursor may have crossed the consumer
+	 * pointer, and then the consumer pointer advanced before we got
+	 * here.
+	 */
+	r->r_producer = c->c_producer;
+}
+#endif
+
+void rvp_ring_init(rvp_ring_t *, uint32_t *, size_t);
 void rvp_rings_init(void);
 int rvp_ring_stdinit(rvp_ring_t *);
 bool rvp_ring_drop_empties(rvp_ring_t *, rvp_interruption_t *);

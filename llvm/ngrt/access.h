@@ -30,6 +30,7 @@ trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
+#if !defined(use_cursor)
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
 	rvp_buf_trace_load_cog(&b, &r->r_lgen);
@@ -37,6 +38,18 @@ trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 	rvp_buf_put_addr(&b, addr);
 	rvp_buf_put(&b, val);
 	rvp_ring_put_buf(r, b);
+#else
+	/* _cursor_for_ring() ensures there is room for an rvp_buf_t's
+	 * worth of traces.
+	 */
+	rvp_cursor_t c = rvp_cursor_for_ring(r);
+
+	rvp_cursor_trace_load_cog(&c, &r->r_lgen);
+	rvp_cursor_put_pc_and_op(&c, &r->r_lastpc, retaddr, op);
+	rvp_cursor_put_addr(&c, addr);
+	rvp_cursor_put(&c, val);
+	rvp_ring_advance_to_cursor(r, &c);
+#endif
 }
 
 static inline void

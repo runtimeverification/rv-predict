@@ -2,6 +2,7 @@
 #define _RVP_INTERPOSE_H_
 
 
+#include <stdlib.h>	/* For strlen, strchr, ... */
 #include <dlfcn.h>	/* for dlsym(3) */
 #include <pthread.h>	/* for pthread_{join,create,exit}(3),
 			 * pthread_mutex_{init,lock,trylock,unlock}(3), etc.

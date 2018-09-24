@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -189,6 +190,15 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 	auto void_type = builder.getVoidTy();
 	auto int8_ptr_type = builder.getInt8PtrTy();
 
+	AttrBuilder ab;
+	ab.addAttribute(Attribute::ZExt);
+	AttributeSet zeroext_1st_arg =
+	    AttributeSet::get(m.getContext(), 1, ab);
+	AttributeSet zeroext_2nd_arg =
+	    AttributeSet::get(m.getContext(), 2, ab);
+	AttributeSet zeroext_2nd_3rd_arg =
+	    zeroext_2nd_arg.addAttribute(m.getContext(), 3, Attribute::ZExt);
+
 	/* const void *__rvpredict_func_entry(const void *, const void *);
 	 * void __rvpredict_func_exit(const void *);
 	 */
@@ -246,45 +256,53 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 		SmallString<32> load_name("__rvpredict_load" + byte_size_str);
 		load[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(load_name,
-                        void_type, ptr_type, type, nullptr));
+		        zeroext_2nd_arg,
+		        void_type, ptr_type, type, nullptr));
 
 		SmallString<32> peek_name("__rvpredict_peek" + byte_size_str);
 		peek[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(peek_name,
-                        type, ptr_type, nullptr));
+		        zeroext_1st_arg,
+		        type, ptr_type, nullptr));
 
 		SmallString<32> store_name("__rvpredict_store" + byte_size_str);
 		store[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(store_name,
+		        zeroext_2nd_arg,
 		        void_type, ptr_type, type, nullptr));
 
 		SmallString<32> poke_name("__rvpredict_poke" + byte_size_str);
 		poke[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(poke_name,
+		        zeroext_2nd_arg,
 		        void_type, ptr_type, type, nullptr));
 
 		SmallString<64> unaligned_load_name(
 		    "__rvpredict_unaligned_load" + byte_size_str);
 		unaligned_load[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(unaligned_load_name,
+		        zeroext_2nd_arg,
 		        void_type, ptr_type, type, nullptr));
 
 		SmallString<64> unaligned_store_name(
 		    "__rvpredict_unaligned_store" + byte_size_str);
 		unaligned_store[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(unaligned_store_name,
+		        zeroext_2nd_arg,
 		        void_type, ptr_type, type, nullptr));
 
 		SmallString<32> atomic_load_name("__rvpredict_atomic_load" +
 		    byte_size_str);
 		atomic_load[i] = checkSanitizerInterfaceFunction(
-		    m.getOrInsertFunction(atomic_load_name, void_type,
-		    ptr_type, type, memory_order_type, nullptr));
+		    m.getOrInsertFunction(atomic_load_name,
+		        zeroext_2nd_arg,
+		        void_type, ptr_type, type, memory_order_type, nullptr));
 
 		SmallString<32> atomic_store_name("__rvpredict_atomic_store" +
 		    byte_size_str);
 		atomic_store[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(atomic_store_name,
+		        zeroext_2nd_arg,
 		        void_type, ptr_type, type, memory_order_type, nullptr));
 
 		for (int op = AtomicRMWInst::FIRST_BINOP;
@@ -312,6 +330,7 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 			atomic_rmw[op][i] =
 			    checkSanitizerInterfaceFunction(
 			        m.getOrInsertFunction(rmw_name, void_type,
+				    zeroext_2nd_3rd_arg,
 				    ptr_type, type, type, memory_order_type,
 				    nullptr));
 		}
@@ -320,6 +339,7 @@ RVPredictInstrument::initializeCallbacks(Module &m)
 		    byte_size_str);
 		atomic_cas[i] = checkSanitizerInterfaceFunction(
 		    m.getOrInsertFunction(atomic_cas_name, type, ptr_type,
+		        zeroext_2nd_3rd_arg,
 		        type, type, memory_order_type, memory_order_type,
 			nullptr));
 	}
@@ -936,6 +956,7 @@ RVPredictInstrument::instrumentAtomic(Instruction *insn, const DataLayout &dl)
 		Value *args[] = {
 		    builder.CreatePointerCast(addr, PtrTy),
 		    li,
+//		    builder.CreateIntCast(li, Ty, false),
 		    createOrdering(&builder, li->getOrdering())};
 		CallInst *ci = CallInst::Create(atomic_load[idx], args);
 		ci->insertAfter(insn);
@@ -969,6 +990,7 @@ RVPredictInstrument::instrumentAtomic(Instruction *insn, const DataLayout &dl)
 		Value *args[] = {
 		    builder.CreatePointerCast(addr, PtrTy),
 		    rmwi,
+//		    builder.CreateIntCast(rmwi, Ty, false),
 		    builder.CreateIntCast(rmwi->getValOperand(), Ty, false),
 		    createOrdering(&builder, rmwi->getOrdering())};
 		CallInst *ci = CallInst::Create(F, args);

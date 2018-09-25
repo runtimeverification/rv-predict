@@ -468,8 +468,11 @@ rvp_cursor_trace_load_cog(rvp_cursor_t *c, volatile uint64_t *lgenp)
 }
 
 static inline rvp_cursor_t
-rvp_cursor_for_ring(const rvp_ring_t *r)
+rvp_cursor_for_ring(rvp_ring_t *r)
 {
+	while (__predict_false(rvp_ring_nempty(r) < RVP_BUF_NITEMS))
+		rvp_ring_await_nempty(r, RVP_BUF_NITEMS);
+
 	return (rvp_cursor_t){.c_producer = r->r_producer,
 	                      .c_last = r->r_last,
 			      .c_first = r->r_items};

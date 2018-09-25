@@ -16,9 +16,11 @@ typedef struct _rvp_cursor {
 } rvp_cursor_t;
 #endif
 
+#define RVP_BUF_NITEMS 20
+
 typedef struct {
 	unsigned int b_nwords;
-	uint32_t b_word[20];
+	uint32_t b_word[RVP_BUF_NITEMS];
 } rvp_buf_t;
 
 #define RVP_BUF_INITIALIZER	(rvp_buf_t){ .b_nwords = 0 }

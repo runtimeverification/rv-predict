@@ -1,10 +1,12 @@
 #include <err.h>
 #include <stdlib.h> /* for EXIT_FAILURE */
+#include <stdatomic.h>
 
 #include "init.h"
 #include "interpose.h"
 #include "lock.h"
 #include "thread.h"
+#include "fence.h"
 #include "trace.h"
 
 REAL_DEFN(int, pthread_mutex_lock, pthread_mutex_t *);
@@ -23,6 +25,20 @@ rvp_lock_prefork_init(void)
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(pthread_mutex_t *restrict,
 	            const pthread_mutexattr_t *restrict), pthread_mutex_init);
+}
+
+/* It is not necessary to perform function interposition because
+ * atomic_thread_fence is implemented as a built-in by clang.
+ *
+ * What about gcc?  We don't want to get a recursive atomic_thread_fence
+ * call if we build the runtime with gcc.
+ */
+void
+__rvpredict_atomic_thread_fence(int32_t memory_order)
+{
+	/* TBD log it! */
+	atomic_thread_fence(memory_order);
+	return;
 }
 
 int

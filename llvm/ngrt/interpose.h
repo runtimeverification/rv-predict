@@ -77,4 +77,6 @@ INTERPOSE_DECLS(void *, memset, void *, int, size_t);
 INTERPOSE_DECLS(void *, memcpy, void *, const void *, size_t);
 INTERPOSE_DECLS(void *, memmove, void *, const void *, size_t);
 
+INTERPOSE_DECLS(size_t , strlen,  const char *);
+
 #endif /* _RVP_INTERPOSE_H_ */

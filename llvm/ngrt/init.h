@@ -22,27 +22,6 @@ void rvp_signal_init(void);
 void rvp_thread_init(void);
 void rvp_static_intrs_init(void);
 void rvp_deltop_init(void);
-/*
- * Inlined functions to access initialize state
- * rvp_initialized Declared in supervise.c
- *                 Extern in supervise.h
- *                 Set in thread.c
- * rvp_real_locks_initialized Declared in lock.c
- *                            Extern in ????.h
- *                            Set in lock.c
- */
-static inline void
-ensure_locks_initialized()
-{
-        if (!rvp_real_locks_initialized)
-                        rvp_lock_prefork_init();
-        return;
-}
-static inline bool
-ring_operational()
-{
-        return rvp_initialized;
-}
 
 extern _Atomic bool __read_mostly rvp_real_initialized;
 

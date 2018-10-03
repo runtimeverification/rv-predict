@@ -3,7 +3,6 @@
 #include <stdatomic.h>
 
 #include "init.h"
-#include "supervise.h"
 #include "interpose.h"
 #include "lock.h"
 #include "nbcompat.h"
@@ -12,51 +11,22 @@
 #include "fence.h"
 #include "trace.h"
 
-#if 0 /* atomic_thread_fence is a macro with param, and a Clang built in */
-/usr/lib/llvm-4.0/bin/../lib/clang/4.0.0/include/stdatomic.h:78:36 
-In stdatomic,h: #define atomic_thread_fence(order) __c11_atomic_thread_fence(order)
-  Note: the function is a built in - so we can't point to it.
-
-RVPredict implements the routine __rvpredict_atomic_thread_fence( memory_order order)
-                                 which invokes the macro atomic_thread_fence
-                                    which expands to _c11_atomic_thread_fence.
-#endif
-
-
 REAL_DEFN(int, pthread_mutex_lock, pthread_mutex_t *);
 REAL_DEFN(int, pthread_mutex_trylock, pthread_mutex_t *);
 REAL_DEFN(int, pthread_mutex_unlock, pthread_mutex_t *);
 REAL_DEFN(int, pthread_mutex_init, pthread_mutex_t *restrict,
    const pthread_mutexattr_t *restrict);
 
-/*
- *   Programs will call lock functions during their initialization before
- * rv-predict can get tracing setup. This requires verifying that things 
- * are initialized. If rv-predict is not initialized, then we will not trace 
- * to the rv_predict ring.
- *
- * There are two stages:
- * Stage 1: Nothing is initialized (rvp_real_locks_initialized == false)
- * 	Call rvp_lock_prefork_init to get ptrs to real pthread_mutex_... routines established)
- * Stage 2: The ring is ready (rvp_initialized == true)
- * 
- *   We use the inline routine rvp_ring_initialized to indicate when one can
- * trace to the ring.
- */
-
-
-volatile _Atomic bool __read_mostly rvp_real_locks_initialized = false ;
-
 void
 rvp_lock_prefork_init(void)
 {
 	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_lock);
-	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_trylock);
+	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *),
+	    pthread_mutex_trylock);
 	ESTABLISH_PTR_TO_REAL(int (*)(pthread_mutex_t *), pthread_mutex_unlock);
 	ESTABLISH_PTR_TO_REAL(
 	    int (*)(pthread_mutex_t *restrict,
 	            const pthread_mutexattr_t *restrict), pthread_mutex_init);
-	rvp_real_locks_initialized = true;
 }
 
 /* It is not necessary to perform function interposition because
@@ -142,7 +112,6 @@ int
 __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 {
 	int rc;
-	bool ri;
 
 	ensure_real_initialized();
 
@@ -161,6 +130,7 @@ __rvpredict_pthread_mutex_unlock(pthread_mutex_t *mtx)
 	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_RELEASE);
 	return real_pthread_mutex_unlock(mtx);
 }
+
 INTERPOSE(int, pthread_mutex_lock, pthread_mutex_t *);
 INTERPOSE(int, pthread_mutex_unlock, pthread_mutex_t *);
 INTERPOSE(int, pthread_mutex_init, pthread_mutex_t *restrict,

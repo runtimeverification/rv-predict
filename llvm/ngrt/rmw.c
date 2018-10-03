@@ -10,6 +10,9 @@ static inline void
 trace_atomic_rmw_narrow(const void *retaddr, rvp_addr_t addr,
     uint16_t oval, uint16_t nval, int32_t memory_order __unused, rvp_op_t op)
 {
+	if (__predict_false(!ring_operational()))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	const uint32_t nmask = __BITS(31, 16), omask = __BITS(15, 0);
@@ -40,6 +43,9 @@ static inline void
 trace_atomic_rmw4(const void *retaddr, rvp_addr_t addr,
     uint32_t oval, uint32_t nval, int32_t memory_order __unused)
 {
+	if (__predict_false(!ring_operational()))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 
@@ -55,6 +61,9 @@ static inline void
 trace_atomic_rmw8(const void *retaddr, rvp_addr_t addr,
     uint64_t oval, uint64_t nval, int32_t memory_order __unused)
 {
+	if (__predict_false(!ring_operational()))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 

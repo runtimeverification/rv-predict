@@ -1,5 +1,6 @@
 /* Copyright (c) 2017 Runtime Verification, Inc.  All rights reserved. */
 
+#include "init.h"
 #include "aligned.h"
 #include "atomic.h"
 #include "cas.h"
@@ -25,7 +26,7 @@ data_is_in_coverage(rvp_addr_t addr)
 static inline void
 trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 {
-	if (data_is_in_coverage(addr))
+	if (data_is_in_coverage(addr) || !ring_operational())
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
@@ -41,7 +42,7 @@ trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 static inline void
 trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
-	if (data_is_in_coverage(addr))
+	if (data_is_in_coverage(addr) || !ring_operational())
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
@@ -57,7 +58,7 @@ trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 static inline void
 trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 {
-	if (data_is_in_coverage(addr))
+	if (data_is_in_coverage(addr) || !ring_operational())
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
@@ -76,7 +77,7 @@ trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 static inline void
 trace_store8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
-	if (data_is_in_coverage(addr))
+	if (data_is_in_coverage(addr) || !ring_operational())
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();

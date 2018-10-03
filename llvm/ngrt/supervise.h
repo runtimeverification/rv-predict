@@ -8,7 +8,15 @@ extern bool rvp_trace_only;
 extern bool rvp_online_analysis;
 extern bool rvp_debug_supervisor;
 extern int rvp_analysis_fd;
-extern volatile _Atomic bool rvp_initialized;
+/* 
+ * In init.h are two inline function that access these initialize bool
+ * void ensure_locks_initialized() -=> if rvp_real_locks_initialised is false
+ *                                     invoke rvp_lock_prefork_init 
+ *                                            Which sets things up so pre-initialization
+ *                                            can procede.
+ * bool ring_operational() -=> returns the value of rvp_initialized.
+ */
+extern volatile _Atomic bool rvp_initialized; /* Declared in supervise.c, set in thread.c */ 
 
 int sigaddset_killers(sigset_t *);
 

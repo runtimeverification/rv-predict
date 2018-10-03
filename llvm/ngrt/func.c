@@ -1,3 +1,4 @@
+#include "init.h"
 #include "func.h"
 #include "thread.h"
 #include "trace.h"
@@ -5,6 +6,9 @@
 const void *
 __rvpredict_func_entry(const void *cfa, const void *callsite)
 {
+	if (__predict_false(!ring_operational()))
+		return __builtin_return_address(0);
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	const void *retaddr = __builtin_return_address(0);
@@ -20,6 +24,9 @@ __rvpredict_func_entry(const void *cfa, const void *callsite)
 void
 __rvpredict_func_exit(const void *retaddr)
 {
+	if (__predict_false(!ring_operational()))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 

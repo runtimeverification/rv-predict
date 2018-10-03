@@ -5,6 +5,8 @@
 #include "init.h"
 #include "interpose.h"
 #include "lock.h"
+#include "nbcompat.h"
+#include "supervise.h"
 #include "thread.h"
 #include "fence.h"
 #include "trace.h"
@@ -56,13 +58,17 @@ __rvpredict_pthread_mutex_init(pthread_mutex_t *restrict mtx,
 		    __func__);
 	}
 #endif
-	rvp_ensure_initialization();
+
+	ensure_real_initialized();
 	return real_pthread_mutex_init(mtx, attr);
 }
 
 static inline void
 trace_mutex_op(const void *retaddr, pthread_mutex_t *mtx, rvp_op_t op)
 {
+	if (__predict_false(!ring_operational()))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;
@@ -86,7 +92,8 @@ __rvpredict_pthread_mutex_lock(pthread_mutex_t *mtx)
 {
 	int rc;
 
-	rvp_ensure_initialization();
+	ensure_real_initialized();
+
 	rc = real_pthread_mutex_lock(mtx);
 	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
 
@@ -98,10 +105,11 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 {
 	int rc;
 
-	rvp_ensure_initialization();
-	if ((rc = real_pthread_mutex_trylock(mtx)) != 0)
-		return rc;
+	ensure_real_initialized();
 
+	rc = real_pthread_mutex_trylock(mtx);
+	if (rc != 0)
+		return rc;
 	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_ACQUIRE);
 
 	return 0;
@@ -110,9 +118,8 @@ __rvpredict_pthread_mutex_trylock(pthread_mutex_t *mtx)
 int
 __rvpredict_pthread_mutex_unlock(pthread_mutex_t *mtx)
 {
-	rvp_ensure_initialization();
+	ensure_real_initialized();
 	trace_mutex_op(__builtin_return_address(0), mtx, RVP_OP_RELEASE);
-
 	return real_pthread_mutex_unlock(mtx);
 }
 

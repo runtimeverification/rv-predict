@@ -78,5 +78,14 @@ INTERPOSE_DECLS(void *, memcpy, void *, const void *, size_t);
 INTERPOSE_DECLS(void *, memmove, void *, const void *, size_t);
 
 INTERPOSE_DECLS(size_t , strlen,  const char *);
+INTERPOSE_DECLS(char * , strchrnul ,  const char *, int );
+////INTERPOSE_DECLS(char * , strchr ,  const char *, int );
+INTERPOSE_DECLS(char * , strcpy ,  char *, const char *);
+INTERPOSE_DECLS(char * , strdup ,  const char *);
+//INTERPOSE_DECLS(char * , strdupa ,  const char *);
+INTERPOSE_DECLS(char * , strndup ,  const char *, size_t);
+//INTERPOSE_DECLS(char * , strndupa ,  const char *, size_t );
+INTERPOSE_DECLS(char * , strncpy ,  char *, const char *, size_t );
+INTERPOSE_DECLS(char * , strrchr ,  const char *, int );
 
 #endif /* _RVP_INTERPOSE_H_ */

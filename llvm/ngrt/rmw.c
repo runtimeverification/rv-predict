@@ -102,7 +102,7 @@ __rvpredict_atomic_exchange4(volatile _Atomic uint32_t *addr,
 }
 
 /*
- * add
+ * add, sub
  */
 void
 __rvpredict_atomic_fetch_add1(volatile _Atomic uint8_t *addr,
@@ -114,11 +114,30 @@ __rvpredict_atomic_fetch_add1(volatile _Atomic uint8_t *addr,
 }
 
 void
+__rvpredict_atomic_fetch_sub1(volatile _Atomic uint8_t *addr,
+    uint8_t oval, uint8_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, (oval - arg)&0xff,
+	    memory_order, RVP_OP_ATOMIC_RMW1);
+}
+
+void
 __rvpredict_atomic_fetch_add2(volatile _Atomic uint16_t *addr,
     uint16_t oval, uint16_t arg, int32_t memory_order __unused)
 {
 	trace_atomic_rmw_narrow(
 	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval + arg,
+	    memory_order, RVP_OP_ATOMIC_RMW2);
+}
+
+
+void
+__rvpredict_atomic_fetch_sub2(volatile _Atomic uint16_t *addr,
+    uint16_t oval, uint16_t arg, int32_t memory_order __unused)
+{
+	trace_atomic_rmw_narrow(
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, (oval - arg)&0xffff,
 	    memory_order, RVP_OP_ATOMIC_RMW2);
 }
 
@@ -280,7 +299,7 @@ __rvpredict_atomic_fetch_xor8(volatile _Atomic uint64_t *addr,
     uint64_t oval, uint64_t arg, int32_t memory_order __unused)
 {
 	trace_atomic_rmw8(
-	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval + arg,
+	    __builtin_return_address(0), (rvp_addr_t)addr, oval, oval ^ arg,
 	    memory_order);
 }
 
@@ -297,8 +316,19 @@ __rvpredict_atomic_cas1(volatile _Atomic uint8_t *addr __unused,
     int32_t memory_order_success __unused,
     int32_t memory_order_failure __unused)
 {
-	not_implemented(__func__);
-	return 0;
+	if (atomic_compare_exchange_strong_explicit(addr, &expected, desired,
+	    memory_order_success, memory_order_failure)) {
+		trace_atomic_rmw1(__builtin_return_address(0),
+		    (rvp_addr_t)addr, expected, desired, memory_order_success);
+	} else {
+		/* `expected` took the unexpected value that was found
+		 * at `addr`
+		 */
+		/* TBD pass memory_order_failure */
+		trace_load(__builtin_return_address(0), RVP_OP_ATOMIC_LOAD1,
+		    (rvp_addr_t)addr, expected);
+	}
+	return expected;
 }
 
 uint16_t

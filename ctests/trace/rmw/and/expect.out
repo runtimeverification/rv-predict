@@ -1,11 +1,14 @@
 tid 1.0 {} begin thread
 tid 1.0 in main at .../and/and.c enter function cfa . return {}
+tid 1.0 in main at .../and/and.c store 1 0x20 -> u8 at and.c;main
 tid 1.0 in main at .../and/and.c store 2 0x2020 -> u16 at and.c;main
 tid 1.0 in main at .../and/and.c store 4 0x40404040 -> u32 at and.c;main
 tid 1.0 in main at .../and/and.c store 8 0x8080808080808080 -> u64 at and.c;main
+tid 1.0 in main at .../and/and.c atomic rmw 1 0x20 <- u8 at and.c;main <- 00
 tid 1.0 in main at .../and/and.c atomic rmw 2 0x2020 <- u16 at and.c;main <- 0000
 tid 1.0 in main at .../and/and.c atomic rmw 4 0x40404040 <- u32 at and.c;main <- 00000000
 tid 1.0 in main at .../and/and.c atomic rmw 8 0x8080808080808080 <- u64 at and.c;main <- 0000000000000000
+tid 1.0 in main at .../and/and.c atomic load 1 00 <- u8 at and.c;main
 tid 1.0 in main at .../and/and.c atomic load 2 0000 <- u16 at and.c;main
 tid 1.0 in main at .../and/and.c atomic load 4 00000000 <- u32 at and.c;main
 tid 1.0 in main at .../and/and.c atomic load 8 0000000000000000 <- u64 at and.c;main

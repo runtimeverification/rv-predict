@@ -339,14 +339,14 @@ __rvpredict_atomic_cas2(volatile _Atomic uint16_t *addr __unused,
 {
 	if (atomic_compare_exchange_strong_explicit(addr, &expected, desired,
 	    memory_order_success, memory_order_failure)) {
-		trace_atomic_rmw2(__builtin_return_address(0),
+		trace_atomic_rmw1(__builtin_return_address(0),
 		    (rvp_addr_t)addr, expected, desired, memory_order_success);
 	} else {
 		/* `expected` took the unexpected value that was found
 		 * at `addr`
 		 */
 		/* TBD pass memory_order_failure */
-		trace_load(__builtin_return_address(0), RVP_OP_ATOMIC_LOAD2,
+		trace_load(__builtin_return_address(0), RVP_OP_ATOMIC_LOAD1,
 		    (rvp_addr_t)addr, expected);
 	}
 	return expected;

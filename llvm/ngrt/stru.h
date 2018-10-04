@@ -4,6 +4,4 @@
 
 #include "interpose.h"
 
-void
-rvp_stru_prefork_init(void);
-
+void rvp_stru_prefork_init(void);

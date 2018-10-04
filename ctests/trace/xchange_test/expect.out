@@ -1,10 +1,31 @@
 tid 1.0 {} begin thread
-tid 1.0 in main at .../xchange_test/xchange_test.c:27 enter function cfa . return {}
-tid 1.0 in main at .../xchange_test/xchange_test.c:28 atomic load 1 0x39 <- initial_u8 at xchange_test.c
-tid 1.0 in main at .../xchange_test/xchange_test.c:29 atomic load 2 0x0040 <- initial_u16 at xchange_test.c
-tid 1.0 in main at .../xchange_test/xchange_test.c:30 atomic load 4 0x00000041 <- initial_u32 at xchange_test.c
-tid 1.0 in main at .../xchange_test/xchange_test.c:31 atomic load 8 0x0000000000000043 <- initial_u64 at xchange_test.c
-tid 1.0 in main at .../xchange_test/xchange_test.c:43 atomic load 4 0x00000041 <- lcl_u32 at xchange_test.c;main
-tid 1.0 in main at .../xchange_test/xchange_test.c:45 atomic rmw 4 0x00000032 <- u_glbl_u32 at xchange_test.c <- 0x00000032
-tid 1.0 in main at .../xchange_test/xchange_test.c:46 atomic rmw 8 0x0000000000000064 <- u_glbl_u64 at xchange_test.c <- 0x0000000000000064
-tid 1.0 in main at .../xchange_test/xchange_test.c:27 exit function
+tid 1.0 in main at .../xchange_test/xchange_test.c:26 enter function cfa . return {}
+tid 1.0 in main at .../xchange_test/xchange_test.c:39 load 1 0x41 <- initial_u8 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:39 atomic store 1 0x41 -> lcl_u8 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:40 load 2 0x0042 <- initial_u16 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:40 atomic store 2 0x0042 -> lcl_u16 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:41 load 4 0x00000044 <- initial_u32 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:41 atomic store 4 0x00000044 -> lcl_u32 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:42 load 8 0x0000000000000048 <- initial_u64 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:42 atomic store 8 0x0000000000000048 -> lcl_u64 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:44 load 1 0x41 <- initial_u8 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:44 atomic rmw 1 0x41 <- lcl_u8 at xchange_test.c;main <- 0x11
+tid 1.0 in main at .../xchange_test/xchange_test.c:45 load 2 0x0042 <- initial_u16 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:45 atomic rmw 2 0x0042 <- lcl_u16 at xchange_test.c;main <- 0x0012
+tid 1.0 in main at .../xchange_test/xchange_test.c:46 load 4 0x00000044 <- initial_u32 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:46 atomic rmw 4 0x00000044 <- lcl_u32 at xchange_test.c;main <- 0x00000014
+tid 1.0 in main at .../xchange_test/xchange_test.c:47 load 8 0x0000000000000048 <- initial_u64 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:47 atomic rmw 8 0x0000000000000048 <- lcl_u64 at xchange_test.c;main <- 0x0000000000000018
+tid 1.0 in main at .../xchange_test/xchange_test.c:49 atomic load 1 0x11 <- lcl_u8 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:49 atomic load 2 0x0012 <- lcl_u16 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:49 atomic load 4 0x00000014 <- lcl_u32 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:49 atomic load 8 0x0000000000000018 <- lcl_u64 at xchange_test.c;main
+tid 1.0 in main at .../xchange_test/xchange_test.c:51 atomic rmw 1 0x41 <- u_glbl_u8 at xchange_test.c <- 0x31
+tid 1.0 in main at .../xchange_test/xchange_test.c:52 atomic rmw 2 0x0042 <- u_glbl_u16 at xchange_test.c <- 0x0032
+tid 1.0 in main at .../xchange_test/xchange_test.c:53 atomic rmw 4 0x00000044 <- u_glbl_u32 at xchange_test.c <- 0x00000034
+tid 1.0 in main at .../xchange_test/xchange_test.c:54 atomic rmw 8 0x0000000000000048 <- u_glbl_u64 at xchange_test.c <- 0x0000000000000038
+tid 1.0 in main at .../xchange_test/xchange_test.c:57 atomic load 1 0x31 <- u_glbl_u8 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:57 atomic load 2 0x0032 <- u_glbl_u16 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:57 atomic load 4 0x00000034 <- u_glbl_u32 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:57 atomic load 8 0x0000000000000038 <- u_glbl_u64 at xchange_test.c
+tid 1.0 in main at .../xchange_test/xchange_test.c:26 exit function

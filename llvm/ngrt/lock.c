@@ -50,7 +50,6 @@ __rvpredict_atomic_signal_fence(int32_t memory_order)
 	return;
 }
 
-
 int
 __rvpredict_pthread_mutex_init(pthread_mutex_t *restrict mtx,
    const pthread_mutexattr_t *restrict attr)

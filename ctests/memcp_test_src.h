@@ -52,10 +52,10 @@
  */
 #define errx(str,qq) err_out_proc(str,srcinx,dstinx,n2move,qq)
 int 
-err_out_proc(char* sss,int s,int d,int l,int ii)
+err_out_proc(char* sss,int s,int d,int l,int qq)
 {
-	printf("mem* Fail:src=%d,dst=%d,lngth=%d,c=%2x,ii=%d %s"
-			,s,d,l,cc[ii],ii,sss);
+	printf("mem* Fail:src=%d,dst=%d,lngth=%d,c=%2x,qq=%d %s"
+			,s,d,l,cc[qq],qq,sss);
 	return EXIT_FAILURE;
 }
 
@@ -133,7 +133,7 @@ testit(int dstinx, int srcinx, int n2move)
 
 int testdriver(void)
 {
-	int ii, jj=0, kk, rr; 
+	int ii, jj, kk, rr, lcsrc; 
 
 	for(ii=0;ii<n_iidst;ii++)
 #ifndef MEMset
@@ -150,7 +150,13 @@ int testdriver(void)
 			  else
 #endif
               		  {
-				rr =  testit(iidst[ii],iisrc[jj],lngths[kk]); 
+#			ifdef MEMset	/* With memset the src and destination are the same */
+				jj = ii;
+				lcsrc = iidst[jj];
+#			else
+				lcsrc = iisrc[jj];
+#			endif
+				rr =  testit(iidst[ii],lcsrc,lngths[kk]); 
 				if( rr == EXIT_FAILURE)
 					return rr;
 			  }

@@ -76,12 +76,12 @@ rvp_ring_in_thread_wait_for_nempty(rvp_ring_t *r, int nempty)
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ostate);
 	real_pthread_mutex_lock(&r->r_mtx);
 	atomic_store_explicit(&r->r_mtxp, &r->r_mtx, memory_order_release);
-	/* Check again now that we hold the lock.  Skip the wakeup
-	 * and wait if enough slots emptied in the mean time.
-	 */
 
 	r->r_stats->rs_ring_waits++;
 
+	/* Check again now that we hold the lock.  Skip the wakeup
+	 * and wait if enough slots emptied in the mean time.
+	 */
 	while (rvp_ring_nempty(r) < nempty) {
 		rvp_wake_transmitter();
 		r->r_stats->rs_ring_sleeps++;

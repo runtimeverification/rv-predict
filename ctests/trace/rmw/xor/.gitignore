@@ -3,3 +3,4 @@ xor
 *.gcda
 *.test.out
 test.trace
+0*

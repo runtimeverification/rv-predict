@@ -1,12 +1,15 @@
 tid 1.0 {} begin thread
 tid 1.0 in main at .../or/or.c enter function cfa . return {}
-tid 1.0 in main at .../or/or.c store 2 0x2020 -> u16 at or.c;main
-tid 1.0 in main at .../or/or.c store 4 0x40404040 -> u32 at or.c;main
-tid 1.0 in main at .../or/or.c store 8 0x8080808080808080 -> u64 at or.c;main
-tid 1.0 in main at .../or/or.c atomic rmw 2 0x2020 <- u16 at or.c;main <- 0x2222
-tid 1.0 in main at .../or/or.c atomic rmw 4 0x40404040 <- u32 at or.c;main <- 0x44444444
-tid 1.0 in main at .../or/or.c atomic rmw 8 0x8080808080808080 <- u64 at or.c;main <- 0x8888888888888888
-tid 1.0 in main at .../or/or.c atomic load 2 0x2222 <- u16 at or.c;main
-tid 1.0 in main at .../or/or.c atomic load 4 0x44444444 <- u32 at or.c;main
-tid 1.0 in main at .../or/or.c atomic load 8 0x8888888888888888 <- u64 at or.c;main
+tid 1.0 in main at .../or/or.c store 1 0x10 -> u8 at or.c;main
+tid 1.0 in main at .../or/or.c store 2 0x1020 -> u16 at or.c;main
+tid 1.0 in main at .../or/or.c store 4 0x10203040 -> u32 at or.c;main
+tid 1.0 in main at .../or/or.c store 8 0x1020304050607080 -> u64 at or.c;main
+tid 1.0 in main at .../or/or.c atomic rmw 1 0x10 <- u8 at or.c;main <- 0x11
+tid 1.0 in main at .../or/or.c atomic rmw 2 0x1020 <- u16 at or.c;main <- 0x1122
+tid 1.0 in main at .../or/or.c atomic rmw 4 0x10203040 <- u32 at or.c;main <- 0x11223344
+tid 1.0 in main at .../or/or.c atomic rmw 8 0x1020304050607080 <- u64 at or.c;main <- 0x1122334455667788
+tid 1.0 in main at .../or/or.c atomic load 1 0x11 <- u8 at or.c;main
+tid 1.0 in main at .../or/or.c atomic load 2 0x1122 <- u16 at or.c;main
+tid 1.0 in main at .../or/or.c atomic load 4 0x11223344 <- u32 at or.c;main
+tid 1.0 in main at .../or/or.c atomic load 8 0x1122334455667788 <- u64 at or.c;main
 tid 1.0 in main at .../or/or.c exit function

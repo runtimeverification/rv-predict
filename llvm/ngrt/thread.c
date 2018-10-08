@@ -189,7 +189,7 @@ rvp_ring_stats_dump_total(void)
 	assert_mutex_held(&thread_mutex);
 
 	fprintf(stderr, "joined threads: ring waits %" PRIu64
-	    " ring sleeps %" PRIu64
+	    " sleeps %" PRIu64
 	    " spins %" PRIu64 " i-ring spins %" PRIu64 "\n",
 	    joined_rs.rs_ring_waits, joined_rs.rs_ring_sleeps,
 	    joined_rs.rs_ring_spins, joined_rs.rs_iring_spins);
@@ -219,9 +219,11 @@ rvp_dump_info(void)
 	for (t = thread_head; t != NULL; t = t->t_next) {
 		rvp_ring_stats_t *rs = &t->t_stats;
 
-		fprintf(stderr, "t%" PRIu32 ": ring sleeps %" PRIu64
+		fprintf(stderr, "t%" PRIu32 ": ring waits %" PRIu64
+		    " sleeps %" PRIu64
 		    " spins %" PRIu64 " i-ring spins %" PRIu64 "%s\n", t->t_id,
-		    rs->rs_ring_sleeps, rs->rs_ring_spins, rs->rs_iring_spins,
+		    rs->rs_ring_waits, rs->rs_ring_sleeps,
+		    rs->rs_ring_spins, rs->rs_iring_spins,
 		    t->t_garbage ? " destroyed" : "");
 	}
 	rvp_ring_stats_dump_total();
@@ -646,6 +648,7 @@ rvp_ring_stats_update_total(const rvp_ring_stats_t *rs)
 {
 	assert_mutex_held(&thread_mutex);
 
+	joined_rs.rs_ring_waits += rs->rs_ring_waits;
 	joined_rs.rs_ring_sleeps += rs->rs_ring_sleeps;
 	joined_rs.rs_ring_spins += rs->rs_ring_spins;
 	joined_rs.rs_iring_spins += rs->rs_iring_spins;

@@ -3,6 +3,7 @@
 #include <err.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <stdatomic.h>	/* for atomic_load_explicit, atomic_store_explicit */
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -356,6 +357,7 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
 	uint32_t *consumer = &r->r_items[cidx], *producer;
 	const struct iovec *iov = *iovp;
 	bool writeback_depth = false;
+	pthread_mutex_t *mtx;
 
 	if (iov == lastiov)
 		return -1;
@@ -389,18 +391,21 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
 	}
 	assert(consumer == r->r_consumer);
 
-	if (r->r_nwanted != 0 && r->r_nwanted <= rvp_ring_nempty(r)) {
-		/* I don't disable cancellation here because this routine
-		 * is run only by the serialization thread, which should
-		 * not be cancelled, least of all by a Predict implementation
-		 * thread.
-		 */
-		real_pthread_mutex_lock(&r->r_mtx);
-		r->r_consumer = producer;
+	/* I don't disable cancellation during the lock/signal/unlock
+	 * sequence because this routine is run only by the
+	 * serialization thread, which should not be cancelled, least of
+	 * all by a Predict implementation thread.
+	 */
+	mtx = atomic_load_explicit(&r->r_mtxp, memory_order_consume);
+	if (mtx != NULL)
+		real_pthread_mutex_lock(mtx);
+
+	r->r_consumer = producer;
+
+	if (mtx != NULL) {
 		pthread_cond_signal(&r->r_cv);
-		real_pthread_mutex_unlock(&r->r_mtx);
-	} else
-		r->r_consumer = producer;
+		real_pthread_mutex_unlock(mtx);
+	}
 
 	rvp_debugf("%s.%d r %p span %td -> %td\n",
 	    __func__, __LINE__, (void *)r, cidx, producer - r->r_items);

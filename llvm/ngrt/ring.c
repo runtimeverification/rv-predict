@@ -33,6 +33,7 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
 	r->r_producer = r->r_consumer = r->r_items = items;
 	r->r_last = &r->r_items[nitems - 1];
 	r->r_state = RVP_RING_S_INUSE;
+	r->r_mtxp = NULL;
 	if ((rc = real_pthread_mutex_init(&r->r_mtx, NULL)) != 0) {
 		errx(EXIT_FAILURE, "%s: pthread_mutex_init: %s", __func__,
 		    strerror(rc));
@@ -62,18 +63,33 @@ rvp_ring_stdinit(rvp_ring_t *r)
 	return 0;
 }
 
-/* Caller must hold r->r_mtx!  r->r_idepth must equal 0. */
+/* r->r_idepth must equal 0. */
 void
 rvp_ring_in_thread_wait_for_nempty(rvp_ring_t *r, int nempty)
 {
+	int ostate, discard;
+
+	/* I disable cancellation here to ensure that the ring
+	 * mutex is released.  Application threads run this routine,
+	 * and all application threads are susceptible to cancellation.
+	 */
+	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &ostate);
+	real_pthread_mutex_lock(&r->r_mtx);
+	atomic_store_explicit(&r->r_mtxp, &r->r_mtx, memory_order_release);
+	/* Check again now that we hold the lock.  Skip the wakeup
+	 * and wait if enough slots emptied in the mean time.
+	 */
+
 	r->r_stats->rs_ring_waits++;
 
-	r->r_nwanted = nempty;
 	while (rvp_ring_nempty(r) < nempty) {
+		rvp_wake_transmitter();
 		r->r_stats->rs_ring_sleeps++;
 		pthread_cond_wait(&r->r_cv, &r->r_mtx);
 	}
-	r->r_nwanted = 0;
+	r->r_mtxp = NULL;
+	real_pthread_mutex_unlock(&r->r_mtx);
+	pthread_setcancelstate(ostate, &discard);
 }
 
 void

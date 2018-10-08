@@ -27,7 +27,9 @@ iostat_inc(iostat_t *ios, iostat_sel_t sel)
 		return;
 	}
 	ios->ios_hi[sel]++;
+	/* TBD barrier */
 	ios->ios_lo[sel] = 0;
+	/* TBD barrier */
 	ios->ios_hi[sel]++;
 }
 
@@ -38,7 +40,9 @@ iostat_get(const iostat_t *ios, iostat_sel_t sel)
 
 	do {
 		ohi = ios->ios_hi[sel];
+		/* TBD barrier */
 		lo = ios->ios_lo[sel];
+		/* TBD barrier */
 		nhi = ios->ios_hi[sel];
 	} while ((ohi % 2) != 0 || ohi != nhi);
 

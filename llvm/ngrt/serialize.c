@@ -388,7 +388,6 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
 		iov++;
 	}
 	assert(consumer == r->r_consumer);
-	r->r_consumer = producer;
 
 	if (r->r_nwanted != 0 && r->r_nwanted <= rvp_ring_nempty(r)) {
 		/* I don't disable cancellation here because this routine
@@ -397,9 +396,12 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
 		 * thread.
 		 */
 		real_pthread_mutex_lock(&r->r_mtx);
+		r->r_consumer = producer;
 		pthread_cond_signal(&r->r_cv);
 		real_pthread_mutex_unlock(&r->r_mtx);
-	}
+	} else
+		r->r_consumer = producer;
+
 	rvp_debugf("%s.%d r %p span %td -> %td\n",
 	    __func__, __LINE__, (void *)r, cidx, producer - r->r_items);
 	*iovp = iov;

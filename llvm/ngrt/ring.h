@@ -29,6 +29,8 @@ typedef struct _rvp_ring_stats {
 	volatile uint64_t _Atomic	rs_ring_sleeps;
 	volatile uint64_t _Atomic	rs_ring_spins;
 	volatile uint64_t _Atomic	rs_iring_spins;
+	volatile uint64_t _Atomic	rs_ring_locks;
+	volatile uint64_t _Atomic	rs_ring_services;
 } rvp_ring_stats_t;
 
 struct _rvp_ring;

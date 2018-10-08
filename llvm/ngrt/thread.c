@@ -190,9 +190,13 @@ rvp_ring_stats_dump_total(void)
 
 	fprintf(stderr, "joined threads: ring waits %" PRIu64
 	    " sleeps %" PRIu64
-	    " spins %" PRIu64 " i-ring spins %" PRIu64 "\n",
+	    " spins %" PRIu64
+	    " services %" PRIu64
+	    " locks %" PRIu64
+	    " i-ring spins %" PRIu64 "\n",
 	    joined_rs.rs_ring_waits, joined_rs.rs_ring_sleeps,
-	    joined_rs.rs_ring_spins, joined_rs.rs_iring_spins);
+	    joined_rs.rs_ring_spins, joined_rs.rs_ring_services,
+	    joined_rs.rs_ring_locks, joined_rs.rs_iring_spins);
 }
 
 /* Caller must hold thread_mutex. */
@@ -221,9 +225,13 @@ rvp_dump_info(void)
 
 		fprintf(stderr, "t%" PRIu32 ": ring waits %" PRIu64
 		    " sleeps %" PRIu64
-		    " spins %" PRIu64 " i-ring spins %" PRIu64 "%s\n", t->t_id,
+		    " spins %" PRIu64
+		    " services %" PRIu64
+		    " locks %" PRIu64
+		    " i-ring spins %" PRIu64 "%s\n", t->t_id,
 		    rs->rs_ring_waits, rs->rs_ring_sleeps,
-		    rs->rs_ring_spins, rs->rs_iring_spins,
+		    rs->rs_ring_spins, rs->rs_ring_services,
+		    rs->rs_ring_locks, rs->rs_iring_spins,
 		    t->t_garbage ? " destroyed" : "");
 	}
 	rvp_ring_stats_dump_total();
@@ -335,7 +343,24 @@ serialize(void *arg __unused)
 			    blocksets_last);
 			any_emptied = false;
 			for (; t != NULL; t = t->t_next) {
-				switch (rvp_ring_flush_to_fd(&t->t_ring,
+				pthread_mutex_t *mtx;
+				rvp_ring_t * const r = &t->t_ring;
+                                /* I don't disable cancellation during
+                                 * the lock/signal/unlock sequence
+                                 * because this routine is run only
+                                 * by the serialization thread, which
+                                 * should not be cancelled, least of all
+                                 * by a Predict implementation thread.
+                                 */
+				mtx = atomic_load_explicit(&r->r_mtxp,
+				    memory_order_consume);
+				if (mtx != NULL) {
+					r->r_stats->rs_ring_locks++;
+					real_pthread_mutex_lock(mtx);
+				}
+				r->r_stats->rs_ring_services++;
+
+				switch (rvp_ring_flush_to_fd(r,
 				    fd, &serializer_lc)) {
 				case -1:
 					warn("RV-Predict/C event serialization failed");
@@ -346,6 +371,11 @@ serialize(void *arg __unused)
 					any_emptied = true;
 					break;
 				}
+				if (mtx != NULL) {
+					pthread_cond_signal(&r->r_cv);
+					real_pthread_mutex_unlock(mtx);
+				}
+
 			}
 			thread_lock(&oldmask);
 		} while (stopping && any_emptied);
@@ -652,6 +682,8 @@ rvp_ring_stats_update_total(const rvp_ring_stats_t *rs)
 	joined_rs.rs_ring_sleeps += rs->rs_ring_sleeps;
 	joined_rs.rs_ring_spins += rs->rs_ring_spins;
 	joined_rs.rs_iring_spins += rs->rs_iring_spins;
+	joined_rs.rs_ring_locks += rs->rs_ring_locks;
+	joined_rs.rs_ring_services += rs->rs_ring_services;
 }
 
 /* Caller must hold thread_mutex. */

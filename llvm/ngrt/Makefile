@@ -39,6 +39,7 @@ SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c
 SRCS+=serialize.c sigutil.c specific.c supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c io.c
+SRCS+=stru.c
 WARNS=4
 LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
 LIBC_A!=$(CC) -print-file-name=libc.a

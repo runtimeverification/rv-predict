@@ -30,15 +30,6 @@ trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
-#if !defined(use_cursor)
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
-
-	rvp_buf_trace_load_cog(&b, &r->r_lgen);
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
-	rvp_buf_put_addr(&b, addr);
-	rvp_buf_put(&b, val);
-	rvp_ring_put_buf(r, b);
-#else
 	/* _cursor_for_ring() ensures there is room for an rvp_buf_t's
 	 * worth of traces.
 	 */
@@ -49,7 +40,6 @@ trace_load(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 	rvp_cursor_put_addr(&c, addr);
 	rvp_cursor_put(&c, val);
 	rvp_ring_advance_to_cursor(r, &c);
-#endif
 }
 
 static inline void
@@ -59,15 +49,6 @@ trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
-#if !defined(use_cursor)
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
-
-	rvp_buf_trace_load_cog(&b, &r->r_lgen);
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
-	rvp_buf_put_addr(&b, addr);
-	rvp_buf_put_u64(&b, val);
-	rvp_ring_put_buf(r, b);
-#else
 	rvp_cursor_t c = rvp_cursor_for_ring(r);
 
 	rvp_cursor_trace_load_cog(&c, &r->r_lgen);
@@ -75,7 +56,6 @@ trace_load8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 	rvp_cursor_put_addr(&c, addr);
 	rvp_cursor_put_u64(&c, val);
 	rvp_ring_advance_to_cursor(r, &c);
-#endif
 }
 
 static inline void
@@ -89,21 +69,12 @@ trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 
 	gen = rvp_ggen_before_store();
 	atomic_thread_fence(memory_order_acquire);
-#if !defined(use_cursor)
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
-	rvp_buf_put_addr(&b, addr);
-	rvp_buf_put(&b, val);
-	rvp_buf_trace_cog(&b, &r->r_lgen, gen);
-	rvp_ring_put_buf(r, b);
-#else
 	rvp_cursor_t c = rvp_cursor_for_ring(r);
 	rvp_cursor_put_pc_and_op(&c, &r->r_lastpc, retaddr, op);
 	rvp_cursor_put_addr(&c, addr);
 	rvp_cursor_put(&c, val);
 	rvp_cursor_trace_cog(&c, &r->r_lgen, gen);
 	rvp_ring_advance_to_cursor(r, &c);
-#endif
 }
 
 static inline void
@@ -117,19 +88,10 @@ trace_store8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 
 	gen = rvp_ggen_before_store();
 	atomic_thread_fence(memory_order_acquire);
-#if !defined(use_cursor)
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, op);
-	rvp_buf_put_addr(&b, addr);
-	rvp_buf_put_u64(&b, val);
-	rvp_buf_trace_cog(&b, &r->r_lgen, gen);
-	rvp_ring_put_buf(r, b);
-#else
 	rvp_cursor_t c = rvp_cursor_for_ring(r);
 	rvp_cursor_put_pc_and_op(&c, &r->r_lastpc, retaddr, op);
 	rvp_cursor_put_addr(&c, addr);
 	rvp_cursor_put_u64(&c, val);
 	rvp_cursor_trace_cog(&c, &r->r_lgen, gen);
 	rvp_ring_advance_to_cursor(r, &c);
-#endif
 }

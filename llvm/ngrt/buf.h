@@ -8,13 +8,11 @@
 #include "tracefmt.h"	/* for rvp_op_t */
 #include "deltops.h"	/* for rvp_vec_and_op_to_deltop */
 
-#if defined(declare_cursor)
 typedef struct _rvp_cursor {
 	uint32_t *c_producer;
 	uint32_t * const c_last;
 	uint32_t * const c_first;
 } rvp_cursor_t;
-#endif
 
 #define RVP_BUF_NITEMS 20
 
@@ -62,7 +60,6 @@ rvp_buf_put_voidptr(rvp_buf_t *b, const void *addr)
 	rvp_buf_put_addr(b, (rvp_addr_t)addr);
 }
 
-#if defined(declare_cursor)
 static inline void
 rvp_cursor_put(rvp_cursor_t *c, uint32_t item)
 {
@@ -128,7 +125,6 @@ rvp_cursor_put_pc_and_op(rvp_cursor_t *c, const char **lastpcp, const char *pc,
 }
 
 void rvp_cursor_put_cog(rvp_cursor_t *, uint64_t);
-#endif
 
 static inline void
 rvp_buf_put_u64(rvp_buf_t *b, uint64_t val)

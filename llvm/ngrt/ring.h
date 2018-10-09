@@ -438,7 +438,6 @@ rvp_interruption_close(rvp_interruption_t *it, int eidx)
 	it->it_interruptor_eidx = eidx;
 }
 
-#if defined(declare_cursor)
 static inline void
 rvp_cursor_trace_cog(rvp_cursor_t *c, volatile uint64_t *lgenp, uint64_t gen)
 {
@@ -485,7 +484,6 @@ rvp_ring_advance_to_cursor(rvp_ring_t *r, rvp_cursor_t *c)
 	if (service_threshold <= nfull && (nfull - RVP_BUF_NITEMS) < service_threshold)
 		rvp_ring_request_service(r);
 }
-#endif
 
 void rvp_ring_init(rvp_ring_t *, uint32_t *, size_t);
 void rvp_rings_init(void);

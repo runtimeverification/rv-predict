@@ -481,7 +481,7 @@ rvp_ring_advance_to_cursor(rvp_ring_t *r, rvp_cursor_t *c)
 	 * service threshold to above, then request that the serialization
 	 * thread services the ring.
 	 */
-	if (service_threshold <= nfull && (nfull - RVP_BUF_NITEMS) < service_threshold)
+	if (__predict_false(service_threshold <= nfull && (nfull - RVP_BUF_NITEMS) < service_threshold))
 		rvp_ring_request_service(r);
 }
 

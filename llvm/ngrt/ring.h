@@ -473,7 +473,17 @@ rvp_ring_advance_to_cursor(rvp_ring_t *r, rvp_cursor_t *c)
 	 * pointer, and then the consumer pointer advanced before we got
 	 * here.
 	 */
-	r->r_producer = c->c_producer;
+	atomic_store_explicit(&r->r_producer, c->c_producer,
+	    memory_order_release);
+	int nslots = rvp_ring_capacity(r) + 1;
+	int service_threshold = nslots * 7 / 8;
+	int nfull = rvp_ring_nfull(r);
+	/* If the number of full slots just crossed from below the
+	 * service threshold to above, then request that the serialization
+	 * thread services the ring.
+	 */
+	if (service_threshold <= nfull && (nfull - RVP_BUF_NITEMS) < service_threshold)
+		rvp_ring_request_service(r);
 }
 #endif
 

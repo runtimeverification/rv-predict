@@ -70,14 +70,8 @@ rvp_thread_for_curthr(void)
 {
 	rvp_thread_t *t;
 
-	if ((t = pthread_getspecific(rvp_thread_key)) == NULL) {
-#if 1
+	if ((t = pthread_getspecific(rvp_thread_key)) == NULL)
 		abort();
-#else
-		warnx("%s: pthread_getspecific -> NULL", __func__);
-		return rvp_pthread_to_thread(pthread_self());
-#endif
-	}
 
 	return t;
 }

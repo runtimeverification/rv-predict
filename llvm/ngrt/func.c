@@ -28,8 +28,8 @@ __rvpredict_func_exit(const void *retaddr)
 		return;
 
 	rvp_ring_t *r = rvp_ring_for_curthr();
-	rvp_buf_t b = RVP_BUF_INITIALIZER;
+	rvp_cursor_t c = rvp_cursor_for_ring(r);
 
-	rvp_buf_put_pc_and_op(&b, &r->r_lastpc, retaddr, RVP_OP_EXITFN);
-	rvp_ring_put_buf(r, b);
+	rvp_cursor_put_pc_and_op(&c, &r->r_lastpc, retaddr, RVP_OP_EXITFN);
+	rvp_ring_advance_to_cursor(r, &c);
 }

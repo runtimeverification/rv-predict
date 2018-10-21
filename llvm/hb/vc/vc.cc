@@ -22,7 +22,7 @@ int VectorClock::get_dimension(){
 	return clock.size();
 }
 
-std::vector<long> VectorClock::get_clock(){
+std::vector<long>& VectorClock::get_clock(){
 	return clock;
 }
 
@@ -59,14 +59,20 @@ void VectorClock::resize(int dim){
 	}
 }
 
-void VectorClock::inc_index(int ind){
+void VectorClock::inc_index(std::size_t ind){
 	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
 	assert(clock.size() >= ind + 1);
 	clock[ind] = clock[ind] + 1;
 }
 
-void VectorClock::update_index(int ind, long val){
+void VectorClock::set_index(std::size_t ind, long val){
 	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
 	assert(clock.size() >= ind + 1);
 	clock[ind] = val;
+}
+
+long VectorClock::get_index(std::size_t ind){
+	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
+	assert(clock.size() >= ind + 1);
+	return clock[ind];
 }

@@ -43,6 +43,7 @@ private:
 	// Side effect: this->vc_size is assigned max(this->vc_size, new_size)
 	void resize_vectorclocks(size_t new_size);
 
+public:
 	// Return the VC index of the thread tid.
 	// Side effect: If tid is a new thread, resize all VectorClocks if required.
 	// Side effect: Also add new entry to thread_vc

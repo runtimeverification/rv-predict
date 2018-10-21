@@ -24,8 +24,8 @@ public:
 	// Returns the size of the vector clock.
 	int get_dimension();
 
-	// Returns (a copy of) the vector `clock`.
-	std::vector<long> get_clock();
+	// Returns (a reference of) the vector `clock`.
+	std::vector<long>& get_clock();
 
 	// Returns true if and only if 
 	// `\forall t \in [0, ..,clock.size()-1], clock[t] <= rhs.clock[t]`.
@@ -46,11 +46,14 @@ public:
 
 	// Increments the ind'th index of clock by 1.
 	// Assert failure if clock.size() < ind + 1
-	void inc_index(int ind);
+	void inc_index(std::size_t ind);
 
 	// Changes the entry at the ind'th index of clock to val.
 	// Assert failure if clock.size() < ind + 1.
-	void update_index(int ind, long val);
+	void set_index(std::size_t ind, long val);
+
+	long get_index(std::size_t ind);
+
 };
 
 

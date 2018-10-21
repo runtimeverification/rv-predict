@@ -6,6 +6,10 @@ VectorClock::VectorClock(){
 	clock = std::vector<long>(DEFAULT_THREADS, 0L);
 }
 
+VectorClock::VectorClock(std::size_t n){
+	clock = std::vector<long>(n, 0L);
+}
+
 VectorClock::VectorClock(VectorClock& from){
 	clock = std::vector<long>(from.clock);
 }

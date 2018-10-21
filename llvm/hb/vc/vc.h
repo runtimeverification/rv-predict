@@ -12,6 +12,8 @@ private:
 public:
 	// Default constructor.
 	VectorClock ();
+
+	VectorClock (std::size_t sz);
 	
 	// Copy constructor.
 	VectorClock (VectorClock& fromVC);

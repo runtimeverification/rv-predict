@@ -1,13 +1,14 @@
 #include "hb_state.h"
 #include "event_type.h"
 
-// bool hb_handler(hb_state* state_ptr, uint32 tid, event_type etype, rvp_ubuf_t decor){
+bool hb_handler(hb_state* state_ptr, uint32 tid, event_type etype, rvp_ubuf_t& decor){
 
-// 	std::size_t t_idx = state_ptr->check_and_add_thread(tid);
-// 	switch(etype){
-// 		case 
-// 	}
-// }
+	std::size_t tid_idx = state_ptr->check_and_add_thread(tid);
+	switch(etype){
+		case EVENT_TYPE_READ:
+			return hb_handler_read(state_ptr, tid, tid_idx, decor.)
+	}
+}
 
 bool exists_key_in_map(std::map<rvp_addr_t, VC_ptr>* map_ptr, rvp_addr_t& key){
 	return map_ptr->find(key) != map_ptr->end();

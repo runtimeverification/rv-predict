@@ -14,7 +14,7 @@ enum event_type {
 	EVENT_TYPE_UNKNOWN = 6
 };
 
-event_type rvp_op_to_event_type(rvp_op op){
+event_type rvp_op_to_event_type(rvp_op_t op){
 	switch(op){
 		case RVP_OP_LOAD1:
 		case RVP_OP_LOAD2:

@@ -57,25 +57,31 @@ std::size_t hb_state::check_and_add_thread(uint32_t tid){
 	return tid_index;
 }
 
-void hb_state::check_and_add_lock(rvp_addr_t& lock){
-	std::map<rvp_addr_t, VC_ptr>::iterator it = lock_vc->find(addr);
+bool hb_state::check_and_add_lock(rvp_addr_t& lock){
+	std::map<rvp_addr_t, VC_ptr>::iterator it = lock_vc->find(lock);
 	if(it == lock_vc->end()){
-		(*lock_vc)[addr] = new VectorClock(vc_size);
+		(*lock_vc)[lock] = new VectorClock(vc_size);
+		return false;
 	}
+	else return true;
 }
 
-void hb_state::check_and_add_read_addr(rvp_addr_t& addr){
+bool hb_state::check_and_add_read_addr(rvp_addr_t& addr){
 	std::map<rvp_addr_t, VC_ptr>::iterator it = read_vc->find(addr);
 	if(it == read_vc->end()){
 		(*read_vc)[addr] = new VectorClock(vc_size);
+		return false;
 	}
+	else return true;
 }
 
-void hb_state::check_and_add_write_addr(rvp_addr_t& addr){
+bool hb_state::check_and_add_write_addr(rvp_addr_t& addr){
 	std::map<rvp_addr_t, VC_ptr>::iterator it = write_vc->find(addr);
 	if(it == write_vc->end()){
 		(*write_vc)[addr] = new  VectorClock(vc_size);
 		// Assumed invariant: \forall addr, addr \in write_vc.keys() iff addr \in lastwrite_vc.keys()
 		(*lastwrite_vc)[addr] = new VectorClock(vc_size);
+		return false;
 	}
+	else return true;
 }

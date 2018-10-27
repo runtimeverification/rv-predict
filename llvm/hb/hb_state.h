@@ -1,6 +1,8 @@
 #ifndef _RVP_HB_STATE_H_
 #define _RVP_HB_STATE_H_
 
+#include<map>
+
 #include "tracefmt.h"
 #include "vc.h"
 
@@ -35,7 +37,7 @@ public:
 	// last-write clock for each address.
 	// We assume all loads and stores are identified by their start addresses.
 	// TODO(umang): Do a fine grained analysis later.
-	std::map<rvp_addr_t, VC_ptr>* lastwrite_vc
+	std::map<rvp_addr_t, VC_ptr>* lastwrite_vc;
 
 	// Default constructor
 	hb_state();

@@ -1,5 +1,5 @@
-SUBPRJ=cmade ngrt personality rvpdump sigsim consistent_rvpdump
+SUBPRJ=cmade ngrt personality rvpdump sigsim vc
 INTERNALLIBS=librvu
-LIBDEPS=librvu:ngrt librvu:rvpdump librvu:consistent_rvpdump
+LIBDEPS=librvu:ngrt librvu:rvpdump
 
 .include <mkc.subprj.mk>

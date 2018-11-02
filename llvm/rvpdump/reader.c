@@ -262,15 +262,14 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 
 static void
 rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
-    const rvp_output_params_t *op,
-    rvp_addr_t op0, uint32_t tid __unused, uint64_t generation __unused)
+    bool emit_generation, rvp_addr_t op0)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
 	 */
 	deltops_t deltops;
 
-	ps->ps_emit_generation = op->op_emit_generation;
+	ps->ps_emit_generation = emit_generation;
 	ps->ps_emitters = emitters;
 
 	ps->ps_deltop_center = op0;
@@ -797,12 +796,14 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 }
 
 void
-rvp_trace_dump(const rvp_output_params_t *op, int fd)
+rvp_trace_dump_with_emitters(bool emit_generation, size_t most_nrecords,
+    const rvp_emitters_t *emitters, int fd)
 {
 	int cmp;
 	rvp_pstate_t ps0;
 	rvp_pstate_t *ps = &ps0;
 	rvp_trace_header_t th;
+ 
 	/* XXX make a compile-time assertion that this is a little-endian
 	 * machine, since we assume that when we read the initial 'begin'
 	 * operation, below.
@@ -827,22 +828,6 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		, { .iov_base = &generation, .iov_len = sizeof(generation) }
 	};
 	struct iovec scratch[__arraycount(iov)];
-	const rvp_emitters_t *emitters;
-
-	switch (op->op_type) {
-	case RVP_OUTPUT_BINARY:
-		emitters = &binary;
-		break;
-	case RVP_OUTPUT_SYMBOL_FRIENDLY:
-		emitters = &symbol_friendly;
-		break;
-	case RVP_OUTPUT_PLAIN_TEXT:
-		emitters = &plain_text;
-		break;
-	default:
-		errx(EXIT_FAILURE, "%s: unknown output type %d", __func__,
-		     op->op_type);
-	}
 
 	if ((nread = readallv(fd, iov, scratch, __arraycount(iov))) == -1)
 		err(EXIT_FAILURE, "%s: readallv(header)", __func__);
@@ -876,8 +861,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		errx(EXIT_FAILURE, "%s: expected thread 1, read %" PRIu32,
 		    __func__, tid);
 	}
-
-	rvp_pstate_init(ps, emitters, op, pc0, tid, generation);
+	rvp_pstate_init(ps, emitters, emit_generation, pc0);
 
 	if (emitters->init != NULL)
 		(*emitters->init)(ps, &th);
@@ -906,7 +890,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 			    __func__);
 		}
 		do {
-			if (nrecords == op->op_nrecords)
+			if (nrecords == most_nrecords)
 				return;
 			nshort = consume_and_print_trace(ps, &ub, &nfull);
 			if (nshort != 0)
@@ -914,4 +898,28 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 			++nrecords;
 		} while (nfull >= sizeof(ub.ub_pc));
 	}
+}
+
+void
+rvp_trace_dump(const rvp_output_params_t *op, int fd)
+{
+	const rvp_emitters_t *emitters;
+	bool emit_generation = op->op_emit_generation;
+	size_t most_nrecords = op->op_nrecords;
+	switch (op->op_type) {
+	case RVP_OUTPUT_BINARY:
+		emitters = &binary;
+		break;
+	case RVP_OUTPUT_SYMBOL_FRIENDLY:
+		emitters = &symbol_friendly;
+		break;
+	case RVP_OUTPUT_PLAIN_TEXT:
+		emitters = &plain_text;
+		break;
+	default:
+		errx(EXIT_FAILURE, "%s: unknown output type %d", __func__,
+		     op->op_type);
+	}
+
+	rvp_trace_dump_with_emitters(emit_generation, most_nrecords, emitters, fd);
 }

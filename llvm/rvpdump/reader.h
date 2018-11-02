@@ -96,6 +96,7 @@ struct _rvp_pstate {
 };
 
 void rvp_trace_dump(const rvp_output_params_t *, int);
+void rvp_trace_dump_with_emitters(bool, size_t, const rvp_emitters_t *, int);
 
 __END_EXTERN_C
 

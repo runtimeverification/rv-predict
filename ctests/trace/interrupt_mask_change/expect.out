@@ -31,10 +31,6 @@ tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 enter signal handle
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 enter function cfa . return in __rvpredict_handler_wrapper
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit function
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit signal handler
-tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 enter signal handler signal 10 handler in handler at .../interrupt_mask_change/chgmask.c:11
-tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 enter function cfa . return in __rvpredict_handler_wrapper
-tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit function
-tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 exit signal handler
 tid 1.1 in handler at .../interrupt_mask_change/chgmask.c:11 signal depth -> 0
 tid 1.0 in main at .../interrupt_mask_change/chgmask.c:46 set signal mask #3
 tid 1.0 in main at .../interrupt_mask_change/chgmask.c:18 exit function

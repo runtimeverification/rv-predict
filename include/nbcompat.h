@@ -210,6 +210,16 @@
 
 /* From <sys/cdefs.h> on NetBSD: */
 
+#if defined(__cplusplus)
+#define __BEGIN_EXTERN_C        extern "C" {
+#define __END_EXTERN_C          }
+#define __static_cast(x,y)      static_cast<x>(y)
+#else
+#define __BEGIN_EXTERN_C
+#define __END_EXTERN_C
+#define __static_cast(x,y)      (x)y
+#endif
+
 #define __printflike(fmtarg, firstvararg)       \
             __attribute__((__format__ (__printf__, fmtarg, firstvararg)))
 #define __scanflike(fmtarg, firstvararg)        \

@@ -9,18 +9,19 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-PROG=rvpdump
+LIB=rvread
 
-CPPFLAGS+=-D_POSIX_C_SOURCE=200809L	# for dprintf(3) and getopt(3)
-CC?=$(HOST_CC)
-CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
-CPPFLAGS+=-I$(.CURDIR)/../librvu
-CPPFLAGS+=-I$(.CURDIR)/../librvread
-SRCS=main.c
-#LDFLAGS+=-L${.CURDIR}/../../librvu -lrvu
-WARNS=4
+.PATH: $(.CURDIR)/../ngrt
+
 STRIPFLAG=
+CC?=clang
+CFLAGS+=-std=c11
+#COPTS+=-O3
+COPTS+=-g
+CFLAGS+=-Wmissing-prototypes
+CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
+CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for write(2) on QNX
+SRCS=reader.c
+WARNS=4
 
-COPTS+=-g -O3
-
-.include <mkc.prog.mk>
+.include <mkc.lib.mk>

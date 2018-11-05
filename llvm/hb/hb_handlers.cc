@@ -1,6 +1,6 @@
 #include "hb_handlers.h"
 
-bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, rvp_ubuf_t& decor){
+bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, rvp_ubuf_t* decor){
 
 	std::size_t tid_idx = state_ptr->check_and_add_thread(tid);
 	switch(op){
@@ -10,13 +10,13 @@ bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, rvp_ubuf_t& deco
 		case RVP_OP_ATOMIC_LOAD1:
 		case RVP_OP_ATOMIC_LOAD2:
 		case RVP_OP_ATOMIC_LOAD4:
-			return hb_handler_read(state_ptr, tid, tid_idx, decor.ub_load1_2_4_store1_2_4.addr);
+			return hb_handler_read(state_ptr, tid, tid_idx, decor->ub_load1_2_4_store1_2_4.addr);
 
 		case RVP_OP_LOAD8:
 		case RVP_OP_LOAD16: // TODO(umang): Ask david what field corresponds to 16 byte wide load/stores
 		case RVP_OP_ATOMIC_LOAD8:
 		case RVP_OP_ATOMIC_LOAD16: // TODO(umang): Ask david what field corresponds to 16 byte wide load/stores
-			return hb_handler_read(state_ptr, tid, tid_idx, decor.ub_load8_store8.addr);
+			return hb_handler_read(state_ptr, tid, tid_idx, decor->ub_load8_store8.addr);
 
 		case RVP_OP_STORE1:
 		case RVP_OP_STORE2:
@@ -24,29 +24,29 @@ bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, rvp_ubuf_t& deco
 		case RVP_OP_ATOMIC_STORE1:
 		case RVP_OP_ATOMIC_STORE2:
 		case RVP_OP_ATOMIC_STORE4:
-			return hb_handler_write(state_ptr, tid, tid_idx, decor.ub_load1_2_4_store1_2_4.addr);
+			return hb_handler_write(state_ptr, tid, tid_idx, decor->ub_load1_2_4_store1_2_4.addr);
 
 		case RVP_OP_STORE8:
 		case RVP_OP_STORE16:
 		case RVP_OP_ATOMIC_STORE8:
 		case RVP_OP_ATOMIC_STORE16:
-			return hb_handler_write(state_ptr, tid, tid_idx, decor.ub_load8_store8.addr);
+			return hb_handler_write(state_ptr, tid, tid_idx, decor->ub_load8_store8.addr);
 
 		case RVP_OP_FORK:
-			return hb_handler_fork(state_ptr, tid, tid_idx, decor.ub_fork_join_switch.tid);
+			return hb_handler_fork(state_ptr, tid, tid_idx, decor->ub_fork_join_switch.tid);
 
 		case RVP_OP_JOIN:
-			return hb_handler_join(state_ptr, tid, tid_idx, decor.ub_fork_join_switch.tid);
+			return hb_handler_join(state_ptr, tid, tid_idx, decor->ub_fork_join_switch.tid);
 
 		case RVP_OP_ACQUIRE:
-			return hb_handler_acquire(state_ptr, tid, tid_idx, decor.ub_acquire_release.addr);
+			return hb_handler_acquire(state_ptr, tid, tid_idx, decor->ub_acquire_release.addr);
 
 		case RVP_OP_RELEASE:
-			return hb_handler_release(state_ptr, tid, tid_idx, decor.ub_acquire_release.addr);
+			return hb_handler_release(state_ptr, tid, tid_idx, decor->ub_acquire_release.addr);
 
 		// TODO(umang): RVP_OP_ATOMIC_RMW get labelled as UNKNOWN.
 		default:
-			return EVENT_TYPE_UNKNOWN;			
+			return false;			
 	}
 }
 

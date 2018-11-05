@@ -13,8 +13,8 @@ LIB=hb
 
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L	# for dprintf(3) and getopt(3)
 #CC?=$(HOST_CC)
-CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include -I${.CURDIR}/../vc
-CPPFLAGS+=-Wuninitialized
+CPPFLAGS+=-Wuninitialized 
+CPPFLAGS+=-I${.CURDIR}/../ngrt -I${.CURDIR}/../../include -I${.CURDIR}/../vc -I${.CURDIR}/../librvread 
 SRCS=hb_handlers.cc hb_state.cc
 WARNS=4
 STRIPFLAG=

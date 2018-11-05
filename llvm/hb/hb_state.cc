@@ -1,4 +1,3 @@
-#include "vc.h"
 #include "hb_state.h"
 
 hb_state::hb_state(){

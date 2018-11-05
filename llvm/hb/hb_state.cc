@@ -1,3 +1,4 @@
+#include "vc.h"
 #include "hb_state.h"
 
 hb_state::hb_state(){
@@ -85,3 +86,5 @@ bool hb_state::check_and_add_write_addr(rvp_addr_t& addr){
 	}
 	else return true;
 }
+
+int main(){}

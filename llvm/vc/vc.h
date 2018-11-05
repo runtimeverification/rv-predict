@@ -22,7 +22,7 @@ public:
 	~VectorClock ();
 
 	// Returns the size of the vector clock.
-	int get_dimension();
+	std::size_t get_dimension();
 
 	// Returns (a reference of) the vector `clock`.
 	std::vector<long>& get_clock();
@@ -42,7 +42,7 @@ public:
 
 	// If dim <= clock.size(), no effect.
 	// Otherwise, clock is resized to dim. The new components are initialized to 0.
-	void resize(int dim);
+	void resize(std::size_t dim);
 
 	// Increments the ind'th index of clock by 1.
 	// Assert failure if clock.size() < ind + 1

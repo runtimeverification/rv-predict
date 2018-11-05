@@ -9,16 +9,19 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-LIB=hb
+PROG=hb
 
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L	# for dprintf(3) and getopt(3)
-#CC?=$(HOST_CC)
+CC?=$(HOST_CC)
 CPPFLAGS+=-Wuninitialized 
-CPPFLAGS+=-I${.CURDIR}/../ngrt -I${.CURDIR}/../../include -I${.CURDIR}/../vc -I${.CURDIR}/../librvread 
-SRCS=hb_handlers.cc hb_state.cc
+CPPFLAGS+=-I${.CURDIR}/../ngrt -I${.CURDIR}/../../include 
+CPPFLAGS+=-I$(.CURDIR)/../librvu -I${.CURDIR}/../librvread 
+CPPFLAGS+=-I${.CURDIR}/../vc
+LDFLAGS+=-L${.CURDIR}../vc/libvc.a #-L${.CURDIR}/../librvu -L${.CURDIR}/../librvread
+SRCS=hb_state.cc #hb_handlers.cc #hb_interface.cc
 WARNS=4
 STRIPFLAG=
 
 COPTS+=-g -O3
 
-.include <mkc.lib.mk>
+.include <mkc.prog.mk>

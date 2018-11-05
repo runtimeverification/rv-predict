@@ -18,7 +18,7 @@ VectorClock::~VectorClock (){
 	clock.~vector<long>();
 }
 
-int VectorClock::get_dimension(){
+std::size_t VectorClock::get_dimension(){
 	return clock.size();
 }
 
@@ -53,7 +53,7 @@ void VectorClock::copy_from(VectorClock& rhs){
 	clock = std::vector<long>(rhs.clock);
 }
 
-void VectorClock::resize(int dim){
+void VectorClock::resize(std::size_t dim){
 	if(clock.size() > dim){
 		clock.resize(dim, 0);
 	}

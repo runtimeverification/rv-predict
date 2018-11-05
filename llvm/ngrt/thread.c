@@ -60,6 +60,11 @@ bool rvp_debug_supervisor = false;
 int64_t rvp_trace_size_limit = INT64_MAX;
 static _Atomic bool info_dump_requested = false;
 
+/* Set to true after the pointers to the "real" implementation functions
+ * are established.
+ */ 
+_Atomic bool __read_mostly rvp_real_initialized = false;
+
 pthread_key_t rvp_thread_key;
 static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
 static pthread_once_t rvp_dump_info_once = PTHREAD_ONCE_INIT;
@@ -73,6 +78,9 @@ static rvp_thread_t *rvp_collect_garbage(void);
 static inline void
 rvp_trace_fork(uint32_t id, const void *retaddr)
 {
+	if (__predict_false(!ring_operational()))
+		return;
+
 	rvp_ring_t *r = rvp_ring_for_curthr();
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
 	uint64_t gen;
@@ -466,6 +474,7 @@ rvp_prefork_init(void)
 	rvp_signal_prefork_init();
 	rvp_str_prefork_init();
 	rvp_thread_prefork_init();
+	rvp_real_initialized = true;
 }
 
 static void

@@ -6,10 +6,12 @@
 #include <stdlib.h>
 #include "nbcompat.h"
 
+static const uint8_t initial_u8 = 0x20U;
 static const uint16_t initial_u16 = 0x2020U;
 static const uint32_t initial_u32 = 0x40404040U;
 static const uint64_t initial_u64 = 0x8080808080808080U;
 
+static const uint8_t end_u8 = 0;
 static const uint16_t end_u16 = 0;
 static const uint32_t end_u32 = 0;
 static const uint64_t end_u64 = 0;
@@ -17,13 +19,16 @@ static const uint64_t end_u64 = 0;
 int
 main(void)
 {
+	volatile _Atomic uint8_t  u8 = initial_u8;
 	volatile _Atomic uint16_t u16 = initial_u16;
 	volatile _Atomic uint32_t u32 = initial_u32;
 	volatile _Atomic uint64_t u64 = initial_u64;
 
+	assert(atomic_fetch_and(&u8, initial_u8 >> 4) == initial_u8);
 	assert(atomic_fetch_and(&u16, initial_u16 >> 4) == initial_u16);
 	assert(atomic_fetch_and(&u32, initial_u32 >> 4) == initial_u32);
 	assert(atomic_fetch_and(&u64, initial_u64 >> 4) == initial_u64);
+	assert(u8 == end_u8);
 	assert(u16 == end_u16);
 	assert(u32 == end_u32);
 	assert(u64 == end_u64);

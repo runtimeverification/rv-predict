@@ -13,7 +13,6 @@
 
 #include "io.h"	/* for __arraycount, offsetof */
 #include "nbcompat.h"	/* for __arraycount, offsetof */
-#include "tracefmt.h"
 #include "reader.h"
 
 #define	RSVD_IDEPTH 0
@@ -22,29 +21,6 @@ typedef char prebuf_t[
     sizeof("tid 4294967295.4294967295 18446744073709551615 ") +
     MAX(sizeof("{0x0123456789abcdef}"), sizeof("pc 0x0123456789abcdef"))];
 
-typedef union {
-	rvp_addr_t ub_pc;
-	rvp_begin_t ub_begin;
-	rvp_fork_join_switch_t ub_fork_join_switch;
-	rvp_load1_2_4_store1_2_4_t ub_load1_2_4_store1_2_4;
-	rvp_acquire_release_t ub_acquire_release;
-	rvp_load8_store8_t ub_load8_store8;
-	rvp_cog_t ub_cog;
-	rvp_entersig_t ub_entersig;
-	rvp_exitsig_t ub_exitsig;
-	rvp_sigdepth_t ub_sigdepth;
-	rvp_sigest_t ub_sigest;
-	rvp_sigdis_t ub_sigdis;
-	rvp_sigmaskmemo_t ub_sigmaskmemo;
-	rvp_sigmask_access_t ub_sigmask_access;
-	rvp_sigmask_rmw_t ub_sigmask_rmw;
-	rvp_rmw1_2_t ub_rmw1_2;
-	rvp_rmw4_t ub_rmw4;
-	rvp_rmw8_t ub_rmw8;
-	rvp_enterfn_t ub_enterfn;
-	char ub_bytes[4096];
-} rvp_ubuf_t;
-
 typedef struct {
 	size_t oi_reclen;
 	const char *oi_descr;
@@ -52,72 +28,6 @@ typedef struct {
 
 #define OP_INFO_INIT(__ty, __descr)	\
 	{.oi_reclen = sizeof(__ty), .oi_descr = __descr}
-
-typedef struct _rvp_frame {
-	rvp_addr_t	f_pc;	/* Program Counter where runtime logged
-				 * function entry
-				 */
-	rvp_addr_t	f_cfa;	/* DWARF Canonical Frame Address */
-} rvp_frame_t;
-
-typedef struct _rvp_call {
-	rvp_frame_t	*cs_frame;
-	int		cs_depth;
-	int		cs_nframes;
-} rvp_callstack_t;
-
-struct _rvp_pstate;
-typedef struct _rvp_pstate rvp_pstate_t;
-
-typedef struct _rvp_emitters {
-	void (*init)(const rvp_pstate_t *, const rvp_trace_header_t *);
-	void (*emit_nop)(const rvp_pstate_t *, const rvp_ubuf_t *);
-	void (*emit_op)(const rvp_pstate_t *, const rvp_ubuf_t *, rvp_op_t,
-	    bool, int);
-	char *(*dataptr_to_string)(const rvp_pstate_t *, char *, size_t,
-	    rvp_addr_t);
-	char *(*insnptr_to_string)(const rvp_pstate_t *, char *, size_t,
-	    rvp_addr_t);
-} rvp_emitters_t;
-
-#define	RVP_SIGNAL_DEPTH	16
-
-/* parse state: per-thread */
-typedef struct _rvp_thread_pstate {
-	bool		ts_present;
-	rvp_callstack_t	ts_callstack[RVP_SIGNAL_DEPTH];
-	rvp_addr_t	ts_lastpc[RVP_SIGNAL_DEPTH];
-	uint64_t	ts_generation[RVP_SIGNAL_DEPTH];
-	uint64_t	ts_nops[RVP_SIGNAL_DEPTH];
-	uint64_t	ts_last_gid[RVP_SIGNAL_DEPTH];
-	bool		ts_sigs_masked;
-} rvp_thread_pstate_t;
-
-/* parse state: global */
-struct _rvp_pstate {
-	rvp_thread_pstate_t	*ps_thread;
-	uint32_t		ps_nthreads;
-	rvp_addr_t		ps_deltop_first, ps_deltop_center,
-				ps_deltop_last;
-	uint32_t		ps_curthread;
-	const rvp_emitters_t	*ps_emitters;
-	uint32_t		ps_idepth;
-	int			ps_zeromasknum;
-	bool			ps_emit_generation;
-};
-
-typedef struct _intmax_item intmax_item_t;
-
-struct _intmax_item {
-	uintmax_t	i_v;
-	intmax_item_t *	i_next;
-	uint32_t	i_id;
-};
-
-typedef struct _intmax_bucket {
-	intmax_item_t *	b_head;
-	size_t		b_nitems;
-} intmax_bucket_t;
 
 static char *preamble_string(const rvp_pstate_t *, char *, size_t);
 
@@ -352,15 +262,14 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 
 static void
 rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
-    const rvp_output_params_t *op,
-    rvp_addr_t op0, uint32_t tid __unused, uint64_t generation __unused)
+    bool emit_generation, rvp_addr_t op0)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
 	 */
 	deltops_t deltops;
 
-	ps->ps_emit_generation = op->op_emit_generation;
+	ps->ps_emit_generation = emit_generation;
 	ps->ps_emitters = emitters;
 
 	ps->ps_deltop_center = op0;
@@ -772,7 +681,7 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 	}
 	extract_jmpvec_and_op_from_deltop(ps->ps_deltop_first,
 	    ub->ub_pc, &jmpvec, &op);
-	const op_info_t *oi = &op_to_info[op];
+	const op_info_t * const oi = &op_to_info[op];
 	if (oi->oi_descr == NULL)
 		errx(EXIT_FAILURE, "unknown op %d\n", op);
 	/* need to top off buffer? */
@@ -887,12 +796,14 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 }
 
 void
-rvp_trace_dump(const rvp_output_params_t *op, int fd)
+rvp_trace_dump_with_emitters(bool emit_generation, size_t most_nrecords,
+    const rvp_emitters_t *emitters, int fd)
 {
 	int cmp;
 	rvp_pstate_t ps0;
 	rvp_pstate_t *ps = &ps0;
 	rvp_trace_header_t th;
+ 
 	/* XXX make a compile-time assertion that this is a little-endian
 	 * machine, since we assume that when we read the initial 'begin'
 	 * operation, below.
@@ -917,22 +828,6 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		, { .iov_base = &generation, .iov_len = sizeof(generation) }
 	};
 	struct iovec scratch[__arraycount(iov)];
-	const rvp_emitters_t *emitters;
-
-	switch (op->op_type) {
-	case RVP_OUTPUT_BINARY:
-		emitters = &binary;
-		break;
-	case RVP_OUTPUT_SYMBOL_FRIENDLY:
-		emitters = &symbol_friendly;
-		break;
-	case RVP_OUTPUT_PLAIN_TEXT:
-		emitters = &plain_text;
-		break;
-	default:
-		errx(EXIT_FAILURE, "%s: unknown output type %d", __func__,
-		     op->op_type);
-	}
 
 	if ((nread = readallv(fd, iov, scratch, __arraycount(iov))) == -1)
 		err(EXIT_FAILURE, "%s: readallv(header)", __func__);
@@ -966,8 +861,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		errx(EXIT_FAILURE, "%s: expected thread 1, read %" PRIu32,
 		    __func__, tid);
 	}
-
-	rvp_pstate_init(ps, emitters, op, pc0, tid, generation);
+	rvp_pstate_init(ps, emitters, emit_generation, pc0);
 
 	if (emitters->init != NULL)
 		(*emitters->init)(ps, &th);
@@ -996,7 +890,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 			    __func__);
 		}
 		do {
-			if (nrecords == op->op_nrecords)
+			if (nrecords == most_nrecords)
 				return;
 			nshort = consume_and_print_trace(ps, &ub, &nfull);
 			if (nshort != 0)
@@ -1004,4 +898,28 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 			++nrecords;
 		} while (nfull >= sizeof(ub.ub_pc));
 	}
+}
+
+void
+rvp_trace_dump(const rvp_output_params_t *op, int fd)
+{
+	const rvp_emitters_t *emitters;
+	bool emit_generation = op->op_emit_generation;
+	size_t most_nrecords = op->op_nrecords;
+	switch (op->op_type) {
+	case RVP_OUTPUT_BINARY:
+		emitters = &binary;
+		break;
+	case RVP_OUTPUT_SYMBOL_FRIENDLY:
+		emitters = &symbol_friendly;
+		break;
+	case RVP_OUTPUT_PLAIN_TEXT:
+		emitters = &plain_text;
+		break;
+	default:
+		errx(EXIT_FAILURE, "%s: unknown output type %d", __func__,
+		     op->op_type);
+	}
+
+	rvp_trace_dump_with_emitters(emit_generation, most_nrecords, emitters, fd);
 }

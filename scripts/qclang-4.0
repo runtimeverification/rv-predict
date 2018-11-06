@@ -8,12 +8,16 @@
 set -e
 set -u
 
-export QNX_TARGET=${HOME}/qnx700/target/qnx7
-export QNX_HOST=${HOME}/qnx700/host/linux/x86_64
-export PATH=${HOME}/qnx700/host/linux/x86_64/usr/bin:${PATH}
+if [ ${QNX_TARGET:-unknown} = unknown ]; then
+	export QNX_TARGET=${HOME}/qnx700/target/qnx7
+fi
+if [ ${QNX_HOST:-unknown} = unknown ]; then
+	export QNX_HOST=${HOME}/qnx700/host/linux/x86_64
+fi
+export PATH=${QNX_HOST}/usr/bin:${PATH}
 
 # -nostdinc -Asystem(unix)
-cflags="-target x86_64-pc-qnx-gnu -mcmodel=small -D__LANGUAGE_C -D_LANGUAGE_C -D__QNX__ -D__QNXNTO__ -D__unix__ -D__unix -D__ELF__ -fPIE -D__X86_64__ -D__LITTLEENDIAN__ -nostdlib --sysroot=${HOME}/qnx700/host/linux/x86_64 -isystem /mnt/hd2/dyoung/qnx700/target/qnx7/usr/include -isystem ${HOME}/qnx700/host/linux/x86_64/usr/include"
+cflags="-target x86_64-pc-qnx-gnu -mcmodel=small -D__LANGUAGE_C -D_LANGUAGE_C -D__QNX__ -D__QNXNTO__ -D__unix__ -D__unix -D__ELF__ -fPIE -D__X86_64__ -D__LITTLEENDIAN__ -nostdlib --sysroot=${QNX_HOST} -isystem ${QNX_TARGET}/usr/include -isystem ${QNX_HOST}/usr/include"
 
 _ldflags="-Wl,--dynamic-linker=/usr/lib/ldqnx-64.so.2"
 _ldflags="${_ldflags:-} -Wl,--sysroot=${QNX_TARGET}/x86_64"
@@ -45,7 +49,7 @@ _post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0
 _post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/crtend.o"
 _post_ldflags="${_post_ldflags:-} ${QNX_TARGET}/x86_64/lib/crtn.o"
 
-_posix_ldflags="-L$(dirname $0)/../lib -lrvpmissing_posix"
+_posix_ldflags="-L$(dirname $0)/../lib/qnx -lrvpmissing_posix"
 
 cplusplus=no
 compile=yes
@@ -56,6 +60,11 @@ posix_ldflags=
 post_ldflags=
 
 prog=$(basename $0)
+
+if [ ${prog%%ld} != ${prog} ]; then
+	echo "${prog}: not implemented" 1>&2
+	exit 1
+fi
 
 if [ ${prog%%++} != ${prog} ]; then
 	cplusplus=yes
@@ -84,7 +93,14 @@ for arg in "$@"; do
 	esac
 done
 
-if [ ${cplusplus:-no} = yes ]; then
+if [ ${compile} = yes -a ${RVP_SETUP:-no} = no ]; then
+	cflags="${cflags} -include $(dirname $0)/../include/qnx/rvpredict_missing_posix.h"
+fi
+
+if [ ${prog##q} = rvpld ]; then
+	compiler=ld
+	cflags=
+elif [ ${cplusplus:-no} = yes ]; then
 	compiler="clang++-4.0 -std=c++11"
 else
 	compiler=clang-4.0
@@ -96,11 +112,11 @@ else
 	pfx=
 fi
 
-if [ ${compile} = yes -a ${RVP_SETUP:-no} = no ]; then
-	cflags="${cflags} -include $(dirname $0)/../include/rvpredict_missing_posix.h"
-fi
-
-if [ ${link} = yes ]; then
+if [ ${prog##q} = rvpld ]; then
+	ldflags=$(echo ${_ldflags} | sed 's/-Wl,//g')
+	post_ldflags=$(echo ${_post_ldflags} | sed 's/-Wl,//g')
+	posix_ldflags=$(echo ${_posix_ldflags} | sed 's/-Wl,//g')
+elif [ ${link} = yes ]; then
 	ldflags=${_ldflags}
 	post_ldflags=${_post_ldflags}
 	posix_ldflags=${_posix_ldflags}

@@ -1,3 +1,4 @@
+#include <ucontext.h>	/* for ucontext_t---on QNX, at least */
 #include <errno.h>
 #include <inttypes.h>	/* for PRIu32 */
 #include <signal.h>
@@ -1075,8 +1076,13 @@ __rvpredict___sysv_signal(int signo, rvp_sighandler_t handler)
 rvp_sighandler_t
 __rvpredict_signal(int signo, rvp_sighandler_t handler)
 {
+#ifdef SA_RESTART
 	return __rvpredict_signal_common(signo, SA_RESTART, handler,
 	    __builtin_return_address(0));
+#else
+	return __rvpredict_signal_common(signo, 0, handler,
+	    __builtin_return_address(0));
+#endif
 }
 
 int

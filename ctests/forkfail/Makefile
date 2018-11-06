@@ -7,7 +7,7 @@ PATH:=$(.OBJDIR)/../toolset/bin:$(PATH)
 PROG=forkfail
 
 PREDICT_CC?=rvpc
-CC=$(PREDICT_CC)
+CC?=$(PREDICT_CC)
 CPPFLAGS+=-I$(.CURDIR)/../../include
 SRCS.forkfail=forkfail.c
 WARNS=4

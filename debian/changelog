@@ -1,3 +1,41 @@
+rv-predict-c (2.1.0-1) xenial; urgency=medium
+
+  * Fix a bug where programs that `fork(2)` would hang.
+
+  * Port to QNX.  Provide `qrvpc` for cross-building for QNX for x86_64.
+
+  * Add an `ld(1)` replacement, `rvpld`.
+
+  * Several improvements to the function and appearance of the HTML
+    report.
+
+  * Fix poor wording in reports that mention locks. 
+
+  * Add synopses for the four categories of data race Predict detects.
+
+  * Fix a bug that crashed some programs that used the POSIX
+    thread-local storage (TLS) APIs (`pthread_getspecific(3)`,
+    `pthread_setspecific(3)`).
+
+  * Fix a but that crashed programs linked to dynamic libraries whose
+    initializers used POSIX mutexes.
+
+  * Separately instrument both the native Linux `signal(3)`, which is
+    implemented using `sigaction(2)`, and the System V variant that is
+    provided by `signal(2)`.
+
+  * Support the `sigaction(2)` flag `SA_RESETHAND`.
+
+  * Fix a bug that crashed some programs that used `memset(3)`.
+
+  * Reduce report clutter: do not prepend `.../` to abbreviated paths.
+
+  * Let the operator direct reports to a file or to a file descriptor
+    using environment variables `RVP_REPORT_FILE` and `RVP_REPORT_FD`,
+    respectively.
+
+ -- Runtime Verification, Inc. <support@runtimeverification.com>  Thu, 13 Sep 2018 12:08:21 -0500
+
 rv-predict-c (2.0.1-1) xenial; urgency=medium
 
   * Fix a defect in the report symbolization that broke some of

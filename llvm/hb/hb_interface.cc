@@ -3,9 +3,10 @@
 #include <unistd.h>	/* for STDIN_FILENO */
 #include <fcntl.h>	/* for open(2) */
 
-extern "C" {
-	#include "reader.h"	
-}
+// extern "C" {
+// #include "reader.h"	
+// }
+
 #include "hb_handlers.h"
 
 extern "C" void hb_perform_nop(const rvp_pstate_t *ps, const rvp_ubuf_t *ub)

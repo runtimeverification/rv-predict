@@ -12,6 +12,7 @@
 PROG=hb
 
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L	# for dprintf(3) and getopt(3)
+#CPPFLAGS+=-fPIC
 CC?=$(HOST_CC)
 CPPFLAGS+=-Wuninitialized 
 CPPFLAGS+=-I${.CURDIR}/../ngrt -I${.CURDIR}/../../include 

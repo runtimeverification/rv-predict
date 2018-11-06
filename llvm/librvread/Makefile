@@ -21,6 +21,8 @@ COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
 CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for write(2) on QNX
+CPPFLAGS+=-fPIC
+CPPFLAGS+=-m64
 SRCS=reader.c
 WARNS=4
 

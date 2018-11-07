@@ -1,6 +1,7 @@
 #ifndef _RVP_INTERPOSE_H_
 #define _RVP_INTERPOSE_H_
 
+#include <stdlib.h>	/* For strlen, strchr, ... */
 #include <dlfcn.h>	/* for dlsym(3) */
 #include <pthread.h>	/* for pthread_{join,create,exit}(3),
 			 * pthread_mutex_{init,lock,trylock,unlock}(3), etc.
@@ -72,5 +73,16 @@ INTERPOSE_DECLS(int, sigsuspend, const sigset_t *);
 INTERPOSE_DECLS(void *, memset, void *, int, size_t);
 INTERPOSE_DECLS(void *, memcpy, void *, const void *, size_t);
 INTERPOSE_DECLS(void *, memmove, void *, const void *, size_t);
+
+INTERPOSE_DECLS(size_t , strlen,  const char *);
+INTERPOSE_DECLS(char * , strchrnul ,  const char *, int );
+////INTERPOSE_DECLS(char * , strchr ,  const char *, int );
+INTERPOSE_DECLS(char * , strcpy ,  char *, const char *);
+INTERPOSE_DECLS(char * , strdup ,  const char *);
+//INTERPOSE_DECLS(char * , strdupa ,  const char *);
+INTERPOSE_DECLS(char * , strndup ,  const char *, size_t);
+//INTERPOSE_DECLS(char * , strndupa ,  const char *, size_t );
+INTERPOSE_DECLS(char * , strncpy ,  char *, const char *, size_t );
+INTERPOSE_DECLS(char * , strrchr ,  const char *, int );
 
 #endif /* _RVP_INTERPOSE_H_ */

@@ -11,3 +11,5 @@ sigtest
 tags
 test.trace
 *.tmp
+0*
+z*

@@ -1,7 +1,10 @@
-cd stopkill;     pwd; stopkill     ;cd ..
-cd memsetx;     pwd; memsetx     ;cd ..
-cd memcpyx;     pwd; memcpyx     ;cd ..
-cd memmovex;     pwd; memmovex     ;cd ..
-echo "======== Skipping regression/cancellation ================"
-echo "======== Skipping regression/cancellation ================"
 # cd cancellation; pwd; cancellation ;cd ..
+echo "======== Skipping regression/cancellation ================"
+cd forkfreeze;   pwd; forkfreeze     ;cd ..
+cd memcpyx;      pwd; memcpyx     ;cd ..
+cd memmovex;     pwd; memmovex     ;cd ..
+cd memsetx;      pwd; memsetx     ;cd ..
+cd setspecific;  pwd; setspecific     ;cd ..
+cd stopkill;     pwd; stopkill     ;cd ..
+echo "======== Exit regression ================================"
+

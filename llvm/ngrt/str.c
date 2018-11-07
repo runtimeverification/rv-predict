@@ -6,6 +6,7 @@
 #include "supervise.h"
 #include "text.h"
 #include "tracefmt.h"
+#include "stru.h"
 
 REAL_DEFN(void *, memcpy, void *, const void *, size_t) =
     __rvpredict_internal_memcpy;
@@ -17,6 +18,7 @@ REAL_DEFN(void *, memset, void *, int, size_t) =
 void
 rvp_str_prefork_init(void)
 {
+	rvp_stru_prefork_init();
 	ESTABLISH_PTR_TO_REAL(void *(*)(void *, const void *, size_t), memcpy);
 	ESTABLISH_PTR_TO_REAL(void *(*)(void *, const void *, size_t), memmove);
 	ESTABLISH_PTR_TO_REAL(void *(*)(void *, int, size_t), memset);

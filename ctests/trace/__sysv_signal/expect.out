@@ -1,17 +1,27 @@
 tid 1.0 {} begin thread
-tid 1.0 in main at .../signal/sigtest.c:51 enter function cfa . return {}
-tid 1.0 in main at .../signal/sigtest.c:53 disestablish signal action signal 6
-tid 1.0 in main at .../signal/sigtest.c:54 establish signal action signal 6 handler in gnutest_handler at .../signal/sigtest.c:12 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../signal/sigtest.c:55 disestablish signal action signal 6
-tid 1.0 in main at .../signal/sigtest.c:58 establish signal action signal 10 handler in usr_1_handler at .../signal/sigtest.c:39 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../signal/sigtest.c:59 disestablish signal action signal 10
-tid 1.0 in main at .../signal/sigtest.c:60 establish signal action signal 12 handler in usr_2_handler at .../signal/sigtest.c:45 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../signal/sigtest.c:61 disestablish signal action signal 12
-tid 1.0 in main at .../signal/sigtest.c:63 establish signal action signal 10 handler in usr_1_handler at .../signal/sigtest.c:39 mask origin 1 bits 0000000000000000
-tid 1.0 in main at .../signal/sigtest.c:64 establish signal action signal 12 handler in usr_2_handler at .../signal/sigtest.c:45 mask origin 1 bits 0000000000000000
-tid 1.1 {} enter signal handler signal 10 handler in usr_1_handler at .../signal/sigtest.c:39
-tid 1.1 in usr_1_handler at .../signal/sigtest.c:39 disestablish signal action signal 10
-tid 1.1 in usr_1_handler at .../signal/sigtest.c:39 enter function cfa . return in __rvpredict_handler_wrapper
-tid 1.1 in usr_1_handler at .../signal/sigtest.c:39 exit function
-tid 1.1 in usr_1_handler at .../signal/sigtest.c:39 exit signal handler
-tid 1.0 in main at .../signal/sigtest.c:51 exit function
+tid 1.0 in main at .../signal/sigtest.c:55 enter function cfa . return {}
+tid 1.0 in main at .../signal/sigtest.c:57 disestablish signal action signal 6
+tid 1.0 in main at .../signal/sigtest.c:58 establish signal action signal 6 handler in gnutest_handler at .../signal/sigtest.c:14 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../signal/sigtest.c:59 disestablish signal action signal 6
+tid 1.0 in main at .../signal/sigtest.c:62 establish signal action signal 10 handler in usr_1_handler at .../signal/sigtest.c:41 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../signal/sigtest.c:63 disestablish signal action signal 10
+tid 1.0 in main at .../signal/sigtest.c:64 establish signal action signal 12 handler in usr_2_handler at .../signal/sigtest.c:48 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../signal/sigtest.c:65 disestablish signal action signal 12
+tid 1.0 in main at .../signal/sigtest.c:67 establish signal action signal 10 handler in usr_1_handler at .../signal/sigtest.c:41 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../signal/sigtest.c:68 establish signal action signal 12 handler in usr_2_handler at .../signal/sigtest.c:48 mask origin 1 bits 0000000000000000
+tid 1.0 in main at .../signal/sigtest.c:71 store 4 00000000 -> glbl_uu at /mnt/hd2/carltonmills/rv-predict/ctests/trace/__sysv_signal/../signal/sigtest.c
+tid 1.1 {} enter signal handler signal 10 handler in usr_1_handler at .../signal/sigtest.c:41
+tid 1.1 in usr_1_handler at .../signal/sigtest.c:41 disestablish signal action signal 10
+tid 1.1 in usr_1_handler at .../signal/sigtest.c:41 enter function cfa . return in __rvpredict_handler_wrapper
+tid 1.1 in usr_1_handler at .../signal/sigtest.c:42 store 4 0x00000001 -> glbl_uu at /mnt/hd2/carltonmills/rv-predict/ctests/trace/__sysv_signal/../signal/sigtest.c
+tid 1.1 in usr_1_handler at .../signal/sigtest.c:41 exit function
+tid 1.1 in usr_1_handler at .../signal/sigtest.c:41 exit signal handler
+tid 1.0 in main at .../signal/sigtest.c:73 load 4 0x00000001 <- glbl_uu at /mnt/hd2/carltonmills/rv-predict/ctests/trace/__sysv_signal/../signal/sigtest.c
+tid 1.1 in usr_1_handler at .../signal/sigtest.c:41 enter signal handler signal 12 handler in usr_2_handler at .../signal/sigtest.c:48
+tid 1.1 in usr_2_handler at .../signal/sigtest.c:48 disestablish signal action signal 12
+tid 1.1 in usr_2_handler at .../signal/sigtest.c:48 enter function cfa . return in __rvpredict_handler_wrapper
+tid 1.1 in usr_2_handler at .../signal/sigtest.c:49 store 4 0x00000002 -> glbl_uu at /mnt/hd2/carltonmills/rv-predict/ctests/trace/__sysv_signal/../signal/sigtest.c
+tid 1.1 in usr_2_handler at .../signal/sigtest.c:48 exit function
+tid 1.1 in usr_2_handler at .../signal/sigtest.c:48 exit signal handler
+tid 1.0 in main at .../signal/sigtest.c:75 load 4 0x00000002 <- glbl_uu at /mnt/hd2/carltonmills/rv-predict/ctests/trace/__sysv_signal/../signal/sigtest.c
+tid 1.0 in main at .../signal/sigtest.c:55 exit function

@@ -1,12 +1,19 @@
 echo "=============== unit c tests ================="
 
 cd ./empty_ring;     main ; cd ..
-cd ./full_ring;      main ; cd ..
+#cd ./full_ring;      main ; cd ..
+echo "Skipping serialization/full_ring"
 
-cd ./initial_intr;    main ; cd ..
+#cd ./initial_intr;    main ; cd ..
+echo "Skipping serialization/initial_intr"
 
-cd ./multi_word;      main ; cd ..
-cd ./one_word;        main ; cd ..
-cd ./wrap_multi_word; main ; cd ..
-cd ./wrap_one_word;   main ; cd ..
+#cd ./multi_word;      main ; cd ..
+echo "Skipping serialization/multi_word"
+#cd ./one_word;        main ; cd ..
+echo "Skipping serialization/one_word"
+#cd ./wrap_multi_word; main ; cd ..
+echo "Skipping serialization/one_word"
+echo "Skipping serialization/wrap_multi_word"
+#cd ./wrap_one_word;   main ; cd ..
+echo "Skipping serialization/wrap_one_word"
 

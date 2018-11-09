@@ -1,0 +1,1 @@
+clang-4.0 -O3 -flto -Xclang -load -Xclang ~/libexec/rvpinstrument.so -o dot-product dot-product.c  -L $(llvm-config-4.0 --libdir)/clang/*/lib/linux  -Wl,-T,./ldscript.lto ~/rv/rv-predict/cross/linux/llvm/ngrt/*.o -L${HOME}/lib -lrvpi_basic -lrvpi_default -lrvpsigsim_none -lrvpsigsim_default -ldl -lrt -latomic -lpthread

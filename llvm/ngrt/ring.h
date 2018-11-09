@@ -137,7 +137,7 @@ extern volatile _Atomic uint64_t rvp_ggen;
 extern unsigned int rvp_log2_nthreads;
 extern bool rvp_consistent;
 
-static inline void
+inline void
 rvp_increase_ggen(void)
 {
 	(void)atomic_fetch_add_explicit(&rvp_ggen, 1, memory_order_release);
@@ -155,7 +155,7 @@ rvp_ggen_before_store(void)
 	return atomic_load_explicit(&rvp_ggen, memory_order_acquire);
 }
 
-static inline uint64_t
+inline uint64_t
 rvp_ggen_after_load(void)
 {
 	if (__predict_false(rvp_consistent)) {
@@ -168,7 +168,7 @@ rvp_ggen_after_load(void)
 	return atomic_load_explicit(&rvp_ggen, memory_order_acquire);
 }
 
-static inline void
+inline void
 rvp_buf_trace_cog(rvp_buf_t *b, volatile uint64_t *lgenp, uint64_t gen)
 {
 	if (*lgenp < gen) {
@@ -177,7 +177,7 @@ rvp_buf_trace_cog(rvp_buf_t *b, volatile uint64_t *lgenp, uint64_t gen)
 	}
 }
 
-static inline void
+inline void
 rvp_buf_trace_load_cog(rvp_buf_t *b, volatile uint64_t *lgenp)
 {
 	rvp_buf_trace_cog(b, lgenp, rvp_ggen_after_load());
@@ -187,7 +187,7 @@ void rvp_ring_init(rvp_ring_t *, uint32_t *, size_t);
 void rvp_ring_wait_for_nempty(rvp_ring_t *, int);
 void rvp_wake_transmitter(void);
 
-static inline int
+inline int
 rvp_iring_nfull(const rvp_iring_t *ir)
 {
 	rvp_interruption_t *producer = ir->ir_producer,
@@ -211,7 +211,7 @@ rvp_iring_nempty(rvp_iring_t *ir)
 	return rvp_iring_capacity(ir) - rvp_iring_nfull(ir);
 }
 
-static inline int
+inline int
 rvp_ring_nfull(const rvp_ring_t *r)
 {
 	uint32_t *producer = r->r_producer,
@@ -223,19 +223,19 @@ rvp_ring_nfull(const rvp_ring_t *r)
 	return (r->r_last - r->r_items) + 1 - (consumer - producer);
 }
 
-static inline int
+inline int
 rvp_ring_capacity(rvp_ring_t *r)
 {
 	return r->r_last - r->r_items;
 }
 
-static inline int
+inline int
 rvp_ring_nempty(rvp_ring_t *r)
 {
 	return rvp_ring_capacity(r) - rvp_ring_nfull(r);
 }
 
-static inline void
+inline void
 rvp_ring_request_service(rvp_ring_t *r)
 {
 	if (r->r_idepth == 0)
@@ -244,7 +244,7 @@ rvp_ring_request_service(rvp_ring_t *r)
 		rvp_wake_relay();
 }
 
-static inline void
+inline void
 rvp_ring_await_nempty(rvp_ring_t *r, int nempty)
 {
 	rvp_ring_request_service(r);
@@ -332,7 +332,7 @@ rvp_ring_consumer_index_advanced_by(const rvp_ring_t *r, int nitems)
 	return next - r->r_items;
 }
 
-static inline void
+inline void
 rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 {
 	uint32_t *prev = r->r_producer;
@@ -385,7 +385,7 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 		rvp_ring_request_service(r);
 }
 
-static inline void
+inline void
 rvp_ring_put_buf(rvp_ring_t *r, rvp_buf_t b)
 {
 	rvp_ring_put_multiple(r, &b.b_word[0], b.b_nwords);

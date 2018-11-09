@@ -9,10 +9,12 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-TARGET_CC?=clang
+TARGET_CC?=clang-4.0
 CC?=$(TARGET_CC)
 
 .include <mkc.init.mk>
+AR?=llvm-ar-4.0
+
 
 .include "../../cross-libdir.mk"
 
@@ -22,7 +24,8 @@ INCS=rvpredict_intr.h
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-fPIC
-#COPTS+=-O3
+CFLAGS+=-flto
+COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wall -Wmissing-prototypes
 CPPFLAGS+=-I$(.CURDIR)/../../include
@@ -32,6 +35,7 @@ CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for sigismember, sigaction on QNX,
 CPPFLAGS+=-D_GNU_SOURCE	# for <dlfcn.h> constant RTLD_NEXT
 
 SRCS+=access.c const.c deltops.c
+SRCS+=extern.c
 SRCS+=fork.c func.c
 SRCS+=lock.c notimpl.c opinit.c
 .if $(OS:Uunknown) != "QNX"

@@ -43,7 +43,7 @@ ensure_real_initialized()
 		rvp_prefork_init();
 }
 
-static inline bool
+inline bool
 ring_operational()
 {
 	return rvp_initialized;

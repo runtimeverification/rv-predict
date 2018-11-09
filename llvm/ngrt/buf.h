@@ -14,7 +14,7 @@ typedef struct {
 
 #define RVP_BUF_INITIALIZER	(rvp_buf_t){ .b_nwords = 0 }
 
-static inline void
+inline void
 rvp_buf_put(rvp_buf_t *b, uint32_t item)
 {
 	assert(b->b_nwords < __arraycount(b->b_word));
@@ -31,7 +31,7 @@ rvp_buf_put_buf(rvp_buf_t *db, const rvp_buf_t *sb)
 		db->b_word[db->b_nwords++] = sb->b_word[i];
 }
 
-static inline void
+inline void
 rvp_buf_put_addr(rvp_buf_t *b, rvp_addr_t addr)
 {
 	unsigned int i;
@@ -51,7 +51,7 @@ rvp_buf_put_voidptr(rvp_buf_t *b, const void *addr)
 	rvp_buf_put_addr(b, (rvp_addr_t)addr);
 }
 
-static inline void
+inline void
 rvp_buf_put_u64(rvp_buf_t *b, uint64_t val)
 {
 	union {

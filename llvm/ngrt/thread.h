@@ -65,7 +65,7 @@ REAL_DECL(void, pthread_exit, void *);
 
 extern pthread_key_t rvp_thread_key;
 
-static inline rvp_thread_t *
+inline rvp_thread_t *
 rvp_thread_for_curthr(void)
 {
 	rvp_thread_t *t;
@@ -82,7 +82,7 @@ rvp_thread_for_curthr(void)
 	return t;
 }
 
-static inline rvp_ring_t *
+inline rvp_ring_t *
 rvp_ring_for_curthr(void)
 {
 	rvp_thread_t *t = rvp_thread_for_curthr();

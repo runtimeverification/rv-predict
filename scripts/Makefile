@@ -8,7 +8,7 @@
 
 MAN=rvpa.1 rvpc.1 rvpsymbolize.1
 FILESMODE=0755
-FILES=qclang-4.0
+FILES=qclang-5.0
 FILES+=rvpa.sh rvpc.sh rvpsymbolize.sh
 FILES+=console-metadata.json csv-metadata.json json-metadata.json
 FILESNAME_rvpa.sh=rvpa
@@ -24,8 +24,8 @@ LINKS=${BINDIR}/rvpc ${BINDIR}/rvpc++
 LINKS+=${BINDIR}/rvpc ${BINDIR}/rvpld
 LINKS+=${BINDIR}/rvpc ${BINDIR}/qrvpld
 LINKS+=${BINDIR}/rvpc ${BINDIR}/qrvpc
-LINKS+=${BINDIR}/qclang-4.0 ${BINDIR}/qclang
-LINKS+=${BINDIR}/qclang-4.0 ${BINDIR}/qld
+LINKS+=${BINDIR}/qclang-5.0 ${BINDIR}/qclang
+LINKS+=${BINDIR}/qclang-5.0 ${BINDIR}/qld
 MLINKS+=rvpc.1 rvpc++.1
 MLINKS+=rvpc.1 rvpld.1
 MLINKS+=rvpc.1 qrvpc.1

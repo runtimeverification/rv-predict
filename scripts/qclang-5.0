@@ -101,9 +101,9 @@ if [ ${prog##q} = rvpld ]; then
 	compiler=ld
 	cflags=
 elif [ ${cplusplus:-no} = yes ]; then
-	compiler="clang++-4.0 -std=c++11"
+	compiler="clang++-5.0 -std=c++11"
 else
-	compiler=clang-4.0
+	compiler=clang-5.0
 fi
 
 if [ ${just_print} = yes ]; then

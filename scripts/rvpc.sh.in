@@ -64,7 +64,7 @@ filter_noncc_arguments()
 )}
 
 ldscript_dir=$(dirname $0)/../share/rv-predict-c
-llvm_libdir=$(llvm-config-4.0 --libdir)
+llvm_libdir=$(llvm-config-5.0 --libdir)
 clang_libdir=${llvm_libdir}/clang/*/lib/linux
 pass_dir=$(dirname $0)/../--LIBEXECDIR--
 runtime_dir=$(dirname $0)/../lib
@@ -146,15 +146,15 @@ if [ x${prog%%rvpc} = xq ]; then
 		echo "${prog}: C++ not supported" 1>&2
 		exit 1
 	fi
-	compiler=qclang-4.0
+	compiler=qclang-5.0
 elif [ ${prog} = qrvpld ]; then
 	compiler=qld
 elif [ ${prog} = rvpld ]; then
 	compiler=ld
 elif [ ${cplusplus:-no} = yes ]; then
-	compiler="clang++-4.0 -std=c++11"
+	compiler="clang++-5.0 -std=c++11"
 else
-	compiler=clang-4.0
+	compiler=clang-5.0
 fi
 
 #

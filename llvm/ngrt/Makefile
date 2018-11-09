@@ -12,8 +12,6 @@
 TARGET_CC?=clang
 CC?=$(TARGET_CC)
 
-.include <mkc.init.mk>
-
 .include "../../cross-libdir.mk"
 
 LIB?=rvprt

@@ -461,9 +461,9 @@ void RVPredictInstrument::chooseInstructionsToInstrument(
 
 static bool isAtomic(Instruction *I) {
   if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->isAtomic() && LI->getSynchScope() == CrossThread;
+    return LI->isAtomic() && LI->getSyncScopeID() == llvm::SyncScope::System;
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->isAtomic() && SI->getSynchScope() == CrossThread;
+    return SI->isAtomic() && SI->getSyncScopeID() == llvm::SyncScope::System;
   if (isa<AtomicRMWInst>(I))
     return true;
   if (isa<AtomicCmpXchgInst>(I))
@@ -999,9 +999,10 @@ RVPredictInstrument::instrumentAtomic(Instruction *insn, const DataLayout &dl)
 		insn->eraseFromParent();
 	} else if (auto fi = dyn_cast<FenceInst>(insn)) {
 		Value *args[] = {createOrdering(&builder, fi->getOrdering())};
-		Function *f = (fi->getSynchScope() == SingleThread)
-		    ? atomic_signal_fence
-		    : atomic_thread_fence;
+		Function *f =
+		    (fi->getSyncScopeID() == llvm::SyncScope::SingleThread)
+		       ? atomic_signal_fence
+		       : atomic_thread_fence;
 		CallInst *ci = CallInst::Create(f, args);
 		ReplaceInstWithInst(insn, ci);
 	}

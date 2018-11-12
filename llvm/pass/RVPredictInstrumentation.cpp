@@ -740,125 +740,129 @@ RVPredictInstrument::addrContainsRegister(Value *addr)
 }
 
 bool
-RVPredictInstrument::instrumentLoadOrStore(Instruction *I,
-                                            const DataLayout &DL)
+RVPredictInstrument::instrumentLoadOrStore(Instruction * const insn,
+                                            const DataLayout &dl)
 {
-  IRBuilder<> IRB(I);
-  const bool IsWrite = isa<StoreInst>(*I);
-  Value *Addr;
-  Value *Val;
-  if (IsWrite) {
-      StoreInst *Store = cast<StoreInst>(I);
-      Addr = Store->getPointerOperand();
-      Val = Store->getValueOperand();
-  } else {
-      LoadInst *Load = cast<LoadInst>(I);
-      Addr = Load->getPointerOperand();
-      Val = Load;
-  }
-
-  Type *OrigTy = cast<PointerType>(Addr->getType())->getElementType();
-  const uint32_t TypeSize = DL.getTypeStoreSizeInBits(OrigTy);
-  Type *Ty = Type::getIntNTy(IRB.getContext(), TypeSize);
-  Type *PtrTy = Ty->getPointerTo();
-  int Idx = getMemoryAccessFuncIndex(Addr, DL);
-  if (Idx < 0)
-    return false;
-  if (addrBelongsToCoverage(Addr))
-	return false;
-  if (addrContainsRegister(Addr)) {
-	Instruction *CastInsn = CastInst::CreateBitOrPointerCast(Val, Ty);
-	if (IsWrite) {
-		CastInsn->insertBefore(I);
-		CallInst *ci = CallInst::Create(poke[Idx], {Addr, CastInsn});
-		ReplaceInstWithInst(I, ci);
+	IRBuilder<> irb(insn);
+	const bool is_write = isa<StoreInst>(*insn);
+	Value *addr;
+	Value *val;
+	if (is_write) {
+		StoreInst *store = cast<StoreInst>(insn);
+		addr = store->getPointerOperand();
+		val = store->getValueOperand();
 	} else {
-		CallInst *ci = CallInst::Create(peek[Idx], {Addr});
-		ci->insertBefore(I);
-		I->replaceAllUsesWith(ci);
-		I->eraseFromParent();
+		LoadInst *load = cast<LoadInst>(insn);
+		addr = load->getPointerOperand();
+		val = load;
 	}
-	return true;
-  }
-  if (IsWrite) {
-    // Val may be a vector type if we are storing several vptrs at once.
-    // In this case, just take the first element of the vector since this is
-    // enough to find vptr races.
-    if (isa<VectorType>(Val->getType()))
-      Val = IRB.CreateExtractElement(
-          Val, ConstantInt::get(IRB.getInt32Ty(), 0));
-    if (Val->getType()->isFloatingPointTy()) {
-      Value* alloca = IRB.CreateAlloca(Val->getType());
-      StoreInst* tmpstore = IRB.CreateStore(Val, alloca);
-      Value* tmpload = IRB.CreateBitCast(tmpstore->getPointerOperand(), PtrTy);
-      Val = IRB.CreateLoad(tmpload);
-    }
+
+	Type *orig_ty = cast<PointerType>(addr->getType())->getElementType();
+	const uint32_t type_size = dl.getTypeStoreSizeInBits(orig_ty);
+	Type *ty = Type::getIntNTy(irb.getContext(), type_size);
+	Type *ptr_ty = ty->getPointerTo();
+	int idx = getMemoryAccessFuncIndex(addr, dl);
+	if (idx < 0)
+		return false;
+	if (addrBelongsToCoverage(addr))
+		return false;
+	if (addrContainsRegister(addr)) {
+		Instruction *cast_insn = CastInst::CreateBitOrPointerCast(val,
+		    ty);
+		if (is_write) {
+			cast_insn->insertBefore(insn);
+			CallInst *ci = CallInst::Create(poke[idx],
+			    {addr, cast_insn});
+			ReplaceInstWithInst(insn, ci);
+		} else {
+			CallInst *ci = CallInst::Create(peek[idx], {addr});
+			ci->insertBefore(insn);
+			insn->replaceAllUsesWith(ci);
+			insn->eraseFromParent();
+		}
+		return true;
+	}
+	if (is_write) {
+		/* val may be a vector type if we are storing several vptrs at
+		 * once.  In this case, just take the first element of the
+		 * vector since this is enough to find vptr races.
+		 */
+		if (isa<VectorType>(val->getType())) {
+			val = irb.CreateExtractElement(val,
+			    ConstantInt::get(irb.getInt32Ty(), 0));
+		}
+		if (val->getType()->isFloatingPointTy()) {
+			Value *alloca = irb.CreateAlloca(val->getType());
+			StoreInst *tmpstore = irb.CreateStore(val, alloca);
+			Value *tmpload = irb.CreateBitCast(
+			    tmpstore->getPointerOperand(), ptr_ty);
+			val = irb.CreateLoad(tmpload);
+		}
 #if 0
-    /* Not sure what this int-to-pointer conversion was for. --dyoung */
-    if (Val->getType()->isIntegerTy())
-      Val = IRB.CreateIntToPtr(Val, IRB.getInt8PtrTy());
+		/* Not sure what this int-to-pointer conversion was for.
+		 * --dyoung
+		 */
+		if (val->getType()->isIntegerTy())
+			val = irb.CreateIntToPtr(val, irb.getInt8PtrTy());
 #endif
-    if (isVtableAccess(I)) {
-      DEBUG(dbgs() << "  VPTR : " << *I << "\n");
-      // Call vptr_update.
-      // XXX
-      // XXX The vptr_update call should be inserted *before* the
-      // XXX store so that we don't log the store Val -> [Addr]
-      // XXX before a subsequent load, [Addr] -> Val.
-      // XXX
-      IRB.CreateCall(vptr_update,
-                     {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                      IRB.CreatePointerCast(Val, IRB.getInt8PtrTy())});
-      NumInstrumentedVtableWrites++;
-      return true;
-    }
-  }
-  if (!IsWrite && isVtableAccess(I)) {
-      IRB.CreateCall(vptr_load,
-                     {IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                      IRB.CreatePointerCast(Val, IRB.getInt8PtrTy())});
-    NumInstrumentedVtableReads++;
-    return true;
-  }
-  const unsigned Alignment = IsWrite
-      ? cast<StoreInst>(I)->getAlignment()
-      : cast<LoadInst>(I)->getAlignment();
-  Value *OnAccessFunc = nullptr;
-  if (Alignment == 0 || Alignment >= 8 || (Alignment % (TypeSize / 8)) == 0)
-    OnAccessFunc = IsWrite ? store[Idx] : load[Idx];
-  else
-    OnAccessFunc = IsWrite ? unaligned_store[Idx] : unaligned_load[Idx];
+		if (isVtableAccess(insn)) {
+			DEBUG(dbgs() << "  VPTR : " << *insn << "\n");
+			// Call vptr_update.
+			// XXX
+			// XXX The vptr_update call should be inserted *before* the
+			// XXX store so that we don't log the store val -> [addr]
+			// XXX before a subsequent load, [addr] -> val.
+			// XXX
+			irb.CreateCall(vptr_update,
+			    {irb.CreatePointerCast(addr, irb.getInt8PtrTy()),
+			     irb.CreatePointerCast(val, irb.getInt8PtrTy())});
+			NumInstrumentedVtableWrites++;
+			return true;
+		}
+	}
+	if (!is_write && isVtableAccess(insn)) {
+		irb.CreateCall(vptr_load,
+		    {irb.CreatePointerCast(addr, irb.getInt8PtrTy()),
+		     irb.CreatePointerCast(val, irb.getInt8PtrTy())});
+		NumInstrumentedVtableReads++;
+		return true;
+	}
+	const unsigned alignment = is_write
+	    ? cast<StoreInst>(insn)->getAlignment()
+	    : cast<LoadInst>(insn)->getAlignment();
+	Value *access_func = nullptr;
+	if (alignment == 0 || alignment >= 8 ||
+	    (alignment % (type_size / 8)) == 0) {
+		access_func = is_write ? store[idx] : load[idx];
+	} else {
+		access_func = is_write
+		    ? unaligned_store[idx]
+		    : unaligned_load[idx];
+	}
 
-  // Cast the address pointer to intN_t * (and insert the cast instruction).
-  Addr = IRB.CreatePointerCast(Addr, PtrTy);
-  /* Cast the value to an unsigned integer of the same size.
-   * XXX Sometimes this produces a redundant cast from typeof(self) to
-   * typeof(self).
-   */
-  Instruction *CastInsn = CastInst::CreateBitOrPointerCast(Val, Ty);
+	// Cast the address pointer to intN_t * (and insert the cast instruction).
+	addr = irb.CreatePointerCast(addr, ptr_ty);
+	/* Cast the value to an unsigned integer of the same size.
+	* XXX Sometimes this produces a redundant cast from typeof(self) to
+	* typeof(self).
+	*/
+	Instruction *cast_insn = CastInst::CreateBitOrPointerCast(val, ty);
 
-  if (IsWrite) {
-      // Insert the call before the store instruction.
-      CastInsn->insertBefore(I);
-      IRB.CreateCall(OnAccessFunc, {Addr, CastInsn});
-  } else {
-      // Insert the call after the load instruction.
-      CastInsn->insertAfter(I);
-      CallInst::Create(OnAccessFunc, {Addr, CastInsn})
-              ->insertAfter(CastInsn);
-  }
-  /*
-  if (IsWrite) {
-    IRB.CreateCall(OnAccessFunc, {Addr, StoredValue});
-  } else {
-//    IRB.CreateCall(OnAccessFunc, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()));
-    CallInst::Create(OnAccessFunc, {Addr, I})
-            ->insertAfter(I);
-  }
-  */
-  if (IsWrite) NumInstrumentedWrites++;
-  else         NumInstrumentedReads++;
-  return true;
+	if (is_write) {
+		// Insert the call before the store instruction.
+		cast_insn->insertBefore(insn);
+		irb.CreateCall(access_func, {addr, cast_insn});
+	} else {
+		// Insert the call after the load instruction.
+		cast_insn->insertAfter(insn);
+		CallInst::Create(access_func, {addr, cast_insn})
+		    ->insertAfter(cast_insn);
+	}
+	if (is_write)
+		NumInstrumentedWrites++;
+	else
+		NumInstrumentedReads++;
+	return true;
 }
 
 GlobalVariable *

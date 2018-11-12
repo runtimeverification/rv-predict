@@ -747,6 +747,7 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction * const insn,
 	const bool is_write = isa<StoreInst>(*insn);
 	Value *addr;
 	Value *val;
+	const bool is_vtable_access = isVtableAccess(insn);
 	if (is_write) {
 		StoreInst *store = cast<StoreInst>(insn);
 		addr = store->getPointerOperand();
@@ -759,8 +760,12 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction * const insn,
 
 	Type *orig_ty = cast<PointerType>(addr->getType())->getElementType();
 	const uint32_t type_size = dl.getTypeStoreSizeInBits(orig_ty);
-	Type *ty = Type::getIntNTy(irb.getContext(), type_size);
-	Type *ptr_ty = ty->getPointerTo();
+	Type *ty = is_vtable_access
+	    ? cast<Type>(irb.getInt8PtrTy())
+	    : cast<Type>(Type::getIntNTy(irb.getContext(), type_size));
+	Type *ptr_ty = is_vtable_access
+	    ? irb.getInt8PtrTy()
+	    : ty->getPointerTo();
 	int idx = getMemoryAccessFuncIndex(addr, dl);
 	if (idx < 0)
 		return false;
@@ -805,33 +810,14 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction * const insn,
 		if (val->getType()->isIntegerTy())
 			val = irb.CreateIntToPtr(val, irb.getInt8PtrTy());
 #endif
-		if (isVtableAccess(insn)) {
-			DEBUG(dbgs() << "  VPTR : " << *insn << "\n");
-			// Call vptr_update.
-			// XXX
-			// XXX The vptr_update call should be inserted *before* the
-			// XXX store so that we don't log the store val -> [addr]
-			// XXX before a subsequent load, [addr] -> val.
-			// XXX
-			irb.CreateCall(vptr_update,
-			    {irb.CreatePointerCast(addr, irb.getInt8PtrTy()),
-			     irb.CreatePointerCast(val, irb.getInt8PtrTy())});
-			NumInstrumentedVtableWrites++;
-			return true;
-		}
-	}
-	if (!is_write && isVtableAccess(insn)) {
-		irb.CreateCall(vptr_load,
-		    {irb.CreatePointerCast(addr, irb.getInt8PtrTy()),
-		     irb.CreatePointerCast(val, irb.getInt8PtrTy())});
-		NumInstrumentedVtableReads++;
-		return true;
 	}
 	const unsigned alignment = is_write
 	    ? cast<StoreInst>(insn)->getAlignment()
 	    : cast<LoadInst>(insn)->getAlignment();
 	Value *access_func = nullptr;
-	if (alignment == 0 || alignment >= 8 ||
+	if (is_vtable_access) {
+		access_func = is_write ? vptr_update : vptr_load;
+	} else if (alignment == 0 || alignment >= 8 ||
 	    (alignment % (type_size / 8)) == 0) {
 		access_func = is_write ? store[idx] : load[idx];
 	} else {
@@ -858,7 +844,13 @@ RVPredictInstrument::instrumentLoadOrStore(Instruction * const insn,
 		CallInst::Create(access_func, {addr, cast_insn})
 		    ->insertAfter(cast_insn);
 	}
-	if (is_write)
+
+	if (is_vtable_access) {
+		if (is_write)
+			NumInstrumentedVtableWrites++;
+		else
+			NumInstrumentedVtableReads++;
+	} else if (is_write)
 		NumInstrumentedWrites++;
 	else
 		NumInstrumentedReads++;

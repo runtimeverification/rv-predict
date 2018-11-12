@@ -37,14 +37,14 @@ extern _Atomic bool __read_mostly rvp_real_initialized;
  * returns.
  */
 static inline void
-ensure_real_initialized()
+ensure_real_initialized(void)
 {
 	if (__predict_false(!rvp_real_initialized))
 		rvp_prefork_init();
 }
 
 static inline bool
-ring_operational()
+ring_operational(void)
 {
 	return rvp_initialized;
 }

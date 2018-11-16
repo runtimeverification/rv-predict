@@ -3,8 +3,8 @@
 #ifndef _RVP_VPTR_H_
 #define _RVP_VPTR_H_
 
-void __rvpredict_vptr_update(void *, void *);
-void __rvpredict_vptr_load(void *);
+void __rvpredict_vptr_update(void **, void *);
+void __rvpredict_vptr_load(void **, void *);
 
 #endif /* _RVP_VPTR_H_ */
 

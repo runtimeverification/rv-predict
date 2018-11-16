@@ -9,7 +9,7 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-LIB=rvu
+LIB=rvread
 
 .PATH: $(.CURDIR)/../ngrt
 
@@ -19,9 +19,9 @@ CFLAGS+=-std=c11
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
-CPPFLAGS+=-I$(.CURDIR)/../../include
+CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
 CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for write(2) on QNX
-SRCS=io.c
+SRCS=io.c reader.c
 WARNS=4
 
 .include <mkc.lib.mk>

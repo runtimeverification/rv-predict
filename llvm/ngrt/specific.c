@@ -77,7 +77,7 @@ rvp_thread_destructor(void *arg)
 				continue;
 			assert(value != NULL);
 			if (destructor != NULL)
-				(*destructor)((void *)value);
+				(*destructor)((void *)(uintptr_t)value);
 		}
 	}
 	if (t->t_nthrspecs != 0) {

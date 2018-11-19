@@ -10,14 +10,12 @@ extern __section(".text") deltops_t deltops;
 static inline deltop_t *
 rvp_vec_and_op_to_deltop(int jmpvec, rvp_op_t op)
 {
-	deltop_t *deltop =
-	    &deltops.matrix[__arraycount(deltops.matrix) / 2 + jmpvec][op];
+	const int halfjmps = RVP_NJMPS / 2;
 
-	if (deltop < &deltops.matrix[0][0] ||
-		     &deltops.matrix[RVP_NJMPS - 1][RVP_NOPS - 1] < deltop)
-		return NULL;
-	
-	return deltop;
+	if (__predict_true(-halfjmps <= jmpvec && jmpvec < halfjmps &&
+	                   0 <= op && op < RVP_NOPS))
+		return &deltops.matrix[halfjmps + jmpvec][op];
+	return NULL;
 }
 
 #endif /* _RVP_DELTOPS_H_ */

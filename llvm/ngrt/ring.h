@@ -141,6 +141,10 @@ struct _rvp_ring {
 	pthread_cond_t r_cv;
 };
 
+#define RVP_RING_BYTES (64 * 4096)
+#define RVP_RING_ITEMS (RVP_RING_BYTES / sizeof(uint32_t))
+#define RVP_RING_SERVICE_THRESHOLD (RVP_RING_ITEMS / 8)
+
 extern volatile _Atomic uint64_t rvp_ggen;
 extern unsigned int rvp_log2_nthreads;
 extern bool rvp_consistent;
@@ -228,13 +232,13 @@ rvp_ring_nfull(const rvp_ring_t *r)
 	if (producer >= consumer)
 		return producer - consumer;
 
-	return (r->r_last - r->r_items) + 1 - (consumer - producer);
+	return RVP_RING_ITEMS - (consumer - producer);
 }
 
 static inline int
 rvp_ring_capacity(rvp_ring_t *r)
 {
-	return r->r_last - r->r_items;
+	return RVP_RING_ITEMS - 1;
 }
 
 static inline int
@@ -338,8 +342,7 @@ rvp_ring_consumer_index_advanced_by(const rvp_ring_t *r, int nitems)
 	if (prev + nitems <= r->r_last) {
 		next = prev + nitems;
 	} else {
-		const int ringsz = r->r_last + 1 - r->r_items;
-		next = prev + (nitems - ringsz);
+		next = prev + (nitems - RVP_RING_ITEMS);
 	}
 	return next - r->r_items;
 }
@@ -353,11 +356,10 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 	if (prev + nitems <= r->r_last) {
 		next = prev + nitems;
 	} else {
-		const int ringsz = r->r_last + 1 - r->r_items;
 		// less-than because you cannot fill every slot in
 		// the ring without causing confusion.
-		assert(nitems < ringsz);
-		next = prev + (nitems - ringsz);
+		assert(nitems < RVP_RING_ITEMS);
+		next = prev + (nitems - RVP_RING_ITEMS);
 	}
 
 	/* TBD do we need to order the r_consumer, r_producer reads? */

@@ -7,16 +7,22 @@
 
 #include "lock.h"
 #include "rvpsignal.h"
+#include "supervise.h"	/* for product_name */
 #include "thread.h"
 #include "trace.h"	/* for rvp_vec_and_op_to_deltop() */
-
-static long pgsz = 0;
 
 void
 rvp_rings_init(void)
 {
-	if (pgsz == 0 && (pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
+	long pgsz;
+
+	if ((pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
 		err(EXIT_FAILURE, "%s: sysconf", __func__);
+	if (RVP_RING_BYTES % pgsz != 0) {
+		errx(EXIT_FAILURE,
+		    "System page size does not evenly divide %s ring size.",
+		    product_name);
+	}
 }
 
 static void
@@ -48,17 +54,13 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
 int
 rvp_ring_stdinit(rvp_ring_t *r)
 {
-	const size_t ringsz = pgsz * 64;
-	const size_t items_per_ring = ringsz / sizeof(*r->r_items);
 	uint32_t *items;
 
-	assert(pgsz != 0);
-
-	items = calloc(items_per_ring, sizeof(*r->r_items));
+	items = calloc(RVP_RING_ITEMS, sizeof(*r->r_items));
 	if (items == NULL)
 		return ENOMEM;
 
-	rvp_ring_init(r, items, items_per_ring);
+	rvp_ring_init(r, items, RVP_RING_ITEMS);
 
 	return 0;
 }

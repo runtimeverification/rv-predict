@@ -299,7 +299,10 @@ rvp_signal_rings_replenish(void)
 		else if (r == NULL)
 			break;
 
-		rvp_ring_stdinit(r);
+		/* TBD recover if *any* were allocated? */
+		if (rvp_ring_stdinit(r) != 0)
+			err(EXIT_FAILURE, "%s: rvp_ring_stdinit", __func__);
+
 		r->r_state = RVP_RING_S_CLEAN;
 		r->r_next = signal_rings;
 

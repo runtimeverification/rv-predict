@@ -88,11 +88,15 @@
 #define __read_mostly                                           \
     __attribute__((__section__(".data.read_mostly")))
 
-#if 0
+#ifdef COHERENCY_UNIT
+#error "COHERENCY_UNIT already defined"
+#else
+#define COHERENCY_UNIT 64
+#endif
+
 #define __cacheline_aligned                                     \
     __attribute__((__aligned__(COHERENCY_UNIT),                 \
                  __section__(".data.cacheline_aligned")))
-#endif
 
 /*
  * GNU C version 2.96 adds explicit branch prediction so that

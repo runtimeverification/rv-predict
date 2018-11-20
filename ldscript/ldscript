@@ -76,6 +76,11 @@ SECTIONS
         __rvpredict_cov_end = . ;
 
 	. = ALIGN(COHERENCY_UNIT);
+	.data.cacheline_aligned :
+	{
+		*(.data.cacheline_aligned)
+	}
+	. = ALIGN(COHERENCY_UNIT);
 	.data.read_mostly :
 	{
 		*(.data.read_mostly)

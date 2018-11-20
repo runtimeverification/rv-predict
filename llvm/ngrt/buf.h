@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdint.h>	/* for uint32_t */
+#include <stdlib.h>	/* for abort(3) */
 
 #include "nbcompat.h"	/* for __arraycount() */
 #include "tracefmt.h"	/* for rvp_op_t */
@@ -74,35 +75,38 @@ rvp_cursor_put(rvp_cursor_t *c, uint32_t item)
 }
 
 static inline void
+rvp_cursor_put_u64(rvp_cursor_t *c, uint64_t val)
+{
+	typedef uint64_t __aligned(sizeof(uint32_t)) ring_uint64_t;
+	if (__predict_false(c->c_producer + 1 == c->c_last)) {
+		*(ring_uint64_t *)c->c_producer = val;
+		c->c_producer = c->c_first;
+	} else if (__predict_false(c->c_producer == c->c_last)) {
+		union {
+			uint64_t u64;
+			uint32_t u32[2];
+		} valu = {.u64 = val};
+		*c->c_producer = valu.u32[0];
+		*c->c_first = valu.u32[1];
+		c->c_producer = c->c_first + 1;
+	} else {
+		*(ring_uint64_t *)c->c_producer = val;
+		c->c_producer += 2;
+	}
+}
+
+static inline void
 rvp_cursor_put_addr(rvp_cursor_t *c, rvp_addr_t addr)
 {
-	unsigned int i;
-	union {
-		rvp_addr_t uaddr;
-		uint32_t u32[sizeof(rvp_addr_t) / sizeof(uint32_t)];
-	} addru = {.uaddr = addr};
-
-	for (i = 0; i < __arraycount(addru.u32); i++) {
-		rvp_cursor_put(c, addru.u32[i]);
-	}
+	if (sizeof(rvp_addr_t) != sizeof(uint64_t))
+		abort();
+	rvp_cursor_put_u64(c, (uint64_t)addr);
 }
 
 static inline void
 rvp_cursor_put_voidptr(rvp_cursor_t *c, const void *addr)
 {
 	rvp_cursor_put_addr(c, (rvp_addr_t)addr);
-}
-
-static inline void
-rvp_cursor_put_u64(rvp_cursor_t *c, uint64_t val)
-{
-	union {
-		uint64_t u64;
-		uint32_t u32[2];
-	} valu = {.u64 = val};
-
-	rvp_cursor_put(c, valu.u32[0]);
-	rvp_cursor_put(c, valu.u32[1]);
 }
 
 static inline void

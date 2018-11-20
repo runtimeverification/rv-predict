@@ -18,7 +18,7 @@ static void __dead
 usage(const char *progname)
 {
 	fprintf(stderr,
-	    "usage: %s [-g] "
+	    "usage: %s [-b] [-g] "
 	    "[-t <binary|plain|symbol-friendly>] [-n #traces]\n"
 	    "[<trace file>]\n", progname);
 	exit(EXIT_FAILURE);
@@ -33,12 +33,13 @@ main(int argc, char **argv)
 	rvp_output_params_t op = {
 	  .op_type = RVP_OUTPUT_PLAIN_TEXT
 	, .op_emit_generation = false
+	, .op_emit_bytes = false
 	, .op_nrecords = SIZE_MAX
 	};
 	intmax_t tmpn;
 	char *end;
 
-	while ((ch = getopt(argc, argv, "gn:t:")) != -1) {
+	while ((ch = getopt(argc, argv, "bgn:t:")) != -1) {
 		switch (ch) {
 		case 'n':
 			errno = 0;
@@ -58,6 +59,9 @@ main(int argc, char **argv)
 			if (tmpn < 0 || SIZE_MAX < tmpn)
 				errx(EXIT_FAILURE, "-n %jd: out range", tmpn);
 			op.op_nrecords = tmpn;
+			break;
+		case 'b':
+			op.op_emit_bytes = true;
 			break;
 		case 'g':
 			op.op_emit_generation = true;

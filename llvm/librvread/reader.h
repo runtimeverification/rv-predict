@@ -16,6 +16,7 @@ typedef enum _rvp_output_type {
 typedef struct _rvp_output_params {
 	rvp_output_type_t	op_type;
 	bool			op_emit_generation;
+	bool			op_emit_bytes;
 	size_t			op_nrecords;
 } rvp_output_params_t;
 
@@ -93,10 +94,12 @@ struct _rvp_pstate {
 	uint32_t		ps_idepth;
 	int			ps_zeromasknum;
 	bool			ps_emit_generation;
+	bool			ps_emit_bytes;
 };
 
 void rvp_trace_dump(const rvp_output_params_t *, int);
-void rvp_trace_dump_with_emitters(bool, size_t, const rvp_emitters_t *, int);
+void rvp_trace_dump_with_emitters(bool, bool, size_t, const rvp_emitters_t *,
+    int);
 
 __END_EXTERN_C
 

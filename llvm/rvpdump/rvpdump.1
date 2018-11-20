@@ -1,4 +1,4 @@
-.Dd March 8, 2018
+.Dd November 16, 2018
 .Dt RVPDUMP 1
 .Os Linux
 .Sh NAME
@@ -8,6 +8,7 @@
 trace file in human-readable form.
 .Sh SYNOPSIS
 .Nm 
+.Op Fl b
 .Op Fl g
 .Op Fl n Ar number
 .Op Fl t Ar binary
@@ -33,6 +34,8 @@ data & instruction addresses.
 Command-line options modify the behavior of
 .Nm :
 .Bl -tag -width "... symbol-friendly"
+.It Fl b
+Print every event with the bytes comprising it in hexadecimal.
 .It Fl g
 Print every event with a generation number.
 .It Fl n Ar number

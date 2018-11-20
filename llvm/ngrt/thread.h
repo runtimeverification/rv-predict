@@ -64,16 +64,12 @@ REAL_DECL(int, pthread_create, pthread_t *, const pthread_attr_t *,
 REAL_DECL(void, pthread_exit, void *);
 
 extern pthread_key_t rvp_thread_key;
+extern _Thread_local rvp_thread_t *rvp_thread;
 
 static inline rvp_thread_t *
 rvp_thread_for_curthr(void)
 {
-	rvp_thread_t *t;
-
-	if ((t = pthread_getspecific(rvp_thread_key)) == NULL)
-		abort();
-
-	return t;
+	return rvp_thread;
 }
 
 static inline rvp_ring_t *

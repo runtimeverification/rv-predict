@@ -124,8 +124,6 @@ rvp_cursor_put_pc_and_op(rvp_cursor_t *c, const char **lastpcp, const char *pc,
 	rvp_cursor_put_voidptr(c, deltop);
 }
 
-void rvp_cursor_put_cog(rvp_cursor_t *, uint64_t);
-
 static inline void
 rvp_buf_put_u64(rvp_buf_t *b, uint64_t val)
 {
@@ -158,5 +156,6 @@ rvp_buf_put_pc_and_op(rvp_buf_t *b, const char **lastpcp, const char *pc,
 }
 
 void rvp_buf_put_cog(rvp_buf_t *, uint64_t);
+void rvp_cursor_put_cog(rvp_cursor_t *, uint64_t);
 
 #endif /* _RVP_BUF_H_ */

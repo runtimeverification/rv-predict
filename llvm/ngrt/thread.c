@@ -15,6 +15,7 @@
 
 #include "init.h"
 #include "interpose.h"
+#include "nbcompat.h"
 #include "relay.h"
 #include "rvpsignal.h"
 #include "serialize.h"
@@ -32,7 +33,8 @@ REAL_DEFN(void, pthread_exit, void *);
 
 static rvp_thread_t *rvp_thread_create(void *(*)(void *), void *);
 
-volatile _Atomic uint64_t rvp_ggen = 0;	// global generation number
+// global generation number
+volatile _Atomic uint64_t __cacheline_aligned rvp_ggen = 0;
 
 /* True iff RVP_CONSISTENT put us into the operating mode where we
  * produce sequentially-consistent traces by increasing the global

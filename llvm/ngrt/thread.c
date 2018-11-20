@@ -72,7 +72,7 @@ static _Atomic bool info_dump_requested = false;
 _Atomic bool __read_mostly rvp_real_initialized = false;
 
 pthread_key_t rvp_thread_key;
-_Thread_local rvp_thread_t *rvp_thread;
+_Thread_local rvp_thread_local_t rvp_thread_local;
 static pthread_once_t rvp_postfork_init_once = PTHREAD_ONCE_INIT;
 static pthread_once_t rvp_dump_info_once = PTHREAD_ONCE_INIT;
 static pthread_once_t rvp_prefork_init_once = PTHREAD_ONCE_INIT;
@@ -134,7 +134,8 @@ rvp_thread0_create(void)
 	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
 
-	rvp_thread = t;
+	rvp_thread_local =
+	    (rvp_thread_local_t){.tl_thread = t, .tl_intr_ring = &t->t_ring};
 
 	if (real_pthread_sigmask(SIG_BLOCK, NULL, &oset) != 0)
 		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
@@ -767,7 +768,6 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 		return NULL;
 	}
 
-	t->t_intr_ring = &t->t_ring;
 	t->t_ring.r_stats = &t->t_stats;
 
 	rvp_thread_attach(t);
@@ -834,7 +834,8 @@ __rvpredict_thread_wrapper(void *arg)
 
 	assert(pthread_getspecific(rvp_thread_key) == NULL);
 
-	rvp_thread = t;
+	rvp_thread_local =
+	    (rvp_thread_local_t){.tl_thread = t, .tl_intr_ring = &t->t_ring};
 
 	r->r_lgen = rvp_ggen_after_load();
 	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);

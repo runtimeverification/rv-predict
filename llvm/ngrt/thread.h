@@ -22,6 +22,12 @@ typedef struct _rvp_maskchg {
 } rvp_maskchg_t;
 
 typedef struct _rvp_thread rvp_thread_t;
+typedef struct _rvp_thread_local rvp_thread_local_t;
+
+struct _rvp_thread_local {
+	rvp_thread_t *tl_thread;
+	rvp_ring_t * _Atomic	tl_intr_ring;
+};
 
 struct _rvp_thread {
 	volatile bool		t_garbage;
@@ -43,7 +49,6 @@ struct _rvp_thread {
 	uint64_t _Atomic	t_intrmask;
 	uint32_t _Atomic	t_idepth;
 	const rvp_maskchg_t * volatile _Atomic	t_maskchg;
-	rvp_ring_t * _Atomic	t_intr_ring;
 	rvp_ring_stats_t	t_stats;
 	int			t_nthrspecs;
 	rvp_thrspec_t		*t_thrspec;
@@ -64,20 +69,18 @@ REAL_DECL(int, pthread_create, pthread_t *, const pthread_attr_t *,
 REAL_DECL(void, pthread_exit, void *);
 
 extern pthread_key_t rvp_thread_key;
-extern _Thread_local rvp_thread_t *rvp_thread;
+extern _Thread_local rvp_thread_local_t rvp_thread_local;
 
 static inline rvp_thread_t *
 rvp_thread_for_curthr(void)
 {
-	return rvp_thread;
+	return rvp_thread_local.tl_thread;
 }
 
 static inline rvp_ring_t *
 rvp_ring_for_curthr(void)
 {
-	rvp_thread_t *t = rvp_thread_for_curthr();
-
-	return t->t_intr_ring;
+	return rvp_thread_local.tl_intr_ring;
 }
 
 #endif /* _RVP_THREAD_H_ */

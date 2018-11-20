@@ -368,7 +368,7 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	uint32_t idepth = atomic_fetch_add_explicit(&t->t_idepth, 1,
 	    memory_order_acquire);
 	rvp_ring_t *r = rvp_signal_ring_acquire(t, idepth + 1);
-	rvp_ring_t *oldr = atomic_exchange(&t->t_intr_ring, r);
+	rvp_ring_t *oldr = atomic_exchange(&rvp_thread_local.tl_intr_ring, r);
 	rvp_interruption_t *it = rvp_ring_put_interruption(oldr, r,
 	    r->r_producer - r->r_items);
 	rvp_buf_t b = RVP_BUF_INITIALIZER;
@@ -492,13 +492,14 @@ __rvpredict_handler_wrapper(int signum, siginfo_t *info, void *ctx)
 	 * does not have to resynchronize with ggen.  It's ok to copy back
 	 * the local generation, here: this ring's local generation is not
 	 * going to increase any more in this signal, and oldr is not
-	 * visible until I copy it back to t_intr_ring. 
+	 * visible until I copy it back to tl_intr_ring. 
 	 */
 	oldr->r_lgen = r->r_lgen;
 
-	atomic_store_explicit(&t->t_intr_ring, oldr, memory_order_release);
+	atomic_store_explicit(&rvp_thread_local.tl_intr_ring, oldr,
+	    memory_order_release);
 	/* At this juncture, a new signal could start with parent
-	 * t_intr_ring and a greater idepth than this thread's, but
+	 * tl_intr_ring and a greater idepth than this thread's, but
 	 * that's ok, it will just get a new ring.
 	 */
 	rvp_buf_put_voidptr(&b, rvp_vec_and_op_to_deltop(0, RVP_OP_EXITSIG));
@@ -959,7 +960,7 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 		 * block at least all of the signals blocked in
 		 * `t->t_intrmask`, however, it may block more.
 		 */
-		if (t->t_intr_ring == &t->t_ring &&
+		if (rvp_thread_local.tl_intr_ring == &t->t_ring &&
 		    actual_omask != 0 && omask != actual_omask)
 			abort();
 	}

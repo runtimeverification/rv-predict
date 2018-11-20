@@ -74,6 +74,10 @@ typedef struct _rvp_intr_hack {
 	sigset_t ih_mask;
 } rvp_intr_hack_t;
 
+#define RVP_RING_BYTES (192 * 4096)
+#define RVP_RING_ITEMS (RVP_RING_BYTES / sizeof(uint32_t))
+#define RVP_RING_SERVICE_THRESHOLD (RVP_RING_ITEMS / 8)
+
 /* An event ring contains events that are serialized as one
  * or more unsigned 32-bit integers.  An execution sequence
  * (thread/interrupt/signal) has an event ring, `r`.  Each new event
@@ -140,10 +144,6 @@ struct _rvp_ring {
 	pthread_mutex_t r_mtx;
 	pthread_cond_t r_cv;
 };
-
-#define RVP_RING_BYTES (64 * 4096)
-#define RVP_RING_ITEMS (RVP_RING_BYTES / sizeof(uint32_t))
-#define RVP_RING_SERVICE_THRESHOLD (RVP_RING_ITEMS / 8)
 
 extern volatile _Atomic uint64_t rvp_ggen;
 extern unsigned int rvp_log2_nthreads;

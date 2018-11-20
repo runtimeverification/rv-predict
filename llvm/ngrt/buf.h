@@ -116,7 +116,7 @@ rvp_cursor_put_pc_and_op(rvp_cursor_t *c, const char **lastpcp, const char *pc,
 
 	*lastpcp = pc;
 
-	if (deltop == NULL) {
+	if (__predict_false(deltop == NULL)) {
 		rvp_cursor_put_voidptr(c, pc);
 		deltop = rvp_vec_and_op_to_deltop(0, op);
 		assert(deltop != NULL);

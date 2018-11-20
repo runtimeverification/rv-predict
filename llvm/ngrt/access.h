@@ -80,18 +80,43 @@ trace_store(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint32_t val)
 static inline void
 trace_store8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
 {
+	uint64_t gen;
+	deltop_t *deltop;
+	int nempty;
+	rvp_ring_t *r = rvp_ring_for_curthr();
+
 	if (__predict_false(data_is_in_coverage(addr) || !ring_operational()))
 		return;
 
-	rvp_ring_t *r = rvp_ring_for_curthr();
-	uint64_t gen;
-
 	gen = rvp_ggen_before_store();
 	atomic_thread_fence(memory_order_acquire);
-	rvp_cursor_t c = rvp_cursor_for_ring(r);
-	rvp_cursor_put_pc_and_op(&c, &r->r_lastpc, retaddr, op);
-	rvp_cursor_put_addr(&c, addr);
-	rvp_cursor_put_u64(&c, val);
-	rvp_cursor_trace_cog(&c, &r->r_lgen, gen);
-	rvp_ring_advance_to_cursor(r, &c);
+	deltop = rvp_vec_and_op_to_deltop(retaddr - r->r_lastpc, op);
+	if (__predict_true(deltop != NULL &&
+	    r->r_lgen >= gen &&
+	    (nempty = rvp_ring_nempty(r)) >= RVP_BUF_NITEMS &&
+	    r->r_last - r->r_producer >= RVP_BUF_NITEMS - 1)) {
+		rvp_load8_store8_t *store = (rvp_load8_store8_t *)r->r_producer;
+		const int slots_per_store =
+		    sizeof(*store) / sizeof(*r->r_producer);
+		store->deltop = (rvp_addr_t)deltop;
+		store->addr = addr;
+		store->data = val;
+		atomic_store_explicit(&r->r_producer,
+		    r->r_producer + slots_per_store, memory_order_release);
+		r->r_lastpc = retaddr;
+		/* If the number of empty slots just crossed from above the
+		 * service threshold to below, then ask the serialization
+		 * thread to service the ring.
+		 */
+		if (__predict_false(nempty >= RVP_RING_SERVICE_THRESHOLD &&
+		    RVP_RING_SERVICE_THRESHOLD > nempty - slots_per_store))
+			rvp_ring_request_service(r);
+	} else {
+		rvp_cursor_t c = rvp_cursor_for_ring(r);
+		rvp_cursor_put_pc_and_op(&c, &r->r_lastpc, retaddr, op);
+		rvp_cursor_put_addr(&c, addr);
+		rvp_cursor_put_u64(&c, val);
+		rvp_cursor_trace_cog(&c, &r->r_lgen, gen);
+		rvp_ring_advance_to_cursor(r, &c);
+	}
 }

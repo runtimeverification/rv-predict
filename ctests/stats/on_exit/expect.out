@@ -1,6 +1,6 @@
-joined threads: ring waits ring sleeps spins i-ring spins
+joined threads: ring waits sleeps spins services locks i-ring spins
 serializer: vectors, I/Os
 serializer: global generation
 serializer relay: signalled times, woke
 serializer: signalled times, woke
-t1: ring sleeps spins i-ring spins
+t1: ring waits sleeps spins services locks i-ring spins

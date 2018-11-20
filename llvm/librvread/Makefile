@@ -16,14 +16,13 @@ LIB=rvread
 STRIPFLAG=
 CC?=clang
 CFLAGS+=-std=c11
+CPPFLAGS+=-fPIC
 #COPTS+=-O3
 COPTS+=-g
 CFLAGS+=-Wmissing-prototypes
 CPPFLAGS+=-Wuninitialized -I${.CURDIR}/../ngrt -I${.CURDIR}/../../include
 CPPFLAGS+=-D_POSIX_C_SOURCE=200112L	# for write(2) on QNX
-CPPFLAGS+=-fPIC
-CPPFLAGS+=-m64
-SRCS=reader.c
+SRCS=io.c reader.c
 WARNS=4
 
 .include <mkc.lib.mk>

@@ -9,12 +9,14 @@
 # bootstrap kit. The package for mk-configure is in devel/.
 #
 
-LIB?=rvprt
-
-STRIPFLAG=
-INCS=rvpredict_intr.h
 TARGET_CC?=clang
 CC?=$(TARGET_CC)
+
+.include "../../cross-libdir.mk"
+
+LIB?=rvprt
+STRIPFLAG=
+INCS=rvpredict_intr.h
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-fPIC
@@ -39,9 +41,10 @@ SRCS+=register.c relay.c ring.c rmw.c rvpsignal.c
 SRCS+=serialize.c sigutil.c specific.c supervise.c
 SRCS+=thread.c trace.c
 SRCS+=intr.c io.c
+SRCS+=vptr.c
 WARNS=4
 LINKS=${LIBDIR}/librvprt.a ${LIBDIR}/librvprt64.a
-LIBC_A!=$(CC) -print-file-name=libc.a
+LIBC_A!=$(TARGET_CC) -print-file-name=libc.a
 
 .if 1
 SRCS+=str.c

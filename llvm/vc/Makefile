@@ -13,6 +13,7 @@ LIB=vc
 
 CPPFLAGS+=-D_POSIX_C_SOURCE=200809L	# for dprintf(3) and getopt(3)
 #CC?=$(HOST_CC)
+CPPFLAGS+=-fPIC
 CPPFLAGS+=-Wuninitialized
 SRCS=vc.cc
 WARNS=4

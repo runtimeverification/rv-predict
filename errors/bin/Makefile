@@ -29,7 +29,9 @@ rvp-error: $(SRCDIR)/rv-error
 rvp-html-report: .PHONY
 	@cp $(.CURDIR)/../html-report/rv-html-report $(.OBJDIR)/rvp-html-report
 
-$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nuninstall:Ntags:Nall:Ndepend:Ntest):
+obj:
+
+$(TARGETS:Ncleandir:Ndistclean:Ninstall:Nfilelist:Ninstalldirs:Nobj:Nuninstall:Ntags:Nall:Ndepend:Ntest):
 	cd $(SRCDIR) && unset DESTDIR && \
 	$(MAKE) $(.TARGET)
 

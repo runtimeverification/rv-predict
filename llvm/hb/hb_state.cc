@@ -53,7 +53,9 @@ std::size_t hb_state::check_and_add_thread(uint32_t tid){
 		tid_vc->set_index(tid_index, 1);
 		(*thread_vc)[tid] = tid_vc;
 	}
-	else tid_index = it->second;
+	else {
+		tid_index = it->second;
+	}
 	return tid_index;
 }
 

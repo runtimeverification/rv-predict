@@ -1,6 +1,7 @@
 #include "hb_handlers.h"
+#include<iostream>
 
-bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, rvp_ubuf_t* decor){
+bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, const rvp_ubuf_t* decor){
 
 	std::size_t tid_idx = state_ptr->check_and_add_thread(tid);
 	switch(op){
@@ -107,7 +108,7 @@ bool hb_handler_release(hb_state* state_ptr, uint32_t tid, std::size_t t_idx, rv
 bool hb_handler_fork(hb_state* state_ptr, uint32_t tid, std::size_t t_idx, uint32_t child){
 	VC_ptr C_t = (state_ptr->thread_vc)->find(tid)->second;
 	std::size_t unused = state_ptr->check_and_add_thread(child);
-	VC_ptr C_child = (state_ptr->lock_vc)->find(child)->second;
+	VC_ptr C_child = (state_ptr->thread_vc)->find(child)->second;
 	C_child->join_with(*C_t);
 	return false;
 }
@@ -116,7 +117,7 @@ bool hb_handler_join(hb_state* state_ptr, uint32_t tid, std::size_t t_idx, uint3
 	VC_ptr C_t = (state_ptr->thread_vc)->find(tid)->second;
 	// TODO(umang): maybe assume that the child thread would have been seen at this point?
 	std::size_t unused = state_ptr->check_and_add_thread(child);
-	VC_ptr C_child = (state_ptr->lock_vc)->find(child)->second;
+	VC_ptr C_child = (state_ptr->thread_vc)->find(child)->second;
 	C_t->join_with(*C_child);
 	return false;
 }

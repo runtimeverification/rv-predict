@@ -1,4 +1,7 @@
+.include "../../../../cross-libdir.mk"
+
 LIB=rvpmissing_posix
+INCSDIR=${PREFIX}/include/qnx
 
 STRIPFLAG=
 TARGET_CC?=clang

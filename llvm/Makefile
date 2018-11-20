@@ -1,7 +1,6 @@
-SUBPRJ=cmade ngrt personality rvpdump sigsim hb
-INTERNALLIBS=librvu librvread vc
-LIBDEPS=librvu:librvread
-LIBDEPS+=vc:hb librvread:hb
-LIBDEPS+=librvu:ngrt librvread:rvpdump librvu:rvpdump
+SUBPRJ=cmade rvpdump vc hb
+#SUBPRJ+=ngrt personality sigsim hb
+INTERNALLIBS=librvread vc
+LIBDEPS+=librvread:rvpdump librvread:hb vc:hb
 
 .include <mkc.subprj.mk>

@@ -262,7 +262,7 @@ rvp_pstate_begin_thread(rvp_pstate_t *ps, uint32_t tid, uint64_t generation)
 
 static void
 rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
-    bool emit_generation, rvp_addr_t op0)
+    bool emit_generation, bool emit_bytes, rvp_addr_t op0)
 {
 	/* XXX it's not strictly necessary for deltops to have any concrete
 	 * storage
@@ -270,6 +270,7 @@ rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
 	deltops_t deltops;
 
 	ps->ps_emit_generation = emit_generation;
+	ps->ps_emit_bytes = emit_bytes;
 	ps->ps_emitters = emitters;
 
 	ps->ps_deltop_center = op0;
@@ -336,12 +337,40 @@ reemit_binary_op(const rvp_pstate_t *ps __unused, const rvp_ubuf_t *ub,
 		err(EXIT_FAILURE, "%s: write", __func__);
 }
 
+static char *
+suffix_string(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, size_t reclen,
+    char *buf0, size_t buflen0)
+{
+	char *buf = buf0;
+	size_t buflen = buflen0;
+	int i;
+	const char *delim = " ";
+
+	if (!ps->ps_emit_bytes)
+		return "";
+
+	for (i = 0; i < reclen; i++) {
+		int nwritten = snprintf(buf, buflen,
+		    "%s%02" PRIx8, delim, (uint8_t)ub->ub_bytes[i]);
+		if (nwritten < 0 || nwritten >= buflen) {
+			errx(EXIT_FAILURE, "%s.%d: snprintf failed",
+			    __func__, __LINE__);
+		}
+		buf += nwritten;
+		buflen -= nwritten;
+		delim = ".";
+	}
+	return buf0;
+}
+
 static void
-print_nop(const rvp_pstate_t *ps, const rvp_ubuf_t *ub __unused)
+print_nop(const rvp_pstate_t *ps, const rvp_ubuf_t *ub)
 {
 	prebuf_t prebuf;
+	char sufbuf[128];
 
-	printf("%s nop\n", preamble_string(ps, prebuf, sizeof(prebuf)));
+	printf("%s nop%s\n", preamble_string(ps, prebuf, sizeof(prebuf)),
+	    suffix_string(ps, ub, sizeof(ub->ub_pc), sufbuf, sizeof(sufbuf)));
 }
 
 static void
@@ -396,7 +425,7 @@ lastpc_to_string(const rvp_pstate_t *ps, char *buf, size_t buflen)
 }
 
 char *
-preamble_string(const rvp_pstate_t *ps __unused, char *buf0, size_t buflen0)
+preamble_string(const rvp_pstate_t *ps, char *buf0, size_t buflen0)
 {
 	char *buf = buf0;
 	size_t buflen = buflen0;
@@ -497,46 +526,55 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 			       "0x0123456789abcdef/0x0123456789abcdef "
 			       "0x0123456789abcdef/0x0123456789abcdef]"))];
 	prebuf_t prebuf;
+	char sufbuf[128];
 
 	switch (op) {
 	case RVP_OP_ATOMIC_LOAD8:
 	case RVP_OP_ATOMIC_STORE8:
 	case RVP_OP_LOAD8:
 	case RVP_OP_STORE8:
-		printf("%s %s %#.*" PRIx64 " %s %s\n",
+		printf("%s %s %#.*" PRIx64 " %s %s%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, field_width,
 		    ub->ub_load8_store8.data,
 		    is_load ? "<-" : "->",
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
-		        ub->ub_load8_store8.addr));
+		        ub->ub_load8_store8.addr),
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_ATOMIC_RMW8:
-		printf("%s %s %#.*" PRIx64 " <- %s <- %#.*" PRIx64 "\n",
+		printf("%s %s %#.*" PRIx64 " <- %s <- %#.*" PRIx64 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, field_width, ub->ub_rmw8.oval,
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_rmw8.addr),
-		    field_width, ub->ub_rmw8.nval);
+		    field_width, ub->ub_rmw8.nval,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_ATOMIC_RMW4:
-		printf("%s %s %#.*" PRIx32 " <- %s <- %#.*" PRIx32 "\n",
+		printf("%s %s %#.*" PRIx32 " <- %s <- %#.*" PRIx32 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, field_width, ub->ub_rmw4.oval,
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_rmw4.addr),
-		    field_width, ub->ub_rmw4.nval);
+		    field_width, ub->ub_rmw4.nval,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_ATOMIC_RMW2:
 	case RVP_OP_ATOMIC_RMW1:
-		printf("%s %s %#.*" PRIxMAX " <- %s <- %#.*" PRIxMAX "\n",
+		printf("%s %s %#.*" PRIxMAX " <- %s <- %#.*" PRIxMAX "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, field_width,
 		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(15, 0)),
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_rmw1_2.addr),
 		    field_width,
-		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(31, 16)));
+		    __SHIFTOUT(ub->ub_rmw1_2.onval, __BITS(31, 16)),
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_ATOMIC_LOAD4:
 	case RVP_OP_ATOMIC_STORE4:
@@ -551,104 +589,132 @@ print_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub, rvp_op_t op,
 	case RVP_OP_LOAD1:
 	case RVP_OP_STORE1:
 		printf("%s %s %#.*" PRIx32
-		    " %s %s\n",
+		    " %s %s%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, field_width,
 		    ub->ub_load1_2_4_store1_2_4.data,
 		    is_load ? "<-" : "->",
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
-		        ub->ub_load1_2_4_store1_2_4.addr));
+		        ub->ub_load1_2_4_store1_2_4.addr),
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_BEGIN:
-		printf("%s %s generation %" PRIu64 "\n",
+		printf("%s %s generation %" PRIu64 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
-		    oi->oi_descr, ub->ub_begin.generation);
+		    oi->oi_descr, ub->ub_begin.generation,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_SIGDEPTH:
-		printf("%s %s -> %" PRIu32 "\n",
+		printf("%s %s -> %" PRIu32 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
-		    oi->oi_descr, ub->ub_sigdepth.depth);
+		    oi->oi_descr, ub->ub_sigdepth.depth,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_COG:
-		printf("%s %s -> %" PRIu64 "\n",
+		printf("%s %s -> %" PRIu64 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
-		    oi->oi_descr, ub->ub_cog.generation);
+		    oi->oi_descr, ub->ub_cog.generation,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_ENTERFN:
-		printf("%s %s cfa %" PRIxPTR " return %s\n",
+		printf("%s %s cfa %" PRIxPTR " return %s%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_enterfn.cfa,
 		    (*emitters->insnptr_to_string)(ps, buf[1], sizeof(buf[1]),
-		        ub->ub_enterfn.callsite));
+		        ub->ub_enterfn.callsite),
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_END:
 	default:
-		printf("%s %s\n",
-		    preamble_string(ps, prebuf, sizeof(prebuf)), oi->oi_descr);
+		printf("%s %s%s\n",
+		    preamble_string(ps, prebuf, sizeof(prebuf)), oi->oi_descr,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_FORK:
 	case RVP_OP_JOIN:
 	case RVP_OP_SWITCH:
-		printf("%s %s tid %" PRIu32 "\n",
+		printf("%s %s tid %" PRIu32 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
-		    oi->oi_descr, ub->ub_fork_join_switch.tid);
+		    oi->oi_descr, ub->ub_fork_join_switch.tid,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		// TBD create a fledgling rvp_thread_pstate_t on fork?
 		break;
 	case RVP_OP_ENTERSIG:
 		printf(
 		    "%s %s signal %" PRIu32
-		    " handler %s generation %" PRIu64 "\n",
+		    " handler %s generation %" PRIu64 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr, ub->ub_entersig.signum,
 		    (*emitters->insnptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_entersig.handler),
-		    ub->ub_entersig.generation);
+		    ub->ub_entersig.generation,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_ACQUIRE:
 	case RVP_OP_RELEASE:
-		printf("%s %s %s\n",
+		printf("%s %s %s%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    (*emitters->dataptr_to_string)(ps, buf[1], sizeof(buf[1]),
-		        ub->ub_acquire_release.addr));
+		        ub->ub_acquire_release.addr),
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_SIGDIS:
-		printf("%s %s signal %" PRIu32 "\n",
+		printf("%s %s signal %" PRIu32 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
-		    oi->oi_descr, ub->ub_sigdis.signum);
+		    oi->oi_descr, ub->ub_sigdis.signum,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_SIGEST:
 		printf("%s %s signal %" PRIu32
-		    " handler %s mask #%" PRIu32 "\n",
+		    " handler %s mask #%" PRIu32 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    ub->ub_sigest.signum,
 		    (*emitters->insnptr_to_string)(ps, buf[1], sizeof(buf[1]),
 		        ub->ub_sigest.handler),
-		    ub->ub_sigest.masknum);
+		    ub->ub_sigest.masknum,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_SIGMASKMEMO:
-		printf("%s %s #%" PRIu32 " origin %" PRIu32 " bits %#016" PRIx64 "\n",
+		printf("%s %s #%" PRIu32 " origin %" PRIu32 " bits %#016" PRIx64 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    ub->ub_sigmaskmemo.masknum,
 		    ub->ub_sigmaskmemo.origin,
-		    ub->ub_sigmaskmemo.mask);
+		    ub->ub_sigmaskmemo.mask,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_SIGGETMASK:
 	case RVP_OP_SIGSETMASK:
 	case RVP_OP_SIGBLOCK:
 	case RVP_OP_SIGUNBLOCK:
-		printf("%s %s #%" PRIu32 "\n",
+		printf("%s %s #%" PRIu32 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
-		    oi->oi_descr, ub->ub_sigmask_access.masknum);
+		    oi->oi_descr, ub->ub_sigmask_access.masknum,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	case RVP_OP_SIGGETSETMASK:
-		printf("%s %s #%" PRIu32 " -> #%" PRIu32 "\n",
+		printf("%s %s #%" PRIu32 " -> #%" PRIu32 "%s\n",
 		    preamble_string(ps, prebuf, sizeof(prebuf)),
 		    oi->oi_descr,
 		    ub->ub_sigmask_rmw.omasknum,
-		    ub->ub_sigmask_rmw.masknum);
+		    ub->ub_sigmask_rmw.masknum,
+		    suffix_string(ps, ub, oi->oi_reclen,
+		        sufbuf, sizeof(sufbuf)));
 		break;
 	}
 }
@@ -796,8 +862,8 @@ consume_and_print_trace(rvp_pstate_t *ps, rvp_ubuf_t *ub, size_t *nfullp)
 }
 
 void
-rvp_trace_dump_with_emitters(bool emit_generation, size_t most_nrecords,
-    const rvp_emitters_t *emitters, int fd)
+rvp_trace_dump_with_emitters(bool emit_generation, bool emit_bytes,
+    size_t most_nrecords, const rvp_emitters_t *emitters, int fd)
 {
 	int cmp;
 	rvp_pstate_t ps0;
@@ -861,7 +927,7 @@ rvp_trace_dump_with_emitters(bool emit_generation, size_t most_nrecords,
 		errx(EXIT_FAILURE, "%s: expected thread 1, read %" PRIu32,
 		    __func__, tid);
 	}
-	rvp_pstate_init(ps, emitters, emit_generation, pc0);
+	rvp_pstate_init(ps, emitters, emit_generation, emit_bytes, pc0);
 
 	if (emitters->init != NULL)
 		(*emitters->init)(ps, &th);
@@ -905,6 +971,7 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 {
 	const rvp_emitters_t *emitters;
 	bool emit_generation = op->op_emit_generation;
+	bool emit_bytes = op->op_emit_bytes;
 	size_t most_nrecords = op->op_nrecords;
 	switch (op->op_type) {
 	case RVP_OUTPUT_BINARY:
@@ -921,5 +988,6 @@ rvp_trace_dump(const rvp_output_params_t *op, int fd)
 		     op->op_type);
 	}
 
-	rvp_trace_dump_with_emitters(emit_generation, most_nrecords, emitters, fd);
+	rvp_trace_dump_with_emitters(emit_generation, emit_bytes, most_nrecords,
+	    emitters, fd);
 }

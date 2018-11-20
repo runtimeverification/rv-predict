@@ -213,6 +213,12 @@ change the variable(s) that control which compiler is used.  Sometimes
 it is necessary to indicate a different linker than the default, too.
 Here are examples for a few popular programs.
 
+### Cross-building for QNX (x86_64)
+
+Make sure that you have the QNX development tools installed at
+`$HOME/qnx700` and that `QNX_TARGET` and `QNX_HOST` are set.  Then you
+can use `qrvpc` to compile for the 64-bit 80x86 (`x86_64`) architecture.
+
 ### CMake
 
 The variables `CMAKE_C_COMPILER` and `CMAKE_CXX_COMPILER` control the
@@ -313,7 +319,6 @@ may not appear in subsequent releases of RV-Predict/C:
 
 RV-Predict/C does not always filter system include files and libraries
 from data-race reports.  This is especially apparent in C++ programs.
-This will be fixed in the 2.1 release.
 
 ## Support
 

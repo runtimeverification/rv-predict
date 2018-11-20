@@ -1,8 +1,14 @@
+TARGET_CC?=clang
+CC?=$(TARGET_CC)
+
+.include <mkc.init.mk>
+
+.include "../../cross-libdir.mk"
+
 LIB?=rvpsigsim_$(SIGSIM)
 
 .PATH: $(.CURDIR)/../../ngrt
 
-CC?=clang
 .if $(CC) == gcc
 CPPFLAGS+=-U_FORTIFY_SOURCE
 .endif

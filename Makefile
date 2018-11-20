@@ -2,7 +2,7 @@ OS!=uname -s
 
 PROJECTNAME=rv-predict-c
 
-SUBPRJ=doc examples ldscript scripts:llvm errors:reports unit_ctests
+SUBPRJ=doc ldscript scripts:cross cross:llvm errors:reports
 
 .if $(OS) == "Linux" || $(OS) == "QNX"
 SUBPRJ+=elftoolchain:rvsyms
@@ -14,10 +14,9 @@ SUBPRJ+=rvsyms
 SUBPRJ+=maven
 .endif
 
-SUBPRJ+=lib
-
 .if $(ONLY_TEST_DEPENDENCIES:Uno) == "no"
-SUBPRJ+=lib:ctests llvm:ctests maven:ctests rvsyms:ctests scripts:ctests reports:ctests ldscript:ctests doc:ctests examples:ctests
+SUBPRJ+=cross:ctests llvm:ctests maven:ctests rvsyms:ctests scripts:ctests reports:ctests ldscript:ctests doc:ctests examples:ctests
+SUBPRJ+=unit_ctests
 .endif
 
 .include <mkc.subprj.mk>

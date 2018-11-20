@@ -4,7 +4,7 @@
 #include "hb_state.h"
 #include "reader.h"
 
-bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, rvp_ubuf_t* decor);
+bool hb_handler(hb_state* state_ptr, uint32_t tid, rvp_op_t op, const rvp_ubuf_t* decor);
 
 bool hb_handler_read(hb_state* state_ptr, uint32_t tid, std::size_t t_idx, rvp_addr_t addr);
 

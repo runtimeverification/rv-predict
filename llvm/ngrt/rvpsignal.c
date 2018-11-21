@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <inttypes.h>	/* for PRIu32 */
 #include <signal.h>
+#include <stdarg.h>	/* for va_list */
 #include <stdatomic.h>
 #include <stdint.h>	/* for uint32_t */
 
@@ -24,8 +25,17 @@
 #define	RVP_INFO_SIGNUM	SIGPWR
 #endif
 
-#define gt_flags(xp)   (xp ? ((unsigned) xp->sa_flags) : 0)
-#define gt_handler(xp) (xp ? ((unsigned) xp->sa_handler) : 0)
+static inline unsigned
+gt_flags(const struct sigaction *sa)
+{
+	return (sa != NULL) ? (unsigned)sa->sa_flags : 0U;
+}
+
+static inline uintptr_t
+gt_handler(const struct sigaction *sa)
+{
+	return (sa != NULL) ? (uintptr_t)sa->sa_handler : (uintptr_t)0;
+}
 
 REAL_DEFN(int, sigaction, int, const struct sigaction *, struct sigaction *);
 REAL_DEFN(rvp_sighandler_t, signal, int, rvp_sighandler_t);
@@ -35,7 +45,7 @@ REAL_DEFN(int, pthread_sigmask, int, const sigset_t *, sigset_t *);
 REAL_DEFN(int, sigsuspend, const sigset_t *);
 
 int ___rvpredict_set_signal_trace(int);
-static void signal_safe_debugf(const char *fmt, ...);
+static void signal_safe_debugf(const char *fmt, ...) __printflike(1, 2);
 static int __rvpredict_sigaction_impl(int, const struct sigaction *,
     struct sigaction *, const void *);
 
@@ -879,6 +889,9 @@ rvp_change_sigmask(rvp_change_sigmask_t changefn, const void *retaddr, int how,
 	case SIG_SETMASK:
 		nmask = maskchg;
 		break;
+	default:
+		errno = EINVAL;
+		return -1;
 	}
 
 	nmask &= ~rvp_unmaskable;
@@ -1067,8 +1080,8 @@ __rvpredict_signal_common(int signo, int flags, rvp_sighandler_t handler,
 		return SIG_ERR;
 	}
 	signal_safe_debugf("signal    :xit :signo =%2d "
-	    "nsa-flags=%8x osa-flags =%8x osa.sa_handler =%8x\n", signo,
-	    nsa.sa_flags, osa.sa_flags,(unsigned ) osa.sa_handler);
+	    "nsa-flags=%8x osa-flags =%8x osa.sa_handler =%" PRIxPTR "\n", signo,
+	    nsa.sa_flags, osa.sa_flags, gt_handler(&osa));
 	return osa.sa_handler;
 }
 
@@ -1117,15 +1130,16 @@ __rvpredict_sigaction_impl(int signum, const struct sigaction *act0,
 	struct sigaction act_copy;
 
 	signal_safe_debugf("sigaction :ntr :signum=%2d act-flags=%8x \n",
-						signum, gt_flags(act0), 0,0 );
+	    signum, gt_flags(act0));
 	const struct sigaction *act = act0;
 	int rc;
 	rvp_addr_t handler;
 	bool establishing;
 
-	if (act == NULL)
+	if (act == NULL) {
 		establishing = false;
-	else if ((act->sa_flags & SA_SIGINFO) != 0) {
+		handler = 0;	// don't care
+	} else if ((act->sa_flags & SA_SIGINFO) != 0) {
 		/* sigaction(2) will not disestablish a signal handler
 		 * if SA_SIGINFO is in the flags.
 		 */
@@ -1139,7 +1153,7 @@ __rvpredict_sigaction_impl(int signum, const struct sigaction *act0,
 
 	if (!establishing)
 		rvp_sigsim_disestablish(signum);
-	signal_safe_debugf("sigaction : mid:signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x \n"
+	signal_safe_debugf("sigaction : mid:signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%" PRIxPTR "\n"
 		,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
 	/* XXX sigaction(2) is supposed to be async-signal-safe, so instead of
 	 * acquiring a lock here, I should use a signal-safe approach to
@@ -1225,7 +1239,7 @@ null_act:
 		oact->sa_handler = s->s_handler;
 	}
 	rvp_signal_unlock(signum, &savedmask);
-	signal_safe_debugf("sigaction :xit :signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%8x\n"
+	signal_safe_debugf("sigaction :xit :signum=%2d act-flags=%8x oact-flags=%8x oact.sa_handler=%" PRIxPTR "\n"
 		,signum, gt_flags(act), gt_flags(oact), gt_handler(oact));
 	return rc;
 }

@@ -1,3 +1,4 @@
 1. Epoch optimizations
 2. Ignore multiple reads/writes in the same epoch.
+3. The clock resizing might be un-necessary. This is because you are not reusing clock slots of threads that are dead. This means that you need to reimplement join and compare for the case when the sizes of the two clocks are different.
 

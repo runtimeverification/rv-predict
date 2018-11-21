@@ -19,7 +19,7 @@ extern "C" void hb_perform_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 {
 	bool has_race = hb_handler(state_ptr, ps->ps_curthread, op, ub);
 	if(has_race){
-		printf("Race occured\n");
+		printf("Race occured by %d thread \n", ps->ps_curthread);
 	}
 }
 

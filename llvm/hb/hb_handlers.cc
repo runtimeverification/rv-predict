@@ -67,6 +67,7 @@ bool hb_handler_read(hb_state* state_ptr, uint32_t tid, std::size_t t_idx, rvp_a
 	bool unused = state_ptr->check_and_add_read_addr(addr);
 	VC_ptr R_x = (state_ptr->read_vc)->find(addr)->second;
 	R_x->set_index(t_idx, C_t->get_index(t_idx));
+	state_ptr->insert_timestamp_in_read_queue(addr, C_t);
 	return race_detected;
 }
 
@@ -85,6 +86,7 @@ bool hb_handler_write(hb_state* state_ptr, uint32_t tid, std::size_t t_idx, rvp_
 		race_detected = true;
 	}
 	W_x->join_with(*C_t);
+	state_ptr->insert_timestamp_in_write_queue(addr, C_t);
 	return race_detected;
 }
 

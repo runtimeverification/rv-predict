@@ -9,6 +9,8 @@ hb_state::hb_state(){
 	read_vc = new std::map<rvp_addr_t, VC_ptr> ();
 	write_vc = new std::map<rvp_addr_t, VC_ptr> ();
 	lastwrite_vc = new std::map<rvp_addr_t, VC_ptr> ();
+	read_access_queue = new std::map<rvp_addr_t, std::queue<VC_ptr>* > ();
+	write_access_queue = new std::map<rvp_addr_t, std::queue<VC_ptr>* > ();
 }
 
 void hb_state::resize_vectorclocks(size_t new_size){
@@ -36,6 +38,27 @@ void hb_state::resize_vectorclocks(size_t new_size){
 	}
 
 	vc_size = new_size;
+}
+
+void insert_timestamp_in_queue(std::map<rvp_addr_t, std::queue<VC_ptr>* >* mp, rvp_addr_t addr, VC_ptr vc_ptr){
+	VC_ptr new_vc = new VectorClock(*vc_ptr);
+	std::map<rvp_addr_t, std::queue<VC_ptr>* >::iterator it = mp->find(addr);
+	if(it == mp->end()){
+		(*mp)[addr] = new std::queue<VC_ptr> ();
+	}
+	(*mp)[addr]->push(new_vc);
+	std::size_t len = (*mp)[addr]->size();
+	if(len > MAX_ACCESS_BUF_LEN){
+		(*mp)[addr]->pop();
+	}
+}
+
+void hb_state::insert_timestamp_in_read_queue(rvp_addr_t addr, VC_ptr vc_ptr){
+	insert_timestamp_in_queue(read_access_queue, addr, vc_ptr);
+}
+
+void hb_state::insert_timestamp_in_write_queue(rvp_addr_t addr, VC_ptr vc_ptr){
+	insert_timestamp_in_queue(write_access_queue, addr, vc_ptr);
 }
 
 std::size_t hb_state::check_and_add_thread(uint32_t tid){

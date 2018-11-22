@@ -23,7 +23,6 @@ extern "C" void hb_perform_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 	}
 }
 
-
 int
 main(int argc, char* argv[])
 {

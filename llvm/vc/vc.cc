@@ -1,5 +1,3 @@
-#include <assert.h>
-
 #include "vc.h"
 
 VectorClock::VectorClock(){
@@ -27,22 +25,33 @@ std::vector<long>& VectorClock::get_clock(){
 }
 
 bool VectorClock::le(VectorClock& rhs){
-	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
-	assert(clock.size() == rhs.clock.size());
+	std::size_t rhs_size = rhs.clock.size();
+	std::size_t clock_size = clock.size();
 	bool is_lte = true;
-	for(int i = 0; i <clock.size(); i++){
+	for(int i = 0; i < clock_size && i < rhs_size; i++){
 		if(clock[i] > rhs.clock[i]){
 			is_lte = false;
 			break;
+		}
+	}
+	if(clock_size > rhs_size && is_lte){
+		for(int i = rhs_size; i < clock_size; i++){
+			if(clock[i] > 0){
+				is_lte = false;
+				break;
+			}
 		}
 	}
 	return is_lte;
 }
 
 void VectorClock::join_with(VectorClock& rhs){
-	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
-	assert(clock.size() == rhs.clock.size());
-	for(int i = 0; i <clock.size(); i++){
+	std::size_t clock_size = clock.size();
+	std::size_t rhs_size = rhs.clock.size();
+	if(clock_size < rhs_size){
+		resize(rhs_size);
+	}
+	for(int i = 0; i < rhs_size; i++){
 		if(rhs.clock[i] > clock[i]){
 			clock[i] = rhs.clock[i];
 		}
@@ -60,19 +69,22 @@ void VectorClock::resize(std::size_t dim){
 }
 
 void VectorClock::inc_index(std::size_t ind){
-	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
-	assert(clock.size() >= ind + 1);
+	if(clock.size() < ind + 1){
+		resize(ind + 1);
+	}
 	clock[ind] = clock[ind] + 1;
 }
 
 void VectorClock::set_index(std::size_t ind, long val){
-	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
-	assert(clock.size() >= ind + 1);
+	if(clock.size() < ind + 1){
+		resize(ind + 1);
+	}
 	clock[ind] = val;
 }
 
 long VectorClock::get_index(std::size_t ind){
-	//TODO: Have a compile-time debug flag and enable this assert only when the flag is on.
-	assert(clock.size() >= ind + 1);
+	if(clock.size() < ind + 1){
+		return 0;
+	}
 	return clock[ind];
 }

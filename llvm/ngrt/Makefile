@@ -14,6 +14,10 @@ CC?=$(TARGET_CC)
 
 .include "../../cross-libdir.mk"
 
+.if $(CC) == gcc
+CPPFLAGS+=-U_FORTIFY_SOURCE
+.endif
+
 LIB?=rvprt
 STRIPFLAG=
 INCS=rvpredict_intr.h

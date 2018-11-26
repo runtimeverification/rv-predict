@@ -209,7 +209,7 @@ rvp_ring_get_iovs_between(rvp_ring_t *r, struct iovec ** const iovp,
 	} else {	/* start > end */
 		*iov++ = (struct iovec){
 			  .iov_base = start
-			, .iov_len = (r->r_last + 1 - start) *
+			, .iov_len = (rvp_ring_last(r) + 1 - start) *
 				     sizeof(start[0])
 		};
 
@@ -377,7 +377,8 @@ rvp_ring_discard_iovs_between(rvp_ring_t *r, const struct iovec ** const iovp,
 
 	assert(iov->iov_base == consumer);
 
-	if (iov->iov_len == (r->r_last + 1 - consumer) * sizeof(consumer[0])) {
+	if (iov->iov_len ==
+	    (rvp_ring_last(r) + 1 - consumer) * sizeof(consumer[0])) {
 		iov++;
 		if (iov == lastiov)
 			return -1;

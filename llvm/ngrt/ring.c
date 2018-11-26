@@ -36,7 +36,10 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
 {
 	int rc;
 
-	r->r_producer = r->r_consumer = r->r_items = items;
+	r->r_producer = r->r_consumer = items;
+#if !defined(EMBED_RING)
+	r->r_items = items;
+#endif
 	r->r_last = &r->r_items[nitems - 1];
 	r->r_state = RVP_RING_S_INUSE;
 	r->r_mtxp = NULL;
@@ -54,6 +57,9 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
 int
 rvp_ring_stdinit(rvp_ring_t *r)
 {
+#if defined(EMBED_RING)
+	rvp_ring_init(r, &r->r_items[0], RVP_RING_ITEMS);
+#else
 	uint32_t *items;
 
 	items = calloc(RVP_RING_ITEMS, sizeof(*r->r_items));
@@ -61,6 +67,7 @@ rvp_ring_stdinit(rvp_ring_t *r)
 		return ENOMEM;
 
 	rvp_ring_init(r, items, RVP_RING_ITEMS);
+#endif
 
 	return 0;
 }

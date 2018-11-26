@@ -74,9 +74,9 @@ typedef struct _rvp_intr_hack {
 	sigset_t ih_mask;
 } rvp_intr_hack_t;
 
-#define RVP_RING_BYTES (192 * 4096)
+#define RVP_RING_BYTES (384 * 4096)
 #define RVP_RING_ITEMS (RVP_RING_BYTES / sizeof(uint32_t))
-#define RVP_RING_SERVICE_THRESHOLD (RVP_RING_ITEMS / 8)
+#define RVP_RING_SERVICE_THRESHOLD (RVP_RING_ITEMS / 4)
 
 /* An event ring contains events that are serialized as one
  * or more unsigned 32-bit integers.  An execution sequence
@@ -100,19 +100,27 @@ struct _rvp_ring {
 	// producer and consumer pointers
 	uint32_t * _Atomic volatile r_producer, * _Atomic volatile r_consumer;
 
-	uint32_t *r_last;		// the consumer pointer follows
-	uint32_t *r_items;		// the producer pointer around and
-					// around the items
-					// between r_items and r_last,
-					// inclusive.
-
+	uint32_t *r_last;
+#if !defined(EMBED_RING)
+	uint32_t *r_items;
+#endif
 	const char *r_lastpc;		// the last program counter (PC)
 					// of an event on this sequence
 
 	volatile uint64_t r_lgen;	// sequence-local generation number
 
-	rvp_ring_t *r_next;		// all signal rings are strung together
-					// through r_next
+#if defined(EMBED_RING)
+	/* the consumer pointer follows the producer pointer around and
+	 * around the items between &r->r_items[0] and rvp_ring_last(r),
+	 * inclusive.
+	 */
+	uint32_t __aligned(64) r_items[RVP_RING_ITEMS];
+#endif
+	// all signal rings are strung together through r_next
+	rvp_ring_t * __aligned(64) r_next;
+	uint32_t r_tid;			// the thread ID and interrupt
+	uint32_t r_idepth;		// depth that identify the sequence
+					// that this ring corresponds to
 
 	// clean: no sequence is using this ring, and it has no
 	// items that need to be serialized
@@ -123,10 +131,6 @@ struct _rvp_ring {
 	// in-use: a sequence is logging on this ring; it
 	// may or may not contains items that need to be serialized
 	volatile rvp_ring_state_t _Atomic r_state;
-
-	uint32_t r_tid;			// the thread ID and interrupt
-	uint32_t r_idepth;		// depth that identify the sequence
-					// that this ring corresponds to
 
 	rvp_iring_t r_iring;		// record of interruptions: when
 					// each interruption occurred, what
@@ -148,6 +152,26 @@ struct _rvp_ring {
 extern volatile _Atomic uint64_t rvp_ggen;
 extern unsigned int rvp_log2_nthreads;
 extern bool rvp_consistent;
+
+static inline const uint32_t *
+rvp_ring_last_const(const rvp_ring_t *r)
+{
+#if defined(NO_RING_LAST)
+	return &r->r_items[RVP_RING_ITEMS - 1];
+#else
+	return r->r_last;
+#endif
+}
+
+static inline uint32_t *
+rvp_ring_last(rvp_ring_t *r)
+{
+#if defined(NO_RING_LAST)
+	return &r->r_items[RVP_RING_ITEMS - 1];
+#else
+	return r->r_last;
+#endif
+}
 
 static inline void
 rvp_increase_ggen(void)
@@ -223,7 +247,18 @@ rvp_iring_nempty(rvp_iring_t *ir)
 	return rvp_iring_capacity(ir) - rvp_iring_nfull(ir);
 }
 
-static inline int
+static inline unsigned int
+rvp_ring_nfull_for_producer(const rvp_ring_t *r, uint32_t *producer)
+{
+	uint32_t *consumer = r->r_consumer;
+
+	if (producer >= consumer)
+		return producer - consumer;
+
+	return RVP_RING_ITEMS - (consumer - producer);
+}
+
+static inline unsigned int
 rvp_ring_nfull(const rvp_ring_t *r)
 {
 	uint32_t *producer = r->r_producer,
@@ -235,13 +270,19 @@ rvp_ring_nfull(const rvp_ring_t *r)
 	return RVP_RING_ITEMS - (consumer - producer);
 }
 
-static inline int
+static inline unsigned int
 rvp_ring_capacity(rvp_ring_t *r)
 {
 	return RVP_RING_ITEMS - 1;
 }
 
-static inline int
+static inline unsigned int
+rvp_ring_nempty_for_producer(rvp_ring_t *r, uint32_t *producer)
+{
+	return rvp_ring_capacity(r) - rvp_ring_nfull_for_producer(r, producer);
+}
+
+static inline unsigned int
 rvp_ring_nempty(rvp_ring_t *r)
 {
 	return rvp_ring_capacity(r) - rvp_ring_nfull(r);
@@ -250,7 +291,7 @@ rvp_ring_nempty(rvp_ring_t *r)
 static inline void
 rvp_ring_request_service(rvp_ring_t *r)
 {
-	if (r->r_idepth == 0)
+	if (__predict_true(r->r_idepth == 0))
 		rvp_wake_transmitter();
 	else
 		rvp_wake_relay();
@@ -339,7 +380,7 @@ rvp_ring_consumer_index_advanced_by(const rvp_ring_t *r, int nitems)
 
 	assert(nitems < rvp_ring_nfull(r));
 
-	if (prev + nitems <= r->r_last) {
+	if (prev + nitems <= rvp_ring_last_const(r)) {
 		next = prev + nitems;
 	} else {
 		next = prev + (nitems - RVP_RING_ITEMS);
@@ -353,7 +394,7 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 	uint32_t *prev = r->r_producer;
 	uint32_t *next;
 
-	if (prev + nitems <= r->r_last) {
+	if (prev + nitems <= rvp_ring_last(r)) {
 		next = prev + nitems;
 	} else {
 		// less-than because you cannot fill every slot in
@@ -370,7 +411,7 @@ rvp_ring_put_multiple(rvp_ring_t *r, const uint32_t *item, int nitems)
 	if (prev < next) {
 		memcpy(prev, item, nitems * sizeof(prev[0]));
 	} else {
-		int nfirst = r->r_last - prev + 1,
+		int nfirst = rvp_ring_last(r) - prev + 1,
 		    nlast = next - r->r_items;
 		memcpy(prev, item, nfirst * sizeof(item[0]));
 		memcpy(r->r_items, &item[nfirst], nlast * sizeof(item[0]));
@@ -462,7 +503,7 @@ rvp_cursor_for_ring(rvp_ring_t *r)
 		rvp_ring_await_nempty(r, RVP_BUF_NITEMS);
 
 	return (rvp_cursor_t){.c_producer = r->r_producer,
-	                      .c_last = r->r_last,
+	                      .c_last = rvp_ring_last(r),
 			      .c_first = r->r_items};
 }
 

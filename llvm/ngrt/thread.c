@@ -330,8 +330,6 @@ serialize(void *arg __unused)
 		if (atomic_exchange(&info_dump_requested, false))
 			rvp_dump_info();
 
-		rvp_increase_ggen();
-
 		rvp_sigblocksets_replenish();
 		rvp_signal_rings_replenish();
 
@@ -744,7 +742,9 @@ rvp_thread_detach(rvp_thread_t *tgt)
 static void
 rvp_thread_destroy(rvp_thread_t *t)
 {
+#if !defined(EMBED_RING)
 	free(t->t_ring.r_items);
+#endif
 	free(t);
 }
 

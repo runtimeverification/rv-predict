@@ -1,4 +1,4 @@
-.Dd March 9, 2018
+.Dd November 27, 2018
 .Dt RVPSYMBOLIZE 1
 .Os Linux
 .Sh NAME
@@ -31,11 +31,9 @@ as a source for the DWARF debugging information that it uses to symbolize
 addresses.
 .Pp
 .Xr rvpa 1
-and
-.Xr rvpx 1
-use
+uses
 .Nm
-to symbolize their data-race reports.
+to symbolize its data-race reports.
 .Nm
 can be used in conjunction with
 .Xr rvpdump 1
@@ -78,8 +76,7 @@ cannot parse its arguments, it returns 1.
 Otherwise, it returns 0.
 .Sh SEE ALSO
 .Xr rvpa 1 ,
-.Xr rvpc 1 ,
-.Xr rvpx 1
+.Xr rvpc 1
 .Sh HISTORY
 .Tn RV-Predict/C
 1.9 was released in February 2018.

@@ -133,25 +133,26 @@ void
 __rvpredict_atomic_store8(uint64_t *addr, uint64_t val,
     int32_t memory_order __unused)
 {
-	trace_store8(__builtin_return_address(0), RVP_OP_ATOMIC_STORE8,
-	    (rvp_addr_t)addr, val);
+	trace_store8(rvp_ring_for_curthr(), __builtin_return_address(0),
+	    RVP_OP_ATOMIC_STORE8, (rvp_addr_t)addr, val);
 }
 
 void
 __rvpredict_store8(uint64_t *addr, uint64_t val)
 {
-	trace_store8(__builtin_return_address(0), RVP_OP_STORE8,
-	    (rvp_addr_t)addr, val);
+	trace_store8(rvp_ring_for_curthr(), __builtin_return_address(0),
+	    RVP_OP_STORE8, (rvp_addr_t)addr, val);
 }
 
 void
 __rvpredict_store16(rvp_uint128_t *addr __unused, rvp_uint128_t val __unused)
 {
 	int i;
+	rvp_ring_t *r = rvp_ring_for_curthr();
 	const char *retaddr = __builtin_return_address(0);
 
 	for (i = 0; i < __arraycount(addr->elts); i++) {
-		trace_store8(retaddr, RVP_OP_STORE8,
+		trace_store8(r, retaddr, RVP_OP_STORE8,
 		    (rvp_addr_t)&addr->elts[i], val.elts[i]);
 	}
 }

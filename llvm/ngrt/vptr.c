@@ -9,6 +9,7 @@ __rvpredict_vptr_update(void **vptr, void *v)
 {
 	rvp_op_t op;
 	const void *retaddr = __builtin_return_address(0);
+	rvp_ring_t *r = rvp_ring_for_curthr();
 
 	switch (sizeof(rvp_addr_t)) {
 	case 1:
@@ -21,7 +22,7 @@ __rvpredict_vptr_update(void **vptr, void *v)
 		op = RVP_OP_STORE4;
 		break;
 	case 8:
-		trace_store8(retaddr, RVP_OP_STORE8, (rvp_addr_t)vptr,
+		trace_store8(r, retaddr, RVP_OP_STORE8, (rvp_addr_t)vptr,
 		    (rvp_addr_t)v);
 		return;
 	default:

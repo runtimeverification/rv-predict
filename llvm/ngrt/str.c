@@ -30,6 +30,7 @@ __rvpredict_memmove1(const void *retaddr,
 	size_t ncopied = 0;
 	int astep, width;
 	bool backwards = src < dst && src + n > dst;
+	rvp_ring_t *r = rvp_ring_for_curthr();
 
 	/* Copy from higher to lower address if the source precedes
 	 * the destination and the source and destination overlap.
@@ -88,7 +89,7 @@ __rvpredict_memmove1(const void *retaddr,
 		  {
 			uint64_t val = *(uint64_t *)from;
 			trace_load8(retaddr, RVP_OP_LOAD8, from, val);
-			trace_store8(retaddr, RVP_OP_STORE8, to, val);
+			trace_store8(r, retaddr, RVP_OP_STORE8, to, val);
 			*(uint64_t *)to = val;
 			break;
 		  }
@@ -116,6 +117,7 @@ __rvpredict_memset1(const void *retaddr, const rvp_addr_t dst, int c, size_t n)
 	size_t ncopied = 0;
 	int width;
 	rvp_addr_t to = dst;
+	rvp_ring_t *r = rvp_ring_for_curthr();
 
 	real_memset(&u, c, sizeof(u));
 
@@ -143,7 +145,7 @@ __rvpredict_memset1(const void *retaddr, const rvp_addr_t dst, int c, size_t n)
 			*(uint32_t *)to = u.u32;
 			break;
 		case 8:
-			trace_store8(retaddr, RVP_OP_STORE8, to, u.u64);
+			trace_store8(r, retaddr, RVP_OP_STORE8, to, u.u64);
 			*(uint64_t *)to = u.u64;
 			break;
 		}

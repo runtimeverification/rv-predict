@@ -84,10 +84,10 @@ decade(unsigned int n)
 }
 
 static inline void
-trace_store8(const char *retaddr, rvp_op_t op, rvp_addr_t addr, uint64_t val)
+trace_store8(rvp_ring_t *r, const char *retaddr, rvp_op_t op, rvp_addr_t addr,
+    uint64_t val)
 {
 	unsigned int nempty;
-	rvp_ring_t *r = rvp_ring_for_curthr();
 	const int slots_per_store =
 	    sizeof(rvp_load8_store8_t) / sizeof(*r->r_producer);
 

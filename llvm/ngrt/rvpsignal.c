@@ -82,6 +82,8 @@ rvp_signal_table_init(void)
 			signals_origin = lastsig;
 	}
 
+	errno = 0;
+
 	if ((storage = calloc(sizeof(*storage), lastsig)) == NULL)
 		err(EXIT_FAILURE, "%s.%d: calloc", __func__, __LINE__);
 

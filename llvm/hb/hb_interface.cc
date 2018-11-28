@@ -1,5 +1,7 @@
 #include <err.h>
 #include <limits.h>	/* for SIZE_MAX */
+#include <stdio.h>	/* for printf(3) */
+#include <stdlib.h>	/* for EXIT_FAILURE */
 #include <unistd.h>	/* for STDIN_FILENO */
 #include <fcntl.h>	/* for open(2) */
 
@@ -27,11 +29,11 @@ int
 main(int argc, char* argv[])
 {
 	const rvp_emitters_t hb_emitters = {
-		  init : NULL
-		, emit_nop : hb_perform_nop
-		, emit_op : hb_perform_op
-		, dataptr_to_string : NULL
-		, insnptr_to_string : NULL
+		  .init = NULL
+		, .emit_nop = hb_perform_nop
+		, .emit_op = hb_perform_op
+		, .dataptr_to_string = NULL
+		, .insnptr_to_string = NULL
 	};
 
 	int fd;

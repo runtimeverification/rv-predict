@@ -182,10 +182,12 @@ rvp_increase_ggen(void)
 static inline uint64_t
 rvp_ggen_before_store(void)
 {
+#if 0
 	if (__predict_false(rvp_consistent)) {
 		return atomic_fetch_add_explicit(&rvp_ggen, 1,
 		    memory_order_seq_cst);
 	}
+#endif
 	// acquire semantics ensure that the global generation load
 	// precedes the following instrumented store
 	return atomic_load_explicit(&rvp_ggen, memory_order_acquire);

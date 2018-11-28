@@ -21,8 +21,9 @@ public class Logger {
 
     private PrintStream debug = System.err;
     private PrintStream result;
+    private boolean report_progress;
 
-    public Logger() {
+    public Logger(boolean report_progress) {
         PrintStream blackhole = new PrintStream(new OutputStream() {
             public void write(int b) throws IOException {
             }
@@ -33,6 +34,13 @@ public class Logger {
         });
         debug = blackhole;
         result = blackhole;
+        this.report_progress = report_progress;
+    }
+    public Logger() {
+        this(false);
+    }
+    public void enableProgressReport() {
+        report_progress = true;
     }
     public void setLogDir(String logDir) throws FileNotFoundException {
         // TODO(YilongL): make sure this log file doesn't grow out of control
@@ -70,8 +78,11 @@ public class Logger {
         case INFO:
             System.err.println(RV_PREDICT_CONSOLE_PREFIX + msg);
             break;
-        case PHASE:
         case PROGRESS:
+            if (!report_progress)
+                return;
+            /*FALLTHROUGH*/
+        case PHASE:
         case VERBOSE:
             System.err.println(msg);
             break;

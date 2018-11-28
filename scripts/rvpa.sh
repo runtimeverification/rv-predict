@@ -96,6 +96,10 @@ if [ ${RVP_REPORT_FD:-none} != none ]; then
 	fi
 fi
 
+if [ ${RVP_PROGRESS:-no} = yes ]; then
+	set -- "--progress" "$@"
+fi
+
 if [ ${RVP_WINDOW_SIZE:-none} != none ]; then
 	if [ -n "$(echo -n "$RVP_WINDOW_SIZE" | sed 's/^[0-9]\+$//g')" ]; then
 		echo "$(basename $0): malformed RVP_WINDOW_SIZE: expected decimal digits, read '${RVP_WINDOW_SIZE}'" 2>&1
@@ -199,7 +203,7 @@ while [ $# -ge 1 ]; do
 		shift
 		help
 		;;
-	--debug)
+	--debug|--progress)
 		analyze_passthrough="${analyze_passthrough:-} $1"
 		shift
 		;;

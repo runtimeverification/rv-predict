@@ -461,6 +461,10 @@ public class Configuration implements Constants {
     @Parameter(names = opt_version, description = "Print product version and exit", descriptionKey = "9100")
     public static boolean display_version;
 
+    final static String opt_progress = "--progress";
+    @Parameter(names = opt_progress, description = "Report progress", descriptionKey = "9100")
+    public boolean report_progress;
+
     final static String short_opt_help = "-h";
     final static String opt_help = "--help";
     @Parameter(names = { short_opt_help, opt_help }, description = "Print help info", help = true, descriptionKey = "9900")
@@ -473,6 +477,8 @@ public class Configuration implements Constants {
     public static Configuration instance(String[] args) {
         Configuration config = new Configuration();
         config.parseArguments(args);
+        if (config.report_progress)
+            config.logger.enableProgressReport();
         return config;
     }
 

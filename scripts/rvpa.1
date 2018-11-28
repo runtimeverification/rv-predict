@@ -1,4 +1,4 @@
-.Dd November 27, 2018
+.Dd November 28, 2018
 .Dt RVPA 1
 .Os Linux
 .Sh NAME
@@ -217,6 +217,19 @@ as if it appeared at the beginning of its command-line arguments.
 Actual command-line arguments will override the arguments 
 set by
 .Ev RVP_ANALYSIS_ARGS .
+.It Ev RVP_PROGRESS
+If
+.Ev RVP_PROGRESS 
+is set to
+.Dq yes ,
+then
+.Nm
+prints messages about the progress that analysis is making.
+Ordinarily the progress messages tell the next event window
+that will be processed:
+.Dl -- Window 1 --
+.Dl -- Window 2 --
+.Dl . . .
 .It Ev RVP_WINDOW_SIZE
 .Nm
 treats this as the default window size.

@@ -76,7 +76,8 @@ rvp_thread_destructor(void *arg)
 			if (t->t_thrspec[j].ts_key != key)
 				continue;
 			assert(value != NULL);
-			(*destructor)((void *)value);
+			if (destructor != NULL)
+				(*destructor)((void *)value);
 		}
 	}
 	if (t->t_nthrspecs != 0) {

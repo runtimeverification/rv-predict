@@ -1,4 +1,4 @@
-SUBPRJ=cancellation forkfreeze ifunc
+SUBPRJ=cancellation forkfreeze errno ifunc
 SUBPRJ+=memcpyx memmovex memsetx
 SUBPRJ+=setspecific stopkill
 SUBPRJ+=vptr1

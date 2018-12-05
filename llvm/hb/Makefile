@@ -18,7 +18,8 @@ CPPFLAGS+=-Wuninitialized
 CPPFLAGS+=-I${.CURDIR}/../ngrt -I${.CURDIR}/../../include 
 CPPFLAGS+=-I$(.CURDIR)/../librvu -I${.CURDIR}/../librvread 
 CPPFLAGS+=-I${.CURDIR}/../vc
-SRCS=hb_state.cc hb_handlers.cc hb_interface.cc
+CPPFLAGS+=-I${.CURDIR}/../json_lib/include
+SRCS=hb_state.cc hb_handlers.cc hb_interface.cc hb_race_report.cc
 WARNS=4
 STRIPFLAG=
 

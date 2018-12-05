@@ -7,7 +7,8 @@
 
 #include "reader.h"	
 #include "hb_handlers.h"
-#include<iostream>
+#include <iostream>
+#include "hb_race_report.h"
 
 hb_state* state_ptr;
 
@@ -21,7 +22,9 @@ extern "C" void hb_perform_op(const rvp_pstate_t *ps, const rvp_ubuf_t *ub,
 {
 	bool has_race = hb_handler(state_ptr, ps->ps_curthread, op, ub);
 	if(has_race){
-		printf("Race occured by %d thread \n", ps->ps_curthread);
+		// printf("Race occured by %d thread \n", ps->ps_curthread);
+		nlohmann::json race_report = hb_race_report(ps, ub, op);
+		std::cout << race_report.dump() << std::endl;
 	}
 }
 

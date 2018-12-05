@@ -83,7 +83,7 @@ decade(unsigned int n)
 	return n & ~0x1ffU;
 }
 
-static inline void
+static inline void __attribute__((always_inline))
 trace_store8(rvp_ring_t *r, const char *retaddr, rvp_op_t op, rvp_addr_t addr,
     uint64_t val)
 {

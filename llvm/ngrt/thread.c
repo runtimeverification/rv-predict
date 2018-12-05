@@ -134,8 +134,12 @@ rvp_thread0_create(void)
 	if ((t = rvp_thread_create(NULL, NULL)) == NULL)
 		err(EXIT_FAILURE, "%s: rvp_thread_create", __func__);
 
+#if defined(QUICK_AND_WRONG)
+	rvp_thread_local.tl_intr_ring = &t->t_ring;
+#else
 	rvp_thread_local =
 	    (rvp_thread_local_t){.tl_thread = t, .tl_intr_ring = &t->t_ring};
+#endif
 
 	if (real_pthread_sigmask(SIG_BLOCK, NULL, &oset) != 0)
 		err(EXIT_FAILURE, "%s: pthread_sigmask", __func__);
@@ -754,10 +758,16 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
 	rvp_thread_t *t;
 	int rc;
 
+#if defined(QUICK_AND_WRONG)
+	memset(&rvp_thread_local.tl_thread, '\0',
+	    sizeof(rvp_thread_local.tl_thread));
+	t = &rvp_thread_local.tl_thread;
+#else
 	if ((t = calloc(1, sizeof(*t))) == NULL) {
 		errno = ENOMEM;
 		return NULL;
 	}
+#endif
 
 	t->t_routine = routine;
 	t->t_arg = arg;
@@ -834,8 +844,12 @@ __rvpredict_thread_wrapper(void *arg)
 
 	assert(pthread_getspecific(rvp_thread_key) == NULL);
 
+#if defined(QUICK_AND_WRONG)
+	rvp_thread_local.tl_intr_ring = &t->t_ring;
+#else
 	rvp_thread_local =
 	    (rvp_thread_local_t){.tl_thread = t, .tl_intr_ring = &t->t_ring};
+#endif
 
 	r->r_lgen = rvp_ggen_after_load();
 	r->r_lastpc = rvp_vec_and_op_to_deltop(0, RVP_OP_BEGIN);

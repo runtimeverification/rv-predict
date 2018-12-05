@@ -24,11 +24,6 @@ typedef struct _rvp_maskchg {
 typedef struct _rvp_thread rvp_thread_t;
 typedef struct _rvp_thread_local rvp_thread_local_t;
 
-struct _rvp_thread_local {
-	rvp_thread_t *tl_thread;
-	rvp_ring_t * _Atomic	tl_intr_ring;
-};
-
 struct _rvp_thread {
 	volatile bool		t_garbage;
 	pthread_t		t_pthread;
@@ -54,6 +49,15 @@ struct _rvp_thread {
 	rvp_thrspec_t		*t_thrspec;
 };
 
+struct _rvp_thread_local {
+#if defined(QUICK_AND_WRONG)
+	rvp_thread_t tl_thread;
+#else
+	rvp_thread_t *tl_thread;
+#endif
+	rvp_ring_t * _Atomic	tl_intr_ring;
+};
+
 int __rvpredict_pthread_create(pthread_t *, const pthread_attr_t *,
     void *(*)(void *), void *);
 void __rvpredict_pthread_exit(void *);
@@ -74,13 +78,24 @@ extern _Thread_local rvp_thread_local_t rvp_thread_local;
 static inline rvp_thread_t *
 rvp_thread_for_curthr(void)
 {
+#if defined(QUICK_AND_WRONG)
+	return &rvp_thread_local.tl_thread;
+#else
 	return rvp_thread_local.tl_thread;
+#endif
 }
 
 static inline rvp_ring_t *
 rvp_ring_for_curthr(void)
 {
+#if defined(QUICK_AND_WRONG)
+	if (__predict_true(rvp_thread_local.tl_intr_ring == &rvp_thread_local.tl_thread.t_ring))
+		return &rvp_thread_local.tl_thread.t_ring;
+	else
+		return rvp_thread_local.tl_intr_ring;
+#else
 	return rvp_thread_local.tl_intr_ring;
+#endif
 }
 
 #endif /* _RVP_THREAD_H_ */

@@ -2,33 +2,37 @@
 
 	cmade/: wrapper for components built by CMake, including our
 	    instrumentation pass
-        librvu/: library of utility functions shared by ngrt/ and rvpdump/
+        librvread/: library of utility functions for reading Predict
+            trace streams, shared by rvpdump/ and Umang Mathur's HB
+            implementation
 	ngrt/: next-generation runtime that is simpler and faster
 	    than the one derived from tsan.
 	pass/: standalone instrumentation pass derived from
 	    Thread Sanitizer (tsan)
-	personality/: interrupt personalities implement the state machine
-	    that determines whether or not a program under test can
-	    enter an interrupt service routine (ISR) and forces the
-	    program to "spontaneously" enter eligible ISRs
+        personality/: an assortment of interrupt personalities
+            that you can link with your program using `rvpc
+            --intr-personality=...`.  Interrupt personalities implement
+            the state machine that determines whether or not a program
+            under test can enter an interrupt service routine (ISR) and
+            forces the program to "spontaneously" enter eligible ISRs.
 	runtime/: standalone runtime derived from tsan.  This is
 	    not built any longer, but we keep it around as a reference.
 	rvpdump/: utility program for displaying RV-Predict/C trace
 	    files
-	test/: tests for instrumentation, just barely started
+        sigsim/: signal simulations that you can link with your program
+            using `rvpc --sigsim=...`.  A signal simulation makes sure
+            that all signals are raised at least once in every interval
+            where they are established and not masked.  This is useful
+            for testing programs that are expected to spontaneously
+            receive signals with Predict.  For example, the programs in
+            the Toyota ITC benchmark are designed to be run with static
+            analysis, so the signal simulation is useful there.
 
 # Building
 
-To build both the runtime (`librvprt.a`) and the instrumentation pass
-(`rvpinstrument.so`):
-
-	mkcmake depend
-	mkcmake
-
-To install in your home directory---files librvprt.a and rvpinstrument.so
-will appear in `$HOME/lib/`:
-
-	mkcmake PREFIX=$HOME install
+To build and install both the runtime (`librvprt.a`) and the
+instrumentation pass (`rvpinstrument.so`), follow the instructions in
+`doc/DEVELOPER.md`.
 
 # Using
 

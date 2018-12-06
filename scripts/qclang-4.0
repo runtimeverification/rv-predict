@@ -8,6 +8,66 @@
 set -e
 set -u
 
+#
+# Set defaults.
+#
+opt_x86_64_def=-D__X86_64__
+platform=x86_64
+platform_path=x86_64-pc-nto-qnx7.0.0
+targetname=x86_64-pc-qnx-gnu
+opt_mcmodel="-mcmodel=small"
+opt_pic="pic"
+
+# Filter out arguments that should not be passed to the compiler.
+# Quote args to make them safe in the shell.
+# Usage: quotedlist="$(shell_quote args...)"
+#
+# Use the returned string by evaling it inside
+# double quotes, like this:
+#    eval "set -- $quotedlist"
+# or like this:
+#    eval "\$command $quotedlist \$filename"
+#
+filter_noncc_arguments()
+{(
+	local result=''
+	local arg qarg
+	LC_COLLATE=C ; export LC_COLLATE # so [a-zA-Z0-9] works in ASCII
+	for arg in "$@" ; do
+		case "${arg}" in
+		-Vgcc_nto*)
+			continue
+			;;
+		'')
+			qarg="''"
+			;;
+		*[!-./a-zA-Z0-9]*)
+			# Convert each embedded ' to '\'',
+			# then insert ' at the beginning of the first line,
+			# and append ' at the end of the last line.
+			# Finally, elide unnecessary '' pairs at the
+			# beginning and end of the result and as part of
+			# '\'''\'' sequences that result from multiple
+			# adjacent quotes in he input.
+			qarg="$(printf "%s\n" "$arg" | \
+			    ${SED:-sed} -e "s/'/'\\\\''/g" \
+				-e "1s/^/'/" -e "\$s/\$/'/" \
+				-e "1s/^''//" -e "\$s/''\$//" \
+				-e "s/'''/'/g"
+				)"
+			;;
+		*)
+			# Arg is not the empty string, and does not contain
+			# any unsafe characters.  Leave it unchanged for
+			# readability.
+			qarg="${arg}"
+			;;
+		esac
+		result="${result}${result:+ }${qarg}"
+	done
+	printf "%s\n" "$result"
+)}
+
 if [ ${QNX_TARGET:-unknown} = unknown ]; then
 	export QNX_TARGET=${HOME}/qnx700/target/qnx7
 fi
@@ -15,39 +75,6 @@ if [ ${QNX_HOST:-unknown} = unknown ]; then
 	export QNX_HOST=${HOME}/qnx700/host/linux/x86_64
 fi
 export PATH=${QNX_HOST}/usr/bin:${PATH}
-
-# -nostdinc -Asystem(unix)
-cflags="-target x86_64-pc-qnx-gnu -mcmodel=small -D__LANGUAGE_C -D_LANGUAGE_C -D__QNX__ -D__QNXNTO__ -D__unix__ -D__unix -D__ELF__ -fPIE -D__X86_64__ -D__LITTLEENDIAN__ -nostdlib --sysroot=${QNX_HOST} -isystem ${QNX_TARGET}/usr/include -isystem ${QNX_HOST}/usr/include"
-
-_ldflags="-Wl,--dynamic-linker=/usr/lib/ldqnx-64.so.2"
-_ldflags="${_ldflags:-} -Wl,--sysroot=${QNX_TARGET}/x86_64"
-_ldflags="${_ldflags:-} -Wl,--hash-style=gnu -Wl,--warn-shared-textrel"
-_ldflags="${_ldflags:-} -Wl,-zrelro"
-_ldflags="${_ldflags:-} -Wl,-znow -Wl,--eh-frame-hdr"
-
-_ldflags="${_ldflags:-} ${QNX_TARGET}/x86_64/lib/crt1.o"
-_ldflags="${_ldflags:-} ${QNX_TARGET}/x86_64/lib/crti.o"
-_ldflags="${_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/crtbegin.o"
-_ldflags="${_ldflags:-} -Wl,-rpath-link=${QNX_TARGET}/x86_64/lib -Wl,-rpath-link=${QNX_TARGET}/x86_64/usr/lib -Wl,-rpath-link=${QNX_TARGET}/x86_64/lib/gcc/5.4.0 -Wl,-rpath-link=${QNX_TARGET}/x86_64/opt/lib"
-_ldflags="${_ldflags:-} -Wl,-Y${QNX_TARGET}/x86_64/lib -Wl,-Y${QNX_TARGET}/x86_64/usr/lib -Wl,-Y${QNX_TARGET}/x86_64/opt/lib"
-_ldflags="${_ldflags:-} -L${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0"
-_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/lib/gcc/5.4.0"
-_ldflags="${_ldflags:-} -L${QNX_TARGET}/usr/x86_64-pc-nto-qnx7.0.0/lib"
-_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/lib"
-_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/usr/lib"
-_ldflags="${_ldflags:-} -L${QNX_TARGET}/x86_64/opt/lib"
-
-#
-# %(ftest-coverage: %(!fprofile-arcs: ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/%(!nopie:pic/)libgcov.a)) %(fprofile-arcs: ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/%(!nopie:pic/)libgcov.a)
-#
-# -lcS -> -lc%(!nopie:S)
-#
-_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/libgcc.a"
-_post_ldflags="${_post_ldflags:-} -lc -Bstatic -lcS"
-_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/libgcc.a"
-
-_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/x86_64-pc-nto-qnx7.0.0/5.4.0/pic/crtend.o"
-_post_ldflags="${_post_ldflags:-} ${QNX_TARGET}/x86_64/lib/crtn.o"
 
 _posix_ldflags="-L$(dirname $0)/../lib/qnx -lrvpmissing_posix"
 
@@ -78,6 +105,31 @@ for arg in "$@"; do
 		just_print=yes
 		continue
 		;;
+	-Vgcc_nto*)
+		case "${arg##-Vgcc_nto}" in
+		aarch64le)
+			opt_x86_64_def=
+			platform=aarch64le
+			platform_path=aarch64-unknown-nto-qnx7.0.0
+			targetname=aarch64-unknown-qnx-gnu
+			opt_mcmodel=
+			opt_pic=
+			;;
+		x86_64)
+			opt_x86_64_def=-D__X86_64__
+			platform=x86_64
+			platform_path=x86_64-pc-nto-qnx7.0.0
+			targetname=x86_64-pc-qnx-gnu
+			opt_mcmodel="-mcmodel=small"
+			opt_pic="pic"
+			;;
+		*)
+			echo "${prog}: unknown architecture ${arg##-Vgcc_nto}" 1>&2
+			exit 1
+			;;
+		esac
+		continue
+		;;
 	-M|-E)	# -M implies -E, and -E skips normal compilation
 		compile=no
 		link=no
@@ -92,6 +144,47 @@ for arg in "$@"; do
 		;;
 	esac
 done
+
+quoted_list=$(filter_noncc_arguments "$@")
+eval "set -- ${quoted_list}"
+
+#
+# Now that we have parsed the arguments, we have the information (such as
+# target platform) that we need to set the options for a QNX cross-build.
+#
+
+# -nostdinc -Asystem(unix)
+cflags="-target ${targetname} ${opt_mcmodel} -D__LANGUAGE_C -D_LANGUAGE_C -D__QNX__ -D__QNXNTO__ -D__unix__ -D__unix -D__ELF__ -fPIE ${opt_x86_64_def} -D__LITTLEENDIAN__ -nostdlib --sysroot=${QNX_HOST} -isystem ${QNX_TARGET}/usr/include -isystem ${QNX_HOST}/usr/include"
+
+_ldflags="-Wl,--dynamic-linker=/usr/lib/ldqnx-64.so.2"
+_ldflags="${_ldflags:-} -Wl,--sysroot=${QNX_TARGET}/${platform}"
+_ldflags="${_ldflags:-} -Wl,--hash-style=gnu -Wl,--warn-shared-textrel"
+_ldflags="${_ldflags:-} -Wl,-zrelro"
+_ldflags="${_ldflags:-} -Wl,-znow -Wl,--eh-frame-hdr"
+
+_ldflags="${_ldflags:-} ${QNX_TARGET}/${platform}/lib/crt1.o"
+_ldflags="${_ldflags:-} ${QNX_TARGET}/${platform}/lib/crti.o"
+_ldflags="${_ldflags:-} ${QNX_HOST}/usr/lib/gcc/${platform_path}/5.4.0/${opt_pic}/crtbegin.o"
+_ldflags="${_ldflags:-} -Wl,-rpath-link=${QNX_TARGET}/${platform}/lib -Wl,-rpath-link=${QNX_TARGET}/${platform}/usr/lib -Wl,-rpath-link=${QNX_TARGET}/${platform}/lib/gcc/5.4.0 -Wl,-rpath-link=${QNX_TARGET}/${platform}/opt/lib"
+_ldflags="${_ldflags:-} -Wl,-Y${QNX_TARGET}/${platform}/lib -Wl,-Y${QNX_TARGET}/${platform}/usr/lib -Wl,-Y${QNX_TARGET}/${platform}/opt/lib"
+_ldflags="${_ldflags:-} -L${QNX_HOST}/usr/lib/gcc/${platform_path}/5.4.0"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/${platform}/lib/gcc/5.4.0"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/usr/${platform_path}/lib"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/${platform}/lib"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/${platform}/usr/lib"
+_ldflags="${_ldflags:-} -L${QNX_TARGET}/${platform}/opt/lib"
+
+#
+# %(ftest-coverage: %(!fprofile-arcs: ${QNX_HOST}/usr/lib/gcc/${platform_path}/5.4.0/%(!nopie:pic/)libgcov.a)) %(fprofile-arcs: ${QNX_HOST}/usr/lib/gcc/${platform_path}/5.4.0/%(!nopie:pic/)libgcov.a)
+#
+# -lcS -> -lc%(!nopie:S)
+#
+_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/${platform_path}/5.4.0/${opt_pic}/libgcc.a"
+_post_ldflags="${_post_ldflags:-} -lc -Bstatic -lcS"
+_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/${platform_path}/5.4.0/${opt_pic}/libgcc.a"
+
+_post_ldflags="${_post_ldflags:-} ${QNX_HOST}/usr/lib/gcc/${platform_path}/5.4.0/${opt_pic}/crtend.o"
+_post_ldflags="${_post_ldflags:-} ${QNX_TARGET}/${platform}/lib/crtn.o"
 
 if [ ${compile} = yes -a ${RVP_SETUP:-no} = no ]; then
 	cflags="${cflags} -include $(dirname $0)/../include/qnx/rvpredict_missing_posix.h"

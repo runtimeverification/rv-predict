@@ -16,7 +16,7 @@ extern int rvp_analysis_fd;
  *                                            can procede.
  * bool ring_operational() -=> returns the value of rvp_initialized.
  */
-extern volatile _Atomic bool rvp_initialized; /* Declared in supervise.c, set in thread.c */ 
+extern _Atomic bool rvp_initialized; /* Declared in supervise.c, set in thread.c */ 
 
 int sigaddset_killers(sigset_t *);
 

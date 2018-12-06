@@ -21,7 +21,7 @@ static const int killer_signum[] = {SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGALRM,
     SIGTERM};
 int rvp_analysis_fd = -1;
 
-volatile _Atomic bool __read_mostly rvp_initialized = false;
+bool _Atomic __read_mostly rvp_initialized = false;
 
 const char *product_name = "RV-Predict/C";
 

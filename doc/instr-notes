@@ -1,0 +1,59 @@
+# Summary
+
+The Predict runtime was designed from the start to produce a trace-event stream with very low CPU overhead.  There are opportunities for reducing the overhead that we have not yet pursued, because demand for bug fixes and other features has been higher.  A first step in reducing overhead would be to add performance counters and use them to locate the bottlenecks.
+
+# Ring architecture
+
+Predict's compiler pass adds calls to the runtime that log events on a per-thread ring buffer.
+
+Each per-thread ring has one producer (the thread it belongs to) and one consumer (the serialization thread).  Each has a pointer into the ring that only it may modify.
+
+# No synchronization
+
+The producer may not advance its pointer past the consumer's pointer, and vice versa.  Simply by observing this rule, the threads avoid corrupting the queue.  No mutexes or locked instructions are necessary.
+
+Rings consist of 1024 32-bit slots.  In other words, they are page sized.
+
+[As of Wed Dec  5 17:22:45 CST 2018, rings are a LOT bigger than that.]
+
+One opportunity for reducing overhead is to increase the ring size.  In that way, the overheads such as writev(2) system calls are amortized over a greater number of slots filled.
+
+# Ring content
+
+Trace events consist of one or more 32-bit words.  Some events record actual program activity, while others record "bookkeeping" events that help the reader maintain state.
+
+Every event begins with a program counter (PC).  A region of PCs is reserved.  Each PC in the reserved region encodes a "deltop", which consists of an adjustment to the current PC [-128, 127] and an opcode.  In this way we avoid storing a full PC with every event.
+
+One way to reduce trace sizes somewhat, thus reducing tracing overhead, is to increase the width of the PC adjustment field in the deltops.  That will cost some PC space.
+
+When a ring fills its ring past a threshold level---for the sake of discussion, let us say half-full---it wakes the serialization thread.
+
+The serialization thread visits every thread's ring and adds to an I/O vector between zero and two base-pointer/length pairs.  Then it calls writev(2) to send all of the slots to a file descriptor (which may be a pipe or file).
+
+Then the serialization thread advances the consumer pointers on the rings that were emptied.
+
+Several rings can be emptied using one system call.
+
+(I have glossed over some details: some bookkeeping events are inserted.)
+
+One aspect of the serialization that deserves a performance counter and possibly a level of auto-tuning is the maximum I/O vector length.
+
+# Generation numbers
+
+We avoid the overhead of a shared event index that has to be modified on every event (a source of cacheline motion and delay) by the use of a global event generation number (epoch) that changes only "often enough" to create many opportunities to introduce a window boundary.
+
+Each thread keeps a local copy of the global generation number.  Ordinarily, a thread only reads the global generation number.  When it reads a change to the global generation, it logs a change of generation number and updates its local copy.
+
+A thread logs a change of generation number before logging a store, and after logging a load.  In this way, a store cannot be logged with a later generation number than the load that depends on it.
+
+# Trace-file ordering 
+
+Note that events in a trace stream that occur on the same thread are always in order.
+
+However, events on different threads may appear in the stream in a different order than they occurred.  We rely on the MCM to put the events back into causal order.
+
+To log events in precise order of occurrence would introduce synchronization overhead.
+
+# Interrupts
+
+Interrupts add new trace events and some cleverness in the instrumentation.  Interrupts may occur at any time, even while we update ring pointers.  At least in the POSIX environment, it is expensive to block interrupts during ring updates, so every interrupt handler runs in a wrapper that establishes an independent ring to log to and logs (in an auxiliary ring) the occurrence of the interrupt on the interrupted thread or interrupt.

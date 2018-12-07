@@ -69,6 +69,7 @@ clang_libdir=${llvm_libdir}/clang/*/lib/linux
 pass_dir=$(dirname $0)/../--LIBEXECDIR--
 runtime_dir=$(dirname $0)/../lib
 
+qnx_arch=x86_64
 cplusplus=no
 sources=no
 link=yes
@@ -89,6 +90,10 @@ for arg in "$@"; do
 		;;
 	-help)	help=yes
 		break
+		;;
+	-Vgcc_nto*)
+		qnx_arch=${arg##-Vgcc_nto}
+		continue
 		;;
         --version)
 		version="unknown"
@@ -141,7 +146,7 @@ quoted_list=$(filter_noncc_arguments "$@")
 eval "set -- ${quoted_list}"
 
 if [ x${prog%%rvpc} = xq ]; then
-	runtime_dir=${runtime_dir}/qnx
+	runtime_dir=${runtime_dir}/${qnx_arch}-qnx
 	if [ ${cplusplus:-no} = yes ]; then
 		echo "${prog}: C++ not supported" 1>&2
 		exit 1
@@ -176,10 +181,16 @@ else
 	fi
 fi
 
-if [ ${prog##q} = rvpld ]; then
-	ldscript_flag="-T${ldscript_dir}/ldscript"
+if [ ${prog##q} != ${prog} ]; then
+	ldscript_suffix=qnx
 else
-	ldscript_flag="-Wl,-T,${ldscript_dir}/ldscript"
+	ldscript_suffix=linux
+fi
+
+if [ ${prog##q} = rvpld ]; then
+	ldscript_flag="-T${ldscript_dir}/ldscript.${ldscript_suffix}"
+else
+	ldscript_flag="-Wl,-T,${ldscript_dir}/ldscript.${ldscript_suffix}"
 fi
 
 if [ ${sources:-yes} = yes -a ${compile:-yes} = yes ] || [ ${help:-no} = yes ]

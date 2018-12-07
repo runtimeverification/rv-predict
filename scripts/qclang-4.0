@@ -68,6 +68,44 @@ filter_noncc_arguments()
 	printf "%s\n" "$result"
 )}
 
+rewrite_cc_to_ld_arguments()
+{(
+	local result=''
+	local arg qarg
+	LC_COLLATE=C ; export LC_COLLATE # so [a-zA-Z0-9] works in ASCII
+	for arg in "$@" ; do
+		case "${arg}" in
+		'')
+			qarg="''"
+			;;
+		*[!-./a-zA-Z0-9]*|-Wl,*)
+			# Convert each embedded ' to '\'',
+			# then insert ' at the beginning of the first line,
+			# and append ' at the end of the last line.
+			# Finally, elide unnecessary '' pairs at the
+			# beginning and end of the result and as part of
+			# '\'''\'' sequences that result from multiple
+			# adjacent quotes in he input.
+			qarg="$(printf "%s\n" "${arg}" | \
+			    ${SED:-sed} -e "s/'/'\\\\''/g" \
+				-e "1s/^/'/" -e "\$s/\$/'/" \
+				-e "1s/^''//" -e "\$s/''\$//" \
+				-e "s/'''/'/g" \
+				-e "s/-Wl,-\([^,]\+\),/-\1/" -e "s/-Wl,//"
+				)"
+			;;
+		*)
+			# Arg is not the empty string, and does not contain
+			# any unsafe characters.  Leave it unchanged for
+			# readability.
+			qarg="${arg##-Wl,}"
+			;;
+		esac
+		result="${result}${result:+ }${qarg}"
+	done
+	printf "%s\n" "$result"
+)}
+
 if [ ${QNX_TARGET:-unknown} = unknown ]; then
 	export QNX_TARGET=${HOME}/qnx700/target/qnx7
 fi
@@ -75,8 +113,6 @@ if [ ${QNX_HOST:-unknown} = unknown ]; then
 	export QNX_HOST=${HOME}/qnx700/host/linux/x86_64
 fi
 export PATH=${QNX_HOST}/usr/bin:${PATH}
-
-_posix_ldflags="-L$(dirname $0)/../lib/qnx -lrvpmissing_posix"
 
 cplusplus=no
 compile=yes
@@ -145,6 +181,8 @@ for arg in "$@"; do
 	esac
 done
 
+_posix_ldflags="-L$(dirname $0)/../lib/${platform}-qnx -lrvpmissing_posix"
+
 quoted_list=$(filter_noncc_arguments "$@")
 eval "set -- ${quoted_list}"
 
@@ -210,9 +248,21 @@ if [ ${prog##q} = rvpld ]; then
 	post_ldflags=$(echo ${_post_ldflags} | sed 's/-Wl,//g')
 	posix_ldflags=$(echo ${_posix_ldflags} | sed 's/-Wl,//g')
 elif [ ${link} = yes ]; then
-	ldflags=${_ldflags}
-	post_ldflags=${_post_ldflags}
-	posix_ldflags=${_posix_ldflags}
+	# Use the right linker for aarch64le; otherwise, use host's (!)
+	# linker.
+	if [ ${platform} = aarch64le ]; then
+		cflags=-nostdlib
+		compiler=${QNX_HOST}/usr/bin/aarch64-unknown-nto-qnx7.0.0-ld
+		quoted_list=$(rewrite_cc_to_ld_arguments "$@")
+		eval "set -- ${quoted_list}"
+		ldflags=$(echo ${_ldflags} | sed 's/-Wl,//g')
+		post_ldflags=$(echo ${_post_ldflags} | sed 's/-Wl,//g')
+		posix_ldflags=$(echo ${_posix_ldflags} | sed 's/-Wl,//g')
+	else
+		ldflags="${cflags} ${_ldflags}"
+		post_ldflags=${_post_ldflags}
+		posix_ldflags=${_posix_ldflags}
+	fi
 fi
 
 #echo link=${link} 1>&2

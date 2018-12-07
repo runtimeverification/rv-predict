@@ -19,6 +19,7 @@ CC?=$(TARGET_CC)
 LIB?=rvpi_none
 .PATH: $(.CURDIR)/../../ngrt
 
+CFLAGS+=$(TARGET_CFLAGS)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-prototypes

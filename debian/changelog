@@ -1,3 +1,32 @@
+rv-predict-c (2.1.1-1) xenial; urgency=medium
+
+  * Build the Predict runtime for QNX on 64-bit ARM. Also, make `qrvpc
+    -Vgcc_ntoaarch64le` cross-build for the same.
+
+  * Fix a bug that would crash some programs that used thread-specific
+    key destructors.
+
+  * Suppress `-- Window ... --` diagnostic output by default.  Add an
+    `rvpa` option and an environment variable to re-enable the output.
+
+  * Omit mentions of rvpx(1), which has been removed.
+
+  * Ensure errno is 0 when the application program begins.
+
+  * Add a new option flag, `-b`, that makes `rvpdump` print the bytes
+  * comprising each event in hexadecimal.
+
+  * Implement instrumentation for C++ virtual-table pointer
+    loads/stores.
+
+  * Add more example code.
+
+  * Repair a bug in Predict's instrumentation pass where it added bad
+    LLVM IR that referred to a value before the statement that loaded it
+    had been performed, causing the LLVM backend subsequently to crash.
+
+ -- Runtime Verification, Inc. <support@runtimeverification.com>  Mon, 17 Dec 2018 16:53:29 -0600
+
 rv-predict-c (2.1.0-1) xenial; urgency=medium
 
   * Fix a bug where programs that `fork(2)` would hang.

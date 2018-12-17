@@ -17,6 +17,7 @@ CC?=$(TARGET_CC)
 LIB?=rvprt
 STRIPFLAG=
 INCS=rvpredict_intr.h
+CFLAGS+=$(TARGET_CFLAGS)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-fPIC

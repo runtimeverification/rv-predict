@@ -8,7 +8,7 @@
 
 NOMAN=
 FILESMODE=0644
-FILES=ldscript
+FILES=ldscript.linux ldscript.qnx
 FILESDIR=$(DATADIR)/rv-predict-c
 
 .include <mkc.files.mk>

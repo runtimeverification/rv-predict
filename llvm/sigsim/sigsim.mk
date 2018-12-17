@@ -12,6 +12,7 @@ LIB?=rvpsigsim_$(SIGSIM)
 .if $(CC) == gcc
 CPPFLAGS+=-U_FORTIFY_SOURCE
 .endif
+CFLAGS+=$(TARGET_CFLAGS)
 CFLAGS+=-std=c11
 CFLAGS+=-pedantic
 CFLAGS+=-Wmissing-prototypes

@@ -186,14 +186,14 @@ extract_jmpvec_and_op_from_deltop(rvp_addr_t deltop0,
 	deltops_t deltops;
 
 	int row = (pc - deltop0) / __arraycount(deltops.matrix[0]);
-	int jmpvec = row - RVP_NJMPS / 2;
 
-	rvp_op_t op = (pc - deltop0) -
+	int col = (pc - deltop0) -
 	    (&deltops.matrix[row][0] - &deltops.matrix[0][0]);
+	int jmpvec = col - RVP_NJMPS / 2;
 
-	assert(op < RVP_NOPS);
+	assert(row < RVP_NOPS);
 
-	*opp = op;
+	*opp = row;
 	*jmpvecp = jmpvec;
 }
 
@@ -275,10 +275,10 @@ rvp_pstate_init(rvp_pstate_t *ps, const rvp_emitters_t *emitters,
 
 	ps->ps_deltop_center = op0;
 	ps->ps_deltop_first = op0 -
-	    (&deltops.matrix[RVP_NJMPS / 2][RVP_OP_BEGIN] -
+	    (&deltops.matrix[RVP_OP_BEGIN][RVP_NJMPS / 2] -
 	     &deltops.matrix[0][0]);
 	ps->ps_deltop_last = ps->ps_deltop_first +
-	    (&deltops.matrix[RVP_NJMPS - 1][RVP_NOPS - 1] -
+	    (&deltops.matrix[RVP_NOPS - 1][RVP_NJMPS - 1] -
 	     &deltops.matrix[0][0]);
 	ps->ps_thread = NULL;
 	ps->ps_nthreads = 0;
@@ -876,7 +876,7 @@ rvp_trace_dump_with_emitters(bool emit_generation, bool emit_bytes,
 	 */
 	const rvp_trace_header_t expected_th = {
 		  .th_magic = "RVP_"
-		, .th_version = {0, 0, 0, 3}
+		, .th_version = {0, 0, 0, 4}
 		, .th_byteorder = '0' | ('1' << 8) | ('2' << 16) | ('3' << 24)
 		, .th_pointer_width = sizeof(rvp_addr_t)
 		, .th_data_width = sizeof(uint32_t)

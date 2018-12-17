@@ -92,7 +92,7 @@ typedef enum _rvp_op {
 	, RVP_OP_SIGUNBLOCK	= 43	// unblock signals
 	, RVP_OP_SIGGETSETMASK	= 44	// get old mask, set new mask
 	, RVP_OP_SIGGETMASK	= 45	// get current mask
-	, RVP_NOPS
+	, RVP_NOPS		= 64
 } rvp_op_t;
 
 #define	RVP_NJMPS	256
@@ -100,8 +100,10 @@ typedef enum _rvp_op {
 typedef const char deltop_t;
 
 struct _deltops {
+#if 0
 	char rsvd;
-	deltop_t matrix[RVP_NJMPS][RVP_NOPS];
+#endif
+	deltop_t matrix[RVP_NOPS][RVP_NJMPS];
 };
 
 typedef struct _deltops deltops_t;

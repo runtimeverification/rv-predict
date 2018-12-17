@@ -141,7 +141,8 @@ public class CompactEventReader implements IEventReader {
                     .mapToInt(Type::intValue)
                     .max();
             assert max.isPresent();
-            maxIntValue = max.getAsInt();
+            assert max.getAsInt() <= 63;
+            maxIntValue = 63;
 
             intToType = new HashMap<>();
             EnumSet.allOf(Type.class).forEach(event -> intToType.put(event.intValue(), event));
@@ -206,10 +207,9 @@ public class CompactEventReader implements IEventReader {
 
         readData(inputStream, pc, "first event descriptor.");
 
-        minDeltaAndEventType =
-                pc.getAsLong() - (Constants.JUMPS_IN_DELTA / 2) * CompactEventReader.Type.getNumberOfValues();
+        minDeltaAndEventType = pc.getAsLong() - Constants.JUMPS_IN_DELTA / 2;
         maxDeltaAndEventType =
-                minDeltaAndEventType + Constants.JUMPS_IN_DELTA * CompactEventReader.Type.getNumberOfValues() - 1;
+                minDeltaAndEventType + (CompactEventReader.Type.getNumberOfValues() - 1) * Constants.JUMPS_IN_DELTA + Constants.JUMPS_IN_DELTA - 1;
 
         context = new Context(minDeltaAndEventType);
         factory = new CompactEventFactory();

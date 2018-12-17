@@ -19,8 +19,8 @@ class DeltaAndEventType {
         long normalizedPc = pc - minDeltaAndEventType;
 
         return new DeltaAndEventType(
-                CompactEventReader.Type.fromInt(toIntExact(normalizedPc % eventCount)),
-                toIntExact(normalizedPc / eventCount - Constants.JUMPS_IN_DELTA / 2));
+                CompactEventReader.Type.fromInt(toIntExact(normalizedPc / Constants.JUMPS_IN_DELTA)),
+                toIntExact(normalizedPc % Constants.JUMPS_IN_DELTA - Constants.JUMPS_IN_DELTA / 2));
     }
 
     CompactEventReader.Type getEventType() {

@@ -1,70 +1,43 @@
 ﻿Runtime Verification, Inc. End User License Agreement (EULA)
-In this Agreement “you” refers to the individual or entity that executes this Agreement, as identified on the signature page, and if executed on behalf of an entity then this Agreement also refers to and binds any individuals acting for or through the entity with respect to exercising your rights and fulfilling your obligations under this Agreement.  This Agreement governs your relationship with Runtime Verification, Inc. (“RV”) with regard to the RV-Predict/Java software product (“Software”) that you have paid an license fee for and are allowed to install, access and/or use (collectively “use”).  This is an important agreement, and you should read it carefully and understand it.
-IF YOU USE THE SOFTWARE YOU ARE AGREEING TO BE BOUND BY ALL OF THE TERMS SET FORTH IN THIS AGREEMENT.  IF YOU ARE NOT WILLING TO AGREE TO THESE TERMS DO NOT USE THE SOFTWARE.
-1.        Grant of Limited License.  RV hereby grants you a non-exclusive, non-transferable, limited license to use one (1) copy of the object code version of the Software made available to you through download or any other media, by RV or by any of its distributors.  The term Software includes any upgrades for which you have paid the appropriate license upgrade fee and any enhancements and other changes to the Software unless you are required to execute a separate license agreement with regard to any such upgrade and/or other change, in which event such subsequent license agreement shall govern.  All rights not expressly granted are reserved by RV.
 
+In this Agreement “you” refers to the individual or entity that executes this Agreement, as identified on the signature page, and if executed on behalf of an entity then this Agreement also refers to and binds any individuals acting for or through the entity with respect to exercising your rights and fulfilling your obligations under this Agreement.  This Agreement governs your relationship with Runtime Verification, Inc. (“RV”) with regard to the RV-Predict/Java software product (“Software”) that you have paid an license fee for and are allowed to install, access and/or use (collectively “use”).  This is an important agreement, and you should read it carefully and understand it.
+
+IF YOU USE THE SOFTWARE YOU ARE AGREEING TO BE BOUND BY ALL OF THE TERMS SET FORTH IN THIS AGREEMENT.  IF YOU ARE NOT WILLING TO AGREE TO THESE TERMS DO NOT USE THE SOFTWARE.
+
+1.        Grant of Limited License.  RV hereby grants you a non-exclusive, non-transferable, limited license to use one (1) copy of the object code version of the Software made available to you through download or any other media, by RV or by any of its distributors.  The term Software includes any upgrades for which you have paid the appropriate license upgrade fee and any enhancements and other changes to the Software unless you are required to execute a separate license agreement with regard to any such upgrade and/or other change, in which event such subsequent license agreement shall govern.  All rights not expressly granted are reserved by RV.
 
 2.        Ownership.  You agree that RV, and any third parties that may have granted rights to RV that are included in the Software, retain all right, title and interest in and to the Software, all copies thereof, all copyrights therein and all other proprietary rights thereto.  
 
-
 3.        Access.  When you have provided a fully executed copy of this Agreement to RV, and satisfactorily provided RV with the information about you requested on the End User Information Form, RV will give you access to the Software.  In order to be activated and to operate properly, the Software may need to access RV’s server via an internet connection at the time of activation, or you will need to obtain an activation file by email or by mail or by other means.  During activation of the Software, data about the Software and your computer will be transmitted to RV, and license data and operational codes will be transmitted by RV to your computer.  RV’s privacy policy is that this information is not to be released by RV to any third party, unless this becomes necessary in the enforcement of this Agreement or as otherwise required by law.  Activation/validation associates the use of the Software with a specific computer, and a License file will be provided to complete activation.  If you modify your computer hardware, you may need to contact RV to re-activate the Software.  You agree to only allow the Software to be accessed by your employees who have been informed of the provisions of this Agreement and for which you have paid the required license fees, and you agree that you are responsible for their full compliance with all of the terms of this Agreement on your behalf. You may make copies of the Software solely for archival/backup purposes, and such copy shall include all notices included in the Software.
-
 
 4.        Remote Access.  Remote access to the Software on your computer via a web or network application (Remote Access) will be allowed only to those of your employees who are individually approved for Remote Access by you or by your designated employee, and whose names and dates of initial approval for Remote Access are listed on an Allowed Remote Access Names List that you will maintain, a copy of which shall be provided to RV upon request from time to time.  
 
-
 5.        Warranty.  RV warrants that for the period of twelve (12) months from the date of your first access to the Software, the Software will perform in accordance with RTV's published specifications.
-
 
 6.        Prohibitions.  You agree not to, and not to permit any third party to, directly or indirectly: (i) reproduce, modify, adapt, translate, convert, embed in other software or activate by a control script, or otherwise create any derivative work of or distribute the Software, or any part thereof; (ii) reverse-compile, reverse-assemble, disassemble, decrypt, decompile, reverse engineer, extract or otherwise attempt to determine the source code of the Software; (iii) tamper with or allow any third party access to the Software, or otherwise attempt to circumvent the licensing control mechanism implemented by the Software; (iv) remove, alter, or obscure any copyright, logo, trademark or other proprietary or legal notice from the Software; (v) sublicense, rent, lease, or loan the Software; (vi) allow or support third parties' use of the Software, time share the Software, or provide service bureau or similar service use; (vii) transfer, assign this Agreement or the Software or otherwise make access to the Software available to any third party; (viii) disclose the password and/or license file to a third party or allow them to be used except as specifically authorized herein; (ix) provide access to the Software via a web or network application, except as provided in Section 4 of this Agreement; or, (x) use the Software for human diagnosis or treatment.
 
-
 7.        Termination; Remedies.  Your rights under this Agreement shall terminate in the event you fail to comply with any material term of this Agreement, immediately if such default relates to the provisions of Section 6 or 11 of this Agreement, and otherwise if the default has not been cured within thirty (30) days after written notice, provided, however, that RV’s rights under this Agreement shall continue after termination.  Upon termination you agree to immediately erase the Software from your computer and not keep or use any copy thereof.  Unless otherwise prohibited by applicable law, RV shall be entitled to recover all costs, including reasonable attorneys’ fees, incurred in enforcing its rights and your obligations under this Agreement, whether or not suit shall be required.  RV shall also be entitled to injunctive relief as required and without need to post bond.
-
 
 8.        Disclaimer of Warranty.  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS LICENSED TO YOU “AS IS.”  EXCEPT FOR THE OBLIGATION OF RV TO SUPPORT THE SOFTWARE DURING THE SOFTWARE WARRANTY PERIOD AND WHILE YOU ARE A PARTY TO, AND RV HAS RECEIVED ALL PAYMENTS DUE IT WITH RESPECT TO, A SEPARATE WRITTEN SUPPORT CONTRACT FOR THE SOFTWARE,  RV DISCLAIMS ANY AND ALL WARRANTIES REGARDING THE SOFTWARE, WHETHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF NON-INFRINGEMENT OF THIRD PARTY RIGHTS, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE RELIABILITY OR AVAILABILITY, ACCURACY OR COMPLETENESS OF RESPONSES OR LACK OF VIRUSES.  RV DOES NOT WARRANT THAT THE OPERATION OF SOFTWARE WILL BE UNINTERRUPTED OR ERROR FREE.  SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OF IMPLIED WARRANTIES, SO THE ABOVE EXCLUSION MAY NOT APPLY UNDER, OR MAY BE LIMITED UNDER APPLICABLE LAW. 
 
-
 9.        Limitation of Liability.  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW:  (A) IN NO EVENT SHALL RV BE LIABLE FOR ANY CONSEQUENTIAL, SPECIAL, INCIDENTAL, PUNITIVE OR INDIRECT DAMAGES OF ANY KIND ARISING OUT OF THE USE OF THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOST DATA OR LOST PROFITS) OR OUT OF THE PROVISION BY RV OF ANY WARRANTY OR SUPPORT SERVICES, EVEN IF FORESEEABLE OR IF RV HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES AND WITHOUT REGARD TO THE THEORY UNDER WHICH SUCH CLAIM MAY BE BROUGHT; AND (B) IN NO EVENT WILL RV’S LIABILITY FOR ANY CLAIM, WHETHER IN CONTRACT, TORT (INCLUDING NEGLIGENCE) OR ANY OTHER THEORY OF LIABILITY, EXCEED THE FEE RECEIVED BY RV WITH RESPECT THE LICENSE TO YOU OF THE SOFTWARE.  SOME JURISDICTIONS DO NOT ALLOW THE LIMITATION OR EXCLUSION OF LIABILITY FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES SO THE ABOVE LIMITATION OR EXCLUSION MAY NOT APPLY UNDER, OR MAY BE LIMITED BY APPLICABLE LAW. 
 
-
 10.        Export.  The Software is subject to the export control laws and regulations of the United States and other jurisdictions, and you agree that you will comply with all such laws and regulations and will not export, re-export, divert, transfer or disclose, directly or indirectly the Software, or any related technical information or materials to any country or entity identified on attached Addendum A.  You further agree that you will not allow the RV Software to be made available to entities or to individuals identified on attached Addendum A or who are nationals of any country identified on attached Addendum A, wherever those individuals may be located.  
-11.        Notice to U.S. Government End Users.  If you are, or are acting on behalf of, an agency or instrumentality of the United States Government, then by accessing and downloading the RV Software and any related documentation you hereby agree that the RV Software and any related documentation qualifies as commercial computer software and commercial computer software documentation as such terms are used or defined in FAR 12.212, DFARS Part 227.72, and DFARS 252.227-7014.  As a result, only the terms and conditions specified in this Agreement shall apply to and govern use, reproduction and disclosure of the RV Software and any related documentation by the federal government (or other entity acquiring for or through the federal government) and shall supersede any conflicting contractual terms or conditions.  If this License fails to meet your needs as a federal government entity or you believe it is inconsistent in any respect with federal procurement law, return the RV Software and any related documentation, unused, to RV.
 
+11.        Notice to U.S. Government End Users.  If you are, or are acting on behalf of, an agency or instrumentality of the United States Government, then by accessing and downloading the RV Software and any related documentation you hereby agree that the RV Software and any related documentation qualifies as commercial computer software and commercial computer software documentation as such terms are used or defined in FAR 12.212, DFARS Part 227.72, and DFARS 252.227-7014.  As a result, only the terms and conditions specified in this Agreement shall apply to and govern use, reproduction and disclosure of the RV Software and any related documentation by the federal government (or other entity acquiring for or through the federal government) and shall supersede any conflicting contractual terms or conditions.  If this License fails to meet your needs as a federal government entity or you believe it is inconsistent in any respect with federal procurement law, return the RV Software and any related documentation, unused, to RV.
 
 12.        Miscellaneous.  This Agreement is governed by the laws of the State of Illinois, USA, without regard to Illinois’ conflict of law principles, and you agree and consent to jurisdiction and venue in the state or federal courts located in Champaign County, Illinois, hereby waiving any claim of forum non conveniens.  The University of Illinois has provided RV a license for certain intellectual property incorporated into the Software, and is an intended third party beneficiary under the terms of this Agreement.  The United Nations Convention on Contracts for the Sale of International Goods does not apply to this Agreement.  You and RV agree that the Uniform Computer Information Transactions Act, or any version thereof, adopted by any jurisdiction in any form ("UCITA"), shall not apply to this Agreement.  To the extent that UCITA would be applicable, you and RV agree to opt out of the applicability of UCITA pursuant to the Opt-Out provision(s) contained therein.  If any provision hereof is held illegal, invalid or unenforceable, in whole or in part, such provision shall be modified to the minimum extent necessary to make it legal, valid and enforceable, and the legality, validity and enforceability of all other provisions of this Agreement shall not be affected thereby.  This Agreement constitutes the entire agreement between you and RV regarding its subject matter and supersedes any prior agreement, whether written or oral, relating to the subject matter of this Agreement.  This Agreement may only be modified, and any waiver of any provision of this Agreement shall only be effective when, in writing and executed by you and a duly authorized officer of RV.  This Agreement may be executed in counterparts, each of which shall be an original, and all of which shall constitute one agreement.  Any notice required or permitted hereunder shall be effective when received by a party as evidenced by reasonable proof of delivery, and shall be given to you at your address below and to Runtime Verification, Inc. at 102 E. Main Street, Suite 500, Urbana, IL 61801.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Addendum A to the RV Verification, Inc. EULA
+
 Country, Person, and Entity List
+
 Countries:
+
 Cuba, Iran, North Korea, Sudan, and Syria
 
-
-
-
 Persons and Entities:
-
 
 1. Any national of one of the Countries listed above, regardless of location of said person.
 2. Any person or entity listed on the Denied Person List at http://www.bis.doc.gov/dpl

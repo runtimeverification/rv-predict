@@ -1,14 +1,15 @@
 *.a
-*.gcno
-*.gcda
 *.d
 .depend
+*.gcda
+*.gcno
 .gdbinit
 internal-libc-redefines
 *.ll
 .Makefile.tags
 _mkc_*
 *.o
+*.os
 *.pico
 *.po
 *.so

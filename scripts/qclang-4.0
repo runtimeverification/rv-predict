@@ -14,7 +14,7 @@ set -u
 opt_x86_64_def=-D__X86_64__
 platform=x86_64
 platform_path=x86_64-pc-nto-qnx7.0.0
-targetname=x86_64-pc-qnx-gnu
+targetname=${platform_path}
 opt_mcmodel="-mcmodel=small"
 opt_pic="pic"
 
@@ -147,7 +147,7 @@ for arg in "$@"; do
 			opt_x86_64_def=
 			platform=aarch64le
 			platform_path=aarch64-unknown-nto-qnx7.0.0
-			targetname=aarch64-unknown-qnx-gnu
+			targetname=${platform_path}
 			opt_mcmodel=
 			opt_pic=
 			;;
@@ -155,7 +155,7 @@ for arg in "$@"; do
 			opt_x86_64_def=-D__X86_64__
 			platform=x86_64
 			platform_path=x86_64-pc-nto-qnx7.0.0
-			targetname=x86_64-pc-qnx-gnu
+			targetname=${platform_path}
 			opt_mcmodel="-mcmodel=small"
 			opt_pic="pic"
 			;;
@@ -248,21 +248,10 @@ if [ ${prog##q} = rvpld ]; then
 	post_ldflags=$(echo ${_post_ldflags} | sed 's/-Wl,//g')
 	posix_ldflags=$(echo ${_posix_ldflags} | sed 's/-Wl,//g')
 elif [ ${link} = yes ]; then
-	# Use the right linker for aarch64le; otherwise, use host's (!)
-	# linker.
-	if [ ${platform} = aarch64le ]; then
-		cflags=-nostdlib
-		compiler=${QNX_HOST}/usr/bin/aarch64-unknown-nto-qnx7.0.0-ld
-		quoted_list=$(rewrite_cc_to_ld_arguments "$@")
-		eval "set -- ${quoted_list}"
-		ldflags=$(echo ${_ldflags} | sed 's/-Wl,//g')
-		post_ldflags=$(echo ${_post_ldflags} | sed 's/-Wl,//g')
-		posix_ldflags=$(echo ${_posix_ldflags} | sed 's/-Wl,//g')
-	else
-		ldflags="${cflags} ${_ldflags}"
-		post_ldflags=${_post_ldflags}
-		posix_ldflags=${_posix_ldflags}
-	fi
+	cflags="${cflags} -B ${QNX_HOST}/usr/bin"
+	ldflags=${_ldflags}
+	post_ldflags=${_post_ldflags}
+	posix_ldflags=${_posix_ldflags}
 fi
 
 #echo link=${link} 1>&2

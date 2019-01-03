@@ -98,6 +98,15 @@ trace_store8(rvp_ring_t *r, const char *retaddr, rvp_op_t op, rvp_addr_t addr,
 	atomic_thread_fence(memory_order_acquire);
 	deltop_t *deltop = rvp_vec_and_op_to_deltop(retaddr - r->r_lastpc, op);
 	uint32_t *producer = r->r_producer;
+#if 0
+	if (__predict_true(deltop != NULL &&
+	    r->r_lgen >= gen &&
+	    ((producer <= &r->r_items[RVP_RING_ITEMS - slots_per_store] &&
+	      (nempty = producer - consumer - 1) >= 0) ||
+	    ((nempty = consumer - producer - 1) > slots_per_store producer < consumer && (producer <= &r->r_items[RVP_RING_ITEMS - slots_per_store] &&
+	      consumer < producer) ||
+	    (nempty = rvp_ring_nempty_for_producer(r, producer)) >= slots_per_store)) {
+#endif
 	if (__predict_true(deltop != NULL &&
 	    r->r_lgen >= gen &&
 	    producer <= &r->r_items[RVP_RING_ITEMS - slots_per_store] &&

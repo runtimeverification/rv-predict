@@ -1,0 +1,155 @@
+diff --git a/llvm/ngrt/ring.c b/llvm/ngrt/ring.c
+index 4610bbe..6ec665c 100644
+--- a/llvm/ngrt/ring.c
++++ b/llvm/ngrt/ring.c
+@@ -3,7 +3,18 @@
+ #include <pthread.h>
+ #include <sched.h>	/* for sched_yield(2) */
+ #include <stdio.h>	/* for stderr, fprintf(3) */
+-#include <stdlib.h>
++#include <stdlib.h>	/* for EXIT_FAILURE, EXIT_SUCCESS */
++#if 1
++#include <fcntl.h>	/* for open(2) */
++#include <unistd.h>
++
++#include <sys/mman.h>	/* for mmap(2) */
++#include <sys/stat.h>	/* for open(2) */
++#include <sys/types.h>	/* for open(2) */
++
++#include "nbcompat.h"
++#endif
++
+ 
+ #include "lock.h"
+ #include "rvpsignal.h"
+@@ -18,6 +29,11 @@ rvp_rings_init(void)
+ 
+ 	if ((pgsz = sysconf(_SC_PAGE_SIZE)) == -1)
+ 		err(EXIT_FAILURE, "%s: sysconf", __func__);
++	if (RVP_OVERFLOW_BYTES % pgsz != 0) {
++		errx(EXIT_FAILURE,
++		    "System page size does not evenly divide %s "
++		    "ring-overflow size.", product_name);
++	}
+ 	if (RVP_RING_BYTES % pgsz != 0) {
+ 		errx(EXIT_FAILURE,
+ 		    "System page size does not evenly divide %s ring size.",
+@@ -36,10 +52,10 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
+ {
+ 	int rc;
+ 
+-	r->r_producer = r->r_consumer = items;
+ #if !defined(EMBED_RING)
+ 	r->r_items = items;
+ #endif
++	r->r_producer = r->r_consumer = &r->r_items[0];
+ 	r->r_last = &r->r_items[nitems - 1];
+ 	r->r_state = RVP_RING_S_INUSE;
+ 	r->r_mtxp = NULL;
+@@ -57,18 +73,39 @@ rvp_ring_init(rvp_ring_t *r, uint32_t *items, size_t nitems)
+ int
+ rvp_ring_stdinit(rvp_ring_t *r)
+ {
++	uint32_t *items;
+ #if defined(EMBED_RING)
+-	rvp_ring_init(r, &r->r_items[0], RVP_RING_ITEMS);
++	items = &r->r_items[0];
+ #else
+-	uint32_t *items;
+-
+-	items = calloc(RVP_RING_ITEMS, sizeof(*r->r_items));
++	items = aligned_alloc(RVP_PAGE_SIZE, sizeof(*r->r_items));
+ 	if (items == NULL)
+ 		return ENOMEM;
+ 
+-	rvp_ring_init(r, items, RVP_RING_ITEMS);
+ #endif
++	rvp_ring_init(r, items, RVP_RING_ITEMS);
+ 
++	char fn[sizeof("/tmp/mm.XXXXXX")] = "/tmp/mm.XXXXXX";
++	int fd;
++
++	if ((fd = mkstemp(fn)) == -1)
++		err(EXIT_FAILURE, "mkstemp");
++	if (unlink(fn) == -1)
++		err(EXIT_FAILURE, "unlink");
++	if (write(fd, &r->r_items[0], RVP_RING_BYTES + RVP_OVERFLOW_BYTES) == -1)
++		err(EXIT_FAILURE, "write");
++	void *p = mmap(&r->r_items[0], RVP_RING_BYTES + RVP_OVERFLOW_BYTES,
++	    PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, fd, 0);
++	if (p == MAP_FAILED)
++		err(EXIT_FAILURE, "%s.%d: mmap", __func__, __LINE__);
++	if (p != &r->r_items[0])
++		errx(EXIT_FAILURE, "p != empty");
++	void *q = mmap(&r->r_items[RVP_RING_ITEMS], RVP_OVERFLOW_BYTES,
++	    PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, fd, 0);
++	if (q == MAP_FAILED)
++		err(EXIT_FAILURE, "%s.%d: mmap", __func__, __LINE__);
++	r->r_items[RVP_RING_ITEMS] = 0xdeadbeefU;
++	if (r->r_items[0] != 0xdeadbeefU)
++		abort();
+ 	return 0;
+ }
+ 
+diff --git a/llvm/ngrt/ring.h b/llvm/ngrt/ring.h
+index 605b6c7..9eaab7b 100644
+--- a/llvm/ngrt/ring.h
++++ b/llvm/ngrt/ring.h
+@@ -74,7 +74,10 @@ typedef struct _rvp_intr_hack {
+ 	sigset_t ih_mask;
+ } rvp_intr_hack_t;
+ 
+-#define RVP_RING_BYTES (384 * 4096)
++#define	RVP_PAGE_SIZE	4096
++#define	RVP_OVERFLOW_BYTES	RVP_PAGE_SIZE
++#define	RVP_OVERFLOW_ITEMS	(RVP_OVERFLOW_BYTES / sizeof(uint32_t))
++#define RVP_RING_BYTES (384 * RVP_PAGE_SIZE)
+ #define RVP_RING_ITEMS (RVP_RING_BYTES / sizeof(uint32_t))
+ #define RVP_RING_SERVICE_THRESHOLD (RVP_RING_ITEMS / 4)
+ 
+@@ -114,7 +117,8 @@ struct _rvp_ring {
+ 	 * around the items between &r->r_items[0] and rvp_ring_last(r),
+ 	 * inclusive.
+ 	 */
+-	uint32_t __aligned(64) r_items[RVP_RING_ITEMS];
++	uint32_t __aligned(RVP_PAGE_SIZE)
++	    r_items[RVP_RING_ITEMS + RVP_OVERFLOW_ITEMS];
+ #endif
+ 	// all signal rings are strung together through r_next
+ 	rvp_ring_t * __aligned(64) r_next;
+diff --git a/llvm/ngrt/thread.c b/llvm/ngrt/thread.c
+index 53d8158..4a67eba 100644
+--- a/llvm/ngrt/thread.c
++++ b/llvm/ngrt/thread.c
+@@ -754,10 +754,11 @@ rvp_thread_create(void *(*routine)(void *), void *arg)
+ 	rvp_thread_t *t;
+ 	int rc;
+ 
+-	if ((t = calloc(1, sizeof(*t))) == NULL) {
++	if ((t = aligned_alloc(RVP_PAGE_SIZE, sizeof(*t))) == NULL) {
+ 		errno = ENOMEM;
+ 		return NULL;
+ 	}
++	memset(t, '\0', sizeof(*t));
+ 
+ 	t->t_routine = routine;
+ 	t->t_arg = arg;
+diff --git a/llvm/ngrt/thread.h b/llvm/ngrt/thread.h
+index 7bcdda6..3f88a1e 100644
+--- a/llvm/ngrt/thread.h
++++ b/llvm/ngrt/thread.h
+@@ -30,13 +30,13 @@ struct _rvp_thread_local {
+ };
+ 
+ struct _rvp_thread {
++	rvp_ring_t __aligned(RVP_PAGE_SIZE)		t_ring;
+ 	volatile bool		t_garbage;
+ 	pthread_t		t_pthread;
+ 	uint32_t		t_id;
+ 	rvp_thread_t * volatile	t_next;
+ 	void			*t_arg;
+ 	void			*(*t_routine)(void *);
+-	rvp_ring_t		t_ring;
+ 	/* t_intrmask is initialized by __rvpredict_pthread_create() with
+ 	 * the signal mask that should take effect after the thread has
+ 	 * entered __rvpredict_thread_wrapper() but before the thread's

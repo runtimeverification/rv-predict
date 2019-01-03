@@ -1,3 +1,9 @@
+rv-predict-c (2.1.2-1) xenial; urgency=medium
+
+  * Add to qrvpc the capability to cross-build for 64-bit ARM.
+
+ -- Runtime Verification, Inc. <support@runtimeverification.com>  Fri, 21 Dec 2018 10:31:20 -0600
+
 rv-predict-c (2.1.0-1) xenial; urgency=medium
 
   * Fix a bug where programs that `fork(2)` would hang.

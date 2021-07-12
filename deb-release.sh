@@ -14,7 +14,10 @@ cleanup()
 {
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
 	cd ${start_dir}
-	rm -rf ${tmpdir}
+	echo "============ Failed ============"
+	echo $@ $version
+	echo ${start_dir} ${tmpdir}
+	# rm -rf ${tmpdir}
 }
 
 [ $# -eq 1 ] || usage
@@ -103,6 +106,7 @@ dpkg-shlibdeps debian/rv-predict-c/usr/lib/x86_64-linux-gnu/rvpinstrument.so \
     debian/rv-predict-c/usr/bin/rvsyms
 
 dpkg-gencontrol -Pdebian/rv-predict-c
+mkdir -p debian/rv-predict-c/DEBIAN
 cd $start_dir
 
 deb_filename=rv-predict-c_${version}-1_amd64.deb

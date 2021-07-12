@@ -105,8 +105,8 @@ dpkg-shlibdeps debian/rv-predict-c/usr/lib/x86_64-linux-gnu/rvpinstrument.so \
     debian/rv-predict-c/usr/bin/rvptrimframe \
     debian/rv-predict-c/usr/bin/rvsyms
 
-dpkg-gencontrol -Pdebian/rv-predict-c
 mkdir -p debian/rv-predict-c/DEBIAN
+dpkg-gencontrol -Pdebian/rv-predict-c
 cd $start_dir
 
 deb_filename=rv-predict-c_${version}-1_amd64.deb

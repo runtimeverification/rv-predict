@@ -14,10 +14,7 @@ cleanup()
 {
 	trap - EXIT ALRM HUP INT PIPE QUIT TERM
 	cd ${start_dir}
-	echo "============ Failed ============"
-	echo $@ $version
-	echo ${start_dir} ${tmpdir}
-	# rm -rf ${tmpdir}
+	rm -rf ${tmpdir}
 }
 
 [ $# -eq 1 ] || usage

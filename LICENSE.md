@@ -1,44 +1,29 @@
--------------------------------------
-RUNTIME VERIFICATION SOFTWARE LICENSE
--------------------------------------
+BSD 3-Clause License
 
-This license is an agreement between Runtime Verification, Inc. (RV) and you. It applies to all software provided by RV, as well as to updates, supplements, Internet-based and support services, unless other terms accompany those items. If so, those terms apply.
+Copyright (c) 2010-2022, Runtime Verification, Inc.
+All rights reserved.
 
-By using the software, you accept these terms. If you do not accept them, do not use the software. Instead, contact us at [Runtime Verification Support](http://runtimeverification.com/support).
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
-1. OVERVIEW.
-  a. The software includes development tools, software programs and documentation.
-  b. The software is licensed based on a per processor core basis. Each license permits you to run the software on up to eight (8) processor cores.
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
 
-2. INSTALLATION AND USE.
-  a. You may install one copy of the software on a single server in your organization to design, develop, test and demonstrate your programs.
-  b. You may only run each licensed copy of the software on up to eight (8) processor cores.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
 
-3. LICENSE. You have limitted rights to use this software. RV reserves all other rights. You may not
-  * Make more copies of the software than specified in this agreement;
-  * Publish the software for others to copy;
-  * Transfer, assign, rent, lease or lend the software; 
-  * Work around any technical limitations in the software;
-  * Reverse engineer, decompile/disassemble, or create derivative works of the software nor permit any third party to do so, except to the extent such restrictions are prohibited by applicable mandatory local law.
-  * Use the software for commercial software hosting services.
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
 
-4. BACKUP COPY. You may make one backup copy of the software. You may use the backup copy only to reinstall the software.
-
-5. THIRD PARTY SOFTWARE. The software may contain permitted open source or community software provided under separate licenses.  Such licenses, if any, can found under a folder named "Licenses".
-
-5. SUPPORT SERVICES. RV provides limitted support services for the software. Please check our website and/or contact us at [Runtime Verification Support](http://runtimeverification.com/support).
-
-6. APPLICABLE LAW. The laws of the country in which you acquired the software govern the interpretation of this agreement and apply to claims for breaching it, regardless of conflict of laws principles.
-
-7. LIMITATION ON AND EXCLUSION OF DAMAGES. You can recover from RV only direct damages up to the amount you paid for the software. You cannot recover any other damages, including consequential, lost profits, special, indirect or incidental damages. This limitation applies to
-  * anything related to the software, services, content (including code) on third party Internet sites, or third party programs; and
-  * claims for breach of contract, breach of warranty, guarantee or condition, strict liability, negligence, or other tort to the extent permitted by applicable law.
-It also applies even if
-  * repair, replacement or a refund for the software does not fully compensate you for any losses; or
-  * RV knew or should have known about the possibility of the damages.
-
---------
-WARRANTY
---------
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

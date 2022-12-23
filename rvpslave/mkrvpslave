@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -ex
+
+useradd -m rvpslave
+install -d -o rvpslave -g rvpslave ~rvpslave/.ssh
+install -d -o rvpslave -g rvpslave ~rvpslave/keys
+./uprvpslave

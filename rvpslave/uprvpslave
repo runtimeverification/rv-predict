@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -ex
+
+install -o rvpslave -g rvpslave -m 0600 authorized_keys ~rvpslave/.ssh/.
+install -o rvpslave -g rvpslave -m 0600 PREDICT_KEY ~rvpslave/keys/.

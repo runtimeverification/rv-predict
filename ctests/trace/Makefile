@@ -1,6 +1,7 @@
 SUBPRJ=atomic_load atomic_store gnutest_sig interrupt_mask_change limits
 SUBPRJ+=mask natest rmw load store unaligned xchange_t816 xchange_test
 SUBPRJ+=memcpy
+#SUBPRJ+=sigfence
 #SUBPRJ+=memmove
 #SUBPRJ+=memset
 SUBPRJ+=__sysv_signal

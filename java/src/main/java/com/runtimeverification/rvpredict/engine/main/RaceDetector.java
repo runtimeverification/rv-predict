@@ -13,4 +13,5 @@ public interface RaceDetector extends Constants, AutoCloseable {
     List<String> getRaceReports();
 
     void run(Trace trace, AnalysisLimit analysisLimit);
+    void finish();
 }

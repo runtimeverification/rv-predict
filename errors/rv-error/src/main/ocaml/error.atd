@@ -248,6 +248,20 @@ type raw_field_frame = {
   cfa: string;
 }
 
+type maybe_skipped_raw_stack_error = [
+  Skipped of skipped_check
+| StackError of raw_stack_error
+]
+
+type skipped_check = {
+  description_format: string;
+  description_fields: raw_field list;
+  category: error_category;
+  first_stack: raw_stack_trace_component;
+  second_stack: raw_stack_trace_component;
+  count: string
+}
+
 type raw_stack_error = {
   description_format: string;
   description_fields: raw_field list;

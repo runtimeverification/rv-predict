@@ -304,8 +304,13 @@ public class MoreAsserts {
                         break;
                     } else if (!expectedElements[i].equals(collection.get(i))) {
                         description.appendText(
-                                "first difference found at index " + i + ": expected " + expectedElements[i]
-                                        + " but got " + collection.get(i) + "; ");
+                                "first difference found at index " + i + ": expected "
+                                        + markDiffInSecondString(
+                                                collection.get(i).toString(), expectedElements[i].toString())
+                                        + " but got "
+                                        + markDiffInSecondString(
+                                                expectedElements[i].toString(), collection.get(i).toString())
+                                        + "; ");
                         mismatch = true;
                         break;
                     }
@@ -451,7 +456,7 @@ public class MoreAsserts {
         return new BaseMatcher<Optional<T>>() {
             @Override
             public void describeTo(Description description) {
-                description.appendText(optionalWithType + " should contain " + value + ".");
+                description.appendText(optionalWithType + " should contain \"" + value + "\".");
             }
 
             @Override
@@ -488,7 +493,10 @@ public class MoreAsserts {
                 }
                 Object presentItem = maybeItem.get();
                 if (!value.equals(presentItem)) {
-                    description.appendText(optionalWithType + " contains " + presentItem + ".");
+                    description.appendText(
+                            optionalWithType + " contains \""
+                                    + markDiffInSecondString(value.toString(), presentItem.toString())
+                                    + "\".");
                 }
             }
         };
@@ -575,6 +583,45 @@ public class MoreAsserts {
                 }
                 if (value != maybeItem.getAsLong()) {
                     description.appendText(optionalWithType + " contains " + maybeItem.getAsLong() + ".");
+                }
+            }
+        };
+    }
+
+    public static Matcher<Optional> isPresent() {
+        String optionalWithType = "Optional<>";
+        return new BaseMatcher<Optional>() {
+            @Override
+            public void describeTo(Description description) {
+                description.appendText(optionalWithType + " should not be empty.");
+            }
+
+            @Override
+            public boolean matches(Object item) {
+                if (item == null) {
+                    return false;
+                }
+                if (!(item instanceof Optional)) {
+                    return false;
+                }
+                Optional maybeItem = (Optional) item;
+                return maybeItem.isPresent();
+            }
+
+            @Override
+            public void describeMismatch(Object item, Description description) {
+                if (item == null) {
+                    description.appendText("Unexpected null object.");
+                    return;
+                }
+                if (!(item instanceof Optional)) {
+                    description.appendText(
+                            "Object type is " + item.getClass().getCanonicalName() + ".");
+                    return;
+                }
+                Optional maybeItem = (Optional) item;
+                if (!maybeItem.isPresent()) {
+                    description.appendText(optionalWithType + " is empty.");
                 }
             }
         };
@@ -764,5 +811,17 @@ public class MoreAsserts {
             description.appendText(entry.getValue().toString());
         }
         description.appendText("} ");
+    }
+
+    private static String markDiffInSecondString(String first, String second) {
+        for (int i = 0; i < second.length(); i++) {
+            if (i == first.length() || first.charAt(i) != second.charAt(i)) {
+                return "[*" + second.substring(0, i) + "*]" + second.substring(i);
+            }
+        }
+        if (first.length() > second.length()) {
+            return "[*" + second + "*]??";
+        }
+        return second;
     }
 }

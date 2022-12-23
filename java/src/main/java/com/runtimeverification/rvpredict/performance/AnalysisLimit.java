@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class AnalysisLimit {
     private final Clock clock;
@@ -28,19 +29,20 @@ public class AnalysisLimit {
         this.logger = logger;
     }
 
-    public void run(Runnable r) {
+    public void run(Runnable r, Consumer<String> onTimeoutSkip) {
         if (timeSeconds.isPresent()) {
             if (timeout()) {
+                onTimeoutSkip.accept(name);
                 return;
             }
             long start = clock.millis();
             try {
-                runInnerTimer(r);
+                runInnerTimer(r, onTimeoutSkip);
             } finally {
                 updateUsedTime(start);
             }
         } else {
-            runInnerTimer(r);
+            runInnerTimer(r, onTimeoutSkip);
         }
     }
 
@@ -55,33 +57,34 @@ public class AnalysisLimit {
         return timeSeconds.isPresent() && TimeUnit.SECONDS.toMillis(timeSeconds.getAsInt()) < usedTimeMillis;
     }
 
-    private void runInnerTimer(Runnable r) {
+    private void runInnerTimer(Runnable r, Consumer<String> onTimeoutSkip) {
         if (innerTimer.isPresent()) {
-            innerTimer.get().run(r);
+            innerTimer.get().run(r, onTimeoutSkip);
         } else {
             r.run();
         }
     }
 
-    public void runWithException(RunnableWithException r) throws Exception {
+    public void runWithException(RunnableWithException r, Consumer<String> onTimeoutSkip) throws Exception {
         if (timeSeconds.isPresent()) {
             if (timeout()) {
+                onTimeoutSkip.accept(name);
                 return;
             }
             long start = clock.millis();
             try {
-                runInnerTimerWithException(r);
+                runInnerTimerWithException(r, onTimeoutSkip);
             } finally {
                 updateUsedTime(start);
             }
         } else {
-            runInnerTimerWithException(r);
+            runInnerTimerWithException(r, onTimeoutSkip);
         }
     }
 
-    private void runInnerTimerWithException(RunnableWithException r) throws Exception {
+    private void runInnerTimerWithException(RunnableWithException r, Consumer<String> onTimeoutSkip) throws Exception {
         if (innerTimer.isPresent()) {
-            innerTimer.get().runWithException(r);
+            innerTimer.get().runWithException(r, onTimeoutSkip);
         } else {
             r.run();
         }

@@ -22,6 +22,7 @@ import java.util.OptionalLong;
 
 import static com.runtimeverification.rvpredict.testutils.MoreAsserts.hasSize;
 import static com.runtimeverification.rvpredict.testutils.TraceUtils.extractEventByType;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -56,6 +57,7 @@ public class TraceStateTest {
         mockConfiguration.windowSize = 10;
         when(mockEvent1.getEventId()).thenReturn(1L);
         when(mockEvent2.getEventId()).thenReturn(2L);
+        when(mockMetadata.getOriginalThreadCreationLocId(anyLong())).thenReturn(OptionalLong.empty());
     }
 
     @Test

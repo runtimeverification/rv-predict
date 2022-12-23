@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 
 public class TraceState {
@@ -284,7 +285,8 @@ public class TraceState {
      */
     void updateThreadLocToUserLoc(ReadonlyEventInterface event, int ttid) {
         long locId = findUserCallLocation(event, ttid);
-        if (locId != metadata.getOriginalThreadCreationLocId(event.getSyncedThreadId())) {
+        OptionalLong maybeThreadCreation = metadata.getOriginalThreadCreationLocId(event.getSyncedThreadId());
+        if (!maybeThreadCreation.isPresent() || locId != maybeThreadCreation.getAsLong()) {
             metadata().addOriginalThreadCreationInfo(event.getSyncedThreadId(), ttid, locId);
         }
     }

@@ -29,4 +29,8 @@ class RaceBucket {
         solved = true;
         return name;
     }
+
+    String getName() {
+        return name;
+    }
 }

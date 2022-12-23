@@ -31,8 +31,11 @@ package com.runtimeverification.rvpredict.engine.main;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ILoggingEngine;
 import com.runtimeverification.rvpredict.metadata.CompactMetadata;
+import com.runtimeverification.rvpredict.metadata.CompactTraceSignatureProcessor;
+import com.runtimeverification.rvpredict.metadata.LLVMSignatureProcessor;
 import com.runtimeverification.rvpredict.metadata.Metadata;
 import com.runtimeverification.rvpredict.metadata.MetadataInterface;
+import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.order.JavaHappensBeforeRaceDetector;
 import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.smt.RaceSolver;
@@ -41,6 +44,7 @@ import com.runtimeverification.rvpredict.trace.LLVMTraceCache;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceCache;
 import com.runtimeverification.rvpredict.util.Logger;
+import com.runtimeverification.rvpredict.violation.RaceSerializer;
 
 import java.io.IOException;
 import java.time.Clock;
@@ -83,10 +87,19 @@ public class RVPredict implements AutoCloseable {
             metadata = Metadata.readFrom(config.getMetadataPath());
             traceCache = new TraceCache(config, metadata);
         }
-        if (config.isHappensBefore()) {
-            this.detector = new JavaHappensBeforeRaceDetector(config, metadata);
+        SignatureProcessor signatureProcessor;
+        if (config.isCompactTrace()) {
+            signatureProcessor = new CompactTraceSignatureProcessor();
+        } else if (config.isLLVMPrediction()) {
+            signatureProcessor = new LLVMSignatureProcessor();
         } else {
-            this.detector = new MaximalRaceDetector(config, RaceSolver.create(config));
+            signatureProcessor = new SignatureProcessor();
+        }
+        RaceSerializer serializer = new RaceSerializer(config, signatureProcessor, metadata);
+        if (config.isHappensBefore()) {
+            this.detector = new JavaHappensBeforeRaceDetector(config, metadata, serializer);
+        } else {
+            this.detector = new MaximalRaceDetector(config, RaceSolver.create(config), serializer);
         }
     }
 
@@ -115,6 +128,8 @@ public class RVPredict implements AutoCloseable {
                     break;
                 }
             }
+
+            detector.finish();
 
             List<String> reports = detector.getRaceReports();
             if (reports.isEmpty()) {

@@ -273,9 +273,13 @@ public class Trace {
     }
 
     public long getSignalNumber(Integer traceThreadId) {
-        OptionalLong maybeSignalNumber = state.getThreadInfos().getThreadInfo(traceThreadId).getSignalNumber();
+        OptionalLong maybeSignalNumber = maybeGetSignalNumber(traceThreadId);
         assert maybeSignalNumber.isPresent();
         return maybeSignalNumber.getAsLong();
+    }
+
+    public OptionalLong maybeGetSignalNumber(Integer traceThreadId) {
+        return state.getThreadInfos().getThreadInfo(traceThreadId).getSignalNumber();
     }
 
     public long getSignalHandler(Integer traceThreadId) {

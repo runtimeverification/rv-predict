@@ -8,7 +8,11 @@ import com.runtimeverification.rvpredict.metadata.MetadataInterface;
 import com.runtimeverification.rvpredict.performance.AnalysisLimit;
 import com.runtimeverification.rvpredict.trace.OrderedTraceReader;
 import com.runtimeverification.rvpredict.trace.Trace;
+import com.runtimeverification.rvpredict.violation.FoundRace;
 import com.runtimeverification.rvpredict.violation.Race;
+import com.runtimeverification.rvpredict.violation.RaceSerializer;
+import com.runtimeverification.rvpredict.violation.ReportType;
+import com.runtimeverification.rvpredict.violation.SignalStackEvent;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -25,14 +29,17 @@ public class OrderedRaceDetector implements RaceDetector {
     private final MetadataInterface metadata;
     private final OrderedTraceReader traceReader;
     private final VectorClockTraceReader vectorClockReader;
-    final Map<String, Race> races;
+    final Map<String, FoundRace> races;
     private Map<Long,ReadonlyOrderedEvent> lastWrites = new HashMap<>();
     private Map<Long,Collection<ReadonlyOrderedEvent>> lastReads = new HashMap<>();
+    private final RaceSerializer serializer;
 
-    protected OrderedRaceDetector(
-            Configuration config, MetadataInterface metadata, VectorClockOrderInterface happensBefore) {
+    OrderedRaceDetector(
+            Configuration config, MetadataInterface metadata, RaceSerializer serializer,
+            VectorClockOrderInterface happensBefore) {
         this.config = config;
         this.metadata = metadata;
+        this.serializer = serializer;
         reports = new ArrayList<>();
         traceReader = new OrderedTraceReader();
         vectorClockReader = new VectorClockTraceReader(traceReader, happensBefore);
@@ -93,8 +100,16 @@ public class OrderedRaceDetector implements RaceDetector {
                     Race race = new Race(event, rEvent.getEvent(), trace, config);
                     String raceSig = race.toString();
                     if (!races.containsKey(raceSig)) {
-                        races.put(raceSig, race);
-                        String report = race.generateRaceReport();
+                        FoundRace found = new FoundRace(
+                                race.firstEvent(),
+                                race.secondEvent(),
+                                Collections.singletonList(SignalStackEvent.fromEventAndTrace(race.firstEvent(), trace)),
+                                Collections.singletonList(SignalStackEvent.fromEventAndTrace(race.secondEvent(), trace))
+                        );
+                        races.put(raceSig, found);
+                        String report = found.generateRaceReport(
+                                serializer,
+                                config.isJsonReport() ? ReportType.JSON : ReportType.USER_READABLE);
                         reports.add(report);
                         config.logger().reportRace(report);
                     }
@@ -104,5 +119,9 @@ public class OrderedRaceDetector implements RaceDetector {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void finish() {
     }
 }

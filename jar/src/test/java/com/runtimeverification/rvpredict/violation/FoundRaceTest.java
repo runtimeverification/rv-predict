@@ -1,26 +1,28 @@
 package com.runtimeverification.rvpredict.violation;
 
+import com.runtimeverification.error.data.ErrorCategory;
+import com.runtimeverification.error.data.RawComponentField;
+import com.runtimeverification.error.data.RawFrame;
+import com.runtimeverification.error.data.RawStackError;
+import com.runtimeverification.error.data.RawStackTrace;
+import com.runtimeverification.error.data.RawStackTraceComponent;
 import com.runtimeverification.rvpredict.config.Configuration;
 import com.runtimeverification.rvpredict.log.ReadonlyEventInterface;
 import com.runtimeverification.rvpredict.log.compact.Context;
 import com.runtimeverification.rvpredict.log.compact.InvalidTraceDataException;
 import com.runtimeverification.rvpredict.metadata.Metadata;
+import com.runtimeverification.rvpredict.metadata.SignatureProcessor;
 import com.runtimeverification.rvpredict.testutils.MoreAsserts;
 import com.runtimeverification.rvpredict.testutils.TraceUtils;
 import com.runtimeverification.rvpredict.trace.RawTrace;
 import com.runtimeverification.rvpredict.trace.Trace;
 import com.runtimeverification.rvpredict.trace.TraceState;
-import com.runtimeverification.error.data.ErrorCategory;
-import com.runtimeverification.error.data.RawComponentField;
-import com.runtimeverification.error.data.RawStackError;
-import com.runtimeverification.error.data.RawStackTrace;
-import com.runtimeverification.error.data.RawStackTraceComponent;
-import com.runtimeverification.error.data.RawFrame;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.util.Arrays;
@@ -30,10 +32,12 @@ import java.util.Optional;
 import java.util.OptionalLong;
 
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
-public class RaceTest {
+public class FoundRaceTest {
     private static final int WINDOW_SIZE = 100;
     private static final long ADDRESS_1 = 200;
     private static final long VALUE_1 = 300;
@@ -54,6 +58,7 @@ public class RaceTest {
     @Mock private Configuration mockConfiguration;
     @Mock private Context mockContext;
     @Mock private Metadata mockMetadata;
+    @Mock private SignatureProcessor mockSignatureProcessor;
 
     @Before
     public void setUp() {
@@ -62,9 +67,11 @@ public class RaceTest {
         when(mockContext.createUniqueDataAddressId(ADDRESS_1)).thenReturn(2L);
         when(mockMetadata.getLocationSig(anyLong())).thenReturn("");
         when(mockMetadata.getVariableSig(anyLong())).thenReturn("");
+        when(mockMetadata.getParentOTID(anyLong())).thenReturn(OptionalLong.empty());
         when(mockConfiguration.isCompactTrace()).thenReturn(true);
         when(mockConfiguration.isLLVMPrediction()).thenReturn(true);
         when(mockConfiguration.stacks()).thenReturn(true);
+        when(mockSignatureProcessor.simplify(anyString())).then(invocation -> invocation.getArguments()[0]);
     }
 
     @Test
@@ -92,16 +99,22 @@ public class RaceTest {
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
         when(mockMetadata.getRaceDataSig(
-                extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration))
+                eq(extractSingleEvent(e1)),
+                Mockito.<List<ReadonlyEventInterface>>any(),
+                Mockito.<List<ReadonlyEventInterface>>any(),
+                eq(mockConfiguration)))
                 .thenReturn("<mock race report>");
 
-        Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
-        race.setFirstSignalStack(Collections.emptyList());
-        race.setSecondSignalStack(Collections.emptyList());
+        FoundRace race = new FoundRace(
+                extractSingleEvent(e1), extractSingleEvent(e2),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e1), trace)),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e2), trace)));
 
-        String report = race.generateRaceReport();
+        RaceSerializer serializer = new RaceSerializer(mockConfiguration, mockSignatureProcessor, mockMetadata);
+
+        String report = race.generateRaceReport(serializer, ReportType.USER_READABLE);
         String[] pieces = report.split("\n");
-        Optional<String>  maybeRaceDescription = Optional.empty();
+        Optional<String> maybeRaceDescription = Optional.empty();
         for (String piece : pieces) {
             if (piece.contains("Data race")) {
                 maybeRaceDescription = Optional.of(piece);
@@ -112,7 +125,7 @@ public class RaceTest {
         String raceDescription = maybeRaceDescription.get();
         MoreAsserts.assertSubstring("<mock race report>", raceDescription);
 
-        Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
+        Optional<RawStackError> reportData = race.generateErrorData(serializer);
         Assert.assertTrue(reportData.isPresent());
         Assert.assertEquals("Data race on %s", reportData.get().description_format);
         Assert.assertEquals(1, reportData.get().description_fields.size());
@@ -147,18 +160,21 @@ public class RaceTest {
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<call site address 1>");
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_2)).thenReturn("<call site address 2>");
         when(mockMetadata.getLocationSig(PROGRAM_COUNTER_1)).thenReturn("<thread 2 creation address>");
-        when(mockMetadata.getParentOTID(THREAD_2)).thenReturn(THREAD_1);
-        when(mockMetadata.getOriginalThreadCreationLocId(THREAD_2)).thenReturn(PROGRAM_COUNTER_1);
+        when(mockMetadata.getParentOTID(THREAD_2)).thenReturn(OptionalLong.of(THREAD_1));
+        when(mockMetadata.getOriginalThreadCreationLocId(THREAD_2)).thenReturn(OptionalLong.of(PROGRAM_COUNTER_1));
 
-        Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
-        race.setFirstSignalStack(Collections.emptyList());
-        race.setSecondSignalStack(Collections.emptyList());
+        RaceSerializer serializer = new RaceSerializer(mockConfiguration, mockSignatureProcessor, mockMetadata);
 
-        String report = race.generateRaceReport();
+        FoundRace race = new FoundRace(
+                extractSingleEvent(e1), extractSingleEvent(e2),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e1), trace)),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e2), trace)));
+
+        String report = race.generateRaceReport(serializer, ReportType.USER_READABLE);
         MoreAsserts.assertSubstring("<call site address 1>", report);
         MoreAsserts.assertSubstring("<call site address 2>", report);
 
-        Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
+        Optional<RawStackError> reportData = race.generateErrorData(serializer);
         Assert.assertTrue(reportData.isPresent());
         Assert.assertEquals(2, reportData.get().stack_traces.size());
         RawStackTrace t1 = reportData.get().stack_traces.get(0);
@@ -181,7 +197,7 @@ public class RaceTest {
             Assert.assertEquals(addresses[i], c.frames.get(i).address);
         }
     }
-    
+
 
     @Test
     public void raceDescriptionContainsMethodStartWhenCallSiteAddressIsMissing() throws InvalidTraceDataException {
@@ -219,11 +235,14 @@ public class RaceTest {
         when(mockMetadata.getLocationSig(PROGRAM_COUNTER_3)).thenReturn("<method 3 start>");
         when(mockMetadata.getLocationSig(PROGRAM_COUNTER_4)).thenReturn("<instruction 4 in method 3>");
 
-        Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
-        race.setFirstSignalStack(Collections.emptyList());
-        race.setSecondSignalStack(Collections.emptyList());
+        RaceSerializer serializer = new RaceSerializer(mockConfiguration, mockSignatureProcessor, mockMetadata);
 
-        String report = race.generateRaceReport();
+        FoundRace race = new FoundRace(
+                extractSingleEvent(e1), extractSingleEvent(e2),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e1), trace)),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e2), trace)));
+
+        String report = race.generateRaceReport(serializer, ReportType.USER_READABLE);
         MoreAsserts.assertSubstring("<instruction 4 in method 3>", report);
         MoreAsserts.assertSubstring("<method 3 call site in method 2>", report);
         MoreAsserts.assertSubstring("<method 1 start>", report);
@@ -232,12 +251,19 @@ public class RaceTest {
         MoreAsserts.assertNotSubstring("<method 2 start>", report);
         MoreAsserts.assertNotSubstring("<method 3 start>", report);
 
-        Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
+        Optional<RawStackError> reportData = race.generateErrorData(serializer);
         Assert.assertTrue(reportData.isPresent());
         Assert.assertEquals(2, reportData.get().stack_traces.size());
         RawStackTrace t1 = reportData.get().stack_traces.get(0);
         RawStackTrace t2 = reportData.get().stack_traces.get(1);
-        assertStackTrace(t2, "1", 4, "Read in thread 1", "<instruction 4 in method 3>", "<method 3 call site in method 2>", "<method 1 start>", "<method 1 call site somewhere>");
+        assertStackTrace(t2,
+                "1",
+                4,
+                "Read in thread 1",
+                "<instruction 4 in method 3>",
+                "<method 3 call site in method 2>",
+                "<method 1 start>",
+                "<method 1 call site somewhere>");
         assertStackTrace(t1, "2", 1, "Write in thread 2");
     }
 
@@ -267,16 +293,19 @@ public class RaceTest {
 
         Trace trace = traceState.initNextTraceWindow(rawTraces);
 
-        when(mockMetadata.getLockSig(extractSingleEvent(e3), trace))
+        when(mockMetadata.getLockSig(eq(extractSingleEvent(e3)), Mockito.any()))
                 .thenReturn("<mock lock representation>");
         when(mockMetadata.getLocationSig(CALL_SITE_ADDRESS_1)).thenReturn("<call site address 1>");
         when(mockMetadata.getLocationSig(PROGRAM_COUNTER_1)).thenReturn("<lock acquire address>");
 
-        Race race = new Race(extractSingleEvent(e1), extractSingleEvent(e2), trace, mockConfiguration);
-        race.setFirstSignalStack(Collections.emptyList());
-        race.setSecondSignalStack(Collections.emptyList());
+        RaceSerializer serializer = new RaceSerializer(mockConfiguration, mockSignatureProcessor, mockMetadata);
 
-        String report = race.generateRaceReport();
+        FoundRace race = new FoundRace(
+                extractSingleEvent(e1), extractSingleEvent(e2),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e1), trace)),
+                Collections.singletonList(SignalStackEvent.fromEventAndTrace(extractSingleEvent(e2), trace)));
+
+        String report = race.generateRaceReport(serializer, ReportType.USER_READABLE);
         String[] pieces = report.split("\n");
         boolean hasHoldingLock = false;
         boolean hasStackLock = false;
@@ -293,7 +322,7 @@ public class RaceTest {
         Assert.assertTrue(hasHoldingLock);
         Assert.assertTrue(hasStackLock);
 
-        Optional<RawStackError> reportData = race.generateErrorData(mockMetadata);
+        Optional<RawStackError> reportData = race.generateErrorData(serializer);
         Assert.assertTrue(reportData.isPresent());
         Assert.assertEquals(2, reportData.get().stack_traces.size());
         RawStackTrace t1 = reportData.get().stack_traces.get(0);
